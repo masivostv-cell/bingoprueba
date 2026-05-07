@@ -1917,6 +1917,7 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                 winR.document.write(`<div class="c-num ${isMarked?'marked':''}" style="${figClass}">${num}</div>`);
             });
             winR.document.write(`</div><h2>CARTÓN #${n}</h2></div></body></html>`);
+            winR.document.close(); // VITAL PARA QUE NO SE QUEDE CARGANDO
         };
         window[`${prefix}manualCheckById`] = (n) => { document.getElementById(`${idPrefix}num-revisar`).value = n; window[`${prefix}manualCheck`](); };
 
@@ -1933,14 +1934,21 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                 }
                 if(ok && tieneFigura) wins.push(c.carton); 
             });
+            
             if (wins.length > 0 && wins.length !== lastWinCount) {
                 if (winRef && !winRef.closed) winRef.close();
                 winRef = window.open("", `W${maxNum}`, "width=350,height=500");
-                winRef.document.write(`<html><head><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-weight:bold;cursor:pointer;}</style></head><body><h2>🏆 GANADORES</h2><div id="l"></div><script>function rev(n){window.opener.${prefix}manualCheckById(n);}<\/script></body></html>`);
-                wins.forEach(n => { let b = winRef.document.createElement('button'); b.className="btn"; b.innerText="CARTÓN #"+n; b.onclick = () => winRef.rev(n); winRef.document.getElementById('l').appendChild(b); });
+                
+                // Mismo método funcional que aplicamos al Bingo 75
+                let botonesHTML = wins.map(n => `<button class="btn" onclick="window.opener.${prefix}manualCheckById(${n})">VER CARTÓN #${n}</button>`).join('');
+                
+                winRef.document.write(`<html><head><title>🏆 GANADORES</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.5);transition:0.2s;} .btn:hover{filter:brightness(1.2);}</style></head><body><h2>🏆 GANADORES</h2><div id="l">${botonesHTML}</div></body></html>`);
+                
+                winRef.document.close(); // CRITICO: LIBERA LA VENTANA PARA PERMITIR EL CLIC
                 lastWinCount = wins.length;
             } else if(wins.length === 0) lastWinCount = 0;
         }
+        
 
         window[`${prefix}toggleAutomatico`] = () => {
             if(!checkSecurity()) return; const clock = document.getElementById(`${idPrefix}timer-auto-container`), btn = document.getElementById(`${idPrefix}btn-auto`);
@@ -2157,6 +2165,13 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         guardarDatos(); 
         if(timerAuto) resetReloj();
     };
+    // NUEVA FUNCIÓN: Apaga o enciende la figura directamente desde la pantalla principal
+    window.toggleFiguraActivaGlobal = (idx, estado) => {
+        if(!dbLocal.config.figurasMultiples) return;
+        dbLocal.config.figurasMultiples[idx].activa = estado;
+        guardarDatos(); // Recarga la pantalla inmediatamente
+    };
+
     window.renderizar = () => { 
         document.getElementById('switch-ganadores').checked = dbLocal.config.autoWin; 
         document.querySelectorAll('.bola-mini').forEach(b => { b.classList.remove('activa', 'ultima'); b.style.backgroundColor = dbLocal.colores.balotas || '#e9ecef'; }); 
@@ -2171,24 +2186,73 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         } 
         document.getElementById('contador-balotas').innerText = dbLocal.juego.length + "/75"; 
         
-        // DIBUJAR MÚLTIPLES FIGURAS EN PANTALLA (TAMAÑO MAXIMIZADO)
+        // DIBUJAR MÚLTIPLES FIGURAS EN PANTALLA CON CHECKBOX ENCIMA
         const contMultiples = document.getElementById('figuras-multiples-container');
         if(contMultiples) {
             contMultiples.innerHTML = "";
-            contMultiples.style.maxWidth = "400px"; /* Ampliamos el contenedor para que quepan figuras más grandes */
-            let figs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "---", patron: dbLocal.config.figura || new Array(25).fill(false)} ];
-            figs.forEach(fig => {
-                let colDiv = document.createElement('div'); colDiv.style.display = "flex"; colDiv.style.flexDirection = "column"; colDiv.style.alignItems = "center";
+            contMultiples.style.maxWidth = "500px"; // Un poco más ancho
+            let figs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "---", patron: dbLocal.config.figura || new Array(25).fill(false), activa: true} ];
+            
+            figs.forEach((fig, index) => {
+                // Si la figura no tiene el estado 'activa' definido, la ponemos true por defecto
+                if(typeof fig.activa === 'undefined') fig.activa = true;
                 
-                /* Cambiamos el width a 75px, los márgenes y los bordes para que se vea premium */
-                let gridFig = document.createElement('div'); gridFig.style.display = "grid"; gridFig.style.gridTemplateColumns = "repeat(5, 1fr)"; gridFig.style.gap = "2px"; gridFig.style.width = "75px"; gridFig.style.background = "#333"; gridFig.style.padding = "3px"; gridFig.style.borderRadius = "5px"; gridFig.style.boxShadow = "0 4px 6px rgba(0,0,0,0.3)";
+                let isActive = fig.activa; 
+                let opacidad = isActive ? "1" : "0.4"; // Se vuelve casi transparente si se apaga
                 
-                fig.patron.forEach(m => { let c = document.createElement('div'); c.style.width = "100%"; c.style.aspectRatio = "1/1"; c.style.background = m ? "#ffeb3b" : "#555"; gridFig.appendChild(c); });
+                let colDiv = document.createElement('div'); 
+                colDiv.style.display = "flex"; 
+                colDiv.style.flexDirection = "column"; 
+                colDiv.style.alignItems = "center"; 
+                colDiv.style.opacity = opacidad;
+                colDiv.style.transition = "opacity 0.3s";
                 
-                /* Letra más grande (13px) y más espacio para los nombres largos (85px) */
-                let lbl = document.createElement('small'); lbl.innerText = fig.nombre; lbl.style.fontWeight = "bold"; lbl.style.color = "#334155"; lbl.style.fontSize = "13px"; lbl.style.marginTop = "6px"; lbl.style.whiteSpace = "nowrap"; lbl.style.overflow = "hidden"; lbl.style.textOverflow = "ellipsis"; lbl.style.maxWidth = "85px";
+                // CHECKBOX ENCIMA DE LA FIGURA
+                let checkContainer = document.createElement('div');
+                checkContainer.style.marginBottom = "5px";
+                checkContainer.innerHTML = `<label style="cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; font-weight:900; color:${isActive ? '#22c55e' : '#dc3545'};">
+                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleFiguraActivaGlobal(${index}, this.checked)" style="width:18px; height:18px; cursor:pointer; margin:0;">
+                    ${isActive ? 'ACTIVA' : 'PAGADA'}
+                </label>`;
                 
-                colDiv.appendChild(gridFig); colDiv.appendChild(lbl); contMultiples.appendChild(colDiv);
+                // TABLERITO DE LA FIGURA
+                let gridFig = document.createElement('div'); 
+                gridFig.style.display = "grid"; 
+                gridFig.style.gridTemplateColumns = "repeat(5, 1fr)"; 
+                gridFig.style.gap = "2px"; 
+                gridFig.style.width = "75px"; 
+                gridFig.style.background = "#333"; 
+                gridFig.style.padding = "3px"; 
+                gridFig.style.borderRadius = "5px"; 
+                gridFig.style.boxShadow = "0 4px 6px rgba(0,0,0,0.3)";
+                
+                fig.patron.forEach(m => { 
+                    let c = document.createElement('div'); 
+                    c.style.width = "100%"; 
+                    c.style.aspectRatio = "1/1"; 
+                    // Si está inactiva, pinta los amarillos de gris claro
+                    c.style.background = m ? (isActive ? "#ffeb3b" : "#888") : "#555"; 
+                    gridFig.appendChild(c); 
+                });
+                
+                // NOMBRE DE LA FIGURA (ABAJO)
+                let lbl = document.createElement('small'); 
+                lbl.innerText = fig.nombre; 
+                lbl.style.fontWeight = "bold"; 
+                lbl.style.color = "#334155"; 
+                lbl.style.fontSize = "13px"; 
+                lbl.style.marginTop = "6px"; 
+                lbl.style.whiteSpace = "nowrap"; 
+                lbl.style.overflow = "hidden"; 
+                lbl.style.textOverflow = "ellipsis"; 
+                lbl.style.maxWidth = "85px";
+                // Tacha el nombre si ya se pagó el premio
+                if(!isActive) lbl.style.textDecoration = "line-through";
+                
+                colDiv.appendChild(checkContainer);
+                colDiv.appendChild(gridFig); 
+                colDiv.appendChild(lbl); 
+                contMultiples.appendChild(colDiv);
             });
         }
         detectarGanadores(); 
@@ -2225,7 +2289,10 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         if(dbLocal.config.figurasMultiples.length >= 5) return alert("Máximo 5 figuras permitidas al mismo tiempo.");
         if(!window.figTemporal.some(x => x)) return alert("Dibuja una figura antes de añadirla.");
         let nom = document.getElementById('input-nombre').value.toUpperCase() || "FIGURA " + (dbLocal.config.figurasMultiples.length + 1);
-        dbLocal.config.figurasMultiples.push({ nombre: nom, patron: [...window.figTemporal] });
+        
+        // Ahora guardamos la figura indicando que está ACTIVA (activa: true)
+        dbLocal.config.figurasMultiples.push({ nombre: nom, patron: [...window.figTemporal], activa: true });
+        
         window.figTemporal = new Array(25).fill(false);
         document.getElementById('input-nombre').value = "";
         document.getElementById('preset-selector').value = "PERSONALIZADA";
@@ -2233,14 +2300,11 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         window.renderListaFiguras();
     };
 
-    window.limpiarFigurasLista = () => {
-        dbLocal.config.figurasMultiples = [];
+    // Nueva función para apagar/prender figuras
+    window.toggleFiguraActiva = (idx, estado) => {
+        dbLocal.config.figurasMultiples[idx].activa = estado;
         window.renderListaFiguras();
-    };
-
-    window.eliminarFiguraLista = (idx) => {
-        dbLocal.config.figurasMultiples.splice(idx, 1);
-        window.renderListaFiguras();
+        guardarDatos(); // Esto actualiza la pantalla principal inmediatamente
     };
 
     window.renderListaFiguras = () => {
@@ -2248,31 +2312,39 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         listDiv.innerHTML = "";
         if(!dbLocal.config.figurasMultiples) return;
         dbLocal.config.figurasMultiples.forEach((fig, idx) => {
-            listDiv.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:#333; margin-bottom:5px; padding:5px 10px; border-radius:3px; color:white; font-size:12px;"><span>${fig.nombre}</span><button onclick="eliminarFiguraLista(${idx})" style="background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">X</button></div>`;
+            if(typeof fig.activa === 'undefined') fig.activa = true; // Por compatibilidad si hay viejas
+            
+            let colorFondo = fig.activa ? '#333' : '#555';
+            let colorTexto = fig.activa ? 'white' : '#aaa';
+            let tachado = fig.activa ? 'none' : 'line-through';
+            
+            listDiv.innerHTML += `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:${colorFondo}; margin-bottom:5px; padding:5px 10px; border-radius:3px; color:${colorTexto}; font-size:12px; text-decoration:${tachado};">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" ${fig.activa ? 'checked' : ''} onchange="toggleFiguraActiva(${idx}, this.checked)" title="Dejar de buscar esta figura" style="cursor:pointer; width:15px; height:15px;">
+                    <span>${fig.nombre}</span>
+                </div>
+                <button onclick="eliminarFiguraLista(${idx})" style="background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">X</button>
+            </div>`;
         });
     };
 
-    window.guardarConfigLocal = () => { 
-        if(!dbLocal.config.figurasMultiples || dbLocal.config.figurasMultiples.length === 0) {
-            if(window.figTemporal.some(x => x)) window.agregarFiguraLista();
-            else return alert("Debes añadir al menos 1 figura a la lista para jugar.");
+    window.eliminarFiguraLista = (idx) => {
+        if(confirm("¿Eliminar esta figura de la lista de juego?")) {
+            dbLocal.config.figurasMultiples.splice(idx, 1);
+            window.renderListaFiguras();
+            guardarDatos();
         }
-        document.getElementById('modal-config').style.display = 'none'; 
-        guardarDatos(); 
     };
 
-    window.manualCheck = () => { 
-        if(!checkSecurity()) return; let n = parseInt(document.getElementById('num-revisar').value); let c = cartonesActuales.find(x => x.carton == n); if(!c) return alert("No existe."); const winR = window.open("", "R", "width=520,height=720"); winR.document.write(`<html><head><title>VERIFICAR CARTÓN</title><style>body{background:#121212;color:white;text-align:center;font-family:Arial;}.c-base{width:480px;background:#002b5c;padding:15px;margin:auto;}.g-main{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#000;border:5px solid #000;}.c-bingo{background:#004080;color:white;height:80px;display:flex;align-items:center;justify-content:center;font-size:60px;font-weight:900;}.c-num{background:white;color:black;height:85px;display:flex;align-items:center;justify-content:center;font-size:45px;font-weight:900;}.marked{background:#28a745 !important;}.figura{border:6px solid #ffeb3b !important;box-sizing:border-box;}</style></head><body><div class="c-base"><div class="g-main"><div class="c-bingo">B</div><div class="c-bingo">I</div><div class="c-bingo">N</div><div class="c-bingo">G</div><div class="c-bingo">O</div>`); 
-        let figDefault = (dbLocal.config.figurasMultiples && dbLocal.config.figurasMultiples[0]) ? dbLocal.config.figurasMultiples[0].patron : new Array(25).fill(false);
-        mapeoCarton.forEach((idx, i) => { let num = c.numeros[idx], isM = dbLocal.juego.includes(num) || num === 0, isF = figDefault[i], displayContent = num === 0 ? (dbLocal.centerLogoBase64 ? `<img src="${dbLocal.centerLogoBase64}" style="width:80%; height:80%; object-fit:contain;">` : "X") : num; winR.document.write(`<div class="c-num ${isM?'marked':''} ${isF&&!isM?'figura':''}">${displayContent}</div>`); }); winR.document.write(`</div><h2>CARTÓN #${n}</h2></div></body></html>`); 
-    }; 
-    window.manualCheckById = (n) => { document.getElementById('num-revisar').value = n; manualCheck(); };
-    window.exportarBaseDatos = () => { const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(dbLocal)], {type:"application/json"})); l.download = "respaldo_bingo75.json"; l.click(); };
-    
     function detectarGanadores() { 
         if (!dbLocal.config.autoWin) return; 
         let wins = []; 
-        let figsAComprobar = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre, patron: dbLocal.config.figura} ];
+        let todasLasFigs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre, patron: dbLocal.config.figura, activa: true} ];
+        
+        // Solo buscamos ganadores en las figuras que tengan el checkbox ACTIVO
+        let figsAComprobar = todasLasFigs.filter(f => f.activa !== false);
+        if (figsAComprobar.length === 0) return; 
         
         cartonesActuales.forEach(c => { 
             let gana = false;
@@ -2292,12 +2364,65 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         
         if (wins.length > 0 && wins.length !== lastWinCount) { 
             if (winRef && !winRef.closed) winRef.close(); 
-            winRef = window.open("", "W", "width=350,height=500"); 
-            winRef.document.write(`<html><head><title>🏆 GANADORES</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;}.btn{background:#6f42c1;color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-weight:bold;cursor:pointer;}</style></head><body><h2>🏆 GANADORES</h2><div id="l"></div><script>function rev(n){window.opener.manualCheckById(n);}<\/script></body></html>`); 
-            wins.forEach(n => { let b = winRef.document.createElement('button'); b.className="btn"; b.innerText="CARTÓN #"+n; b.onclick = () => winRef.rev(n); winRef.document.getElementById('l').appendChild(b); }); 
+            winRef = window.open("", "W75", "width=350,height=500"); 
+            
+            let botonesHTML = wins.map(n => `<button class="btn" onclick="window.opener.manualCheckById(${n})">VER CARTÓN #${n}</button>`).join('');
+
+            winRef.document.write(`<html><head><title>🏆 GANADORES 75</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.5);transition:0.2s;} .btn:hover{filter:brightness(1.2);}</style></head><body><h2>🏆 GANADORES 75</h2><div id="l">${botonesHTML}</div></body></html>`); 
+            
+            winRef.document.close();
             lastWinCount = wins.length; 
         } else if(wins.length === 0) lastWinCount = 0; 
     }
+
+   window.manualCheck = () => {
+        if(!checkSecurity()) return;
+        let n = parseInt(document.getElementById('num-revisar').value);
+        let c = cartonesActuales.find(x => x.carton == n);
+        if(!c) return alert("No existe el cartón en el serial activo.");
+
+        const winR = window.open("", "R75", "width=500,height=600");
+        
+        // 1. Validar si hay logo superior cargado para mostrarlo en la verificación
+        let imgHeaderHtml = dbLocal.headerCartonBase64 ? `<div style="background:white; text-align:center; border-bottom: 3px solid ${dbLocal.colores.cartonExport}; padding:5px;"><img src="${dbLocal.headerCartonBase64}" style="max-width:100%; max-height:80px; display:block; margin:auto;"></div>` : '';
+        
+        // 2. Extraer el color personalizado del texto "CARTÓN", si no existe, usa blanco
+        let colorTexto = dbLocal.colores.cartonTexto || "#ffffff";
+
+        winR.document.write(`<html><head><title>VERIFICAR</title><style>body{background:#121212;color:white;text-align:center;font-family:Arial;} .g-main{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#000;border:5px solid #000;} .c-num{background:white;color:black;height:80px;display:flex;align-items:center;justify-content:center;font-size:35px;font-weight:900;} .marked{background:${dbLocal.colores.cartonExport} !important; color:white;}</style></head><body><div style="background:${dbLocal.colores.cartonFondo};padding:15px;margin:auto;width:450px;">${imgHeaderHtml}<div style="background:${dbLocal.colores.cartonExport}; color:white; font-size:40px; font-weight:900; padding:10px; text-transform:uppercase;">BINGO 75</div><div class="g-main">`);
+
+        mapeoCarton.forEach((m, i) => {
+            let num = c.numeros[m];
+            let isMarked = (num === 0) || dbLocal.juego.includes(num);
+            
+            // Reemplazar el 0 por la X o el logo central si existe
+            let displayTxt = num;
+            if (num === 0) {
+                displayTxt = dbLocal.centerLogoBase64 ? `<img src="${dbLocal.centerLogoBase64}" style="width:80%; height:80%; object-fit:contain;">` : "X";
+            }
+
+            // Revisar si forma parte de alguna figura activa para resaltar el borde
+            let isFig = false;
+            if(dbLocal.config.figurasMultiples) {
+                let figsAComprobar = dbLocal.config.figurasMultiples.filter(f => f.activa !== false);
+                for(let f of figsAComprobar) {
+                    if(f.patron[i]) { isFig = true; break; }
+                }
+            }
+
+            let figClass = (isFig && !isMarked) ? 'border:6px solid #ffeb3b; box-sizing:border-box;' : '';
+            winR.document.write(`<div class="c-num ${isMarked ? 'marked' : ''}" style="${figClass}">${displayTxt}</div>`);
+        });
+
+        // 3. Aplicamos el color de texto a la palabra CARTÓN #X
+        winR.document.write(`</div><h2 style="color:${colorTexto}; margin-top:15px; font-size:28px;">CARTÓN #${n}</h2></div></body></html>`);
+        winR.document.close(); 
+    };
+
+    window.manualCheckById = (n) => {
+        document.getElementById('num-revisar').value = n;
+        window.manualCheck();
+    };
 
     window.toggleAutomatico = () => { if(!checkSecurity()) return; const clock = document.getElementById('timer-auto-container'), btn = document.getElementById('btn-auto'); if(timerAuto) { clearInterval(timerAuto); timerAuto = null; clearInterval(timerVisual); clock.style.display="none"; btn.innerText="AUTO (↑)"; } else { timerAuto = setInterval(sacarBalota, 6000); clock.style.display="block"; btn.innerText="PARAR (↑)"; resetReloj(); } };
     function resetReloj() { let tl = 6; document.getElementById('timer-count').innerText = "06"; if(timerVisual) clearInterval(timerVisual); timerVisual = setInterval(() => { tl--; document.getElementById('timer-count').innerText = "0"+tl; if(tl<=0) tl=6; }, 1000); }
