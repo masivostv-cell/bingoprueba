@@ -813,9 +813,8 @@
             <div id="media-left" class="media-zone"></div>
             <div class="game-center-panel">
                 <div style="text-align:center;">
-                    <strong style="font-size: 2vh; color: #495057;">FIGURA</strong>
-                    <div id="figura-display" style="display:grid; grid-template-columns:repeat(5,1fr); gap:1px; width:80px; background:#333; padding:2px; margin: 5px auto;"></div>
-                    <small id="nombre-figura" style="font-weight:bold; color: #6c757d;">---</small>
+                    <strong style="font-size: 2vh; color: #495057;">FIGURAS A JUGAR</strong>
+                    <div id="figuras-multiples-container" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:5px; max-width: 250px;"></div>
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:center;">
                     <div class="balota-grande bg-red-ball">
@@ -914,8 +913,8 @@
     </div>
 
     <!-- MODAL DE FIGURA (Solo 75) -->
-    <div id="modal-config" class="modal-config">
-        <h3 style="text-align:center; margin-top:0;">CONFIGURACIÓN DE FIGURA</h3>
+    <div id="modal-config" class="modal-config" style="width: 550px; max-width: 95vw;">
+        <h3 style="text-align:center; margin-top:0;">SELECCIÓN DE FIGURAS</h3>
         <select id="preset-selector" style="width:100%; padding:10px; margin-bottom:15px; border-radius:5px; background:#222; color:white; border:1px solid #555; font-size: 16px; cursor: pointer;" onchange="aplicarPreset(this.value)">
             <option value="PERSONALIZADA">✏️ Crear Personalizada</option>
             <optgroup label="Básicas y Líneas">
@@ -949,13 +948,24 @@
                 <option value="LETRA Z">Letra Z</option>
             </optgroup>
         </select>
-        </select>
-        <div id="selector-figura" class="selector-figura"></div>
-        <input type="text" id="input-nombre" placeholder="Nombre Jugada (ej. PLENO)" style="width:100%; padding:10px; margin-top:15px; border-radius:5px; font-weight: bold; text-align: center;">
-        <button onclick="guardarConfigLocal()" style="width:100%; background:#2e7d32; color:white; padding:15px; font-weight:bold; border:none; border-radius:10px; margin-top:15px; cursor: pointer;">GUARDAR FIGURA</button>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+            <div style="flex: 1; min-width: 200px;">
+                <div id="selector-figura" class="selector-figura"></div>
+                <input type="text" id="input-nombre" placeholder="Nombre (ej. LÍNEA)" style="width:100%; padding:10px; margin-top:10px; border-radius:5px; font-weight: bold; text-align: center;">
+                <button onclick="agregarFiguraLista()" style="width:100%; background:#0dcaf0; color:black; font-weight:900; padding:10px; border:none; border-radius:5px; margin-top:10px; cursor:pointer;">➕ AÑADIR A LA LISTA</button>
+            </div>
+            
+            <div style="flex: 1; min-width: 200px; background: #111; border: 1px solid #555; padding: 10px; border-radius: 5px; display: flex; flex-direction: column;">
+                <h4 style="margin-top:0; color:#fff; text-align:center; font-size:14px;">FIGURAS ACTIVAS (Máx 5)</h4>
+                <div id="lista-figuras-jugar" style="flex: 1; overflow-y:auto; margin-bottom: 10px;"></div>
+                <button onclick="limpiarFigurasLista()" style="width:100%; background:#dc3545; color:white; padding:5px; border:none; border-radius:3px; cursor:pointer;">🗑 Limpiar Todo</button>
+            </div>
+        </div>
+
+        <button onclick="guardarConfigLocal()" style="width:100%; background:#2e7d32; color:white; padding:15px; font-weight:bold; border:none; border-radius:10px; margin-top:15px; cursor: pointer;">GUARDAR Y APLICAR</button>
         <button onclick="document.getElementById('modal-config').style.display='none'" style="width:100%; margin-top:5px; background:none; border:none; color:blue; cursor: pointer;">Cerrar</button>
     </div>
-</div>
 
 <div id="export-area" style="position: absolute; top: 0; left: -9999px; width: 600px;"></div>
 <!-- CONTENEDOR PARA EXPORTACION DE LOTERIA DE TAMAÑO FIJO -->
@@ -2147,13 +2157,141 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         guardarDatos(); 
         if(timerAuto) resetReloj();
     };
-    window.renderizar = () => { document.getElementById('switch-ganadores').checked = dbLocal.config.autoWin; document.querySelectorAll('.bola-mini').forEach(b => { b.classList.remove('activa', 'ultima'); b.style.backgroundColor = dbLocal.colores.balotas || '#e9ecef'; }); if(dbLocal.juego.length > 0){ let u = dbLocal.juego[dbLocal.juego.length-1]; document.getElementById('main-numero').innerText = u; document.getElementById('main-letra').innerText = (u<=15?'B':u<=30?'I':u<=45?'N':u<=60?'G':'O'); dbLocal.juego.forEach(n => { const el = document.getElementById('bola-'+n); if(el) { el.classList.add('activa'); el.style.backgroundColor = ''; } }); const ult = document.getElementById('bola-'+u); if(ult) ult.classList.add('ultima'); document.getElementById('historial-4').innerHTML = ""; const ultimas = dbLocal.juego.slice(-5, -1).reverse(); for(let i=0; i<4; i++) document.getElementById('historial-4').innerHTML += `<div class="bola-historial">${ultimas[i] || "-"}</div>`; } else { document.getElementById('main-numero').innerText = "--"; document.getElementById('main-letra').innerText = "-"; document.getElementById('historial-4').innerHTML = '<div class="bola-historial">-</div>'.repeat(4); } document.getElementById('contador-balotas').innerText = dbLocal.juego.length + "/75"; document.getElementById('nombre-figura').innerText = dbLocal.config.nombre; document.getElementById('figura-display').innerHTML = ""; dbLocal.config.figura.forEach(m => { let c = document.createElement('div'); c.style.width="100%"; c.style.aspectRatio="1/1"; c.style.background = m ? "#ffeb3b" : "#555"; document.getElementById('figura-display').appendChild(c); }); detectarGanadores(); };
+    window.renderizar = () => { 
+        document.getElementById('switch-ganadores').checked = dbLocal.config.autoWin; 
+        document.querySelectorAll('.bola-mini').forEach(b => { b.classList.remove('activa', 'ultima'); b.style.backgroundColor = dbLocal.colores.balotas || '#e9ecef'; }); 
+        if(dbLocal.juego.length > 0){ 
+            let u = dbLocal.juego[dbLocal.juego.length-1]; document.getElementById('main-numero').innerText = u; document.getElementById('main-letra').innerText = (u<=15?'B':u<=30?'I':u<=45?'N':u<=60?'G':'O'); 
+            dbLocal.juego.forEach(n => { const el = document.getElementById('bola-'+n); if(el) { el.classList.add('activa'); el.style.backgroundColor = ''; } }); 
+            const ult = document.getElementById('bola-'+u); if(ult) ult.classList.add('ultima'); 
+            document.getElementById('historial-4').innerHTML = ""; const ultimas = dbLocal.juego.slice(-5, -1).reverse(); 
+            for(let i=0; i<4; i++) document.getElementById('historial-4').innerHTML += `<div class="bola-historial">${ultimas[i] || "-"}</div>`; 
+        } else { 
+            document.getElementById('main-numero').innerText = "--"; document.getElementById('main-letra').innerText = "-"; document.getElementById('historial-4').innerHTML = '<div class="bola-historial">-</div>'.repeat(4); 
+        } 
+        document.getElementById('contador-balotas').innerText = dbLocal.juego.length + "/75"; 
+        
+        // DIBUJAR MÚLTIPLES FIGURAS EN PANTALLA
+        const contMultiples = document.getElementById('figuras-multiples-container');
+        if(contMultiples) {
+            contMultiples.innerHTML = "";
+            let figs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "---", patron: dbLocal.config.figura || new Array(25).fill(false)} ];
+            figs.forEach(fig => {
+                let colDiv = document.createElement('div'); colDiv.style.display = "flex"; colDiv.style.flexDirection = "column"; colDiv.style.alignItems = "center";
+                let gridFig = document.createElement('div'); gridFig.style.display = "grid"; gridFig.style.gridTemplateColumns = "repeat(5, 1fr)"; gridFig.style.gap = "1px"; gridFig.style.width = "40px"; gridFig.style.background = "#333"; gridFig.style.padding = "2px"; gridFig.style.borderRadius = "3px";
+                fig.patron.forEach(m => { let c = document.createElement('div'); c.style.width = "100%"; c.style.aspectRatio = "1/1"; c.style.background = m ? "#ffeb3b" : "#555"; gridFig.appendChild(c); });
+                let lbl = document.createElement('small'); lbl.innerText = fig.nombre; lbl.style.fontWeight = "bold"; lbl.style.color = "#334155"; lbl.style.fontSize = "10px"; lbl.style.marginTop = "3px"; lbl.style.whiteSpace = "nowrap"; lbl.style.overflow = "hidden"; lbl.style.textOverflow = "ellipsis"; lbl.style.maxWidth = "45px";
+                colDiv.appendChild(gridFig); colDiv.appendChild(lbl); contMultiples.appendChild(colDiv);
+            });
+        }
+        detectarGanadores(); 
+    };
     window.toggleAutoWin = (val) => { if(!checkSecurity()) return; dbLocal.config.autoWin = val; guardarDatos(); };
     window.REINICIAR_JUEGO = () => { if(!checkSecurity() || !confirm("¿REINICIAR TODO?")) return; dbLocal.juego = []; lastWinCount = 0; if(timerAuto) { clearInterval(timerAuto); clearInterval(timerVisual); timerAuto = null; } document.getElementById('timer-auto-container').style.display = 'none'; document.getElementById('btn-auto').innerText = "AUTO (↑)"; guardarDatos(); renderizar(); };
-    window.abrirConfig = () => { if(!checkSecurity()) return; document.getElementById('modal-config').style.display = "block"; let figTemporal = [...dbLocal.config.figura]; const renderGrid = () => { document.getElementById('selector-figura').innerHTML = ""; for(let i=0; i<25; i++) { let s = document.createElement('div'); s.className = "celda-config" + (figTemporal[i] ? " seleccionada" : ""); s.onclick = function() { figTemporal[i] = !figTemporal[i]; this.classList.toggle('seleccionada'); document.getElementById('preset-selector').value = "PERSONALIZADA"; }; document.getElementById('selector-figura').appendChild(s); } }; window.aplicarPreset = (val) => { if(val === "PERSONALIZADA") return; if(PRESET_FIGURAS[val]) { figTemporal = PRESET_FIGURAS[val].map(x => x === 1); document.getElementById('input-nombre').value = val; renderGrid(); } }; window.guardarConfigLocal = () => { dbLocal.config.figura = [...figTemporal]; dbLocal.config.nombre = document.getElementById('input-nombre').value.toUpperCase() || "BINGO"; document.getElementById('modal-config').style.display = 'none'; guardarDatos(); }; renderGrid(); let match = "PERSONALIZADA"; for(let key in PRESET_FIGURAS) { if(PRESET_FIGURAS[key].every((v, i) => (v === 1) === figTemporal[i])) { match = key; break; } } document.getElementById('preset-selector').value = match; document.getElementById('input-nombre').value = dbLocal.config.nombre; };
-    window.manualCheck = () => { if(!checkSecurity()) return; let n = parseInt(document.getElementById('num-revisar').value); let c = cartonesActuales.find(x => x.carton == n); if(!c) return alert("No existe."); const winR = window.open("", "R", "width=520,height=720"); winR.document.write(`<html><head><title>VERIFICAR CARTÓN</title><style>body{background:#121212;color:white;text-align:center;font-family:Arial;}.c-base{width:480px;background:#002b5c;padding:15px;margin:auto;}.g-main{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#000;border:5px solid #000;}.c-bingo{background:#004080;color:white;height:80px;display:flex;align-items:center;justify-content:center;font-size:60px;font-weight:900;}.c-num{background:white;color:black;height:85px;display:flex;align-items:center;justify-content:center;font-size:45px;font-weight:900;}.marked{background:#28a745 !important;}.figura{border:6px solid #ffeb3b !important;box-sizing:border-box;}</style></head><body><div class="c-base"><div class="g-main"><div class="c-bingo">B</div><div class="c-bingo">I</div><div class="c-bingo">N</div><div class="c-bingo">G</div><div class="c-bingo">O</div>`); mapeoCarton.forEach((idx, i) => { let num = c.numeros[idx], isM = dbLocal.juego.includes(num) || num === 0, isF = dbLocal.config.figura[i], displayContent = num === 0 ? (dbLocal.centerLogoBase64 ? `<img src="${dbLocal.centerLogoBase64}" style="width:80%; height:80%; object-fit:contain;">` : "X") : num; winR.document.write(`<div class="c-num ${isM?'marked':''} ${isF&&!isM?'figura':''}">${displayContent}</div>`); }); winR.document.write(`</div><h2>CARTÓN #${n}</h2></div></body></html>`); }; window.manualCheckById = (n) => { document.getElementById('num-revisar').value = n; manualCheck(); };
+    window.abrirConfig = () => { 
+        if(!checkSecurity()) return; 
+        document.getElementById('modal-config').style.display = "block"; 
+        window.figTemporal = new Array(25).fill(false);
+        document.getElementById('input-nombre').value = "";
+        if(!dbLocal.config.figurasMultiples) dbLocal.config.figurasMultiples = [];
+        renderGrid(); 
+        window.renderListaFiguras();
+    }; 
+    
+    const renderGrid = () => { 
+        document.getElementById('selector-figura').innerHTML = ""; 
+        for(let i=0; i<25; i++) { 
+            let s = document.createElement('div'); 
+            s.className = "celda-config" + (window.figTemporal[i] ? " seleccionada" : ""); 
+            s.onclick = function() { window.figTemporal[i] = !window.figTemporal[i]; this.classList.toggle('seleccionada'); document.getElementById('preset-selector').value = "PERSONALIZADA"; }; 
+            document.getElementById('selector-figura').appendChild(s); 
+        } 
+    }; 
+    
+    window.aplicarPreset = (val) => { 
+        if(val === "PERSONALIZADA") return; 
+        if(PRESET_FIGURAS[val]) { window.figTemporal = PRESET_FIGURAS[val].map(x => x === 1); document.getElementById('input-nombre').value = val; renderGrid(); } 
+    }; 
+    
+    window.agregarFiguraLista = () => {
+        if(!dbLocal.config.figurasMultiples) dbLocal.config.figurasMultiples = [];
+        if(dbLocal.config.figurasMultiples.length >= 5) return alert("Máximo 5 figuras permitidas al mismo tiempo.");
+        if(!window.figTemporal.some(x => x)) return alert("Dibuja una figura antes de añadirla.");
+        let nom = document.getElementById('input-nombre').value.toUpperCase() || "FIGURA " + (dbLocal.config.figurasMultiples.length + 1);
+        dbLocal.config.figurasMultiples.push({ nombre: nom, patron: [...window.figTemporal] });
+        window.figTemporal = new Array(25).fill(false);
+        document.getElementById('input-nombre').value = "";
+        document.getElementById('preset-selector').value = "PERSONALIZADA";
+        renderGrid();
+        window.renderListaFiguras();
+    };
+
+    window.limpiarFigurasLista = () => {
+        dbLocal.config.figurasMultiples = [];
+        window.renderListaFiguras();
+    };
+
+    window.eliminarFiguraLista = (idx) => {
+        dbLocal.config.figurasMultiples.splice(idx, 1);
+        window.renderListaFiguras();
+    };
+
+    window.renderListaFiguras = () => {
+        const listDiv = document.getElementById('lista-figuras-jugar');
+        listDiv.innerHTML = "";
+        if(!dbLocal.config.figurasMultiples) return;
+        dbLocal.config.figurasMultiples.forEach((fig, idx) => {
+            listDiv.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:#333; margin-bottom:5px; padding:5px 10px; border-radius:3px; color:white; font-size:12px;"><span>${fig.nombre}</span><button onclick="eliminarFiguraLista(${idx})" style="background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">X</button></div>`;
+        });
+    };
+
+    window.guardarConfigLocal = () => { 
+        if(!dbLocal.config.figurasMultiples || dbLocal.config.figurasMultiples.length === 0) {
+            if(window.figTemporal.some(x => x)) window.agregarFiguraLista();
+            else return alert("Debes añadir al menos 1 figura a la lista para jugar.");
+        }
+        document.getElementById('modal-config').style.display = 'none'; 
+        guardarDatos(); 
+    };
+
+    window.manualCheck = () => { 
+        if(!checkSecurity()) return; let n = parseInt(document.getElementById('num-revisar').value); let c = cartonesActuales.find(x => x.carton == n); if(!c) return alert("No existe."); const winR = window.open("", "R", "width=520,height=720"); winR.document.write(`<html><head><title>VERIFICAR CARTÓN</title><style>body{background:#121212;color:white;text-align:center;font-family:Arial;}.c-base{width:480px;background:#002b5c;padding:15px;margin:auto;}.g-main{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#000;border:5px solid #000;}.c-bingo{background:#004080;color:white;height:80px;display:flex;align-items:center;justify-content:center;font-size:60px;font-weight:900;}.c-num{background:white;color:black;height:85px;display:flex;align-items:center;justify-content:center;font-size:45px;font-weight:900;}.marked{background:#28a745 !important;}.figura{border:6px solid #ffeb3b !important;box-sizing:border-box;}</style></head><body><div class="c-base"><div class="g-main"><div class="c-bingo">B</div><div class="c-bingo">I</div><div class="c-bingo">N</div><div class="c-bingo">G</div><div class="c-bingo">O</div>`); 
+        let figDefault = (dbLocal.config.figurasMultiples && dbLocal.config.figurasMultiples[0]) ? dbLocal.config.figurasMultiples[0].patron : new Array(25).fill(false);
+        mapeoCarton.forEach((idx, i) => { let num = c.numeros[idx], isM = dbLocal.juego.includes(num) || num === 0, isF = figDefault[i], displayContent = num === 0 ? (dbLocal.centerLogoBase64 ? `<img src="${dbLocal.centerLogoBase64}" style="width:80%; height:80%; object-fit:contain;">` : "X") : num; winR.document.write(`<div class="c-num ${isM?'marked':''} ${isF&&!isM?'figura':''}">${displayContent}</div>`); }); winR.document.write(`</div><h2>CARTÓN #${n}</h2></div></body></html>`); 
+    }; 
+    window.manualCheckById = (n) => { document.getElementById('num-revisar').value = n; manualCheck(); };
     window.exportarBaseDatos = () => { const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(dbLocal)], {type:"application/json"})); l.download = "respaldo_bingo75.json"; l.click(); };
-    function detectarGanadores() { if (!dbLocal.config.autoWin) return; let wins = []; cartonesActuales.forEach(c => { let ok = true; dbLocal.config.figura.forEach((m, idx) => { if(m && c.numeros[mapeoCarton[idx]]!==0 && !dbLocal.juego.includes(c.numeros[mapeoCarton[idx]])) ok = false; }); if(ok && dbLocal.config.figura.some(f=>f)) wins.push(c.carton); }); if (wins.length > 0 && wins.length !== lastWinCount) { if (winRef && !winRef.closed) winRef.close(); winRef = window.open("", "W", "width=350,height=500"); winRef.document.write(`<html><head><title>🏆 GANADORES</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;}.btn{background:#6f42c1;color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-weight:bold;cursor:pointer;}</style></head><body><h2>🏆 GANADORES</h2><div id="l"></div><script>function rev(n){window.opener.manualCheckById(n);}<\/script></body></html>`); wins.forEach(n => { let b = winRef.document.createElement('button'); b.className="btn"; b.innerText="CARTÓN #"+n; b.onclick = () => winRef.rev(n); winRef.document.getElementById('l').appendChild(b); }); lastWinCount = wins.length; } else if(wins.length === 0) lastWinCount = 0; }
+    
+    function detectarGanadores() { 
+        if (!dbLocal.config.autoWin) return; 
+        let wins = []; 
+        let figsAComprobar = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre, patron: dbLocal.config.figura} ];
+        
+        cartonesActuales.forEach(c => { 
+            let gana = false;
+            for(let f of figsAComprobar) {
+                let ok = true; 
+                let tienePatron = false;
+                f.patron.forEach((m, idx) => { 
+                    if(m) {
+                        tienePatron = true;
+                        if(c.numeros[mapeoCarton[idx]]!==0 && !dbLocal.juego.includes(c.numeros[mapeoCarton[idx]])) ok = false; 
+                    }
+                }); 
+                if(ok && tienePatron) { gana = true; break; }
+            }
+            if(gana) wins.push(c.carton); 
+        }); 
+        
+        if (wins.length > 0 && wins.length !== lastWinCount) { 
+            if (winRef && !winRef.closed) winRef.close(); 
+            winRef = window.open("", "W", "width=350,height=500"); 
+            winRef.document.write(`<html><head><title>🏆 GANADORES</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;}.btn{background:#6f42c1;color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-weight:bold;cursor:pointer;}</style></head><body><h2>🏆 GANADORES</h2><div id="l"></div><script>function rev(n){window.opener.manualCheckById(n);}<\/script></body></html>`); 
+            wins.forEach(n => { let b = winRef.document.createElement('button'); b.className="btn"; b.innerText="CARTÓN #"+n; b.onclick = () => winRef.rev(n); winRef.document.getElementById('l').appendChild(b); }); 
+            lastWinCount = wins.length; 
+        } else if(wins.length === 0) lastWinCount = 0; 
+    }
+
     window.toggleAutomatico = () => { if(!checkSecurity()) return; const clock = document.getElementById('timer-auto-container'), btn = document.getElementById('btn-auto'); if(timerAuto) { clearInterval(timerAuto); timerAuto = null; clearInterval(timerVisual); clock.style.display="none"; btn.innerText="AUTO (↑)"; } else { timerAuto = setInterval(sacarBalota, 6000); clock.style.display="block"; btn.innerText="PARAR (↑)"; resetReloj(); } };
     function resetReloj() { let tl = 6; document.getElementById('timer-count').innerText = "06"; if(timerVisual) clearInterval(timerVisual); timerVisual = setInterval(() => { tl--; document.getElementById('timer-count').innerText = "0"+tl; if(tl<=0) tl=6; }, 1000); }
     
