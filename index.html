@@ -1667,7 +1667,9 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     // FABRICA DE SALAS BINGO RAPID (18, 30, 90)
     // ==========================================
     function createFastBingo(prefix, idPrefix, maxNum, storageKey, cartonSize, gridCols, defaultBg, defaultHeader) {
-        let dbLocal = JSON.parse(localStorage.getItem(storageKey)) || { juego: [], config: { autoWin: false }, serialesExtra: [], serialActivoIndex: -1, colores: { tablero: "#f8f9fa", balotas: "#e9ecef", cartonExport: defaultHeader, cartonFondo: defaultBg }, media: { left: null, right: null }, headerCartonBase64: null };
+        let dbLocal = JSON.parse(localStorage.getItem(storageKey)) || { juego: [], config: { autoWin: false, secuencia: [], usoSecuencia: false, figura: new Array(cartonSize).fill(true), nombreFigura: "PLENO" }, serialesExtra: [], serialActivoIndex: -1, colores: { tablero: "#f8f9fa", balotas: "#e9ecef", cartonExport: defaultHeader, cartonFondo: defaultBg }, media: { left: null, right: null }, headerCartonBase64: null };
+        if(!dbLocal.config.figura) { dbLocal.config.figura = new Array(cartonSize).fill(true); dbLocal.config.nombreFigura = "PLENO"; }
+        
         let cartonesActuales = [], timerAuto = null, timerVisual = null, winRef = null, lastWinCount = 0, manualUnlocked = false, vozOK = false;
 
         window[`${prefix}guardarDatos`] = () => { if(!SISTEMA_AUTORIZADO) return; try { const copy = { ...dbLocal }; copy.headerCartonBase64 = null; copy.media = { left: null, right: null }; localStorage.setItem(storageKey, JSON.stringify(copy)); window[`${prefix}renderizar`](); } catch (e) { alert("Memoria llena."); } };
@@ -1734,14 +1736,126 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         window[`${prefix}seleccionarSerial`] = (idx) => { if(!checkSecurity()) return; dbLocal.serialActivoIndex = idx; window[`${prefix}guardarDatos`](); window[`${prefix}actualizarListaSeriales`](); };
         window[`${prefix}eliminarSerial`] = (idx) => { if(!checkSecurity() || !confirm("¿Borrar?")) return; dbLocal.serialesExtra.splice(idx,1); dbLocal.serialActivoIndex=-1; window[`${prefix}guardarDatos`](); window[`${prefix}actualizarListaSeriales`](); };
 
+        // === FUNCIONES DE SECUENCIA ===
+        window[`${prefix}guardarSecuenciaInput`] = () => {
+            const txt = document.getElementById(`${idPrefix}input-secuencia`).value;
+            const arr = txt.split(/[\s,]+/).map(n => parseInt(n)).filter(n => !isNaN(n) && n >= 1 && n <= maxNum);
+            dbLocal.config.secuencia = arr;
+            window[`${prefix}guardarDatos`]();
+        };
+
+        window[`${prefix}toggleModoSecuencia`] = (val) => {
+            dbLocal.config.usoSecuencia = val;
+            window[`${prefix}guardarSecuenciaInput`](); 
+        };
+
+        window[`${prefix}copiarSecuenciaJugada`] = () => {
+            if (!dbLocal.juego || dbLocal.juego.length === 0) return alert("⚠️ Aún no han salido balotas para exportar.");
+            let jugadaMezclada = [...dbLocal.juego];
+            jugadaMezclada.sort(() => Math.random() - 0.5);
+            const secuenciaTexto = jugadaMezclada.join(", ");
+            navigator.clipboard.writeText(secuenciaTexto).then(() => {
+                alert("✅ ¡Secuencia MEZCLADA copiada! (Sala " + maxNum + ")");
+            }).catch(err => {
+                prompt("Copia tu secuencia mezclada:", secuenciaTexto);
+            });
+        };
+
+        // --- SISTEMA DE FIGURAS BINGOS RAPIDOS ---
+        window[`${prefix}abrirConfig`] = () => {
+            if(!checkSecurity()) return;
+            let modal = document.getElementById(`${idPrefix}modal-config`);
+            if(!modal) {
+                modal = document.createElement('div');
+                modal.id = `${idPrefix}modal-config`;
+                modal.className = "modal-config";
+                modal.innerHTML = `
+                    <h3 style="text-align:center; margin-top:0;">CREAR FIGURA BINGO ${maxNum}</h3>
+                    <p style="text-align:center; font-size:12px; color:#555;">Haz clic en los cuadros que quieres pedir para ganar.</p>
+                    <div id="${idPrefix}selector-figura" class="selector-figura" style="grid-template-columns: repeat(${gridCols}, 1fr); max-width: 250px; margin: auto;"></div>
+                    <input type="text" id="${idPrefix}input-nombre" placeholder="Nombre Jugada (ej. LÍNEA)" style="width:100%; padding:10px; margin-top:15px; border-radius:5px; font-weight: bold; text-align: center;">
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <button onclick="${prefix}marcarTodo()" style="flex:1; background:#0d6efd; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Llenar Todo</button>
+                        <button onclick="${prefix}limpiarTodo()" style="flex:1; background:#6c757d; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Limpiar</button>
+                    </div>
+                    <button onclick="${prefix}guardarConfig()" style="width:100%; background:#2e7d32; color:white; padding:15px; font-weight:bold; border:none; border-radius:10px; margin-top:15px; cursor: pointer;">GUARDAR FIGURA</button>
+                    <button onclick="document.getElementById('${idPrefix}modal-config').style.display='none'" style="width:100%; margin-top:5px; background:none; border:none; color:blue; cursor: pointer;">Cerrar</button>
+                `;
+                document.body.appendChild(modal);
+            }
+            modal.style.display = "block";
+            window[`${prefix}figTemporal`] = [...dbLocal.config.figura];
+            window[`${prefix}renderGridConfig`]();
+            document.getElementById(`${idPrefix}input-nombre`).value = dbLocal.config.nombreFigura;
+        };
+
+        window[`${prefix}renderGridConfig`] = () => {
+            const cont = document.getElementById(`${idPrefix}selector-figura`);
+            cont.innerHTML = "";
+            for(let i=0; i<cartonSize; i++) {
+                let s = document.createElement('div');
+                s.className = "celda-config" + (window[`${prefix}figTemporal`][i] ? " seleccionada" : "");
+                s.onclick = function() {
+                    window[`${prefix}figTemporal`][i] = !window[`${prefix}figTemporal`][i];
+                    this.classList.toggle('seleccionada');
+                };
+                cont.appendChild(s);
+            }
+        };
+
+        window[`${prefix}marcarTodo`] = () => { window[`${prefix}figTemporal`] = new Array(cartonSize).fill(true); window[`${prefix}renderGridConfig`](); };
+        window[`${prefix}limpiarTodo`] = () => { window[`${prefix}figTemporal`] = new Array(cartonSize).fill(false); window[`${prefix}renderGridConfig`](); };
+
+        window[`${prefix}guardarConfig`] = () => {
+            dbLocal.config.figura = [...window[`${prefix}figTemporal`]];
+            dbLocal.config.nombreFigura = document.getElementById(`${idPrefix}input-nombre`).value.toUpperCase() || "PLENO";
+            document.getElementById(`${idPrefix}modal-config`).style.display = 'none';
+            window[`${prefix}guardarDatos`]();
+        };
+
         window[`${prefix}sacarBalota`] = () => {
             if(!checkSecurity() || dbLocal.juego.length >= maxNum) return;
-            let r; do { r = Math.floor(Math.random()*maxNum)+1; } while(dbLocal.juego.includes(r)); dbLocal.juego.push(r); 
+            let r;
+            let usadoSecuencia = false;
+
+            if (dbLocal.config.usoSecuencia && dbLocal.config.secuencia && dbLocal.config.secuencia.length > 0) {
+                const proximo = dbLocal.config.secuencia.find(n => !dbLocal.juego.includes(n));
+                if (proximo) {
+                    r = proximo;
+                    usadoSecuencia = true;
+                }
+            }
+
+            if (!usadoSecuencia) {
+                do { r = Math.floor(Math.random()*maxNum)+1; } while(dbLocal.juego.includes(r));
+            }
+
+            dbLocal.juego.push(r); 
             if(vozOK) { try { new Audio(`Sonidos_bingo75/${r}.wav`).play(); }catch(e){} }
             window[`${prefix}guardarDatos`](); if(timerAuto) resetReloj();
         };
 
         window[`${prefix}renderizar`] = () => {
+            // Actualizar DOM central dinámicamente si no tiene el bloque de figura
+            const panel = document.querySelector(`#cs-bingo${maxNum}-content .game-center-panel`);
+            if (panel && !document.getElementById(`${idPrefix}figura-display`)) {
+                panel.children[0].innerHTML = `<strong style="font-size: 2.5vh; color: #495057; display:block; margin-bottom:5px;">SALA ${maxNum}</strong><div id="${idPrefix}figura-display" style="display:grid; grid-template-columns:repeat(${gridCols},1fr); gap:2px; width:${gridCols*20}px; background:#333; padding:3px; margin: 0 auto; border-radius:4px;"></div><small id="${idPrefix}nombre-figura" style="font-weight:bold; color: ${maxNum===18?'#a855f7':maxNum===30?'#06b6d4':'#f97316'}; font-size:16px;">PLENO</small>`;
+            }
+
+            // Dibujar figura en el centro
+            const figDisp = document.getElementById(`${idPrefix}figura-display`);
+            if(figDisp) {
+                figDisp.innerHTML = "";
+                dbLocal.config.figura.forEach(m => {
+                    let c = document.createElement('div');
+                    c.style.width="100%"; c.style.aspectRatio="1/1";
+                    c.style.background = m ? "#ffeb3b" : "#555";
+                    figDisp.appendChild(c);
+                });
+            }
+            const figName = document.getElementById(`${idPrefix}nombre-figura`);
+            if(figName) figName.innerText = dbLocal.config.nombreFigura;
+
             document.getElementById(`${idPrefix}switch-ganadores`).checked = dbLocal.config.autoWin;
             document.querySelectorAll(`.${idPrefix}bola-mini`).forEach(b => { b.classList.remove('activa', 'ultima'); b.style.backgroundColor = dbLocal.colores?.balotas || '#e9ecef'; });
             if(dbLocal.juego.length > 0){
@@ -1771,14 +1885,29 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
             if(!c) return alert("No existe el cartón.");
             const winR = window.open("", `R${maxNum}`, "width=500,height=600");
             winR.document.write(`<html><head><title>VERIFICAR</title><style>body{background:#121212;color:white;text-align:center;font-family:Arial;} .g-main{display:grid;grid-template-columns:repeat(${gridCols},1fr);gap:5px;background:#000;border:5px solid #000;} .c-num{background:white;color:black;height:${maxNum===90?'80':'120'}px;display:flex;align-items:center;justify-content:center;font-size:45px;font-weight:900;} .marked{background:${dbLocal.colores.cartonExport} !important; color:white;}</style></head><body><div style="background:${dbLocal.colores.cartonFondo};padding:15px;margin:auto;width:450px;"><div style="background:${dbLocal.colores.cartonExport}; color:white; font-size:40px; font-weight:900; padding:10px;">BINGO ${maxNum}</div><div class="g-main">`);
-            c.numeros.forEach(num => winR.document.write(`<div class="c-num ${dbLocal.juego.includes(num)?'marked':''}">${num}</div>`));
+            c.numeros.forEach((num, i) => {
+                let isMarked = dbLocal.juego.includes(num);
+                let isFig = dbLocal.config.figura[i];
+                let figClass = (isFig && !isMarked) ? 'border:6px solid #ffeb3b; box-sizing:border-box;' : '';
+                winR.document.write(`<div class="c-num ${isMarked?'marked':''}" style="${figClass}">${num}</div>`);
+            });
             winR.document.write(`</div><h2>CARTÓN #${n}</h2></div></body></html>`);
         };
         window[`${prefix}manualCheckById`] = (n) => { document.getElementById(`${idPrefix}num-revisar`).value = n; window[`${prefix}manualCheck`](); };
 
         function detectarGanadores() {
             if (!dbLocal.config.autoWin) return; let wins = [];
-            cartonesActuales.forEach(c => { let ok = true; c.numeros.forEach(n => { if(!dbLocal.juego.includes(n)) ok = false; }); if(ok) wins.push(c.carton); });
+            cartonesActuales.forEach(c => { 
+                let ok = true; 
+                let tieneFigura = false;
+                for(let i=0; i<cartonSize; i++) {
+                    if(dbLocal.config.figura[i]) {
+                        tieneFigura = true;
+                        if(!dbLocal.juego.includes(c.numeros[i])) { ok = false; break; }
+                    }
+                }
+                if(ok && tieneFigura) wins.push(c.carton); 
+            });
             if (wins.length > 0 && wins.length !== lastWinCount) {
                 if (winRef && !winRef.closed) winRef.close();
                 winRef = window.open("", `W${maxNum}`, "width=350,height=500");
@@ -1802,6 +1931,17 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
 
         window[`iniciarAppBingo${maxNum}`] = () => {
             setInterval(() => { const ahora = new Date(); document.getElementById(`${idPrefix}fecha-pc`).innerText = ahora.toLocaleDateString(); document.getElementById(`${idPrefix}hora-pc`).innerText = ahora.toLocaleTimeString(); }, 1000);
+            
+            // Cargar valores de secuencia si existen
+            if(dbLocal.config.secuencia) {
+                const inp = document.getElementById(`${idPrefix}input-secuencia`);
+                if(inp) inp.value = dbLocal.config.secuencia.join(", ");
+            }
+            if(dbLocal.config.usoSecuencia) {
+                const chk = document.getElementById(`${idPrefix}check-secuencia`);
+                if(chk) chk.checked = true;
+            }
+
             if(dbLocal.colores) {
                 if(dbLocal.colores.tablero) { document.getElementById(`${idPrefix}color-tablero`).value = dbLocal.colores.tablero; document.getElementById(`pantalla-principal-${maxNum}`).style.backgroundColor = dbLocal.colores.tablero; }
                 if(dbLocal.colores.balotas) document.getElementById(`${idPrefix}color-balotas`).value = dbLocal.colores.balotas;
@@ -1817,6 +1957,22 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                     tM.appendChild(b);
                 }
             }
+            
+            // Inyectar botón de figura dinámicamente
+            const adminZone = document.getElementById(`admin-zone-${maxNum}`);
+            if(adminZone && !document.getElementById(`${idPrefix}btn-figura`)) {
+                const btnAuto = document.getElementById(`${idPrefix}btn-auto`);
+                const btnFig = document.createElement('button');
+                btnFig.id = `${idPrefix}btn-figura`;
+                btnFig.className = "admin-btn";
+                btnFig.style.background = "#ffc107";
+                btnFig.style.color = "black";
+                btnFig.style.fontWeight = "bold";
+                btnFig.innerText = `FIGURA (${gridCols}x${cartonSize/gridCols})`;
+                btnFig.onclick = window[`${prefix}abrirConfig`];
+                btnAuto.parentNode.insertBefore(btnFig, btnAuto.nextSibling);
+            }
+            
             window[`${prefix}actualizarListaSeriales`](); window[`${prefix}renderizar`]();
         };
     }
