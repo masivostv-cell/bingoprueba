@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1280">
     <title>Casino Suite V16 (Bingo 75, 18, 30, 90 + Ruleta + Casino)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -176,10 +176,11 @@
         /* ========================================== */
         .figuras-flotantes {
             position: absolute !important;
-            top: 220px; 
+            bottom: 20px; /* <--- AHORA INICIA ABAJO DEL TABLERO */
+            top: auto;    /* <--- Liberamos la parte superior */
             left: 20px;
-            width: 280px; /* 1. FIJAMOS EL ANCHO BASE */
-            height: 180px; /* 2. FIJAMOS EL ALTO BASE */
+            width: 280px; 
+            height: 180px; 
             z-index: 99990;
             cursor: move;
             border: 3px dashed transparent;
@@ -188,9 +189,10 @@
             transition: background 0.3s;
             margin: 0 !important;
             resize: both; 
-            overflow: hidden; /* Ocultamos barras feas */
+            overflow: hidden; 
             min-width: 150px; 
             min-height: 100px;
+            touch-action: none; /* <--- CRUCIAL: Permite moverlo en celulares sin hacer scroll a la pantalla */
         }
         .figuras-flotantes:hover {
             border: 3px dashed #facc15;
@@ -254,42 +256,7 @@
         .celda-config { aspect-ratio: 1/1; background: #555; cursor: pointer; border-radius: 4px; border: 1px solid #777; transition: 0.1s; }
         .celda-config.seleccionada { background: #ffeb3b; border: 1px solid #000; }
 
-        /* ========================================== */
-        /* RESPONSIVE DESING (ADAPTABLE A MOVILES)    */
-        /* ========================================== */
-        @media (max-width: 768px) {
-            .header-bingo { flex-direction: column; height: auto; min-height:auto; padding: 15px; }
-            .media-zone { display: none; }
-            .game-center-panel { flex-direction: column; width:100%; gap:15px;}
-            .balota-grande { width: 120px; min-width:120px; height: 120px; min-height:120px;}
-            .balota-grande .numero-balota { font-size: 60px; }
-            .historial-balotas { margin-bottom:10px;}
-            #contador-balotas, #b18-contador-balotas, #b30-contador-balotas, #b90-contador-balotas { font-size: 50px; }
-            .fila-bingo { gap: 5px; }
-            .letra-circulo { width: 35px; min-width:35px; height: 35px; min-height:35px; font-size: 20px; }
-            .bola-mini { font-size: 16px; }
-            .numeros-grid { gap: 2px; }
-            .b18-board-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding:5px;}
-            .b18-bola-mini { font-size: 40px; border-radius:10px;}
-            .b30-board-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; padding:5px;}
-            .b30-bola-mini { font-size: 30px; border-radius:8px;}
-            .b90-board-grid { gap: 3px; padding:5px; min-height:auto;}
-            .b90-bola-mini { font-size: 14px; border-radius: 4px; padding:5px 0;}
-            .admin-zone { padding: 15px; }
-            .admin-btn { width: 100%; font-size: 16px; padding:12px;}
-            #cs-ruleta-content { flex-direction: column; padding: 10px; }
-            .rl-panel-left { width: 100%; }
-            .rl-wheel-container { width: 280px; height: 280px; margin: 10px auto; }
-            .rl-grid-container, .rl-out-bets { overflow-x: auto; -webkit-overflow-scrolling: touch; justify-content: flex-start;}
-            .rl-zero { min-width: 80px; }
-            .rl-numbers { min-width: 600px; }
-            .rl-out-btn { min-width: 150px; font-size: 16px;}
-            .cs-table-felt { padding: 15px; }
-            .dice-die { width: 100px; height: 100px; font-size: 60px; }
-            .slot-reel { width: 90px; height: 120px; font-size: 60px; }
-            .loteria-container { flex-direction:column; }
-            .loteria-right { width:100%; height: 300px;}
-        }
+      
 /* ========================================== */
         /* VISTA CLÁSICA (TABLA BLANCA, FONDO AZUL)   */
         /* ========================================== */
@@ -539,6 +506,71 @@
             object-fit: cover; /* Hace que el video llene el cuadro sin deformarse */
             pointer-events: none; /* VITAL: Permite arrastrar haciendo clic sobre el video */
             transform: scaleX(-1); /* Efecto espejo */
+        }
+    /* ========================================== */
+        /* ADAPTACIÓN PARA LAPTOPS Y PANTALLAS MEDIANAS */
+        /* ========================================== */
+        @media (min-width: 769px) and (max-width: 1366px) {
+            .vista-clasica {
+                gap: 10px;
+                padding: 10px;
+            }
+            .vista-clasica #tablero-maestro {
+                padding: 10px;
+                gap: 5px;
+            }
+            .vista-clasica .fila-bingo {
+                gap: 4px; /* Reducimos el espacio entre la letra y los números */
+            }
+            .vista-clasica .numeros-grid {
+                display: grid; 
+                grid-template-columns: repeat(15, minmax(0, 1fr)); /* Fuerza a que no se salgan del ancho */
+                gap: 4px;
+            }
+            .vista-clasica .letra-circulo {
+                width: 40px; min-width: 40px; 
+                height: 40px; min-height: 40px; 
+                font-size: 20px;
+            }
+            .vista-clasica .bola-mini {
+                font-size: 2vw; /* Ahora la letra depende del ancho de la pantalla, no del alto */
+            }
+            .vista-clasica .balota-grande {
+                width: 140px; min-width: 140px; 
+                height: 140px; min-height: 140px;
+            }
+            .vista-clasica .balota-grande .numero-balota { font-size: 65px !important; }
+            .vista-clasica .bola-historial {
+                width: 55px; min-width: 55px; 
+                height: 55px; min-height: 55px; 
+                font-size: 25px;
+            }
+            .vista-clasica .game-center-panel > div.figuras-flotantes {
+                transform: scale(1) !important; /* Achicamos las figuras a jugar */
+            }
+            .vista-clasica .game-center-panel > div:nth-child(3) {
+                font-size: 40px !important; /* Achicamos el contador de 0/75 */
+            }
+        }
+    /* ========================================== */
+        /* AJUSTE PARA ESTIRAR EL TABLERO HACIA ABAJO */
+        /* ========================================== */
+        .vista-clasica {
+            grid-template-rows: 1fr auto !important; 
+            align-items: stretch !important;
+        }
+
+        .vista-clasica #tablero-maestro {
+            height: 65%; /* Forzamos a que el tablero ocupe todo el alto disponible */
+        }
+
+        .vista-clasica .fila-bingo {
+            flex: 1; /* Hace que cada fila (B, I, N, G, O) se estire equitativamente */
+        }
+
+        .vista-clasica .bola-mini {
+            aspect-ratio: auto !important; /* Rompemos la regla del cuadrado perfecto */
+            height: 100% !important;       /* Dejamos que se vuelvan rectángulos hacia abajo */
         }
     </style>
 </head>
@@ -2130,7 +2162,16 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
             }
             
             window[`${prefix}actualizarListaSeriales`](); window[`${prefix}renderizar`]();
+            
         };
+    window.addEventListener('storage', (e) => {
+            if (e.key === storageKey && e.newValue) {
+                dbLocal = JSON.parse(e.newValue);
+                if(typeof window[`${prefix}renderizar`] === 'function') {
+                    window[`${prefix}renderizar`]();
+                }
+            }
+        });    
     }
 
     // Instanciar módulos de bingo rápidos
@@ -2805,37 +2846,55 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     };
 // Función mágica que permite arrastrar la cámara por la pantalla
     // Función mágica que permite arrastrar cualquier elemento por la pantalla
+    // Función mágica que permite arrastrar cualquier elemento por la pantalla
     function hacerArrastrable(elmnt) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        
+        // Soportar Mouse (PC) y Touch (Celulares)
         elmnt.onmousedown = dragMouseDown;
+        elmnt.ontouchstart = dragMouseDown;
 
         function dragMouseDown(e) {
             e = e || window.event;
             
-            // ¡VITAL! Si hacen clic en un Checkbox, una etiqueta o texto, NO arrastramos. 
-            // Esto permite prender/apagar las figuras normalmente sin mover la caja por error.
-            if(['INPUT', 'LABEL', 'SMALL'].includes(e.target.tagName)) return;
+            // ¡VITAL! Si hacen clic en un Checkbox, etiqueta o texto, NO arrastramos.
+            if(['INPUT', 'LABEL', 'SMALL', 'BUTTON'].includes(e.target.tagName)) return;
             
             // Si el usuario hace clic en la esquina inferior derecha (para cambiar tamaño), NO arrastramos.
             let rect = elmnt.getBoundingClientRect();
-            let isResizeZone = (e.clientX > rect.right - 25 && e.clientY > rect.bottom - 25);
+            let clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            let clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            
+            let isResizeZone = (clientX > rect.right - 25 && clientY > rect.bottom - 25);
             if(isResizeZone) return; 
             
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
+            if (!e.type.includes('touch')) e.preventDefault();
+            
+            pos3 = clientX;
+            pos4 = clientY;
+            
+            // IMPORTANTÍSIMO: Liberamos el anclaje de abajo para poder moverlo libremente hacia arriba
+            elmnt.style.bottom = "auto";
+            
             document.onmouseup = closeDragElement;
             document.onmousemove = elementDrag;
+            document.ontouchend = closeDragElement;
+            document.ontouchmove = elementDrag;
         }
 
         function elementDrag(e) {
             e = e || window.event;
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            // Calculamos la nueva posición
+            if (!e.type.includes('touch')) e.preventDefault();
+
+            let clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            let clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+            pos1 = pos3 - clientX;
+            pos2 = pos4 - clientY;
+            pos3 = clientX;
+            pos4 = clientY;
+            
+            // Calculamos y aplicamos la nueva posición
             elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
             elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
         }
@@ -2843,8 +2902,19 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         function closeDragElement() {
             document.onmouseup = null;
             document.onmousemove = null;
+            document.ontouchend = null;
+            document.ontouchmove = null;
         }
     }
+
+    window.addEventListener('storage', (e) => {
+        // Si otra pestaña actualizó la base de datos del Bingo 75...
+        if (e.key === 'bingoSala2_V15_MASTER' && e.newValue) {
+            // Actualizamos la memoria de esta pestaña y redibujamos la pantalla al instante
+            dbLocal = JSON.parse(e.newValue);
+            if(typeof renderizar === 'function') renderizar();
+        }
+    });
 </script>
 </body>
 </html>
