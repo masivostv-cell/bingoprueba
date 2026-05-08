@@ -143,8 +143,67 @@
         #app-content::-webkit-scrollbar, #cs-bingo18-content::-webkit-scrollbar, #cs-bingo30-content::-webkit-scrollbar, #cs-bingo90-content::-webkit-scrollbar { display: none; }
         .pantalla-principal-base { width: 100%; min-height: 100vh; height:auto; display: flex; flex-direction: column; padding: 10px; background: #f8f9fa; flex-shrink: 0; position: relative; transition: background 0.3s, border 0.3s; }
         .header-bingo { height: 25vh; min-height:200px; display: flex; justify-content: space-between; align-items: center; background: #f1f3f5; padding: 5px 10px; border-radius: 15px; border: 1px solid #dee2e6; margin-bottom: 10px; gap: 10px; }
-        .media-zone { width: 20%; height: 100%; background: transparent; border: none; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
-        .media-zone img, .media-zone video { width: 100%; height: 100%; object-fit: contain; }
+        /* ZONAS MULTIMEDIA FLOTANTES (Imágenes/Videos subidos) */
+        .media-zone { 
+            position: absolute; /* Las hace flotantes y libres */
+            top: 20px; 
+            width: 250px; /* Tamaño inicial */
+            height: 250px; 
+            background: transparent; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 99990; /* Asegura que estén por encima del tablero */
+            resize: both; /* Permite agrandar/achicar desde la esquina inferior derecha */
+            cursor: move; /* Muestra el cursor de mover */
+            border: 3px dashed transparent; /* Borde invisible por defecto */
+            transition: border 0.3s, background 0.3s;
+        }
+        .media-zone:hover {
+            border: 3px dashed #facc15; /* Se ilumina en amarillo al pasar el mouse para que sepas de dónde agarrar */
+            background: rgba(0,0,0,0.3); /* Se oscurece un poco para verla si está vacía */
+        }
+        .media-zone img, .media-zone video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            pointer-events: none; /* VITAL: Evita que la imagen bloquee el clic para arrastrar */
+        }
+        
+        /* ZONA DE FIGURAS FLOTANTES                  */
+        /* ========================================== */
+        .figuras-flotantes {
+            position: absolute !important;
+            top: 220px; 
+            left: 20px;
+            width: 280px; /* 1. FIJAMOS EL ANCHO BASE */
+            height: 180px; /* 2. FIJAMOS EL ALTO BASE */
+            z-index: 99990;
+            cursor: move;
+            border: 3px dashed transparent;
+            padding: 10px;
+            border-radius: 10px;
+            transition: background 0.3s;
+            margin: 0 !important;
+            resize: both; 
+            overflow: hidden; /* Ocultamos barras feas */
+            min-width: 150px; 
+            min-height: 100px;
+        }
+        .figuras-flotantes:hover {
+            border: 3px dashed #facc15;
+            background: rgba(0,0,0,0.15);
+        }
+        /* Para que en la vista clásica mantengan su zoom inicial */
+        .vista-clasica .figuras-flotantes {
+            transform: scale(1.4);
+            transform-origin: left top;
+        }
+        /* Posiciones iniciales para que no aparezcan amontonadas */
+        #media-left, #b18-media-left, #b30-media-left, #b90-media-left, #loteria-media-left { left: 20px; }
+        #media-right, #b18-media-right, #b30-media-right, #b90-media-right, #loteria-media-right { right: 20px; }
         .game-center-panel { flex-grow: 1; display: flex; justify-content: space-around; align-items: center; height: 100%; }
         .timer-auto-container { display: none; position: absolute; top: 15px; right: 30px; background: #000; color: #00ff00; padding: 8px 20px; border-radius: 10px; font-weight: bold; font-family: 'Courier New', monospace; z-index: 100; font-size: 24px; border: 2px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .balota-grande { width: 18vh; height: 18vh; min-width:120px; min-height:120px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); color: white; }
@@ -244,7 +303,7 @@
         }
 
         .vista-clasica .header-bingo { display: contents !important; }
-        .vista-clasica .media-zone { display: none !important; }
+        .vista-clasica .media-zone { display: flex !important; }
         .vista-clasica .game-center-panel { display: contents !important; }
 
         /* 1. TABLERO MAESTRO (Izquierda, Arriba) */
@@ -378,19 +437,19 @@
             line-height: 0.9;
         }
 
-        /* 3. FIGURA (Abajo Izquierda, debajo del tablero) */
-        .vista-clasica .game-center-panel > div:nth-child(1) {
-            grid-column: 1 / 2;
-            grid-row: 2 / 3;
-            display: flex;
-            flex-direction: column !important; /* <-- Esto arregla que el texto se apile hacia abajo y no estorbe */
-            align-items: center;
-            justify-content: flex-start;
-            gap: 8px !important;
-            transform: scale(1.4);
-            transform-origin: center top;
-            margin-top: 15px;
-        }
+       /* 3. FIGURA FLOTANTE (Corregida para evitar que salga volando) */
+.vista-clasica .game-center-panel > div.figuras-flotantes {
+    grid-column: auto !important; /* Desconectamos de la cuadrícula */
+    grid-row: auto !important;    /* Desconectamos de la cuadrícula */
+    margin: 0 !important;         /* Quitamos el margen negativo viejo */
+    
+    display: flex !important;
+    flex-direction: column !important; 
+    align-items: flex-start !important; 
+    gap: 8px !important;
+    transform: scale(1.4);
+    transform-origin: left top; 
+}
         
         /* Bajar el nombre de la figura y resaltarlo */
         .vista-clasica #nombre-figura {
@@ -455,7 +514,32 @@
         .rs-btn-spin:active { transform: scale(0.95); }
         .rs-btn-spin:disabled { background:#475569; cursor:not-allowed; transform: none; box-shadow:none; border-color:#333;}
         .rs-btn-update { background:#22c55e; color:white; border:none; padding:15px; font-size:18px; font-weight:bold; border-radius:8px; cursor:pointer; box-shadow:0 4px 10px rgba(34, 197, 94, 0.4);}
-    
+    /* ========================================== */
+        /* ESTILOS PARA LA CÁMARA FLOTANTE            */
+        /* ========================================== */
+        #camara-flotante {
+            position: absolute; /* ¡CAMBIO CLAVE! Antes era 'fixed' */
+            top: 20px; /* Hacemos que aparezca arriba en vez de abajo */
+            left: 30px;
+            width: 320px; 
+            height: 240px;
+            background: #000;
+            border: 4px solid #facc15; 
+            border-radius: 12px;
+            z-index: 99999;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            resize: both; 
+            overflow: hidden;
+            display: none; 
+            cursor: move; 
+        }
+        #camara-flotante video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Hace que el video llene el cuadro sin deformarse */
+            pointer-events: none; /* VITAL: Permite arrastrar haciendo clic sobre el video */
+            transform: scaleX(-1); /* Efecto espejo */
+        }
     </style>
 </head>
 <body>
@@ -709,6 +793,7 @@
         <div class="admin-zone" id="admin-zone-loteria" style="flex-shrink:0;">
             <button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #22c55e; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY</button>
             <button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button>
+            <button onclick="toggleCamaraFlotante()" class="admin-btn" style="background:#e83e8c; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🎥 ACTIVAR/OCULTAR CÁMARA</button>
             <button onclick="toggleFullScreen()" class="admin-btn" style="background:#17a2b8; width:100%; margin-bottom:20px;">🖥️ PANTALLA COMPLETA</button>
             
             <button onclick="sacarCartaLoteria()" class="admin-btn" style="background:#28a745; font-size: 20px;">CANTAR (↓)</button>
@@ -821,9 +906,13 @@
         <div class="header-bingo">
             <div id="media-left" class="media-zone"></div>
             <div class="game-center-panel">
-                <div style="text-align:center;">
-                    <strong style="font-size: 2vh; color: #495057;">FIGURAS A JUGAR</strong>
-                    <div id="figuras-multiples-container" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:5px; max-width: 250px;"></div>
+                <div id="zona-figuras" class="figuras-flotantes"> 
+                    <div style="display:flex; align-items:center; gap:10px; background: rgba(255,255,255,0.7); padding: 2px 5px; border-radius: 4px; width:max-content;">
+                        <strong style="font-size: 14px; color: #495057; pointer-events:none;"></strong>
+                        <div style="display:flex; gap:3px;">
+                        </div>
+                    </div>
+                    <div id="figuras-multiples-container" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start; margin-top:5px; max-width: 250px;"></div> 
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:center;">
                     <div class="balota-grande bg-red-ball">
@@ -842,6 +931,9 @@
     <div class="admin-zone">
         <button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #3b82f6; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY DEL CASINO</button>
         <button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button>
+        
+        <button onclick="toggleCamaraFlotante()" class="admin-btn" style="background:#e83e8c; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🎥 ACTIVAR/OCULTAR CÁMARA</button>
+
         <button id="btn-activar-voz" onclick="permitirSonido()" style="background:#ffc107; color:#000; border:3px solid #000; padding:15px; font-weight:900; cursor:pointer; width:100%; max-width:800px; border-radius:10px; margin:0 auto 10px; font-size:18px; display:block;">🔊 ACTIVAR SONIDO</button>
         <button onclick="toggleFullScreen()" style="background:#17a2b8; color:#fff; border:3px solid #fff; padding:15px; font-weight:900; cursor:pointer; width:100%; max-width:800px; border-radius:10px; margin:0 auto 20px; font-size:18px; display:block;">🖥️ PANTALLA COMPLETA</button>
 
@@ -1930,33 +2022,55 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         };
         window[`${prefix}manualCheckById`] = (n) => { document.getElementById(`${idPrefix}num-revisar`).value = n; window[`${prefix}manualCheck`](); };
 
-        function detectarGanadores() {
-            if (!dbLocal.config.autoWin) return; let wins = [];
-            cartonesActuales.forEach(c => { 
-                let ok = true; 
-                let tieneFigura = false;
-                for(let i=0; i<cartonSize; i++) {
-                    if(dbLocal.config.figura[i]) {
-                        tieneFigura = true;
-                        if(!dbLocal.juego.includes(c.numeros[i])) { ok = false; break; }
-                    }
-                }
-                if(ok && tieneFigura) wins.push(c.carton); 
-            });
+        function detectarGanadores() { 
+        if (!dbLocal.config.autoWin) return; 
+        let wins = []; 
+        let todasLasFigs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "FIGURA", patron: dbLocal.config.figura, activa: true} ];
+        
+        // Solo buscamos ganadores en las figuras que tengan el checkbox ACTIVO
+        let figsAComprobar = todasLasFigs.filter(f => f.activa !== false);
+        if (figsAComprobar.length === 0) return; 
+        
+        cartonesActuales.forEach(c => { 
+            let figurasGanadas = []; // Guardará los nombres de las figuras ganadoras
             
-            if (wins.length > 0 && wins.length !== lastWinCount) {
-                if (winRef && !winRef.closed) winRef.close();
-                winRef = window.open("", `W${maxNum}`, "width=350,height=500");
-                
-                // Mismo método funcional que aplicamos al Bingo 75
-                let botonesHTML = wins.map(n => `<button class="btn" onclick="window.opener.${prefix}manualCheckById(${n})">VER CARTÓN #${n}</button>`).join('');
-                
-                winRef.document.write(`<html><head><title>🏆 GANADORES</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.5);transition:0.2s;} .btn:hover{filter:brightness(1.2);}</style></head><body><h2>🏆 GANADORES</h2><div id="l">${botonesHTML}</div></body></html>`);
-                
-                winRef.document.close(); // CRITICO: LIBERA LA VENTANA PARA PERMITIR EL CLIC
-                lastWinCount = wins.length;
-            } else if(wins.length === 0) lastWinCount = 0;
-        }
+            for(let f of figsAComprobar) {
+                let ok = true; 
+                let tienePatron = false;
+                f.patron.forEach((m, idx) => { 
+                    if(m) {
+                        tienePatron = true;
+                        if(c.numeros[mapeoCarton[idx]]!==0 && !dbLocal.juego.includes(c.numeros[mapeoCarton[idx]])) ok = false; 
+                    }
+                }); 
+                if(ok && tienePatron) { 
+                    figurasGanadas.push(f.nombre); // Agregamos el nombre de la figura
+                }
+            }
+            // Si el cartón ganó al menos en una figura, lo guardamos con sus datos
+            if(figurasGanadas.length > 0) {
+                wins.push({ carton: c.carton, figuras: figurasGanadas.join(" + ") }); 
+            }
+        }); 
+        
+        if (wins.length > 0 && wins.length !== lastWinCount) { 
+            if (winRef && !winRef.closed) winRef.close(); 
+            winRef = window.open("", "W75", "width=350,height=500"); 
+            
+            // Creamos los botones incluyendo el nombre de la figura ganadora en amarillo
+            let botonesHTML = wins.map(w => `
+                <button class="btn" onclick="window.opener.manualCheckById(${w.carton})">
+                    CARTÓN #${w.carton}<br>
+                    <span style="font-size:14px; color:#ffeb3b;">⭐ ${w.figuras}</span>
+                </button>
+            `).join('');
+
+            winRef.document.write(`<html><head><title>🏆 GANADORES 75</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.5);transition:0.2s;} .btn:hover{filter:brightness(1.2);}</style></head><body><h2>🏆 GANADORES 75</h2><div id="l">${botonesHTML}</div></body></html>`); 
+            
+            winRef.document.close();
+            lastWinCount = wins.length; 
+        } else if(wins.length === 0) lastWinCount = 0; 
+    }
         
 
         window[`${prefix}toggleAutomatico`] = () => {
@@ -2184,30 +2298,85 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     window.renderizar = () => { 
         document.getElementById('switch-ganadores').checked = dbLocal.config.autoWin; 
         document.querySelectorAll('.bola-mini').forEach(b => { b.classList.remove('activa', 'ultima'); b.style.backgroundColor = dbLocal.colores.balotas || '#e9ecef'; }); 
+        
+        // --- NUEVA FUNCIÓN: Obtiene el color según la letra del Bingo ---
+        const getColorPorNumero = (num) => {
+            if(num <= 15) return '#004080'; // B (Azul)
+            if(num <= 30) return '#d32f2f'; // I (Rojo)
+            if(num <= 45) return '#757575'; // N (Gris)
+            if(num <= 60) return '#28a745'; // G (Verde)
+            return '#fbc02d'; // O (Amarillo)
+        };
+
         if(dbLocal.juego.length > 0){ 
-            let u = dbLocal.juego[dbLocal.juego.length-1]; document.getElementById('main-numero').innerText = u; document.getElementById('main-letra').innerText = (u<=15?'B':u<=30?'I':u<=45?'N':u<=60?'G':'O'); 
+            let u = dbLocal.juego[dbLocal.juego.length-1]; 
+            document.getElementById('main-numero').innerText = u; 
+            document.getElementById('main-letra').innerText = (u<=15?'B':u<=30?'I':u<=45?'N':u<=60?'G':'O'); 
+            
+            // 1. PINTAR EL BORDE DE LA BALOTA GRANDE (Específicamente la del Bingo 75)
+            let balotaGrande = document.querySelector('#app-content .balota-grande');
+            if(balotaGrande) {
+                let colorPrincipal = getColorPorNumero(u);
+                
+                // Mantenemos el fondo blanco y la letra oscura
+                balotaGrande.style.setProperty('background', 'white', 'important');
+                balotaGrande.style.setProperty('color', '#111', 'important');
+                
+                // Pintamos el anillo grueso exterior
+                balotaGrande.style.setProperty('border-color', colorPrincipal, 'important'); 
+                balotaGrande.style.setProperty('border-width', '8px', 'important');
+                balotaGrande.style.setProperty('border-style', 'solid', 'important');
+                
+                // Detalle pro: Un pequeño resplandor del color de la balota
+                balotaGrande.style.setProperty('box-shadow', `0 10px 25px ${colorPrincipal}aa`, 'important');
+            }
+
             dbLocal.juego.forEach(n => { const el = document.getElementById('bola-'+n); if(el) { el.classList.add('activa'); el.style.backgroundColor = ''; } }); 
             const ult = document.getElementById('bola-'+u); if(ult) ult.classList.add('ultima'); 
-            document.getElementById('historial-4').innerHTML = ""; const ultimas = dbLocal.juego.slice(-5, -1).reverse(); 
-            for(let i=0; i<4; i++) document.getElementById('historial-4').innerHTML += `<div class="bola-historial">${ultimas[i] || "-"}</div>`; 
+            
+            document.getElementById('historial-4').innerHTML = ""; 
+            const ultimas = dbLocal.juego.slice(-5, -1).reverse(); 
+            for(let i=0; i<4; i++) {
+                let numH = ultimas[i];
+                if (numH) {
+                    // 2. PINTAR LAS BALOTAS DEL HISTORIAL
+                    let colorH = getColorPorNumero(numH);
+                    document.getElementById('historial-4').innerHTML += `<div class="bola-historial" style="background:${colorH} !important; color:white !important; border: 3px solid white !important;">${numH}</div>`;
+                } else {
+                    document.getElementById('historial-4').innerHTML += `<div class="bola-historial">-</div>`;
+                }
+            } 
         } else { 
-            document.getElementById('main-numero').innerText = "--"; document.getElementById('main-letra').innerText = "-"; document.getElementById('historial-4').innerHTML = '<div class="bola-historial">-</div>'.repeat(4); 
+            // CUANDO SE REINICIA EL JUEGO (Tablero vacío)
+            document.getElementById('main-numero').innerText = "--"; 
+            document.getElementById('main-letra').innerText = "-"; 
+            document.getElementById('historial-4').innerHTML = '<div class="bola-historial">-</div>'.repeat(4); 
+            
+            let balotaGrande = document.querySelector('#app-content .balota-grande');
+            if(balotaGrande) {
+                balotaGrande.style.background = '';
+                balotaGrande.style.color = '';
+                // Quitamos las propiedades inyectadas para que vuelva a su estado original
+                balotaGrande.style.removeProperty('border-color');
+                balotaGrande.style.removeProperty('border-width');
+                balotaGrande.style.removeProperty('border-style');
+                balotaGrande.style.removeProperty('box-shadow');
+            }
         } 
         document.getElementById('contador-balotas').innerText = dbLocal.juego.length + "/75"; 
         
-        // DIBUJAR MÚLTIPLES FIGURAS EN PANTALLA CON CHECKBOX ENCIMA
+        // DIBUJAR MÚLTIPLES FIGURAS EN PANTALLA
         const contMultiples = document.getElementById('figuras-multiples-container');
         if(contMultiples) {
             contMultiples.innerHTML = "";
-            contMultiples.style.maxWidth = "500px"; // Un poco más ancho
+            contMultiples.style.maxWidth = "500px"; 
             let figs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "---", patron: dbLocal.config.figura || new Array(25).fill(false), activa: true} ];
             
             figs.forEach((fig, index) => {
-                // Si la figura no tiene el estado 'activa' definido, la ponemos true por defecto
                 if(typeof fig.activa === 'undefined') fig.activa = true;
                 
                 let isActive = fig.activa; 
-                let opacidad = isActive ? "1" : "0.4"; // Se vuelve casi transparente si se apaga
+                let opacidad = isActive ? "1" : "0.4"; 
                 
                 let colDiv = document.createElement('div'); 
                 colDiv.style.display = "flex"; 
@@ -2216,7 +2385,6 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                 colDiv.style.opacity = opacidad;
                 colDiv.style.transition = "opacity 0.3s";
                 
-                // CHECKBOX ENCIMA DE LA FIGURA
                 let checkContainer = document.createElement('div');
                 checkContainer.style.marginBottom = "5px";
                 checkContainer.innerHTML = `<label style="cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; font-weight:900; color:${isActive ? '#22c55e' : '#dc3545'};">
@@ -2224,7 +2392,6 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                     ${isActive ? 'ACTIVA' : 'PAGADA'}
                 </label>`;
                 
-                // TABLERITO DE LA FIGURA
                 let gridFig = document.createElement('div'); 
                 gridFig.style.display = "grid"; 
                 gridFig.style.gridTemplateColumns = "repeat(5, 1fr)"; 
@@ -2239,12 +2406,10 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                     let c = document.createElement('div'); 
                     c.style.width = "100%"; 
                     c.style.aspectRatio = "1/1"; 
-                    // Si está inactiva, pinta los amarillos de gris claro
                     c.style.background = m ? (isActive ? "#ffeb3b" : "#888") : "#555"; 
                     gridFig.appendChild(c); 
                 });
                 
-                // NOMBRE DE LA FIGURA (ABAJO)
                 let lbl = document.createElement('small'); 
                 lbl.innerText = fig.nombre; 
                 lbl.style.fontWeight = "bold"; 
@@ -2255,7 +2420,6 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                 lbl.style.overflow = "hidden"; 
                 lbl.style.textOverflow = "ellipsis"; 
                 lbl.style.maxWidth = "85px";
-                // Tacha el nombre si ya se pagó el premio
                 if(!isActive) lbl.style.textDecoration = "line-through";
                 
                 colDiv.appendChild(checkContainer);
@@ -2277,7 +2441,18 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         renderGrid(); 
         window.renderListaFiguras();
     }; 
-    
+    window.guardarConfigLocal = () => {
+        // Si el usuario dibujó una figura en la cuadrícula pero olvidó darle a "Añadir a la lista", la guardamos por él
+        if (window.figTemporal && window.figTemporal.some(x => x)) {
+            window.agregarFiguraLista();
+        }
+        
+        // 1. Ocultamos el modal (ventana flotante)
+        document.getElementById('modal-config').style.display = 'none';
+        
+        // 2. Guardamos los cambios en la base de datos local y actualizamos la pantalla
+        guardarDatos(); 
+    };
     const renderGrid = () => { 
         document.getElementById('selector-figura').innerHTML = ""; 
         for(let i=0; i<25; i++) { 
@@ -2345,18 +2520,25 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
             guardarDatos();
         }
     };
-
+    window.limpiarFigurasLista = () => {
+        if(confirm("¿Estás seguro de que quieres borrar TODAS las figuras de la lista?")) {
+            dbLocal.config.figurasMultiples = []; // Vaciamos la lista
+            window.renderListaFiguras(); // Actualizamos la vista para que desaparezcan
+            guardarDatos(); // Guardamos los cambios para que se reflejen en la pantalla principal
+        }
+    };
     function detectarGanadores() { 
         if (!dbLocal.config.autoWin) return; 
         let wins = []; 
-        let todasLasFigs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre, patron: dbLocal.config.figura, activa: true} ];
+        let todasLasFigs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "FIGURA", patron: dbLocal.config.figura, activa: true} ];
         
         // Solo buscamos ganadores en las figuras que tengan el checkbox ACTIVO
         let figsAComprobar = todasLasFigs.filter(f => f.activa !== false);
         if (figsAComprobar.length === 0) return; 
         
         cartonesActuales.forEach(c => { 
-            let gana = false;
+            let figurasGanadas = []; // Guardará los nombres de las figuras ganadoras
+            
             for(let f of figsAComprobar) {
                 let ok = true; 
                 let tienePatron = false;
@@ -2366,16 +2548,27 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                         if(c.numeros[mapeoCarton[idx]]!==0 && !dbLocal.juego.includes(c.numeros[mapeoCarton[idx]])) ok = false; 
                     }
                 }); 
-                if(ok && tienePatron) { gana = true; break; }
+                if(ok && tienePatron) { 
+                    figurasGanadas.push(f.nombre); // Agregamos el nombre de la figura
+                }
             }
-            if(gana) wins.push(c.carton); 
+            // Si el cartón ganó al menos en una figura, lo guardamos con sus datos
+            if(figurasGanadas.length > 0) {
+                wins.push({ carton: c.carton, figuras: figurasGanadas.join(" + ") }); 
+            }
         }); 
         
         if (wins.length > 0 && wins.length !== lastWinCount) { 
             if (winRef && !winRef.closed) winRef.close(); 
             winRef = window.open("", "W75", "width=350,height=500"); 
             
-            let botonesHTML = wins.map(n => `<button class="btn" onclick="window.opener.manualCheckById(${n})">VER CARTÓN #${n}</button>`).join('');
+            // Creamos los botones incluyendo el nombre de la figura ganadora en amarillo
+            let botonesHTML = wins.map(w => `
+                <button class="btn" onclick="window.opener.manualCheckById(${w.carton})">
+                    CARTÓN #${w.carton}<br>
+                    <span style="font-size:14px; color:#ffeb3b;">⭐ ${w.figuras}</span>
+                </button>
+            `).join('');
 
             winRef.document.write(`<html><head><title>🏆 GANADORES 75</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.5);transition:0.2s;} .btn:hover{filter:brightness(1.2);}</style></head><body><h2>🏆 GANADORES 75</h2><div id="l">${botonesHTML}</div></body></html>`); 
             
@@ -2495,6 +2688,8 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     }
 
     // Ejecutar inmediatamente al abrir el archivo para poner la vista predeterminada
+    // Ejecutar inmediatamente al abrir el archivo para poner la vista predeterminada
+    // Ejecutar inmediatamente al abrir el archivo para poner la vista predeterminada
     document.addEventListener('DOMContentLoaded', () => {
         // Inicializamos el selector de color en el panel admin
         const savedColor = localStorage.getItem('casino_color_softblue_global') || COLOR_SOFT_BLUE_DEF;
@@ -2502,6 +2697,36 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         if(inputColor) inputColor.value = savedColor;
 
         aplicarVistaGlobal();
+        
+        // Inyectar la capacidad de arrastrar a las pantallas multimedia
+        document.querySelectorAll('.media-zone').forEach(zona => {
+            hacerArrastrable(zona);
+        });
+
+        // Hacer arrastrable el bloque de las figuras a jugar
+       // Hacer arrastrable el bloque de las figuras a jugar
+        let zonaFiguras = document.getElementById('zona-figuras');
+        if(zonaFiguras) {
+            hacerArrastrable(zonaFiguras);
+            
+            // ¡MAGIA CORREGIDA! El zoom ya no se vuelve loco
+            new ResizeObserver(entries => {
+                // Obtenemos el tamaño exacto al que tú estiraste la caja
+                let anchoActual = entries[0].target.offsetWidth; 
+                
+                // Lo dividimos entre el ancho original (280px) para sacar la escala
+                let escala = anchoActual / 280; 
+                
+                // Se lo aplicamos a las figuras
+                let contFiguras = document.getElementById('figuras-multiples-container');
+                if(contFiguras) contFiguras.style.zoom = escala;
+                
+                // Se lo aplicamos al título
+                let titulo = zonaFiguras.querySelector('strong');
+                if(titulo) titulo.style.zoom = escala;
+                
+            }).observe(zonaFiguras);
+        }
     });
 
     setInterval(() => {
@@ -2519,6 +2744,107 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
             }
         });
     }, 1000); // Revisa la seguridad cada 1 segundo automáticamente
+// ==========================================
+    // LÓGICA DE LA CÁMARA FLOTANTE
+    // ==========================================
+    let camaraStream = null;
+
+    window.toggleCamaraFlotante = async () => {
+        let container = document.getElementById('camara-flotante');
+        
+        // Si la cajita no existe en el HTML, la creamos y la inyectamos
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'camara-flotante';
+            
+            container.innerHTML = `
+                <video id="camara-video" autoplay playsinline muted></video>
+                <div style="position: absolute; bottom: 0; right: 0; width: 25px; height: 25px; background: transparent; cursor: nwse-resize; pointer-events: none;" title="Arrastra de aquí para redimensionar">
+                   <div style="position:absolute; bottom:2px; right:2px; width:0; height:0; border-style:solid; border-width:0 0 15px 15px; border-color:transparent transparent #facc15 transparent;"></div>
+                </div>
+            `;
+            
+            // ¡EL OTRO CAMBIO CLAVE! 
+            // Inyectamos la cámara dentro de 'pantalla-principal' para que haga scroll junto con el tablero.
+            let tablero = document.getElementById('pantalla-principal');
+            if (tablero) {
+                tablero.appendChild(container);
+            } else {
+                document.body.appendChild(container);
+            }
+            
+            // Le aplicamos la función para que se pueda arrastrar
+            hacerArrastrable(container);
+        }
+
+        const videoEl = document.getElementById('camara-video');
+
+        // Si está oculta, prendemos la cámara y la mostramos
+        if (container.style.display === 'none' || container.style.display === '') {
+            try {
+                // Pedimos permiso para usar el video
+                camaraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                videoEl.srcObject = camaraStream;
+                container.style.display = 'block';
+                
+                // Aseguramos que siempre aparezca en la parte superior donde estás viendo
+                container.style.top = "20px";
+                container.style.left = "30px";
+            } catch (err) {
+                alert("No se pudo acceder a la cámara. Asegúrate de darle permisos al navegador. Error: " + err.message);
+            }
+        } else {
+            // Si está visible, apagamos la cámara y ocultamos la caja
+            if (camaraStream) {
+                camaraStream.getTracks().forEach(track => track.stop());
+                camaraStream = null;
+            }
+            videoEl.srcObject = null;
+            container.style.display = 'none';
+        }
+    };
+// Función mágica que permite arrastrar la cámara por la pantalla
+    // Función mágica que permite arrastrar cualquier elemento por la pantalla
+    function hacerArrastrable(elmnt) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        elmnt.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            
+            // ¡VITAL! Si hacen clic en un Checkbox, una etiqueta o texto, NO arrastramos. 
+            // Esto permite prender/apagar las figuras normalmente sin mover la caja por error.
+            if(['INPUT', 'LABEL', 'SMALL'].includes(e.target.tagName)) return;
+            
+            // Si el usuario hace clic en la esquina inferior derecha (para cambiar tamaño), NO arrastramos.
+            let rect = elmnt.getBoundingClientRect();
+            let isResizeZone = (e.clientX > rect.right - 25 && e.clientY > rect.bottom - 25);
+            if(isResizeZone) return; 
+            
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            // Calculamos la nueva posición
+            elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+            elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
 </script>
 </body>
 </html>
