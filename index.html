@@ -874,10 +874,171 @@
       .sticky-cta strong{padding-left:0}
       .sticky-cta .btn{width:100%}
     }
+
+    .demo-popup-overlay{
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+      background:rgba(0,0,0,.72);
+      backdrop-filter:blur(10px);
+    }
+
+    .demo-popup-overlay.show{
+      display:flex;
+      animation:fadeIn .25s ease both;
+    }
+
+    @keyframes fadeIn{
+      from{opacity:0}
+      to{opacity:1}
+    }
+
+    .demo-popup{
+      position:relative;
+      width:min(520px,100%);
+      border-radius:32px;
+      padding:34px 26px 28px;
+      text-align:center;
+      color:#fff;
+      background:
+        radial-gradient(circle at 20% 0%,rgba(255,200,77,.34),transparent 36%),
+        radial-gradient(circle at 80% 10%,rgba(25,217,255,.22),transparent 34%),
+        linear-gradient(180deg,rgba(20,31,52,.98),rgba(7,10,18,.98));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:0 30px 90px rgba(0,0,0,.62),0 0 55px rgba(255,200,77,.16);
+      overflow:hidden;
+      animation:popUp .35s ease both;
+    }
+
+    @keyframes popUp{
+      from{transform:scale(.92) translateY(18px);opacity:0}
+      to{transform:scale(1) translateY(0);opacity:1}
+    }
+
+    .demo-popup::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
+      transform:translateX(-100%);
+      animation:popupShine 3.2s infinite;
+      pointer-events:none;
+    }
+
+    @keyframes popupShine{
+      0%{transform:translateX(-100%)}
+      55%,100%{transform:translateX(100%)}
+    }
+
+    .demo-popup-close{
+      position:absolute;
+      top:14px;
+      right:14px;
+      width:38px;
+      height:38px;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.08);
+      color:#fff;
+      font-size:22px;
+      font-weight:900;
+      cursor:pointer;
+      transition:.2s ease;
+      z-index:2;
+    }
+
+    .demo-popup-close:hover{
+      background:rgba(255,64,88,.22);
+      transform:rotate(90deg);
+    }
+
+    .demo-popup-icon{
+      width:78px;
+      height:78px;
+      margin:0 auto 16px;
+      border-radius:24px;
+      display:grid;
+      place-items:center;
+      background:linear-gradient(135deg,var(--gold),var(--gold2));
+      color:#111;
+      font-size:38px;
+      box-shadow:0 0 34px rgba(255,200,77,.30);
+    }
+
+    .demo-popup h2{
+      font-size:clamp(30px,5vw,44px);
+      line-height:1.05;
+      margin-bottom:12px;
+      text-transform:uppercase;
+    }
+
+    .demo-popup h2 span{
+      color:var(--gold);
+    }
+
+    .demo-popup p{
+      color:var(--muted);
+      line-height:1.65;
+      font-size:17px;
+      margin-bottom:22px;
+    }
+
+    .demo-popup-actions{
+      display:grid;
+      gap:12px;
+      position:relative;
+      z-index:2;
+    }
+
+    .demo-popup-actions .btn{
+      width:100%;
+      justify-content:center;
+      font-size:17px;
+    }
+
+    .demo-popup-note{
+      margin-top:14px;
+      color:#dce6ff;
+      font-size:13px;
+      line-height:1.45;
+      opacity:.9;
+    }
+
   </style>
 </head>
 
 <body>
+  <div class="demo-popup-overlay" id="demoPopup" aria-hidden="true">
+    <div class="demo-popup" role="dialog" aria-modal="true" aria-labelledby="demoPopupTitle">
+      <button class="demo-popup-close" type="button" id="demoPopupClose" aria-label="Cerrar ventana">×</button>
+
+      <div class="demo-popup-icon">🚀</div>
+
+      <h2 id="demoPopupTitle">Pide tu <span>prueba</span></h2>
+      <p>
+        Entra ahora y mira una prueba del software multijuego profesional.
+        Conoce cómo funciona antes de comprar o cotizar.
+      </p>
+
+      <div class="demo-popup-actions">
+        <a class="btn btn-primary" href="http://www.mercadodigital.com.co/BINGO%20PARA%20VENTAS-vr6.html" target="_blank" rel="noopener">
+          👉 Pide tu prueba e ingresa aquí
+        </a>
+        <a class="btn btn-outline" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">
+          💬 Quiero información por WhatsApp
+        </a>
+      </div>
+
+      <div class="demo-popup-note">
+        La prueba se abrirá en una nueva pestaña.
+      </div>
+    </div>
+  </div>
+
   <div class="top-alert">
     <div class="container top-alert-inner">
       <span>🔥 Promoción activa: compra o cotiza tu software completo hoy</span>
@@ -1226,7 +1387,12 @@
         <strong>Mercado Digital</strong><br>
         Software Multijuego Profesional
       </div>
-     </div>
+      <div class="notice">
+        Sube este archivo como <strong>index.html</strong> y coloca en la misma carpeta tus imágenes
+        <strong>ima1.jpg</strong>, <strong>ima2.jpg</strong>, <strong>ima3.jpg</strong> e <strong>ima4.jpg</strong>.
+        También detecta PNG, JPEG y WEBP.
+      </div>
+    </div>
   </footer>
 
   <script>
@@ -1354,6 +1520,36 @@
 
     hydrateImages().then(setupGallery);
     startCountdown();
+
+    function setupDemoPopup(){
+      const popup = document.getElementById("demoPopup");
+      const closeBtn = document.getElementById("demoPopupClose");
+
+      if(!popup || !closeBtn) return;
+
+      const closePopup = () => {
+        popup.classList.remove("show");
+        popup.setAttribute("aria-hidden", "true");
+      };
+
+      setTimeout(() => {
+        popup.classList.add("show");
+        popup.setAttribute("aria-hidden", "false");
+      }, 900);
+
+      closeBtn.addEventListener("click", closePopup);
+
+      popup.addEventListener("click", (event) => {
+        if(event.target === popup) closePopup();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if(event.key === "Escape") closePopup();
+      });
+    }
+
+    setupDemoPopup();
+
   </script>
 </body>
 </html>
