@@ -256,7 +256,31 @@
         .celda-config { aspect-ratio: 1/1; background: #555; cursor: pointer; border-radius: 4px; border: 1px solid #777; transition: 0.1s; }
         .celda-config.seleccionada { background: #ffeb3b; border: 1px solid #000; }
 
-      
+      //* ========================================== */
+        /* MÓDULO SUBASTAS (OPTIMIZADO PANTALLA COMPLETA) */
+        /* ========================================== */
+        #cs-subastas-content { display:none; flex-direction:column; padding:15px 30px; width:100%; max-width:none; margin:0; flex:1; overflow:hidden; }
+        #cs-subastas-content h2 { font-size:35px !important; margin:0 0 10px 0 !important; }
+        .subasta-container { display:flex; gap:20px; background:#1e293b; border: 4px solid #f59e0b; border-radius:20px; padding:20px; flex-wrap:nowrap; box-shadow: 0 15px 35px rgba(0,0,0,0.6); flex:1; min-height:0; }
+        .subasta-img-box { flex:1.2; min-width:300px; background:#0f172a; border:3px dashed #f59e0b; border-radius:15px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; min-height:200px; transition: 0.3s; }
+        .subasta-img-box:hover { border-color: #fcd34d; background: #111827; }
+        .subasta-img-box img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index:2; pointer-events:none; }
+        .subasta-controls { flex:1; min-width:300px; display:flex; flex-direction:column; gap:10px; color:white; justify-content: center; }
+        .subasta-input-group { display:flex; flex-direction:column; gap:5px; }
+        .subasta-input-group label { color:#cbd5e1; font-weight:bold; font-size:12px; text-transform:uppercase; letter-spacing: 1px; margin:0; }
+        .subasta-input-group input { padding:10px; font-size:20px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#facc15; font-weight:900; text-align:center; transition:0.2s; margin:0;}
+        .subasta-input-group input:focus { border-color:#f59e0b; outline:none; }
+        .subasta-display-box { background:#000; border:4px solid #22c55e; border-radius:15px; padding:15px; text-align:center; box-shadow: inset 0 0 20px rgba(34, 197, 94, 0.2); margin-top:5px; flex:1; display:flex; flex-direction:column; justify-content:center; }
+        .subasta-display-box h3 { margin:0; color:#22c55e; font-size:16px; text-transform:uppercase; letter-spacing: 2px; }
+        .subasta-valor { font-size:60px; margin:0; color:#ffffff; font-weight:900; transition: transform 0.1s, color 0.1s; text-shadow: 0 5px 15px rgba(0,0,0,0.8); line-height:1.2; }
+        .subasta-btn-group { display:flex; gap:15px; margin-top:5px; }
+        .subasta-btn { flex:1; padding:10px; font-size:45px; font-weight:bold; border:none; border-radius:12px; cursor:pointer; color:white; transition:0.1s; box-shadow:0 5px 15px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; line-height: 1; }
+        .subasta-btn.plus { background:linear-gradient(180deg, #22c55e, #16a34a); border: 2px solid #4ade80;} 
+        .subasta-btn.plus:active { transform:scale(0.95); background:#15803d; }
+        .subasta-btn.minus { background:linear-gradient(180deg, #ef4444, #dc2626); border: 2px solid #f87171;} 
+        .subasta-btn.minus:active { transform:scale(0.95); background:#b91c1c; }
+        .subasta-btn-sold { background:linear-gradient(90deg, #f59e0b, #d97706); width:100%; padding:15px; font-size:24px; font-weight:900; color:black; border-radius:12px; cursor:pointer; margin-top:5px; text-transform:uppercase; box-shadow:0 5px 20px rgba(245, 158, 11, 0.4); transition: 0.2s; border: 2px solid #fde68a; }
+        .subasta-btn-sold:active { transform:scale(0.98); }
 /* ========================================== */
         /* VISTA CLÁSICA (TABLA BLANCA, FONDO AZUL)   */
         /* ========================================== */
@@ -294,8 +318,8 @@
         .vista-clasica .letra-circulo { margin: 0; width: 9vh; height: 9vh; min-width: 50px; min-height: 50px; font-size: 5vh; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
         .vista-clasica .bola-mini { border-radius: 8px; border: 2px solid #cbd5e1; background: white; color: #1e293b; font-size: 5vh; flex: 1; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-weight: 900; }
         
-        .vista-clasica .bola-mini.activa { background-color: rgba(34, 197, 94, 0.2) !important; color: #111 !important; border: 3px solid #16a34a !important; }
-        .vista-clasica .bola-mini.ultima { background-color: #fef08a !important; color: #b91c1c !important; border: 4px solid #b91c1c !important; animation: pulso 0.8s infinite alternate; }
+        .vista-clasica .bola-mini.activa { background-color: rgb(247, 30, 6) !important; color: #111 !important; border: 3px solid #000000 !important; }
+        .vista-clasica .bola-mini.ultima { background-color: lch(96.46% 91.24 105.88) !important; color: #000000 !important; border: 4px solid #ff0000 !important; animation: pulso 0.8s infinite alternate; }
 
         /* 2. BALOTA, HISTORIAL Y CONTADOR (Derecha) */
         .vista-clasica .game-center-panel > div:nth-child(2) {
@@ -636,6 +660,16 @@
                 <div class="card-icon"><div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:5px; background:#0f172a; padding:10px; border-radius:10px; border:1px solid #c2410c; transform: rotate(-5deg);"><div style="width:40px; height:40px; background:#f97316; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size: 20px;">90</div><div style="width:40px; height:40px; background:#f97316; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size: 20px;">1</div></div></div>
                 <h3>BINGO 90 (EURO)</h3><p>El gigante de 90 balotas. Cartones de 15 números.</p>
             </div>
+           
+             <div class="game-card" style="border-color: #ec4899;" onclick="abrirRuletaSorteos()">
+                <div class="card-icon"><div style="font-size: 80px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">🎡</div></div>
+                <h3 style="color:#ec4899;">RULETA DESEMPATES</h3><p>Ingresa nombres y gira la ruleta para elegir un ganador al azar.</p>
+            </div>
+
+            <div class="game-card" style="border-color: #f59e0b;" onclick="abrirSubastas()">
+                <div class="card-icon"><div style="font-size: 80px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">⚖️</div></div>
+                <h3 style="color:#f59e0b;">SUBASTAS</h3><p>Sube la foto del premio y administra el incremento de las pujas en tiempo real.</p>
+            </div>
             <div class="game-card ruleta" onclick="abrirRuleta()">
                 <div class="card-icon"><div style="width:110px; height:110px; border-radius:50%; border:10px solid #0f172a; background:conic-gradient(#dc2626 0% 50%, #000 50% 100%); display:flex; align-items:center; justify-content:center;"><div style="width:50px; height:50px; background:#16a34a; border-radius:50%; border:3px solid #eab308; color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:20px;">0</div></div></div>
                 <h3>RULETA CASINO</h3><p>Ruleta con SVG nativo, animación de giro separada y apuestas en mesa.</p>
@@ -657,10 +691,7 @@
                 <h3 style="color:#22c55e;">LOTERÍA TRADICIONAL</h3><p>Baraja de 54 cartas con generador de tablas en ZIP.</p>
             </div>
             
-            <div class="game-card" style="border-color: #ec4899;" onclick="abrirRuletaSorteos()">
-                <div class="card-icon"><div style="font-size: 80px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">🎡</div></div>
-                <h3 style="color:#ec4899;">RULETA DESEMPATES</h3><p>Ingresa nombres y gira la ruleta para elegir un ganador al azar.</p>
-            </div>
+           
 
             <div class="game-card" style="border-color: #3b82f6;" onclick="abrirLeaderboard()">
                 <div class="card-icon"><div style="font-size: 80px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">🏆</div></div>
@@ -902,7 +933,61 @@
             <button onclick="document.getElementById('modal-config-loteria').style.display='none'" style="width:100%; margin-top:5px; background:none; border:none; color:blue; cursor: pointer;">Cerrar</button>
         </div>
     </div>
+    <div id="cs-subastas-content" style="position: relative; display: none; flex-direction: column !important; overflow-y: auto !important; padding: 15px 30px; align-items: center;">
+        
+        <div id="subastas-media-left" class="media-zone" style="left: 20px; top: 20px;"></div>
+        <div id="subastas-media-right" class="media-zone" style="right: 20px; top: 20px;"></div>
 
+        <h2 style="color:#f59e0b; text-align:center; font-size:35px; margin:0 0 10px 0; font-weight:900; letter-spacing: 2px; text-shadow: 0 4px 6px rgba(0,0,0,0.5); width: 100%; flex-shrink: 0;">MARTILLO DE SUBASTAS</h2>
+        
+        <div class="subasta-container" style="flex: none; width: 100%; max-width: 1200px;">
+            <div class="subasta-img-box" id="subasta-img-container">
+                <input type="file" id="subasta-file" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer; z-index:3;" onchange="cargarImagenSubasta(this)" title="Haz clic para subir la foto del premio">
+                <div id="subasta-img-placeholder" style="color:#64748b; font-size:22px; font-weight:bold; text-align:center; pointer-events:none; padding: 20px;">
+                    <div style="font-size: 60px; margin-bottom: 15px;">📷</div>
+                    Haz clic aquí para subir<br>la imagen del premio
+                </div>
+            </div>
+            
+            <div class="subasta-controls">
+                <div style="display:flex; gap:15px;">
+                    <div class="subasta-input-group" style="flex:1;">
+                        <label>Valor Inicial</label>
+                        <input type="number" id="subasta-inicial" value="50000" onchange="resetSubasta()">
+                    </div>
+                    <div class="subasta-input-group" style="flex:1;">
+                        <label>Paso a subir (+ / -)</label>
+                        <input type="number" id="subasta-paso" value="10000">
+                    </div>
+                </div>
+                
+                <button onclick="resetSubasta()" style="background:#334155; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#475569'" onmouseout="this.style.background='#334155'">
+                    🔄 APLICAR VALOR INICIAL AL MARCADOR
+                </button>
+                
+                <div class="subasta-display-box">
+                    <h3>PUJA ACTUAL</h3>
+                    <div class="subasta-valor" id="subasta-valor-display">$0</div>
+                </div>
+                
+                <div class="subasta-btn-group">
+                    <button class="subasta-btn minus" onclick="modificarSubasta(-1)" title="Restar puja">-</button>
+                    <button class="subasta-btn plus" onclick="modificarSubasta(1)" title="Sumar puja">+</button>
+                </div>
+                
+                <button class="subasta-btn-sold" onclick="venderSubasta()">🔨 ¡VENDIDO!</button>
+            </div>
+        </div>
+
+        <div class="bloque-personalizacion" style="width: 100%; max-width: 1200px; margin-top: 20px; margin-bottom: 40px; flex-shrink: 0; background: #1e293b; border: 2px solid #334155;">
+            <h3 style="margin-top:0; text-align:center; color:white;">🎨 MULTIMEDIA SUBASTAS (FLOTANTES)</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="control-grupo"><label>🖼️ IMAGEN IZQUIERDA:</label><input type="file" accept="image/*,video/*" onchange="subastas_cargarMedia(this, 'left')"></div>
+                <div class="control-grupo"><label>🖼️ IMAGEN DERECHA:</label><input type="file" accept="image/*,video/*" onchange="subastas_cargarMedia(this, 'right')"></div>
+            </div>
+            <button onclick="subastas_borrarDatos()" class="admin-btn" style="background:#dc3545; border: 2px solid white; color:white; width:100%; margin-top:15px; font-weight: bold; font-size: 16px;">🗑 BORRAR IMÁGENES GUARDADAS EN PC</button>
+        </div>
+    </div>
     <!-- PANTALLA: LEADERBOARD -->
     <div id="cs-leaderboard-content" style="display:none; padding: 30px; width: 100%; max-width: 1200px; margin: 0 auto; height: 100%;">
         <div class="cs-table-felt" style="background:#1e293b; border-color:#0f172a;">
@@ -1135,7 +1220,7 @@
     let bingo75_Iniciado = false, bingo18_Init = false, bingo30_Init = false, bingo90_Init = false, ruleta_Init = false;
 
     function ocultarTodo() {
-        ['app-content', 'cs-bingo18-content', 'cs-bingo30-content', 'cs-bingo90-content', 'casino-master', 'casino-lobby', 'cs-ruleta-content', 'cs-dados-content', 'cs-slots-content', 'cs-caballos-content', 'cs-loteria-content', 'cs-leaderboard-content', 'cs-ruleta-sorteos-content'].forEach(id => {
+        ['app-content', 'cs-bingo18-content', 'cs-bingo30-content', 'cs-bingo90-content', 'casino-master', 'casino-lobby', 'cs-ruleta-content', 'cs-dados-content', 'cs-slots-content', 'cs-caballos-content', 'cs-loteria-content', 'cs-leaderboard-content', 'cs-ruleta-sorteos-content', 'cs-subastas-content'].forEach(id => {
             if(document.getElementById(id)) document.getElementById(id).style.display = 'none';
         });
     }
@@ -1152,6 +1237,124 @@
     function abrirCaballos() { ocultarTodo(); document.getElementById('casino-master').style.display = 'flex'; document.getElementById('cs-caballos-content').style.display = 'flex'; document.getElementById('btn-master-volver').style.display = 'block'; document.getElementById('casino-title-text').innerText = 'CARRERA DE CABALLOS'; initCaballos(); }
     function abrirLoteria() { ocultarTodo(); document.getElementById('casino-master').style.display = 'flex'; document.getElementById('cs-loteria-content').style.display = 'flex'; document.getElementById('btn-master-volver').style.display = 'block'; document.getElementById('casino-title-text').innerText = 'LOTERÍA TRADICIONAL'; initLoteriaDeck(); }
     function abrirLeaderboard() { ocultarTodo(); document.getElementById('casino-master').style.display = 'flex'; document.getElementById('cs-leaderboard-content').style.display = 'flex'; document.getElementById('btn-master-volver').style.display = 'block'; document.getElementById('casino-title-text').innerText = 'RANKING'; renderLB(); }
+    // ==========================================
+    // SISTEMA CASINO: SUBASTAS
+    // ==========================================
+    let pujaActual = 0;
+    let dbSubastas = JSON.parse(localStorage.getItem('casino_subastas_data')) || { premio: null, media: { left: null, right: null } };
+
+    function subastas_guardarDatos() {
+        try {
+            localStorage.setItem('casino_subastas_data', JSON.stringify(dbSubastas));
+        } catch (e) {
+            alert("⚠️ La imagen es muy pesada. Te sugiero reducir el tamaño o peso de la imagen antes de subirla para asegurar que se guarde correctamente en el navegador.");
+        }
+    }
+
+    function abrirSubastas() { 
+        ocultarTodo(); 
+        document.getElementById('casino-master').style.display = 'flex'; 
+        document.getElementById('cs-subastas-content').style.display = 'flex'; 
+        document.getElementById('btn-master-volver').style.display = 'block'; 
+        document.getElementById('casino-title-text').innerText = 'SUBASTAS'; 
+        if(pujaActual === 0) resetSubasta(); 
+        subastas_restaurarMedios();
+    }
+
+    function cargarImagenSubasta(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = function() {
+            dbSubastas.premio = reader.result;
+            subastas_guardarDatos();
+            subastas_dibujarPremio();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function subastas_dibujarPremio() {
+        const container = document.getElementById('subasta-img-container');
+        const placeholder = document.getElementById('subasta-img-placeholder');
+        const existingImg = container.querySelector('img');
+        if (existingImg) existingImg.remove();
+
+        if (dbSubastas.premio) {
+            const img = document.createElement('img');
+            img.src = dbSubastas.premio;
+            container.appendChild(img);
+            placeholder.style.display = 'none';
+        } else {
+            placeholder.style.display = 'block';
+        }
+    }
+
+    function subastas_cargarMedia(input, lado) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = function() {
+            dbSubastas.media[lado] = { type: file.type.startsWith('video/') ? 'video' : 'image', data: reader.result };
+            subastas_guardarDatos();
+            subastas_restaurarMedios();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function subastas_restaurarMedios() {
+        subastas_dibujarPremio();
+        ['left', 'right'].forEach(lado => {
+            const cont = document.getElementById('subastas-media-' + lado);
+            if(!cont) return;
+            cont.innerHTML = '';
+            if (dbSubastas.media[lado]) {
+                if (dbSubastas.media[lado].type === 'video') {
+                    cont.innerHTML = `<video src="${dbSubastas.media[lado].data}" autoplay loop muted style="width:100%; height:100%; object-fit:contain; pointer-events:none;"></video>`;
+                } else {
+                    cont.innerHTML = `<img src="${dbSubastas.media[lado].data}" style="width:100%; height:100%; object-fit:contain; pointer-events:none;">`;
+                }
+            }
+        });
+    }
+
+    function subastas_borrarDatos() {
+        if(confirm("¿Borrar todas las imágenes guardadas de las subastas en el PC?")) {
+            dbSubastas = { premio: null, media: { left: null, right: null } };
+            subastas_guardarDatos();
+            subastas_restaurarMedios();
+            document.querySelectorAll('#cs-subastas-content input[type="file"]').forEach(i => i.value = '');
+        }
+    }
+
+    function formatearDinero(valor) { return "$" + valor.toLocaleString('es-CO'); }
+
+    function resetSubasta() {
+        const inicial = parseInt(document.getElementById('subasta-inicial').value) || 0;
+        pujaActual = inicial;
+        const display = document.getElementById('subasta-valor-display');
+        display.innerText = formatearDinero(pujaActual);
+        display.style.color = '#ffffff';
+    }
+
+    function modificarSubasta(direccion) {
+        const paso = parseInt(document.getElementById('subasta-paso').value) || 0;
+        pujaActual += (paso * direccion);
+        if(pujaActual < 0) pujaActual = 0;
+        const display = document.getElementById('subasta-valor-display');
+        display.innerText = formatearDinero(pujaActual);
+        display.style.transform = 'scale(1.1)';
+        display.style.color = direccion > 0 ? '#4ade80' : '#f87171';
+        setTimeout(() => { display.style.transform = 'scale(1)'; display.style.color = '#ffffff'; }, 150);
+    }
+
+    function venderSubasta() {
+        if(pujaActual === 0) return alert("¡No hay una puja activa para vender!");
+        const display = document.getElementById('subasta-valor-display');
+        display.style.color = '#facc15';
+        display.innerText = "¡VENDIDO: " + formatearDinero(pujaActual) + "!";
+        if(typeof window.permitirSonido === 'function') { try { new Audio('Sonidos_bingo75/winner.wav').play(); } catch(e){} }
+    }
+    
     // ==========================================
     // SISTEMA CASINO: RULETA SORTEOS (NOMBRES)
     // ==========================================
