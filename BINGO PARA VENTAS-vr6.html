@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1280">
     <title>Casino Suite V16 (Bingo 75, 18, 30, 90 + Ruleta + Casino)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -143,8 +143,69 @@
         #app-content::-webkit-scrollbar, #cs-bingo18-content::-webkit-scrollbar, #cs-bingo30-content::-webkit-scrollbar, #cs-bingo90-content::-webkit-scrollbar { display: none; }
         .pantalla-principal-base { width: 100%; min-height: 100vh; height:auto; display: flex; flex-direction: column; padding: 10px; background: #f8f9fa; flex-shrink: 0; position: relative; transition: background 0.3s, border 0.3s; }
         .header-bingo { height: 25vh; min-height:200px; display: flex; justify-content: space-between; align-items: center; background: #f1f3f5; padding: 5px 10px; border-radius: 15px; border: 1px solid #dee2e6; margin-bottom: 10px; gap: 10px; }
-        .media-zone { width: 20%; height: 100%; background: transparent; border: none; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
-        .media-zone img, .media-zone video { width: 100%; height: 100%; object-fit: contain; }
+        /* ZONAS MULTIMEDIA FLOTANTES (Imágenes/Videos subidos) */
+        .media-zone { 
+            position: absolute; /* Las hace flotantes y libres */
+            top: 20px; 
+            width: 250px; /* Tamaño inicial */
+            height: 250px; 
+            background: transparent; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 99990; /* Asegura que estén por encima del tablero */
+            resize: both; /* Permite agrandar/achicar desde la esquina inferior derecha */
+            cursor: move; /* Muestra el cursor de mover */
+            border: 3px dashed transparent; /* Borde invisible por defecto */
+            transition: border 0.3s, background 0.3s;
+        }
+        .media-zone:hover {
+            border: 3px dashed #facc15; /* Se ilumina en amarillo al pasar el mouse para que sepas de dónde agarrar */
+            background: rgba(0,0,0,0.3); /* Se oscurece un poco para verla si está vacía */
+        }
+        .media-zone img, .media-zone video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            pointer-events: none; /* VITAL: Evita que la imagen bloquee el clic para arrastrar */
+        }
+        
+        /* ZONA DE FIGURAS FLOTANTES                  */
+        /* ========================================== */
+        .figuras-flotantes {
+            position: absolute !important;
+            bottom: 20px; /* <--- AHORA INICIA ABAJO DEL TABLERO */
+            top: auto;    /* <--- Liberamos la parte superior */
+            left: 20px;
+            width: 280px; 
+            height: 180px; 
+            z-index: 99990;
+            cursor: move;
+            border: 3px dashed transparent;
+            padding: 10px;
+            border-radius: 10px;
+            transition: background 0.3s;
+            margin: 0 !important;
+            resize: both; 
+            overflow: hidden; 
+            min-width: 150px; 
+            min-height: 100px;
+            touch-action: none; /* <--- CRUCIAL: Permite moverlo en celulares sin hacer scroll a la pantalla */
+        }
+        .figuras-flotantes:hover {
+            border: 3px dashed #facc15;
+            background: rgba(0,0,0,0.15);
+        }
+        /* Para que en la vista clásica mantengan su zoom inicial */
+        .vista-clasica .figuras-flotantes {
+            transform: scale(1.4);
+            transform-origin: left top;
+        }
+        /* Posiciones iniciales para que no aparezcan amontonadas */
+        #media-left, #b18-media-left, #b30-media-left, #b90-media-left, #loteria-media-left { left: 20px; }
+        #media-right, #b18-media-right, #b30-media-right, #b90-media-right, #loteria-media-right { right: 20px; }
         .game-center-panel { flex-grow: 1; display: flex; justify-content: space-around; align-items: center; height: 100%; }
         .timer-auto-container { display: none; position: absolute; top: 15px; right: 30px; background: #000; color: #00ff00; padding: 8px 20px; border-radius: 10px; font-weight: bold; font-family: 'Courier New', monospace; z-index: 100; font-size: 24px; border: 2px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .balota-grande { width: 18vh; height: 18vh; min-width:120px; min-height:120px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); color: white; }
@@ -195,42 +256,31 @@
         .celda-config { aspect-ratio: 1/1; background: #555; cursor: pointer; border-radius: 4px; border: 1px solid #777; transition: 0.1s; }
         .celda-config.seleccionada { background: #ffeb3b; border: 1px solid #000; }
 
+      //* ========================================== */
+        /* MÓDULO SUBASTAS (OPTIMIZADO PANTALLA COMPLETA) */
         /* ========================================== */
-        /* RESPONSIVE DESING (ADAPTABLE A MOVILES)    */
-        /* ========================================== */
-        @media (max-width: 768px) {
-            .header-bingo { flex-direction: column; height: auto; min-height:auto; padding: 15px; }
-            .media-zone { display: none; }
-            .game-center-panel { flex-direction: column; width:100%; gap:15px;}
-            .balota-grande { width: 120px; min-width:120px; height: 120px; min-height:120px;}
-            .balota-grande .numero-balota { font-size: 60px; }
-            .historial-balotas { margin-bottom:10px;}
-            #contador-balotas, #b18-contador-balotas, #b30-contador-balotas, #b90-contador-balotas { font-size: 50px; }
-            .fila-bingo { gap: 5px; }
-            .letra-circulo { width: 35px; min-width:35px; height: 35px; min-height:35px; font-size: 20px; }
-            .bola-mini { font-size: 16px; }
-            .numeros-grid { gap: 2px; }
-            .b18-board-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding:5px;}
-            .b18-bola-mini { font-size: 40px; border-radius:10px;}
-            .b30-board-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; padding:5px;}
-            .b30-bola-mini { font-size: 30px; border-radius:8px;}
-            .b90-board-grid { gap: 3px; padding:5px; min-height:auto;}
-            .b90-bola-mini { font-size: 14px; border-radius: 4px; padding:5px 0;}
-            .admin-zone { padding: 15px; }
-            .admin-btn { width: 100%; font-size: 16px; padding:12px;}
-            #cs-ruleta-content { flex-direction: column; padding: 10px; }
-            .rl-panel-left { width: 100%; }
-            .rl-wheel-container { width: 280px; height: 280px; margin: 10px auto; }
-            .rl-grid-container, .rl-out-bets { overflow-x: auto; -webkit-overflow-scrolling: touch; justify-content: flex-start;}
-            .rl-zero { min-width: 80px; }
-            .rl-numbers { min-width: 600px; }
-            .rl-out-btn { min-width: 150px; font-size: 16px;}
-            .cs-table-felt { padding: 15px; }
-            .dice-die { width: 100px; height: 100px; font-size: 60px; }
-            .slot-reel { width: 90px; height: 120px; font-size: 60px; }
-            .loteria-container { flex-direction:column; }
-            .loteria-right { width:100%; height: 300px;}
-        }
+        #cs-subastas-content { display:none; flex-direction:column; padding:15px 30px; width:100%; max-width:none; margin:0; flex:1; overflow:hidden; }
+        #cs-subastas-content h2 { font-size:35px !important; margin:0 0 10px 0 !important; }
+        .subasta-container { display:flex; gap:20px; background:#1e293b; border: 4px solid #f59e0b; border-radius:20px; padding:20px; flex-wrap:nowrap; box-shadow: 0 15px 35px rgba(0,0,0,0.6); flex:1; min-height:0; }
+        .subasta-img-box { flex:1.2; min-width:300px; background:#0f172a; border:3px dashed #f59e0b; border-radius:15px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; min-height:200px; transition: 0.3s; }
+        .subasta-img-box:hover { border-color: #fcd34d; background: #111827; }
+        .subasta-img-box img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index:2; pointer-events:none; }
+        .subasta-controls { flex:1; min-width:300px; display:flex; flex-direction:column; gap:10px; color:white; justify-content: center; }
+        .subasta-input-group { display:flex; flex-direction:column; gap:5px; }
+        .subasta-input-group label { color:#cbd5e1; font-weight:bold; font-size:12px; text-transform:uppercase; letter-spacing: 1px; margin:0; }
+        .subasta-input-group input { padding:10px; font-size:20px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#facc15; font-weight:900; text-align:center; transition:0.2s; margin:0;}
+        .subasta-input-group input:focus { border-color:#f59e0b; outline:none; }
+        .subasta-display-box { background:#000; border:4px solid #22c55e; border-radius:15px; padding:15px; text-align:center; box-shadow: inset 0 0 20px rgba(34, 197, 94, 0.2); margin-top:5px; flex:1; display:flex; flex-direction:column; justify-content:center; }
+        .subasta-display-box h3 { margin:0; color:#22c55e; font-size:16px; text-transform:uppercase; letter-spacing: 2px; }
+        .subasta-valor { font-size:60px; margin:0; color:#ffffff; font-weight:900; transition: transform 0.1s, color 0.1s; text-shadow: 0 5px 15px rgba(0,0,0,0.8); line-height:1.2; }
+        .subasta-btn-group { display:flex; gap:15px; margin-top:5px; }
+        .subasta-btn { flex:1; padding:10px; font-size:45px; font-weight:bold; border:none; border-radius:12px; cursor:pointer; color:white; transition:0.1s; box-shadow:0 5px 15px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; line-height: 1; }
+        .subasta-btn.plus { background:linear-gradient(180deg, #22c55e, #16a34a); border: 2px solid #4ade80;} 
+        .subasta-btn.plus:active { transform:scale(0.95); background:#15803d; }
+        .subasta-btn.minus { background:linear-gradient(180deg, #ef4444, #dc2626); border: 2px solid #f87171;} 
+        .subasta-btn.minus:active { transform:scale(0.95); background:#b91c1c; }
+        .subasta-btn-sold { background:linear-gradient(90deg, #f59e0b, #d97706); width:100%; padding:15px; font-size:24px; font-weight:900; color:black; border-radius:12px; cursor:pointer; margin-top:5px; text-transform:uppercase; box-shadow:0 5px 20px rgba(245, 158, 11, 0.4); transition: 0.2s; border: 2px solid #fde68a; }
+        .subasta-btn-sold:active { transform:scale(0.98); }
 /* ========================================== */
         /* VISTA CLÁSICA (TABLA BLANCA, FONDO AZUL)   */
         /* ========================================== */
@@ -244,7 +294,7 @@
         }
 
         .vista-clasica .header-bingo { display: contents !important; }
-        .vista-clasica .media-zone { display: none !important; }
+        .vista-clasica .media-zone { display: flex !important; }
         .vista-clasica .game-center-panel { display: contents !important; }
 
         /* 1. TABLERO MAESTRO (Izquierda, Arriba) */
@@ -268,8 +318,8 @@
         .vista-clasica .letra-circulo { margin: 0; width: 9vh; height: 9vh; min-width: 50px; min-height: 50px; font-size: 5vh; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
         .vista-clasica .bola-mini { border-radius: 8px; border: 2px solid #cbd5e1; background: white; color: #1e293b; font-size: 5vh; flex: 1; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-weight: 900; }
         
-        .vista-clasica .bola-mini.activa { background-color: rgba(34, 197, 94, 0.2) !important; color: #111 !important; border: 3px solid #16a34a !important; }
-        .vista-clasica .bola-mini.ultima { background-color: #fef08a !important; color: #b91c1c !important; border: 4px solid #b91c1c !important; animation: pulso 0.8s infinite alternate; }
+        .vista-clasica .bola-mini.activa { background-color: rgb(247, 30, 6) !important; color: #111 !important; border: 3px solid #000000 !important; }
+        .vista-clasica .bola-mini.ultima { background-color: lch(96.46% 91.24 105.88) !important; color: #000000 !important; border: 4px solid #ff0000 !important; animation: pulso 0.8s infinite alternate; }
 
         /* 2. BALOTA, HISTORIAL Y CONTADOR (Derecha) */
         .vista-clasica .game-center-panel > div:nth-child(2) {
@@ -378,19 +428,19 @@
             line-height: 0.9;
         }
 
-        /* 3. FIGURA (Abajo Izquierda, debajo del tablero) */
-        .vista-clasica .game-center-panel > div:nth-child(1) {
-            grid-column: 1 / 2;
-            grid-row: 2 / 3;
-            display: flex;
-            flex-direction: column !important; /* <-- Esto arregla que el texto se apile hacia abajo y no estorbe */
-            align-items: center;
-            justify-content: flex-start;
-            gap: 8px !important;
-            transform: scale(1.4);
-            transform-origin: center top;
-            margin-top: 15px;
-        }
+       /* 3. FIGURA FLOTANTE (Corregida para evitar que salga volando) */
+.vista-clasica .game-center-panel > div.figuras-flotantes {
+    grid-column: auto !important; /* Desconectamos de la cuadrícula */
+    grid-row: auto !important;    /* Desconectamos de la cuadrícula */
+    margin: 0 !important;         /* Quitamos el margen negativo viejo */
+    
+    display: flex !important;
+    flex-direction: column !important; 
+    align-items: flex-start !important; 
+    gap: 8px !important;
+    transform: scale(1.4);
+    transform-origin: left top; 
+}
         
         /* Bajar el nombre de la figura y resaltarlo */
         .vista-clasica #nombre-figura {
@@ -455,7 +505,97 @@
         .rs-btn-spin:active { transform: scale(0.95); }
         .rs-btn-spin:disabled { background:#475569; cursor:not-allowed; transform: none; box-shadow:none; border-color:#333;}
         .rs-btn-update { background:#22c55e; color:white; border:none; padding:15px; font-size:18px; font-weight:bold; border-radius:8px; cursor:pointer; box-shadow:0 4px 10px rgba(34, 197, 94, 0.4);}
-    
+    /* ========================================== */
+        /* ESTILOS PARA LA CÁMARA FLOTANTE            */
+        /* ========================================== */
+        #camara-flotante {
+            position: absolute; /* ¡CAMBIO CLAVE! Antes era 'fixed' */
+            top: 20px; /* Hacemos que aparezca arriba en vez de abajo */
+            left: 30px;
+            width: 320px; 
+            height: 240px;
+            background: #000;
+            border: 4px solid #facc15; 
+            border-radius: 12px;
+            z-index: 99999;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            resize: both; 
+            overflow: hidden;
+            display: none; 
+            cursor: move; 
+        }
+        #camara-flotante video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Hace que el video llene el cuadro sin deformarse */
+            pointer-events: none; /* VITAL: Permite arrastrar haciendo clic sobre el video */
+            transform: scaleX(-1); /* Efecto espejo */
+        }
+    /* ========================================== */
+        /* ADAPTACIÓN PARA LAPTOPS Y PANTALLAS MEDIANAS */
+        /* ========================================== */
+        @media (min-width: 769px) and (max-width: 1366px) {
+            .vista-clasica {
+                gap: 10px;
+                padding: 10px;
+            }
+            .vista-clasica #tablero-maestro {
+                padding: 10px;
+                gap: 5px;
+            }
+            .vista-clasica .fila-bingo {
+                gap: 4px; /* Reducimos el espacio entre la letra y los números */
+            }
+            .vista-clasica .numeros-grid {
+                display: grid; 
+                grid-template-columns: repeat(15, minmax(0, 1fr)); /* Fuerza a que no se salgan del ancho */
+                gap: 4px;
+            }
+            .vista-clasica .letra-circulo {
+                width: 40px; min-width: 40px; 
+                height: 40px; min-height: 40px; 
+                font-size: 20px;
+            }
+            .vista-clasica .bola-mini {
+                font-size: 2vw; /* Ahora la letra depende del ancho de la pantalla, no del alto */
+            }
+            .vista-clasica .balota-grande {
+                width: 140px; min-width: 140px; 
+                height: 140px; min-height: 140px;
+            }
+            .vista-clasica .balota-grande .numero-balota { font-size: 65px !important; }
+            .vista-clasica .bola-historial {
+                width: 55px; min-width: 55px; 
+                height: 55px; min-height: 55px; 
+                font-size: 25px;
+            }
+            .vista-clasica .game-center-panel > div.figuras-flotantes {
+                transform: scale(1) !important; /* Achicamos las figuras a jugar */
+            }
+            .vista-clasica .game-center-panel > div:nth-child(3) {
+                font-size: 40px !important; /* Achicamos el contador de 0/75 */
+            }
+        }
+    /* ========================================== */
+        /* AJUSTE PARA ESTIRAR EL TABLERO HACIA ABAJO */
+        /* ========================================== */
+        .vista-clasica {
+            grid-template-rows: 1fr auto !important; 
+            align-items: stretch !important;
+        }
+
+        .vista-clasica #tablero-maestro {
+            height: 65%; /* Forzamos a que el tablero ocupe todo el alto disponible */
+        }
+
+        .vista-clasica .fila-bingo {
+            flex: 1; /* Hace que cada fila (B, I, N, G, O) se estire equitativamente */
+        }
+
+        .vista-clasica .bola-mini {
+            aspect-ratio: auto !important; /* Rompemos la regla del cuadrado perfecto */
+            height: 100% !important;       /* Dejamos que se vuelvan rectángulos hacia abajo */
+        }
     </style>
 </head>
 <body>
@@ -493,6 +633,15 @@
     </div>
 
     <div id="casino-lobby">
+        <a href="https://drive.google.com/drive/folders/1JPC4jOJPvhWuOrNThJH2n8LOjka1bRpW?usp=sharing" target="_blank" style="text-decoration: none; width: 90%; max-width: 800px; background: linear-gradient(90deg, #8b5cf6, #6d28d9); color: white; padding: 20px 30px; border-radius: 15px; display: flex; align-items: center; justify-content: flex-start; gap: 20px; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(109, 40, 217, 0.4); border: 2px solid #a78bfa;">
+            <span style="font-size: 45px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">📺</span>
+            <div style="text-align: left; flex: 1;">
+                <div style="font-size: 24px; font-weight: 900; letter-spacing: 1px;">TUTORIALES DE USO</div>
+                <div style="font-size: 15px; color: #ddd; margin-top: 5px;">Haz clic aquí para ver los videos sobre cómo configurar y administrar las salas.</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 8px; font-weight: bold; text-align: center;">VER VIDEOS ↗️</div>
+        </a>
+        
         <h2 style="color:#94a3b8; font-weight:normal; text-align:center;">Seleccione un juego para administrar:</h2>
         <div class="cards-container">
             <div class="game-card bingo75" onclick="abrirBingo75()">
@@ -510,6 +659,16 @@
             <div class="game-card bingo90" onclick="abrirBingo90()">
                 <div class="card-icon"><div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:5px; background:#0f172a; padding:10px; border-radius:10px; border:1px solid #c2410c; transform: rotate(-5deg);"><div style="width:40px; height:40px; background:#f97316; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size: 20px;">90</div><div style="width:40px; height:40px; background:#f97316; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size: 20px;">1</div></div></div>
                 <h3>BINGO 90 (EURO)</h3><p>El gigante de 90 balotas. Cartones de 15 números.</p>
+            </div>
+           
+             <div class="game-card" style="border-color: #ec4899;" onclick="abrirRuletaSorteos()">
+                <div class="card-icon"><div style="font-size: 80px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">🎡</div></div>
+                <h3 style="color:#ec4899;">RULETA DESEMPATES</h3><p>Ingresa nombres y gira la ruleta para elegir un ganador al azar.</p>
+            </div>
+
+            <div class="game-card" style="border-color: #f59e0b;" onclick="abrirSubastas()">
+                <div class="card-icon"><div style="font-size: 80px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">⚖️</div></div>
+                <h3 style="color:#f59e0b;">SUBASTAS</h3><p>Sube la foto del premio y administra el incremento de las pujas en tiempo real.</p>
             </div>
             <div class="game-card ruleta" onclick="abrirRuleta()">
                 <div class="card-icon"><div style="width:110px; height:110px; border-radius:50%; border:10px solid #0f172a; background:conic-gradient(#dc2626 0% 50%, #000 50% 100%); display:flex; align-items:center; justify-content:center;"><div style="width:50px; height:50px; background:#16a34a; border-radius:50%; border:3px solid #eab308; color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:20px;">0</div></div></div>
@@ -532,10 +691,7 @@
                 <h3 style="color:#22c55e;">LOTERÍA TRADICIONAL</h3><p>Baraja de 54 cartas con generador de tablas en ZIP.</p>
             </div>
             
-            <div class="game-card" style="border-color: #ec4899;" onclick="abrirRuletaSorteos()">
-                <div class="card-icon"><div style="font-size: 80px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">🎡</div></div>
-                <h3 style="color:#ec4899;">RULETA DESEMPATES</h3><p>Ingresa nombres y gira la ruleta para elegir un ganador al azar.</p>
-            </div>
+           
 
             <div class="game-card" style="border-color: #3b82f6;" onclick="abrirLeaderboard()">
                 <div class="card-icon"><div style="font-size: 80px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">🏆</div></div>
@@ -700,6 +856,7 @@
         <div class="admin-zone" id="admin-zone-loteria" style="flex-shrink:0;">
             <button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #22c55e; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY</button>
             <button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button>
+            <button onclick="toggleCamaraFlotante()" class="admin-btn" style="background:#e83e8c; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🎥 ACTIVAR/OCULTAR CÁMARA</button>
             <button onclick="toggleFullScreen()" class="admin-btn" style="background:#17a2b8; width:100%; margin-bottom:20px;">🖥️ PANTALLA COMPLETA</button>
             
             <button onclick="sacarCartaLoteria()" class="admin-btn" style="background:#28a745; font-size: 20px;">CANTAR (↓)</button>
@@ -776,7 +933,61 @@
             <button onclick="document.getElementById('modal-config-loteria').style.display='none'" style="width:100%; margin-top:5px; background:none; border:none; color:blue; cursor: pointer;">Cerrar</button>
         </div>
     </div>
+    <div id="cs-subastas-content" style="position: relative; display: none; flex-direction: column !important; overflow-y: auto !important; padding: 15px 30px; align-items: center;">
+        
+        <div id="subastas-media-left" class="media-zone" style="left: 20px; top: 20px;"></div>
+        <div id="subastas-media-right" class="media-zone" style="right: 20px; top: 20px;"></div>
 
+        <h2 style="color:#f59e0b; text-align:center; font-size:35px; margin:0 0 10px 0; font-weight:900; letter-spacing: 2px; text-shadow: 0 4px 6px rgba(0,0,0,0.5); width: 100%; flex-shrink: 0;">MARTILLO DE SUBASTAS</h2>
+        
+        <div class="subasta-container" style="flex: none; width: 100%; max-width: 1200px;">
+            <div class="subasta-img-box" id="subasta-img-container">
+                <input type="file" id="subasta-file" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer; z-index:3;" onchange="cargarImagenSubasta(this)" title="Haz clic para subir la foto del premio">
+                <div id="subasta-img-placeholder" style="color:#64748b; font-size:22px; font-weight:bold; text-align:center; pointer-events:none; padding: 20px;">
+                    <div style="font-size: 60px; margin-bottom: 15px;">📷</div>
+                    Haz clic aquí para subir<br>la imagen del premio
+                </div>
+            </div>
+            
+            <div class="subasta-controls">
+                <div style="display:flex; gap:15px;">
+                    <div class="subasta-input-group" style="flex:1;">
+                        <label>Valor Inicial</label>
+                        <input type="number" id="subasta-inicial" value="50000" onchange="resetSubasta()">
+                    </div>
+                    <div class="subasta-input-group" style="flex:1;">
+                        <label>Paso a subir (+ / -)</label>
+                        <input type="number" id="subasta-paso" value="10000">
+                    </div>
+                </div>
+                
+                <button onclick="resetSubasta()" style="background:#334155; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#475569'" onmouseout="this.style.background='#334155'">
+                    🔄 APLICAR VALOR INICIAL AL MARCADOR
+                </button>
+                
+                <div class="subasta-display-box">
+                    <h3>PUJA ACTUAL</h3>
+                    <div class="subasta-valor" id="subasta-valor-display">$0</div>
+                </div>
+                
+                <div class="subasta-btn-group">
+                    <button class="subasta-btn minus" onclick="modificarSubasta(-1)" title="Restar puja">-</button>
+                    <button class="subasta-btn plus" onclick="modificarSubasta(1)" title="Sumar puja">+</button>
+                </div>
+                
+                <button class="subasta-btn-sold" onclick="venderSubasta()">🔨 ¡VENDIDO!</button>
+            </div>
+        </div>
+
+        <div class="bloque-personalizacion" style="width: 100%; max-width: 1200px; margin-top: 20px; margin-bottom: 40px; flex-shrink: 0; background: #1e293b; border: 2px solid #334155;">
+            <h3 style="margin-top:0; text-align:center; color:white;">🎨 MULTIMEDIA SUBASTAS (FLOTANTES)</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="control-grupo"><label>🖼️ IMAGEN IZQUIERDA:</label><input type="file" accept="image/*,video/*" onchange="subastas_cargarMedia(this, 'left')"></div>
+                <div class="control-grupo"><label>🖼️ IMAGEN DERECHA:</label><input type="file" accept="image/*,video/*" onchange="subastas_cargarMedia(this, 'right')"></div>
+            </div>
+            <button onclick="subastas_borrarDatos()" class="admin-btn" style="background:#dc3545; border: 2px solid white; color:white; width:100%; margin-top:15px; font-weight: bold; font-size: 16px;">🗑 BORRAR IMÁGENES GUARDADAS EN PC</button>
+        </div>
+    </div>
     <!-- PANTALLA: LEADERBOARD -->
     <div id="cs-leaderboard-content" style="display:none; padding: 30px; width: 100%; max-width: 1200px; margin: 0 auto; height: 100%;">
         <div class="cs-table-felt" style="background:#1e293b; border-color:#0f172a;">
@@ -799,9 +1010,9 @@
 <!-- ========================================== -->
 <!-- SALAS BINGO 18, 30 Y 90 (DOM)              -->
 <!-- ========================================== -->
-<div id="cs-bingo18-content"><div id="pantalla-principal-18" class="pantalla-principal-base"><div id="b18-timer-auto-container" class="timer-auto-container">⏱️ <span id="b18-timer-count">06</span>s</div><div class="header-bingo"><div id="b18-media-left" class="media-zone"></div><div class="game-center-panel"><div style="text-align:center;"><strong style="font-size: 2.5vh; color: #495057; display:block; margin-bottom:10px;">SALA 18 RAPID</strong><div style="background:#222; color:#fff; padding:5px 15px; border-radius:10px; border:2px solid #a855f7; font-weight:bold; font-size:1.5vh;">MODO: CARTÓN LLENO</div></div><div style="display:flex; flex-direction:column; align-items:center;"><div class="balota-grande bg-purple-ball"><span id="b18-main-numero" class="numero-balota" style="font-size:11vh; margin-top:1.5vh;">--</span></div><div id="b18-historial-4" class="historial-balotas"><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div></div></div><div id="b18-contador-balotas" style="font-size:8vh; font-weight:900; color:#9333ea;">0/18</div></div><div id="b18-media-right" class="media-zone"></div></div><div class="b18-board-grid" id="b18-tablero-maestro"></div></div><div class="admin-zone" id="admin-zone-18"><button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #a855f7; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY</button><button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button><button id="b18-btn-activar-voz" onclick="b18_permitirSonido()" class="admin-btn" style="background:#ffc107; color:#000; width:100%;">🔊 ACTIVAR SONIDO</button><button onclick="toggleFullScreen()" class="admin-btn" style="background:#17a2b8; width:100%;">🖥️ PANTALLA COMPLETA</button><button onclick="b18_sacarBalota()" class="admin-btn" style="background:#28a745;">CANTAR (↓)</button><button id="b18-btn-auto" onclick="b18_toggleAutomatico()" class="admin-btn" style="background:#007bff;">AUTO (↑)</button><button id="b18-btn-lock" onclick="b18_toggleLock()" class="admin-btn" style="background:#6c757d;">MANUAL (OFF)</button><button onclick="b18_REINICIAR_JUEGO()" class="admin-btn" style="background:#dc3545;">🔄 REINICIAR</button><button onclick="b18_borrarDatosFabrica()" class="admin-btn" style="background:#000; color:red; width:100%; margin-top:10px;">☢️ BORRAR DATOS</button><div style="background:#3d3d3d; padding:20px; border-radius:15px; margin-top:15px;"><label><input type="checkbox" id="b18-switch-ganadores" onchange="b18_toggleAutoWin(this.checked)"> Detección Automática</label><div style="display:flex; justify-content:center; gap:15px; margin-top:15px;"><strong>REVISAR N°:</strong><input type="number" id="b18-num-revisar" style="width:100px;"><button onclick="b18_manualCheck()" class="admin-btn" style="background:#004080; margin:0;">VERIFICAR</button></div><div style="display:flex; gap:10px; justify-content:center; margin-top:15px;"><button onclick="b18_exportarBaseDatos()" class="admin-btn" style="background:#6c757d; width:48%;">💾 RESPALDO JSON</button><button onclick="document.getElementById('b18-input-restore').click()" class="admin-btn" style="background:#fd7e14; width:48%;">📂 SUBIR RESPALDO</button><input type="file" id="b18-input-restore" style="display:none;" accept=".json" onchange="b18_restaurarRespaldo(event)"></div><button onclick="document.getElementById('b18-import-excel').click()" class="admin-btn" style="background:#198754; margin-top:15px;">📊 IMPORTAR EXCEL (9 Núm)</button><input type="file" id="b18-import-excel" style="display:none;" accept=".xlsx,.xls,.csv" onchange="b18_importarDesdeExcel(event)"><button onclick="b18_crearNuevoSerial()" class="admin-btn" style="background:#6f42c1; width:100%; margin-top:10px;">🎲 CREAR SERIAL 18</button><div class="contenedor-seriales"><strong style="color:#a855f7; display:block; margin:10px 0;">📁 SERIALES:</strong><div id="b18-lista-seriales-div" style="text-align:left; background:#1a1a1a; padding:10px; border-radius:10px; max-height:300px; overflow-y:auto;"></div></div></div><div class="bloque-personalizacion"><h3 style="margin-top:0; text-align:center;">🎨 PERSONALIZACIÓN 18</h3><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:15px;"><div class="control-grupo"><label>🖼️ IZQUIERDA:</label><input type="file" onchange="b18_cargarMedia(this, 'left')"></div><div class="control-grupo"><label>🖼️ DERECHA:</label><input type="file" onchange="b18_cargarMedia(this, 'right')"></div></div><div style="display:flex; gap:20px; margin-top:15px;"><div class="control-grupo" style="flex:1;"><label>🎨 Fondo Tablero:</label><input type="color" id="b18-color-tablero" value="#f8f9fa" onchange="b18_cambiarColorTablero(this.value)"></div><div class="control-grupo" style="flex:1;"><label>🎨 Balotas:</label><input type="color" id="b18-color-balotas" value="#e9ecef" onchange="b18_cambiarColorBalotas(this.value)"></div></div><h4 style="text-align:center; border-top:1px solid #555; padding-top:15px;">📤 EXPORTACIÓN CARTONES</h4><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="control-grupo"><label>🎨 Marco/Fondo:</label><input type="color" id="b18-color-carton-fondo" value="#2e1065" onchange="b18_cambiarColorCartonFondo(this.value)"></div><div class="control-grupo"><label>🎨 Encabezado:</label><input type="color" id="b18-color-carton-export" value="#4c1d95" onchange="b18_cambiarColorCartonExport(this.value)"></div></div><div class="control-grupo" style="margin-top:15px;"><label>🖼️ Logo Superior Cartón:</label><input type="file" onchange="b18_cargarHeaderCarton(this)"></div><div id="b18-preview-header-carton" style="text-align:center; min-height:20px;"></div><div id="b18-reloj-pc" style="margin-top:25px; padding:15px; background:#1a1a1a; border-radius:10px; text-align:center; border:2px solid #a855f7; color:#c084fc; font-family:monospace; font-size:20px; font-weight:bold;">🕒 <span id="b18-fecha-pc">--/--/----</span> - <span id="b18-hora-pc">--:--:--</span></div></div></div></div>
-<div id="cs-bingo30-content"><div id="pantalla-principal-30" class="pantalla-principal-base"><div id="b30-timer-auto-container" class="timer-auto-container">⏱️ <span id="b30-timer-count">06</span>s</div><div class="header-bingo"><div id="b30-media-left" class="media-zone"></div><div class="game-center-panel"><div style="text-align:center;"><strong style="font-size: 2.5vh; color: #495057; display:block; margin-bottom:10px;">SALA 30 VELOZ</strong><div style="background:#222; color:#fff; padding:5px 15px; border-radius:10px; border:2px solid #06b6d4; font-weight:bold; font-size:1.5vh;">MODO: CARTÓN LLENO</div></div><div style="display:flex; flex-direction:column; align-items:center;"><div class="balota-grande bg-teal-ball"><span id="b30-main-numero" class="numero-balota" style="font-size:11vh; margin-top:1.5vh;">--</span></div><div id="b30-historial-4" class="historial-balotas"><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div></div></div><div id="b30-contador-balotas" style="font-size:8vh; font-weight:900; color:#06b6d4;">0/30</div></div><div id="b30-media-right" class="media-zone"></div></div><div class="b30-board-grid" id="b30-tablero-maestro"></div></div><div class="admin-zone" id="admin-zone-30"><button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #06b6d4; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY</button><button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button><button id="b30-btn-activar-voz" onclick="b30_permitirSonido()" class="admin-btn" style="background:#ffc107; color:#000; width:100%;">🔊 ACTIVAR SONIDO</button><button onclick="toggleFullScreen()" class="admin-btn" style="background:#17a2b8; width:100%;">🖥️ PANTALLA COMPLETA</button><button onclick="b30_sacarBalota()" class="admin-btn" style="background:#28a745;">CANTAR (↓)</button><button id="b30-btn-auto" onclick="b30_toggleAutomatico()" class="admin-btn" style="background:#007bff;">AUTO (↑)</button><button id="b30-btn-lock" onclick="b30_toggleLock()" class="admin-btn" style="background:#6c757d;">MANUAL (OFF)</button><button onclick="b30_REINICIAR_JUEGO()" class="admin-btn" style="background:#dc3545;">🔄 REINICIAR</button><button onclick="b30_borrarDatosFabrica()" class="admin-btn" style="background:#000; color:red; width:100%; margin-top:10px;">☢️ BORRAR DATOS</button><div style="background:#3d3d3d; padding:20px; border-radius:15px; margin-top:15px;"><label><input type="checkbox" id="b30-switch-ganadores" onchange="b30_toggleAutoWin(this.checked)"> Detección Automática</label><div style="display:flex; justify-content:center; gap:15px; margin-top:15px;"><strong>REVISAR N°:</strong><input type="number" id="b30-num-revisar" style="width:100px;"><button onclick="b30_manualCheck()" class="admin-btn" style="background:#004080; margin:0;">VERIFICAR</button></div><div style="display:flex; gap:10px; justify-content:center; margin-top:15px;"><button onclick="b30_exportarBaseDatos()" class="admin-btn" style="background:#6c757d; width:48%;">💾 RESPALDO JSON</button><button onclick="document.getElementById('b30-input-restore').click()" class="admin-btn" style="background:#fd7e14; width:48%;">📂 SUBIR RESPALDO</button><input type="file" id="b30-input-restore" style="display:none;" accept=".json" onchange="b30_restaurarRespaldo(event)"></div><button onclick="document.getElementById('b30-import-excel').click()" class="admin-btn" style="background:#198754; margin-top:15px;">📊 IMPORTAR EXCEL (9 Núm)</button><input type="file" id="b30-import-excel" style="display:none;" accept=".xlsx,.xls,.csv" onchange="b30_importarDesdeExcel(event)"><button onclick="b30_crearNuevoSerial()" class="admin-btn" style="background:#6f42c1; width:100%; margin-top:10px;">🎲 CREAR SERIAL 30</button><div class="contenedor-seriales"><strong style="color:#06b6d4; display:block; margin:10px 0;">📁 SERIALES:</strong><div id="b30-lista-seriales-div" style="text-align:left; background:#1a1a1a; padding:10px; border-radius:10px; max-height:300px; overflow-y:auto;"></div></div></div><div class="bloque-personalizacion"><h3 style="margin-top:0; text-align:center;">🎨 PERSONALIZACIÓN 30</h3><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:15px;"><div class="control-grupo"><label>🖼️ IZQUIERDA:</label><input type="file" onchange="b30_cargarMedia(this, 'left')"></div><div class="control-grupo"><label>🖼️ DERECHA:</label><input type="file" onchange="b30_cargarMedia(this, 'right')"></div></div><div style="display:flex; gap:20px; margin-top:15px;"><div class="control-grupo" style="flex:1;"><label>🎨 Fondo Tablero:</label><input type="color" id="b30-color-tablero" value="#f8f9fa" onchange="b30_cambiarColorTablero(this.value)"></div><div class="control-grupo" style="flex:1;"><label>🎨 Balotas:</label><input type="color" id="b30-color-balotas" value="#e9ecef" onchange="b30_cambiarColorBalotas(this.value)"></div></div><h4 style="text-align:center; border-top:1px solid #555; padding-top:15px;">📤 EXPORTACIÓN CARTONES</h4><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="control-grupo"><label>🎨 Marco/Fondo:</label><input type="color" id="b30-color-carton-fondo" value="#164e63" onchange="b30_cambiarColorCartonFondo(this.value)"></div><div class="control-grupo"><label>🎨 Encabezado:</label><input type="color" id="b30-color-carton-export" value="#0891b2" onchange="b30_cambiarColorCartonExport(this.value)"></div></div><div class="control-grupo" style="margin-top:15px;"><label>🖼️ Logo Superior Cartón:</label><input type="file" onchange="b30_cargarHeaderCarton(this)"></div><div id="b30-preview-header-carton" style="text-align:center; min-height:20px;"></div><div id="b30-reloj-pc" style="margin-top:25px; padding:15px; background:#1a1a1a; border-radius:10px; text-align:center; border:2px solid #06b6d4; color:#22d3ee; font-family:monospace; font-size:20px; font-weight:bold;">🕒 <span id="b30-fecha-pc">--/--/----</span> - <span id="b30-hora-pc">--:--:--</span></div></div></div></div>
-<div id="cs-bingo90-content"><div id="pantalla-principal-90" class="pantalla-principal-base"><div id="b90-timer-auto-container" class="timer-auto-container">⏱️ <span id="b90-timer-count">06</span>s</div><div class="header-bingo"><div id="b90-media-left" class="media-zone"></div><div class="game-center-panel"><div style="text-align:center;"><strong style="font-size: 2.5vh; color: #495057; display:block; margin-bottom:10px;">SALA 90 EURO</strong><div style="background:#222; color:#fff; padding:5px 15px; border-radius:10px; border:2px solid #f97316; font-weight:bold; font-size:1.5vh;">MODO: CARTÓN LLENO (15 NÚM)</div></div><div style="display:flex; flex-direction:column; align-items:center;"><div class="balota-grande bg-orange-ball"><span id="b90-main-numero" class="numero-balota" style="font-size:11vh; margin-top:1.5vh;">--</span></div><div id="b90-historial-4" class="historial-balotas"><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div></div></div><div id="b90-contador-balotas" style="font-size:8vh; font-weight:900; color:#f97316;">0/90</div></div><div id="b90-media-right" class="media-zone"></div></div><div class="b90-board-grid" id="b90-tablero-maestro"></div></div><div class="admin-zone" id="admin-zone-90"><button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #f97316; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY</button><button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button><button id="b90-btn-activar-voz" onclick="b90_permitirSonido()" class="admin-btn" style="background:#ffc107; color:#000; width:100%;">🔊 ACTIVAR SONIDO</button><button onclick="toggleFullScreen()" class="admin-btn" style="background:#17a2b8; width:100%;">🖥️ PANTALLA COMPLETA</button><button onclick="b90_sacarBalota()" class="admin-btn" style="background:#28a745;">CANTAR (↓)</button><button id="b90-btn-auto" onclick="b90_toggleAutomatico()" class="admin-btn" style="background:#007bff;">AUTO (↑)</button><button id="b90-btn-lock" onclick="b90_toggleLock()" class="admin-btn" style="background:#6c757d;">MANUAL (OFF)</button><button onclick="b90_REINICIAR_JUEGO()" class="admin-btn" style="background:#dc3545;">🔄 REINICIAR</button><button onclick="b90_borrarDatosFabrica()" class="admin-btn" style="background:#000; color:red; width:100%; margin-top:10px;">☢️ BORRAR DATOS</button><div style="background:#3d3d3d; padding:20px; border-radius:15px; margin-top:15px;"><label><input type="checkbox" id="b90-switch-ganadores" onchange="b90_toggleAutoWin(this.checked)"> Detección Automática</label><div style="display:flex; justify-content:center; gap:15px; margin-top:15px;"><strong>REVISAR N°:</strong><input type="number" id="b90-num-revisar" style="width:100px;"><button onclick="b90_manualCheck()" class="admin-btn" style="background:#004080; margin:0;">VERIFICAR</button></div><div style="display:flex; gap:10px; justify-content:center; margin-top:15px;"><button onclick="b90_exportarBaseDatos()" class="admin-btn" style="background:#6c757d; width:48%;">💾 RESPALDO JSON</button><button onclick="document.getElementById('b90-input-restore').click()" class="admin-btn" style="background:#fd7e14; width:48%;">📂 SUBIR RESPALDO</button><input type="file" id="b90-input-restore" style="display:none;" accept=".json" onchange="b90_restaurarRespaldo(event)"></div><button onclick="document.getElementById('b90-import-excel').click()" class="admin-btn" style="background:#198754; margin-top:15px;">📊 IMPORTAR EXCEL (15 Núm)</button><input type="file" id="b90-import-excel" style="display:none;" accept=".xlsx,.xls,.csv" onchange="b90_importarDesdeExcel(event)"><button onclick="b90_crearNuevoSerial()" class="admin-btn" style="background:#6f42c1; width:100%; margin-top:10px;">🎲 CREAR SERIAL 90</button><div class="contenedor-seriales"><strong style="color:#f97316; display:block; margin:10px 0;">📁 SERIALES:</strong><div id="b90-lista-seriales-div" style="text-align:left; background:#1a1a1a; padding:10px; border-radius:10px; max-height:300px; overflow-y:auto;"></div></div></div><div class="bloque-personalizacion"><h3 style="margin-top:0; text-align:center;">🎨 PERSONALIZACIÓN 90</h3><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:15px;"><div class="control-grupo"><label>🖼️ IZQUIERDA:</label><input type="file" onchange="b90_cargarMedia(this, 'left')"></div><div class="control-grupo"><label>🖼️ DERECHA:</label><input type="file" onchange="b90_cargarMedia(this, 'right')"></div></div><div style="display:flex; gap:20px; margin-top:15px;"><div class="control-grupo" style="flex:1;"><label>🎨 Fondo Tablero:</label><input type="color" id="b90-color-tablero" value="#f8f9fa" onchange="b90_cambiarColorTablero(this.value)"></div><div class="control-grupo" style="flex:1;"><label>🎨 Balotas:</label><input type="color" id="b90-color-balotas" value="#e9ecef" onchange="b90_cambiarColorBalotas(this.value)"></div></div><h4 style="text-align:center; border-top:1px solid #555; padding-top:15px;">📤 EXPORTACIÓN CARTONES</h4><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="control-grupo"><label>🎨 Marco/Fondo:</label><input type="color" id="b90-color-carton-fondo" value="#7c2d12" onchange="b90_cambiarColorCartonFondo(this.value)"></div><div class="control-grupo"><label>🎨 Encabezado:</label><input type="color" id="b90-color-carton-export" value="#c2410c" onchange="b90_cambiarColorCartonExport(this.value)"></div></div><div class="control-grupo" style="margin-top:15px;"><label>🖼️ Logo Superior Cartón:</label><input type="file" onchange="b90_cargarHeaderCarton(this)"></div><div id="b90-preview-header-carton" style="text-align:center; min-height:20px;"></div><div id="b90-reloj-pc" style="margin-top:25px; padding:15px; background:#1a1a1a; border-radius:10px; text-align:center; border:2px solid #f97316; color:#fdba74; font-family:monospace; font-size:20px; font-weight:bold;">🕒 <span id="b90-fecha-pc">--/--/----</span> - <span id="b90-hora-pc">--:--:--</span></div></div></div></div>
+<div id="cs-bingo18-content"><div id="pantalla-principal-18" class="pantalla-principal-base"><div id="b18-timer-auto-container" class="timer-auto-container">⏱️ <span id="b18-timer-count">06</span>s</div><div class="header-bingo"><div id="b18-media-left" class="media-zone"></div><div class="game-center-panel"><div style="text-align:center;"><strong style="font-size: 2.5vh; color: #495057; display:block; margin-bottom:10px;">SALA 18 RAPID</strong><div style="background:#222; color:#fff; padding:5px 15px; border-radius:10px; border:2px solid #a855f7; font-weight:bold; font-size:1.5vh;">MODO: CARTÓN LLENO</div></div><div style="display:flex; flex-direction:column; align-items:center;"><div class="balota-grande bg-purple-ball"><span id="b18-main-numero" class="numero-balota" style="font-size:11vh; margin-top:1.5vh;">--</span></div><div id="b18-historial-4" class="historial-balotas"><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div></div></div><div id="b18-contador-balotas" style="font-size:8vh; font-weight:900; color:#9333ea;">0/18</div></div><div id="b18-media-right" class="media-zone"></div></div><div class="b18-board-grid" id="b18-tablero-maestro"></div></div><div class="admin-zone" id="admin-zone-18"><button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #a855f7; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY</button><button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button><button id="b18-btn-activar-voz" onclick="b18_permitirSonido()" class="admin-btn" style="background:#ffc107; color:#000; width:100%;">🔊 ACTIVAR SONIDO</button><button onclick="toggleFullScreen()" class="admin-btn" style="background:#17a2b8; width:100%;">🖥️ PANTALLA COMPLETA</button><button onclick="b18_sacarBalota()" class="admin-btn" style="background:#28a745;">CANTAR (↓)</button><button id="b18-btn-auto" onclick="b18_toggleAutomatico()" class="admin-btn" style="background:#007bff;">AUTO (↑)</button><button id="b18-btn-lock" onclick="b18_toggleLock()" class="admin-btn" style="background:#6c757d;">MANUAL (OFF)</button><button onclick="b18_REINICIAR_JUEGO()" class="admin-btn" style="background:#dc3545;">🔄 REINICIAR</button><button onclick="b18_borrarDatosFabrica()" class="admin-btn" style="background:#000; color:red; width:100%; margin-top:10px;">☢️ BORRAR DATOS</button><div style="background:#3d3d3d; padding:20px; border-radius:15px; margin-top:15px;"><label><input type="checkbox" id="b18-switch-ganadores" onchange="b18_toggleAutoWin(this.checked)"> Detección Automática</label><div style="display:flex; justify-content:center; gap:15px; margin-top:15px;"><strong>REVISAR N°:</strong><input type="number" id="b18-num-revisar" style="width:100px;"><button onclick="b18_manualCheck()" class="admin-btn" style="background:#004080; margin:0;">VERIFICAR</button></div><div style="display:flex; gap:10px; justify-content:center; margin-top:15px;"><button onclick="b18_exportarBaseDatos()" class="admin-btn" style="background:#6c757d; width:48%;">💾 RESPALDO JSON</button><button onclick="document.getElementById('b18-input-restore').click()" class="admin-btn" style="background:#fd7e14; width:48%;">📂 SUBIR RESPALDO</button><input type="file" id="b18-input-restore" style="display:none;" accept=".json" onchange="b18_restaurarRespaldo(event)"></div><button onclick="document.getElementById('b18-import-excel').click()" class="admin-btn" style="background:#198754; margin-top:15px;">📊 IMPORTAR EXCEL (9 Núm)</button><input type="file" id="b18-import-excel" style="display:none;" accept=".xlsx,.xls,.csv" onchange="b18_importarDesdeExcel(event)"><button onclick="b18_crearNuevoSerial()" class="admin-btn" style="background:#6f42c1; width:100%; margin-top:10px;">🎲 CREAR SERIAL 18</button><div class="contenedor-seriales"><strong style="color:#a855f7; display:block; margin:10px 0;">📁 SERIALES:</strong><div id="b18-lista-seriales-div" style="text-align:left; background:#1a1a1a; padding:10px; border-radius:10px; max-height:300px; overflow-y:auto;"></div></div></div><div class="bloque-personalizacion"><h3 style="margin-top:0; text-align:center;">🎨 PERSONALIZACIÓN 18</h3><div class="control-grupo" style="border: 2px solid #ffc107; padding: 15px; border-radius: 10px; background: #222; margin-top: 15px; margin-bottom: 15px;"><button onclick="b18_copiarSecuenciaJugada()" class="admin-btn" style="background:#0dcaf0; color:#000; width:100%; margin-bottom:10px; font-weight:900;">🎲 COPIAR JUGADA MEZCLADA</button><label style="color:#00ff00;">🔢 MODO SECUENCIA:</label><textarea id="b18-input-secuencia" oninput="b18_guardarSecuenciaInput()" placeholder="Ej: 1, 15..." style="width:100%; height:60px; background: #111; color: #00ff00; border: 1px solid #555; padding: 10px; border-radius: 5px; font-family: monospace;"></textarea><label style="cursor: pointer; display: flex; align-items: center; gap: 10px; color: white; margin-top: 10px;"><input type="checkbox" id="b18-check-secuencia" onchange="b18_toggleModoSecuencia(this.checked)" style="width: 20px; height: 20px;"> ACTIVAR SECUENCIA</label></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:15px;"><div class="control-grupo"><label>🖼️ IZQUIERDA:</label><input type="file" onchange="b18_cargarMedia(this, 'left')"></div><div class="control-grupo"><label>🖼️ DERECHA:</label><input type="file" onchange="b18_cargarMedia(this, 'right')"></div></div><div style="display:flex; gap:20px; margin-top:15px;"><div class="control-grupo" style="flex:1;"><label>🎨 Fondo Tablero:</label><input type="color" id="b18-color-tablero" value="#f8f9fa" onchange="b18_cambiarColorTablero(this.value)"></div><div class="control-grupo" style="flex:1;"><label>🎨 Balotas:</label><input type="color" id="b18-color-balotas" value="#e9ecef" onchange="b18_cambiarColorBalotas(this.value)"></div></div><h4 style="text-align:center; border-top:1px solid #555; padding-top:15px;">📤 EXPORTACIÓN CARTONES</h4><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="control-grupo"><label>🎨 Marco/Fondo:</label><input type="color" id="b18-color-carton-fondo" value="#2e1065" onchange="b18_cambiarColorCartonFondo(this.value)"></div><div class="control-grupo"><label>🎨 Encabezado:</label><input type="color" id="b18-color-carton-export" value="#4c1d95" onchange="b18_cambiarColorCartonExport(this.value)"></div></div><div class="control-grupo" style="margin-top:15px;"><label>🖼️ Logo Superior Cartón:</label><input type="file" onchange="b18_cargarHeaderCarton(this)"></div><div id="b18-preview-header-carton" style="text-align:center; min-height:20px;"></div><div id="b18-reloj-pc" style="margin-top:25px; padding:15px; background:#1a1a1a; border-radius:10px; text-align:center; border:2px solid #a855f7; color:#c084fc; font-family:monospace; font-size:20px; font-weight:bold;">🕒 <span id="b18-fecha-pc">--/--/----</span> - <span id="b18-hora-pc">--:--:--</span></div></div></div></div>
+<div id="cs-bingo30-content"><div id="pantalla-principal-30" class="pantalla-principal-base"><div id="b30-timer-auto-container" class="timer-auto-container">⏱️ <span id="b30-timer-count">06</span>s</div><div class="header-bingo"><div id="b30-media-left" class="media-zone"></div><div class="game-center-panel"><div style="text-align:center;"><strong style="font-size: 2.5vh; color: #495057; display:block; margin-bottom:10px;">SALA 30 VELOZ</strong><div style="background:#222; color:#fff; padding:5px 15px; border-radius:10px; border:2px solid #06b6d4; font-weight:bold; font-size:1.5vh;">MODO: CARTÓN LLENO</div></div><div style="display:flex; flex-direction:column; align-items:center;"><div class="balota-grande bg-teal-ball"><span id="b30-main-numero" class="numero-balota" style="font-size:11vh; margin-top:1.5vh;">--</span></div><div id="b30-historial-4" class="historial-balotas"><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div></div></div><div id="b30-contador-balotas" style="font-size:8vh; font-weight:900; color:#06b6d4;">0/30</div></div><div id="b30-media-right" class="media-zone"></div></div><div class="b30-board-grid" id="b30-tablero-maestro"></div></div><div class="admin-zone" id="admin-zone-30"><button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #06b6d4; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY</button><button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button><button id="b30-btn-activar-voz" onclick="b30_permitirSonido()" class="admin-btn" style="background:#ffc107; color:#000; width:100%;">🔊 ACTIVAR SONIDO</button><button onclick="toggleFullScreen()" class="admin-btn" style="background:#17a2b8; width:100%;">🖥️ PANTALLA COMPLETA</button><button onclick="b30_sacarBalota()" class="admin-btn" style="background:#28a745;">CANTAR (↓)</button><button id="b30-btn-auto" onclick="b30_toggleAutomatico()" class="admin-btn" style="background:#007bff;">AUTO (↑)</button><button id="b30-btn-lock" onclick="b30_toggleLock()" class="admin-btn" style="background:#6c757d;">MANUAL (OFF)</button><button onclick="b30_REINICIAR_JUEGO()" class="admin-btn" style="background:#dc3545;">🔄 REINICIAR</button><button onclick="b30_borrarDatosFabrica()" class="admin-btn" style="background:#000; color:red; width:100%; margin-top:10px;">☢️ BORRAR DATOS</button><div style="background:#3d3d3d; padding:20px; border-radius:15px; margin-top:15px;"><label><input type="checkbox" id="b30-switch-ganadores" onchange="b30_toggleAutoWin(this.checked)"> Detección Automática</label><div style="display:flex; justify-content:center; gap:15px; margin-top:15px;"><strong>REVISAR N°:</strong><input type="number" id="b30-num-revisar" style="width:100px;"><button onclick="b30_manualCheck()" class="admin-btn" style="background:#004080; margin:0;">VERIFICAR</button></div><div style="display:flex; gap:10px; justify-content:center; margin-top:15px;"><button onclick="b30_exportarBaseDatos()" class="admin-btn" style="background:#6c757d; width:48%;">💾 RESPALDO JSON</button><button onclick="document.getElementById('b30-input-restore').click()" class="admin-btn" style="background:#fd7e14; width:48%;">📂 SUBIR RESPALDO</button><input type="file" id="b30-input-restore" style="display:none;" accept=".json" onchange="b30_restaurarRespaldo(event)"></div><button onclick="document.getElementById('b30-import-excel').click()" class="admin-btn" style="background:#198754; margin-top:15px;">📊 IMPORTAR EXCEL (9 Núm)</button><input type="file" id="b30-import-excel" style="display:none;" accept=".xlsx,.xls,.csv" onchange="b30_importarDesdeExcel(event)"><button onclick="b30_crearNuevoSerial()" class="admin-btn" style="background:#6f42c1; width:100%; margin-top:10px;">🎲 CREAR SERIAL 30</button><div class="contenedor-seriales"><strong style="color:#06b6d4; display:block; margin:10px 0;">📁 SERIALES:</strong><div id="b30-lista-seriales-div" style="text-align:left; background:#1a1a1a; padding:10px; border-radius:10px; max-height:300px; overflow-y:auto;"></div></div></div><div class="bloque-personalizacion"><h3 style="margin-top:0; text-align:center;">🎨 PERSONALIZACIÓN 30</h3><div class="control-grupo" style="border: 2px solid #ffc107; padding: 15px; border-radius: 10px; background: #222; margin-top: 15px; margin-bottom: 15px;"><button onclick="b30_copiarSecuenciaJugada()" class="admin-btn" style="background:#0dcaf0; color:#000; width:100%; margin-bottom:10px; font-weight:900;">🎲 COPIAR JUGADA MEZCLADA</button><label style="color:#00ff00;">🔢 MODO SECUENCIA:</label><textarea id="b30-input-secuencia" oninput="b30_guardarSecuenciaInput()" placeholder="Ej: 1, 15..." style="width:100%; height:60px; background: #111; color: #00ff00; border: 1px solid #555; padding: 10px; border-radius: 5px; font-family: monospace;"></textarea><label style="cursor: pointer; display: flex; align-items: center; gap: 10px; color: white; margin-top: 10px;"><input type="checkbox" id="b30-check-secuencia" onchange="b30_toggleModoSecuencia(this.checked)" style="width: 20px; height: 20px;"> ACTIVAR SECUENCIA</label></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:15px;"><div class="control-grupo"><label>🖼️ IZQUIERDA:</label><input type="file" onchange="b30_cargarMedia(this, 'left')"></div><div class="control-grupo"><label>🖼️ DERECHA:</label><input type="file" onchange="b30_cargarMedia(this, 'right')"></div></div><div style="display:flex; gap:20px; margin-top:15px;"><div class="control-grupo" style="flex:1;"><label>🎨 Fondo Tablero:</label><input type="color" id="b30-color-tablero" value="#f8f9fa" onchange="b30_cambiarColorTablero(this.value)"></div><div class="control-grupo" style="flex:1;"><label>🎨 Balotas:</label><input type="color" id="b30-color-balotas" value="#e9ecef" onchange="b30_cambiarColorBalotas(this.value)"></div></div><h4 style="text-align:center; border-top:1px solid #555; padding-top:15px;">📤 EXPORTACIÓN CARTONES</h4><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="control-grupo"><label>🎨 Marco/Fondo:</label><input type="color" id="b30-color-carton-fondo" value="#164e63" onchange="b30_cambiarColorCartonFondo(this.value)"></div><div class="control-grupo"><label>🎨 Encabezado:</label><input type="color" id="b30-color-carton-export" value="#0891b2" onchange="b30_cambiarColorCartonExport(this.value)"></div></div><div class="control-grupo" style="margin-top:15px;"><label>🖼️ Logo Superior Cartón:</label><input type="file" onchange="b30_cargarHeaderCarton(this)"></div><div id="b30-preview-header-carton" style="text-align:center; min-height:20px;"></div><div id="b30-reloj-pc" style="margin-top:25px; padding:15px; background:#1a1a1a; border-radius:10px; text-align:center; border:2px solid #06b6d4; color:#22d3ee; font-family:monospace; font-size:20px; font-weight:bold;">🕒 <span id="b30-fecha-pc">--/--/----</span> - <span id="b30-hora-pc">--:--:--</span></div></div></div></div>
+<div id="cs-bingo90-content"><div id="pantalla-principal-90" class="pantalla-principal-base"><div id="b90-timer-auto-container" class="timer-auto-container">⏱️ <span id="b90-timer-count">06</span>s</div><div class="header-bingo"><div id="b90-media-left" class="media-zone"></div><div class="game-center-panel"><div style="text-align:center;"><strong style="font-size: 2.5vh; color: #495057; display:block; margin-bottom:10px;">SALA 90 EURO</strong><div style="background:#222; color:#fff; padding:5px 15px; border-radius:10px; border:2px solid #f97316; font-weight:bold; font-size:1.5vh;">MODO: CARTÓN LLENO (15 NÚM)</div></div><div style="display:flex; flex-direction:column; align-items:center;"><div class="balota-grande bg-orange-ball"><span id="b90-main-numero" class="numero-balota" style="font-size:11vh; margin-top:1.5vh;">--</span></div><div id="b90-historial-4" class="historial-balotas"><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div><div class="bola-historial">-</div></div></div><div id="b90-contador-balotas" style="font-size:8vh; font-weight:900; color:#f97316;">0/90</div></div><div id="b90-media-right" class="media-zone"></div></div><div class="b90-board-grid" id="b90-tablero-maestro"></div></div><div class="admin-zone" id="admin-zone-90"><button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #f97316; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY</button><button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button><button id="b90-btn-activar-voz" onclick="b90_permitirSonido()" class="admin-btn" style="background:#ffc107; color:#000; width:100%;">🔊 ACTIVAR SONIDO</button><button onclick="toggleFullScreen()" class="admin-btn" style="background:#17a2b8; width:100%;">🖥️ PANTALLA COMPLETA</button><button onclick="b90_sacarBalota()" class="admin-btn" style="background:#28a745;">CANTAR (↓)</button><button id="b90-btn-auto" onclick="b90_toggleAutomatico()" class="admin-btn" style="background:#007bff;">AUTO (↑)</button><button id="b90-btn-lock" onclick="b90_toggleLock()" class="admin-btn" style="background:#6c757d;">MANUAL (OFF)</button><button onclick="b90_REINICIAR_JUEGO()" class="admin-btn" style="background:#dc3545;">🔄 REINICIAR</button><button onclick="b90_borrarDatosFabrica()" class="admin-btn" style="background:#000; color:red; width:100%; margin-top:10px;">☢️ BORRAR DATOS</button><div style="background:#3d3d3d; padding:20px; border-radius:15px; margin-top:15px;"><label><input type="checkbox" id="b90-switch-ganadores" onchange="b90_toggleAutoWin(this.checked)"> Detección Automática</label><div style="display:flex; justify-content:center; gap:15px; margin-top:15px;"><strong>REVISAR N°:</strong><input type="number" id="b90-num-revisar" style="width:100px;"><button onclick="b90_manualCheck()" class="admin-btn" style="background:#004080; margin:0;">VERIFICAR</button></div><div style="display:flex; gap:10px; justify-content:center; margin-top:15px;"><button onclick="b90_exportarBaseDatos()" class="admin-btn" style="background:#6c757d; width:48%;">💾 RESPALDO JSON</button><button onclick="document.getElementById('b90-input-restore').click()" class="admin-btn" style="background:#fd7e14; width:48%;">📂 SUBIR RESPALDO</button><input type="file" id="b90-input-restore" style="display:none;" accept=".json" onchange="b90_restaurarRespaldo(event)"></div><button onclick="document.getElementById('b90-import-excel').click()" class="admin-btn" style="background:#198754; margin-top:15px;">📊 IMPORTAR EXCEL (15 Núm)</button><input type="file" id="b90-import-excel" style="display:none;" accept=".xlsx,.xls,.csv" onchange="b90_importarDesdeExcel(event)"><button onclick="b90_crearNuevoSerial()" class="admin-btn" style="background:#6f42c1; width:100%; margin-top:10px;">🎲 CREAR SERIAL 90</button><div class="contenedor-seriales"><strong style="color:#f97316; display:block; margin:10px 0;">📁 SERIALES:</strong><div id="b90-lista-seriales-div" style="text-align:left; background:#1a1a1a; padding:10px; border-radius:10px; max-height:300px; overflow-y:auto;"></div></div></div><div class="bloque-personalizacion"><h3 style="margin-top:0; text-align:center;">🎨 PERSONALIZACIÓN 90</h3><div class="control-grupo" style="border: 2px solid #ffc107; padding: 15px; border-radius: 10px; background: #222; margin-top: 15px; margin-bottom: 15px;"><button onclick="b90_copiarSecuenciaJugada()" class="admin-btn" style="background:#0dcaf0; color:#000; width:100%; margin-bottom:10px; font-weight:900;">🎲 COPIAR JUGADA MEZCLADA</button><label style="color:#00ff00;">🔢 MODO SECUENCIA:</label><textarea id="b90-input-secuencia" oninput="b90_guardarSecuenciaInput()" placeholder="Ej: 1, 15..." style="width:100%; height:60px; background: #111; color: #00ff00; border: 1px solid #555; padding: 10px; border-radius: 5px; font-family: monospace;"></textarea><label style="cursor: pointer; display: flex; align-items: center; gap: 10px; color: white; margin-top: 10px;"><input type="checkbox" id="b90-check-secuencia" onchange="b90_toggleModoSecuencia(this.checked)" style="width: 20px; height: 20px;"> ACTIVAR SECUENCIA</label></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:15px;"><div class="control-grupo"><label>🖼️ IZQUIERDA:</label><input type="file" onchange="b90_cargarMedia(this, 'left')"></div><div class="control-grupo"><label>🖼️ DERECHA:</label><input type="file" onchange="b90_cargarMedia(this, 'right')"></div></div><div style="display:flex; gap:20px; margin-top:15px;"><div class="control-grupo" style="flex:1;"><label>🎨 Fondo Tablero:</label><input type="color" id="b90-color-tablero" value="#f8f9fa" onchange="b90_cambiarColorTablero(this.value)"></div><div class="control-grupo" style="flex:1;"><label>🎨 Balotas:</label><input type="color" id="b90-color-balotas" value="#e9ecef" onchange="b90_cambiarColorBalotas(this.value)"></div></div><h4 style="text-align:center; border-top:1px solid #555; padding-top:15px;">📤 EXPORTACIÓN CARTONES</h4><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="control-grupo"><label>🎨 Marco/Fondo:</label><input type="color" id="b90-color-carton-fondo" value="#7c2d12" onchange="b90_cambiarColorCartonFondo(this.value)"></div><div class="control-grupo"><label>🎨 Encabezado:</label><input type="color" id="b90-color-carton-export" value="#c2410c" onchange="b90_cambiarColorCartonExport(this.value)"></div></div><div class="control-grupo" style="margin-top:15px;"><label>🖼️ Logo Superior Cartón:</label><input type="file" onchange="b90_cargarHeaderCarton(this)"></div><div id="b90-preview-header-carton" style="text-align:center; min-height:20px;"></div><div id="b90-reloj-pc" style="margin-top:25px; padding:15px; background:#1a1a1a; border-radius:10px; text-align:center; border:2px solid #f97316; color:#fdba74; font-family:monospace; font-size:20px; font-weight:bold;">🕒 <span id="b90-fecha-pc">--/--/----</span> - <span id="b90-hora-pc">--:--:--</span></div></div></div></div>
 
 <!-- ========================================== -->
 <!-- BINGO 75 ORIGINAL (CON MODAL)              -->
@@ -812,10 +1023,13 @@
         <div class="header-bingo">
             <div id="media-left" class="media-zone"></div>
             <div class="game-center-panel">
-                <div style="text-align:center;">
-                    <strong style="font-size: 2vh; color: #495057;">FIGURA</strong>
-                    <div id="figura-display" style="display:grid; grid-template-columns:repeat(5,1fr); gap:1px; width:80px; background:#333; padding:2px; margin: 5px auto;"></div>
-                    <small id="nombre-figura" style="font-weight:bold; color: #6c757d;">---</small>
+                <div id="zona-figuras" class="figuras-flotantes"> 
+                    <div style="display:flex; align-items:center; gap:10px; background: rgba(255,255,255,0.7); padding: 2px 5px; border-radius: 4px; width:max-content;">
+                        <strong style="font-size: 14px; color: #495057; pointer-events:none;"></strong>
+                        <div style="display:flex; gap:3px;">
+                        </div>
+                    </div>
+                    <div id="figuras-multiples-container" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start; margin-top:5px; max-width: 250px;"></div> 
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:center;">
                     <div class="balota-grande bg-red-ball">
@@ -834,6 +1048,9 @@
     <div class="admin-zone">
         <button onclick="mostrarLobby()" class="admin-btn" style="background:#0f172a; border: 2px solid #3b82f6; color:white; width:100%; margin-bottom: 20px; font-size: 18px;">🏠 VOLVER AL LOBBY DEL CASINO</button>
         <button onclick="toggleVista()" class="admin-btn" style="background:#8e44ad; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">👁️ CAMBIAR VISTA (TABLA CLÁSICA / PANTALLA COMPLETA)</button>
+        
+        <button onclick="toggleCamaraFlotante()" class="admin-btn" style="background:#e83e8c; border: 2px solid white; color:white; width:100%; margin-bottom: 20px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🎥 ACTIVAR/OCULTAR CÁMARA</button>
+
         <button id="btn-activar-voz" onclick="permitirSonido()" style="background:#ffc107; color:#000; border:3px solid #000; padding:15px; font-weight:900; cursor:pointer; width:100%; max-width:800px; border-radius:10px; margin:0 auto 10px; font-size:18px; display:block;">🔊 ACTIVAR SONIDO</button>
         <button onclick="toggleFullScreen()" style="background:#17a2b8; color:#fff; border:3px solid #fff; padding:15px; font-weight:900; cursor:pointer; width:100%; max-width:800px; border-radius:10px; margin:0 auto 20px; font-size:18px; display:block;">🖥️ PANTALLA COMPLETA</button>
 
@@ -868,6 +1085,18 @@
 
         <div class="bloque-personalizacion">
             <h3 style="margin-top:0; color:#fff; text-align:center;">🎨 PERSONALIZACIÓN VISUAL</h3>
+            <div class="control-grupo" style="border: 2px solid #ffc107; padding: 15px; border-radius: 10px; background: #222; margin-top: 15px;">
+                <button onclick="copiarSecuenciaJugada()" class="admin-btn" style="background:#0dcaf0; color:#000; width:100%; margin-bottom:10px; font-weight:900;">
+                    🎲 COPIAR JUGADA MEZCLADA (Aleatoria)
+                </button>
+                <label style="color:#00ff00;">🔢 MODO SECUENCIA (Orden Específico):</label>
+                <textarea id="input-secuencia" oninput="guardarSecuenciaInput()" placeholder="Ej: 1, 15, 75, 4 (Separados por coma)" style="width:100%; height:60px; background: #111; color: #00ff00; border: 1px solid #555; padding: 10px; border-radius: 5px; font-family: monospace;"></textarea>
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 10px; color: white; margin-top: 10px;">
+                    <input type="checkbox" id="check-secuencia" onchange="toggleModoSecuencia(this.checked)" style="width: 20px; height: 20px;"> 
+                    ACTIVAR SECUENCIA
+                </label>
+                <small style="color: #aaa;">Si la secuencia termina, continuará de forma aleatoria.</small>
+            </div>
             <div class="control-grupo" style="margin-top:15px; border-top: 1px solid #555; padding-top:10px;">
                 <label style="color:#e0f2fe;">🎨 Color Fondo Vista Clásica (Soft Blue):</label>
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -902,8 +1131,8 @@
     </div>
 
     <!-- MODAL DE FIGURA (Solo 75) -->
-    <div id="modal-config" class="modal-config">
-        <h3 style="text-align:center; margin-top:0;">CONFIGURACIÓN DE FIGURA</h3>
+    <div id="modal-config" class="modal-config" style="width: 550px; max-width: 95vw;">
+        <h3 style="text-align:center; margin-top:0;">SELECCIÓN DE FIGURAS</h3>
         <select id="preset-selector" style="width:100%; padding:10px; margin-bottom:15px; border-radius:5px; background:#222; color:white; border:1px solid #555; font-size: 16px; cursor: pointer;" onchange="aplicarPreset(this.value)">
             <option value="PERSONALIZADA">✏️ Crear Personalizada</option>
             <optgroup label="Básicas y Líneas">
@@ -937,13 +1166,24 @@
                 <option value="LETRA Z">Letra Z</option>
             </optgroup>
         </select>
-        </select>
-        <div id="selector-figura" class="selector-figura"></div>
-        <input type="text" id="input-nombre" placeholder="Nombre Jugada (ej. PLENO)" style="width:100%; padding:10px; margin-top:15px; border-radius:5px; font-weight: bold; text-align: center;">
-        <button onclick="guardarConfigLocal()" style="width:100%; background:#2e7d32; color:white; padding:15px; font-weight:bold; border:none; border-radius:10px; margin-top:15px; cursor: pointer;">GUARDAR FIGURA</button>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+            <div style="flex: 1; min-width: 200px;">
+                <div id="selector-figura" class="selector-figura"></div>
+                <input type="text" id="input-nombre" placeholder="Nombre (ej. LÍNEA)" style="width:100%; padding:10px; margin-top:10px; border-radius:5px; font-weight: bold; text-align: center;">
+                <button onclick="agregarFiguraLista()" style="width:100%; background:#0dcaf0; color:black; font-weight:900; padding:10px; border:none; border-radius:5px; margin-top:10px; cursor:pointer;">➕ AÑADIR A LA LISTA</button>
+            </div>
+            
+            <div style="flex: 1; min-width: 200px; background: #111; border: 1px solid #555; padding: 10px; border-radius: 5px; display: flex; flex-direction: column;">
+                <h4 style="margin-top:0; color:#fff; text-align:center; font-size:14px;">FIGURAS ACTIVAS (Máx 5)</h4>
+                <div id="lista-figuras-jugar" style="flex: 1; overflow-y:auto; margin-bottom: 10px;"></div>
+                <button onclick="limpiarFigurasLista()" style="width:100%; background:#dc3545; color:white; padding:5px; border:none; border-radius:3px; cursor:pointer;">🗑 Limpiar Todo</button>
+            </div>
+        </div>
+
+        <button onclick="guardarConfigLocal()" style="width:100%; background:#2e7d32; color:white; padding:15px; font-weight:bold; border:none; border-radius:10px; margin-top:15px; cursor: pointer;">GUARDAR Y APLICAR</button>
         <button onclick="document.getElementById('modal-config').style.display='none'" style="width:100%; margin-top:5px; background:none; border:none; color:blue; cursor: pointer;">Cerrar</button>
     </div>
-</div>
 
 <div id="export-area" style="position: absolute; top: 0; left: -9999px; width: 600px;"></div>
 <!-- CONTENEDOR PARA EXPORTACION DE LOTERIA DE TAMAÑO FIJO -->
@@ -980,7 +1220,7 @@
     let bingo75_Iniciado = false, bingo18_Init = false, bingo30_Init = false, bingo90_Init = false, ruleta_Init = false;
 
     function ocultarTodo() {
-        ['app-content', 'cs-bingo18-content', 'cs-bingo30-content', 'cs-bingo90-content', 'casino-master', 'casino-lobby', 'cs-ruleta-content', 'cs-dados-content', 'cs-slots-content', 'cs-caballos-content', 'cs-loteria-content', 'cs-leaderboard-content', 'cs-ruleta-sorteos-content'].forEach(id => {
+        ['app-content', 'cs-bingo18-content', 'cs-bingo30-content', 'cs-bingo90-content', 'casino-master', 'casino-lobby', 'cs-ruleta-content', 'cs-dados-content', 'cs-slots-content', 'cs-caballos-content', 'cs-loteria-content', 'cs-leaderboard-content', 'cs-ruleta-sorteos-content', 'cs-subastas-content'].forEach(id => {
             if(document.getElementById(id)) document.getElementById(id).style.display = 'none';
         });
     }
@@ -997,6 +1237,124 @@
     function abrirCaballos() { ocultarTodo(); document.getElementById('casino-master').style.display = 'flex'; document.getElementById('cs-caballos-content').style.display = 'flex'; document.getElementById('btn-master-volver').style.display = 'block'; document.getElementById('casino-title-text').innerText = 'CARRERA DE CABALLOS'; initCaballos(); }
     function abrirLoteria() { ocultarTodo(); document.getElementById('casino-master').style.display = 'flex'; document.getElementById('cs-loteria-content').style.display = 'flex'; document.getElementById('btn-master-volver').style.display = 'block'; document.getElementById('casino-title-text').innerText = 'LOTERÍA TRADICIONAL'; initLoteriaDeck(); }
     function abrirLeaderboard() { ocultarTodo(); document.getElementById('casino-master').style.display = 'flex'; document.getElementById('cs-leaderboard-content').style.display = 'flex'; document.getElementById('btn-master-volver').style.display = 'block'; document.getElementById('casino-title-text').innerText = 'RANKING'; renderLB(); }
+    // ==========================================
+    // SISTEMA CASINO: SUBASTAS
+    // ==========================================
+    let pujaActual = 0;
+    let dbSubastas = JSON.parse(localStorage.getItem('casino_subastas_data')) || { premio: null, media: { left: null, right: null } };
+
+    function subastas_guardarDatos() {
+        try {
+            localStorage.setItem('casino_subastas_data', JSON.stringify(dbSubastas));
+        } catch (e) {
+            alert("⚠️ La imagen es muy pesada. Te sugiero reducir el tamaño o peso de la imagen antes de subirla para asegurar que se guarde correctamente en el navegador.");
+        }
+    }
+
+    function abrirSubastas() { 
+        ocultarTodo(); 
+        document.getElementById('casino-master').style.display = 'flex'; 
+        document.getElementById('cs-subastas-content').style.display = 'flex'; 
+        document.getElementById('btn-master-volver').style.display = 'block'; 
+        document.getElementById('casino-title-text').innerText = 'SUBASTAS'; 
+        if(pujaActual === 0) resetSubasta(); 
+        subastas_restaurarMedios();
+    }
+
+    function cargarImagenSubasta(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = function() {
+            dbSubastas.premio = reader.result;
+            subastas_guardarDatos();
+            subastas_dibujarPremio();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function subastas_dibujarPremio() {
+        const container = document.getElementById('subasta-img-container');
+        const placeholder = document.getElementById('subasta-img-placeholder');
+        const existingImg = container.querySelector('img');
+        if (existingImg) existingImg.remove();
+
+        if (dbSubastas.premio) {
+            const img = document.createElement('img');
+            img.src = dbSubastas.premio;
+            container.appendChild(img);
+            placeholder.style.display = 'none';
+        } else {
+            placeholder.style.display = 'block';
+        }
+    }
+
+    function subastas_cargarMedia(input, lado) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = function() {
+            dbSubastas.media[lado] = { type: file.type.startsWith('video/') ? 'video' : 'image', data: reader.result };
+            subastas_guardarDatos();
+            subastas_restaurarMedios();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function subastas_restaurarMedios() {
+        subastas_dibujarPremio();
+        ['left', 'right'].forEach(lado => {
+            const cont = document.getElementById('subastas-media-' + lado);
+            if(!cont) return;
+            cont.innerHTML = '';
+            if (dbSubastas.media[lado]) {
+                if (dbSubastas.media[lado].type === 'video') {
+                    cont.innerHTML = `<video src="${dbSubastas.media[lado].data}" autoplay loop muted style="width:100%; height:100%; object-fit:contain; pointer-events:none;"></video>`;
+                } else {
+                    cont.innerHTML = `<img src="${dbSubastas.media[lado].data}" style="width:100%; height:100%; object-fit:contain; pointer-events:none;">`;
+                }
+            }
+        });
+    }
+
+    function subastas_borrarDatos() {
+        if(confirm("¿Borrar todas las imágenes guardadas de las subastas en el PC?")) {
+            dbSubastas = { premio: null, media: { left: null, right: null } };
+            subastas_guardarDatos();
+            subastas_restaurarMedios();
+            document.querySelectorAll('#cs-subastas-content input[type="file"]').forEach(i => i.value = '');
+        }
+    }
+
+    function formatearDinero(valor) { return "$" + valor.toLocaleString('es-CO'); }
+
+    function resetSubasta() {
+        const inicial = parseInt(document.getElementById('subasta-inicial').value) || 0;
+        pujaActual = inicial;
+        const display = document.getElementById('subasta-valor-display');
+        display.innerText = formatearDinero(pujaActual);
+        display.style.color = '#ffffff';
+    }
+
+    function modificarSubasta(direccion) {
+        const paso = parseInt(document.getElementById('subasta-paso').value) || 0;
+        pujaActual += (paso * direccion);
+        if(pujaActual < 0) pujaActual = 0;
+        const display = document.getElementById('subasta-valor-display');
+        display.innerText = formatearDinero(pujaActual);
+        display.style.transform = 'scale(1.1)';
+        display.style.color = direccion > 0 ? '#4ade80' : '#f87171';
+        setTimeout(() => { display.style.transform = 'scale(1)'; display.style.color = '#ffffff'; }, 150);
+    }
+
+    function venderSubasta() {
+        if(pujaActual === 0) return alert("¡No hay una puja activa para vender!");
+        const display = document.getElementById('subasta-valor-display');
+        display.style.color = '#facc15';
+        display.innerText = "¡VENDIDO: " + formatearDinero(pujaActual) + "!";
+        if(typeof window.permitirSonido === 'function') { try { new Audio('Sonidos_bingo75/winner.wav').play(); } catch(e){} }
+    }
+    
     // ==========================================
     // SISTEMA CASINO: RULETA SORTEOS (NOMBRES)
     // ==========================================
@@ -1666,6 +2024,9 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     // ==========================================
     // FABRICA DE SALAS BINGO RAPID (18, 30, 90)
     // ==========================================
+    // ==========================================
+    // FABRICA DE SALAS BINGO RAPID (18, 30, 90)
+    // ==========================================
     function createFastBingo(prefix, idPrefix, maxNum, storageKey, cartonSize, gridCols, defaultBg, defaultHeader) {
         let dbLocal = JSON.parse(localStorage.getItem(storageKey)) || { juego: [], config: { autoWin: false, secuencia: [], usoSecuencia: false, figura: new Array(cartonSize).fill(true), nombreFigura: "PLENO" }, serialesExtra: [], serialActivoIndex: -1, colores: { tablero: "#f8f9fa", balotas: "#e9ecef", cartonExport: defaultHeader, cartonFondo: defaultBg }, media: { left: null, right: null }, headerCartonBase64: null };
         if(!dbLocal.config.figura) { dbLocal.config.figura = new Array(cartonSize).fill(true); dbLocal.config.nombreFigura = "PLENO"; }
@@ -1892,30 +2253,60 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
                 winR.document.write(`<div class="c-num ${isMarked?'marked':''}" style="${figClass}">${num}</div>`);
             });
             winR.document.write(`</div><h2>CARTÓN #${n}</h2></div></body></html>`);
+            winR.document.close(); // VITAL PARA QUE NO SE QUEDE CARGANDO
         };
         window[`${prefix}manualCheckById`] = (n) => { document.getElementById(`${idPrefix}num-revisar`).value = n; window[`${prefix}manualCheck`](); };
 
-        function detectarGanadores() {
-            if (!dbLocal.config.autoWin) return; let wins = [];
-            cartonesActuales.forEach(c => { 
+        function detectarGanadores() { 
+        if (!dbLocal.config.autoWin) return; 
+        let wins = []; 
+        let todasLasFigs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "FIGURA", patron: dbLocal.config.figura, activa: true} ];
+        
+        // Solo buscamos ganadores en las figuras que tengan el checkbox ACTIVO
+        let figsAComprobar = todasLasFigs.filter(f => f.activa !== false);
+        if (figsAComprobar.length === 0) return; 
+        
+        cartonesActuales.forEach(c => { 
+            let figurasGanadas = []; // Guardará los nombres de las figuras ganadoras
+            
+            for(let f of figsAComprobar) {
                 let ok = true; 
-                let tieneFigura = false;
-                for(let i=0; i<cartonSize; i++) {
-                    if(dbLocal.config.figura[i]) {
-                        tieneFigura = true;
-                        if(!dbLocal.juego.includes(c.numeros[i])) { ok = false; break; }
+                let tienePatron = false;
+                f.patron.forEach((m, idx) => { 
+                    if(m) {
+                        tienePatron = true;
+                        if(c.numeros[mapeoCarton[idx]]!==0 && !dbLocal.juego.includes(c.numeros[mapeoCarton[idx]])) ok = false; 
                     }
+                }); 
+                if(ok && tienePatron) { 
+                    figurasGanadas.push(f.nombre); // Agregamos el nombre de la figura
                 }
-                if(ok && tieneFigura) wins.push(c.carton); 
-            });
-            if (wins.length > 0 && wins.length !== lastWinCount) {
-                if (winRef && !winRef.closed) winRef.close();
-                winRef = window.open("", `W${maxNum}`, "width=350,height=500");
-                winRef.document.write(`<html><head><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-weight:bold;cursor:pointer;}</style></head><body><h2>🏆 GANADORES</h2><div id="l"></div><script>function rev(n){window.opener.${prefix}manualCheckById(n);}<\/script></body></html>`);
-                wins.forEach(n => { let b = winRef.document.createElement('button'); b.className="btn"; b.innerText="CARTÓN #"+n; b.onclick = () => winRef.rev(n); winRef.document.getElementById('l').appendChild(b); });
-                lastWinCount = wins.length;
-            } else if(wins.length === 0) lastWinCount = 0;
-        }
+            }
+            // Si el cartón ganó al menos en una figura, lo guardamos con sus datos
+            if(figurasGanadas.length > 0) {
+                wins.push({ carton: c.carton, figuras: figurasGanadas.join(" + ") }); 
+            }
+        }); 
+        
+        if (wins.length > 0 && wins.length !== lastWinCount) { 
+            if (winRef && !winRef.closed) winRef.close(); 
+            winRef = window.open("", "W75", "width=350,height=500"); 
+            
+            // Creamos los botones incluyendo el nombre de la figura ganadora en amarillo
+            let botonesHTML = wins.map(w => `
+                <button class="btn" onclick="window.opener.manualCheckById(${w.carton})">
+                    CARTÓN #${w.carton}<br>
+                    <span style="font-size:14px; color:#ffeb3b;">⭐ ${w.figuras}</span>
+                </button>
+            `).join('');
+
+            winRef.document.write(`<html><head><title>🏆 GANADORES 75</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.5);transition:0.2s;} .btn:hover{filter:brightness(1.2);}</style></head><body><h2>🏆 GANADORES 75</h2><div id="l">${botonesHTML}</div></body></html>`); 
+            
+            winRef.document.close();
+            lastWinCount = wins.length; 
+        } else if(wins.length === 0) lastWinCount = 0; 
+    }
+        
 
         window[`${prefix}toggleAutomatico`] = () => {
             if(!checkSecurity()) return; const clock = document.getElementById(`${idPrefix}timer-auto-container`), btn = document.getElementById(`${idPrefix}btn-auto`);
@@ -1974,7 +2365,16 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
             }
             
             window[`${prefix}actualizarListaSeriales`](); window[`${prefix}renderizar`]();
+            
         };
+    window.addEventListener('storage', (e) => {
+            if (e.key === storageKey && e.newValue) {
+                dbLocal = JSON.parse(e.newValue);
+                if(typeof window[`${prefix}renderizar`] === 'function') {
+                    window[`${prefix}renderizar`]();
+                }
+            }
+        });    
     }
 
     // Instanciar módulos de bingo rápidos
@@ -2033,6 +2433,9 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     function iniciarAppBingo() {
         document.getElementById('lbl-usuario').innerText = (localStorage.getItem('bingo_user') || "Desconocido").toUpperCase();
         setInterval(() => { const ahora = new Date(); document.getElementById('fecha-pc').innerText = ahora.toLocaleDateString(); document.getElementById('hora-pc').innerText = ahora.toLocaleTimeString(); }, 1000);
+        // Cargar datos de la secuencia en pantalla
+        if(dbLocal.config.secuencia) { document.getElementById('input-secuencia').value = dbLocal.config.secuencia.join(", "); }
+        if(dbLocal.config.usoSecuencia) { document.getElementById('check-secuencia').checked = true; }
         if(dbLocal.colores) { if(dbLocal.colores.tablero) { document.getElementById('color-tablero').value = dbLocal.colores.tablero; document.getElementById('pantalla-principal').style.backgroundColor = dbLocal.colores.tablero; } if(dbLocal.colores.balotas) document.getElementById('color-balotas').value = dbLocal.colores.balotas; if(dbLocal.colores.cartonExport) document.getElementById('color-carton-export').value = dbLocal.colores.cartonExport; if(dbLocal.colores.cartonFondo) document.getElementById('color-carton-fondo').value = dbLocal.colores.cartonFondo; if(dbLocal.colores.cartonTexto && document.getElementById('color-carton-texto')) document.getElementById('color-carton-texto').value = dbLocal.colores.cartonTexto; }
         restaurarMediosGuardados(); mostrarPreviewHeader();
         const tM = document.getElementById('tablero-maestro');
@@ -2078,14 +2481,395 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     window.importarDesdeExcel = (event) => { if(!checkSecurity()) return; const reader = new FileReader(); reader.onload = (e) => { const rows = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), { type: 'array' }).Sheets[XLSX.read(new Uint8Array(e.target.result), { type: 'array' }).SheetNames[0]], { header: 1 }); let nuevoS = { nombre: event.target.files[0].name.toUpperCase(), lista: [] }; rows.forEach(fila => { let nC = parseInt(fila[0]), nums = fila.slice(1).filter(n => !isNaN(n) && n !== ""); if (!isNaN(nC) && nums.length >= 24) nuevoS.lista.push({ carton: nC, numeros: [...nums.slice(0, 12), 0, ...nums.slice(12, 24)] }); }); dbLocal.serialesExtra.push(nuevoS); guardarDatos(); actualizarListaSeriales(); }; reader.readAsArrayBuffer(event.target.files[0]); };
     window.actualizarListaSeriales = () => { const div = document.getElementById('lista-seriales-div'); div.innerHTML = ""; dbLocal.serialesExtra.forEach((s, idx) => { let item = document.createElement('div'); item.className = "serial-item" + (dbLocal.serialActivoIndex === idx ? " activo" : ""); item.innerHTML = `<span><b>${s.nombre} (${s.lista.length})</b></span><div><button onclick="descargarSerialImagenes(${idx})" class="admin-btn" style="background:#8e0000; padding:5px;">📷 ZIP</button><button onclick="exportarSerialExcel(${idx})" class="admin-btn" style="background:#198754; padding:5px;">📊 Excel</button><button onclick="seleccionarSerial(${idx})" class="admin-btn" style="background:#004080; padding:5px 10px;">USAR</button><button onclick="eliminarSerial(${idx})" class="admin-btn" style="background:#dc3545; padding:5px 10px;">🗑</button></div>`; div.appendChild(item); }); cartonesActuales = dbLocal.serialesExtra[dbLocal.serialActivoIndex]?.lista || []; renderizar(); };
     window.seleccionarSerial = (idx) => { if(!checkSecurity()) return; dbLocal.serialActivoIndex = idx; guardarDatos(); actualizarListaSeriales(); }; window.eliminarSerial = (idx) => { if(!checkSecurity() || !confirm("¿Borrar?")) return; dbLocal.serialesExtra.splice(idx,1); dbLocal.serialActivoIndex=-1; guardarDatos(); actualizarListaSeriales(); };
-    window.sacarBalota = () => { if(!checkSecurity() || dbLocal.juego.length >= 75) return; let r; do { r = Math.floor(Math.random()*75)+1; } while(dbLocal.juego.includes(r)); dbLocal.juego.push(r); if(vozOK) new Audio('Sonidos_bingo75/'+r+'.wav').play(); guardarDatos(); if(timerAuto) resetReloj(); };
-    window.renderizar = () => { document.getElementById('switch-ganadores').checked = dbLocal.config.autoWin; document.querySelectorAll('.bola-mini').forEach(b => { b.classList.remove('activa', 'ultima'); b.style.backgroundColor = dbLocal.colores.balotas || '#e9ecef'; }); if(dbLocal.juego.length > 0){ let u = dbLocal.juego[dbLocal.juego.length-1]; document.getElementById('main-numero').innerText = u; document.getElementById('main-letra').innerText = (u<=15?'B':u<=30?'I':u<=45?'N':u<=60?'G':'O'); dbLocal.juego.forEach(n => { const el = document.getElementById('bola-'+n); if(el) { el.classList.add('activa'); el.style.backgroundColor = ''; } }); const ult = document.getElementById('bola-'+u); if(ult) ult.classList.add('ultima'); document.getElementById('historial-4').innerHTML = ""; const ultimas = dbLocal.juego.slice(-5, -1).reverse(); for(let i=0; i<4; i++) document.getElementById('historial-4').innerHTML += `<div class="bola-historial">${ultimas[i] || "-"}</div>`; } else { document.getElementById('main-numero').innerText = "--"; document.getElementById('main-letra').innerText = "-"; document.getElementById('historial-4').innerHTML = '<div class="bola-historial">-</div>'.repeat(4); } document.getElementById('contador-balotas').innerText = dbLocal.juego.length + "/75"; document.getElementById('nombre-figura').innerText = dbLocal.config.nombre; document.getElementById('figura-display').innerHTML = ""; dbLocal.config.figura.forEach(m => { let c = document.createElement('div'); c.style.width="100%"; c.style.aspectRatio="1/1"; c.style.background = m ? "#ffeb3b" : "#555"; document.getElementById('figura-display').appendChild(c); }); detectarGanadores(); };
+    // --- LÓGICA DE SECUENCIA ---
+    window.guardarSecuenciaInput = () => {
+        const txt = document.getElementById('input-secuencia').value;
+        const arr = txt.split(/[\s,]+/).map(n => parseInt(n)).filter(n => !isNaN(n) && n >= 1 && n <= 75);
+        dbLocal.config.secuencia = arr;
+        guardarDatos();
+    };
+
+    window.toggleModoSecuencia = (val) => {
+        dbLocal.config.usoSecuencia = val;
+        window.guardarSecuenciaInput(); 
+    };
+
+    window.copiarSecuenciaJugada = () => {
+        if (!dbLocal.juego || dbLocal.juego.length === 0) {
+            return alert("⚠️ Aún no han salido balotas para exportar.");
+        }
+        let jugadaMezclada = [...dbLocal.juego];
+        jugadaMezclada.sort(() => Math.random() - 0.5);
+        const secuenciaTexto = jugadaMezclada.join(", ");
+        navigator.clipboard.writeText(secuenciaTexto).then(() => {
+            alert("✅ ¡Secuencia MEZCLADA copiada!\n\nSe han copiado los mismos números que salieron, pero en ORDEN ALEATORIO.\n\nPegala en la caja de 'Modo Secuencia' para jugar la misma partida con distinto orden.");
+        }).catch(err => {
+            prompt("Copia tu secuencia mezclada:", secuenciaTexto);
+        });
+    };
+
+    window.sacarBalota = () => {
+        if(!checkSecurity() || dbLocal.juego.length >= 75) return;
+        let r;
+        let usadoSecuencia = false;
+
+        // Validar si usamos la secuencia escrita por el usuario
+        if (dbLocal.config.usoSecuencia && dbLocal.config.secuencia && dbLocal.config.secuencia.length > 0) {
+            const proximo = dbLocal.config.secuencia.find(n => !dbLocal.juego.includes(n));
+            if (proximo) {
+                r = proximo;
+                usadoSecuencia = true;
+            }
+        }
+
+        // Si no activamos secuencia, o si ya se acabaron los números de la caja, saca aleatorio
+        if (!usadoSecuencia) {
+            do { r = Math.floor(Math.random()*75)+1; } while(dbLocal.juego.includes(r));
+        }
+
+        dbLocal.juego.push(r); 
+        if(vozOK) { try { new Audio('Sonidos_bingo75/'+r+'.wav').play(); } catch(e){} }
+        guardarDatos(); 
+        if(timerAuto) resetReloj();
+    };
+    // NUEVA FUNCIÓN: Apaga o enciende la figura directamente desde la pantalla principal
+    window.toggleFiguraActivaGlobal = (idx, estado) => {
+        if(!dbLocal.config.figurasMultiples) return;
+        dbLocal.config.figurasMultiples[idx].activa = estado;
+        guardarDatos(); // Recarga la pantalla inmediatamente
+    };
+
+    window.renderizar = () => { 
+        document.getElementById('switch-ganadores').checked = dbLocal.config.autoWin; 
+        document.querySelectorAll('.bola-mini').forEach(b => { b.classList.remove('activa', 'ultima'); b.style.backgroundColor = dbLocal.colores.balotas || '#e9ecef'; }); 
+        
+        // --- NUEVA FUNCIÓN: Obtiene el color según la letra del Bingo ---
+        const getColorPorNumero = (num) => {
+            if(num <= 15) return '#004080'; // B (Azul)
+            if(num <= 30) return '#d32f2f'; // I (Rojo)
+            if(num <= 45) return '#757575'; // N (Gris)
+            if(num <= 60) return '#28a745'; // G (Verde)
+            return '#fbc02d'; // O (Amarillo)
+        };
+
+        if(dbLocal.juego.length > 0){ 
+            let u = dbLocal.juego[dbLocal.juego.length-1]; 
+            document.getElementById('main-numero').innerText = u; 
+            document.getElementById('main-letra').innerText = (u<=15?'B':u<=30?'I':u<=45?'N':u<=60?'G':'O'); 
+            
+            // 1. PINTAR EL BORDE DE LA BALOTA GRANDE (Específicamente la del Bingo 75)
+            let balotaGrande = document.querySelector('#app-content .balota-grande');
+            if(balotaGrande) {
+                let colorPrincipal = getColorPorNumero(u);
+                
+                // Mantenemos el fondo blanco y la letra oscura
+                balotaGrande.style.setProperty('background', 'white', 'important');
+                balotaGrande.style.setProperty('color', '#111', 'important');
+                
+                // Pintamos el anillo grueso exterior
+                balotaGrande.style.setProperty('border-color', colorPrincipal, 'important'); 
+                balotaGrande.style.setProperty('border-width', '8px', 'important');
+                balotaGrande.style.setProperty('border-style', 'solid', 'important');
+                
+                // Detalle pro: Un pequeño resplandor del color de la balota
+                balotaGrande.style.setProperty('box-shadow', `0 10px 25px ${colorPrincipal}aa`, 'important');
+            }
+
+            dbLocal.juego.forEach(n => { const el = document.getElementById('bola-'+n); if(el) { el.classList.add('activa'); el.style.backgroundColor = ''; } }); 
+            const ult = document.getElementById('bola-'+u); if(ult) ult.classList.add('ultima'); 
+            
+            document.getElementById('historial-4').innerHTML = ""; 
+            const ultimas = dbLocal.juego.slice(-5, -1).reverse(); 
+            for(let i=0; i<4; i++) {
+                let numH = ultimas[i];
+                if (numH) {
+                    // 2. PINTAR LAS BALOTAS DEL HISTORIAL
+                    let colorH = getColorPorNumero(numH);
+                    document.getElementById('historial-4').innerHTML += `<div class="bola-historial" style="background:${colorH} !important; color:white !important; border: 3px solid white !important;">${numH}</div>`;
+                } else {
+                    document.getElementById('historial-4').innerHTML += `<div class="bola-historial">-</div>`;
+                }
+            } 
+        } else { 
+            // CUANDO SE REINICIA EL JUEGO (Tablero vacío)
+            document.getElementById('main-numero').innerText = "--"; 
+            document.getElementById('main-letra').innerText = "-"; 
+            document.getElementById('historial-4').innerHTML = '<div class="bola-historial">-</div>'.repeat(4); 
+            
+            let balotaGrande = document.querySelector('#app-content .balota-grande');
+            if(balotaGrande) {
+                balotaGrande.style.background = '';
+                balotaGrande.style.color = '';
+                // Quitamos las propiedades inyectadas para que vuelva a su estado original
+                balotaGrande.style.removeProperty('border-color');
+                balotaGrande.style.removeProperty('border-width');
+                balotaGrande.style.removeProperty('border-style');
+                balotaGrande.style.removeProperty('box-shadow');
+            }
+        } 
+        document.getElementById('contador-balotas').innerText = dbLocal.juego.length + "/75"; 
+        
+        // DIBUJAR MÚLTIPLES FIGURAS EN PANTALLA
+        const contMultiples = document.getElementById('figuras-multiples-container');
+        if(contMultiples) {
+            contMultiples.innerHTML = "";
+            contMultiples.style.maxWidth = "500px"; 
+            let figs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "---", patron: dbLocal.config.figura || new Array(25).fill(false), activa: true} ];
+            
+            figs.forEach((fig, index) => {
+                if(typeof fig.activa === 'undefined') fig.activa = true;
+                
+                let isActive = fig.activa; 
+                let opacidad = isActive ? "1" : "0.4"; 
+                
+                let colDiv = document.createElement('div'); 
+                colDiv.style.display = "flex"; 
+                colDiv.style.flexDirection = "column"; 
+                colDiv.style.alignItems = "center"; 
+                colDiv.style.opacity = opacidad;
+                colDiv.style.transition = "opacity 0.3s";
+                
+                let checkContainer = document.createElement('div');
+                checkContainer.style.marginBottom = "5px";
+                checkContainer.innerHTML = `<label style="cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; font-weight:900; color:${isActive ? '#22c55e' : '#dc3545'};">
+                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleFiguraActivaGlobal(${index}, this.checked)" style="width:18px; height:18px; cursor:pointer; margin:0;">
+                    ${isActive ? 'ACTIVA' : 'PAGADA'}
+                </label>`;
+                
+                let gridFig = document.createElement('div'); 
+                gridFig.style.display = "grid"; 
+                gridFig.style.gridTemplateColumns = "repeat(5, 1fr)"; 
+                gridFig.style.gap = "2px"; 
+                gridFig.style.width = "75px"; 
+                gridFig.style.background = "#333"; 
+                gridFig.style.padding = "3px"; 
+                gridFig.style.borderRadius = "5px"; 
+                gridFig.style.boxShadow = "0 4px 6px rgba(0,0,0,0.3)";
+                
+                fig.patron.forEach(m => { 
+                    let c = document.createElement('div'); 
+                    c.style.width = "100%"; 
+                    c.style.aspectRatio = "1/1"; 
+                    c.style.background = m ? (isActive ? "#ffeb3b" : "#888") : "#555"; 
+                    gridFig.appendChild(c); 
+                });
+                
+                let lbl = document.createElement('small'); 
+                lbl.innerText = fig.nombre; 
+                lbl.style.fontWeight = "bold"; 
+                lbl.style.color = "#334155"; 
+                lbl.style.fontSize = "13px"; 
+                lbl.style.marginTop = "6px"; 
+                lbl.style.whiteSpace = "nowrap"; 
+                lbl.style.overflow = "hidden"; 
+                lbl.style.textOverflow = "ellipsis"; 
+                lbl.style.maxWidth = "85px";
+                if(!isActive) lbl.style.textDecoration = "line-through";
+                
+                colDiv.appendChild(checkContainer);
+                colDiv.appendChild(gridFig); 
+                colDiv.appendChild(lbl); 
+                contMultiples.appendChild(colDiv);
+            });
+        }
+        detectarGanadores(); 
+    };
     window.toggleAutoWin = (val) => { if(!checkSecurity()) return; dbLocal.config.autoWin = val; guardarDatos(); };
     window.REINICIAR_JUEGO = () => { if(!checkSecurity() || !confirm("¿REINICIAR TODO?")) return; dbLocal.juego = []; lastWinCount = 0; if(timerAuto) { clearInterval(timerAuto); clearInterval(timerVisual); timerAuto = null; } document.getElementById('timer-auto-container').style.display = 'none'; document.getElementById('btn-auto').innerText = "AUTO (↑)"; guardarDatos(); renderizar(); };
-    window.abrirConfig = () => { if(!checkSecurity()) return; document.getElementById('modal-config').style.display = "block"; let figTemporal = [...dbLocal.config.figura]; const renderGrid = () => { document.getElementById('selector-figura').innerHTML = ""; for(let i=0; i<25; i++) { let s = document.createElement('div'); s.className = "celda-config" + (figTemporal[i] ? " seleccionada" : ""); s.onclick = function() { figTemporal[i] = !figTemporal[i]; this.classList.toggle('seleccionada'); document.getElementById('preset-selector').value = "PERSONALIZADA"; }; document.getElementById('selector-figura').appendChild(s); } }; window.aplicarPreset = (val) => { if(val === "PERSONALIZADA") return; if(PRESET_FIGURAS[val]) { figTemporal = PRESET_FIGURAS[val].map(x => x === 1); document.getElementById('input-nombre').value = val; renderGrid(); } }; window.guardarConfigLocal = () => { dbLocal.config.figura = [...figTemporal]; dbLocal.config.nombre = document.getElementById('input-nombre').value.toUpperCase() || "BINGO"; document.getElementById('modal-config').style.display = 'none'; guardarDatos(); }; renderGrid(); let match = "PERSONALIZADA"; for(let key in PRESET_FIGURAS) { if(PRESET_FIGURAS[key].every((v, i) => (v === 1) === figTemporal[i])) { match = key; break; } } document.getElementById('preset-selector').value = match; document.getElementById('input-nombre').value = dbLocal.config.nombre; };
-    window.manualCheck = () => { if(!checkSecurity()) return; let n = parseInt(document.getElementById('num-revisar').value); let c = cartonesActuales.find(x => x.carton == n); if(!c) return alert("No existe."); const winR = window.open("", "R", "width=520,height=720"); winR.document.write(`<html><head><title>VERIFICAR CARTÓN</title><style>body{background:#121212;color:white;text-align:center;font-family:Arial;}.c-base{width:480px;background:#002b5c;padding:15px;margin:auto;}.g-main{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#000;border:5px solid #000;}.c-bingo{background:#004080;color:white;height:80px;display:flex;align-items:center;justify-content:center;font-size:60px;font-weight:900;}.c-num{background:white;color:black;height:85px;display:flex;align-items:center;justify-content:center;font-size:45px;font-weight:900;}.marked{background:#28a745 !important;}.figura{border:6px solid #ffeb3b !important;box-sizing:border-box;}</style></head><body><div class="c-base"><div class="g-main"><div class="c-bingo">B</div><div class="c-bingo">I</div><div class="c-bingo">N</div><div class="c-bingo">G</div><div class="c-bingo">O</div>`); mapeoCarton.forEach((idx, i) => { let num = c.numeros[idx], isM = dbLocal.juego.includes(num) || num === 0, isF = dbLocal.config.figura[i], displayContent = num === 0 ? (dbLocal.centerLogoBase64 ? `<img src="${dbLocal.centerLogoBase64}" style="width:80%; height:80%; object-fit:contain;">` : "X") : num; winR.document.write(`<div class="c-num ${isM?'marked':''} ${isF&&!isM?'figura':''}">${displayContent}</div>`); }); winR.document.write(`</div><h2>CARTÓN #${n}</h2></div></body></html>`); }; window.manualCheckById = (n) => { document.getElementById('num-revisar').value = n; manualCheck(); };
-    window.exportarBaseDatos = () => { const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(dbLocal)], {type:"application/json"})); l.download = "respaldo_bingo75.json"; l.click(); };
-    function detectarGanadores() { if (!dbLocal.config.autoWin) return; let wins = []; cartonesActuales.forEach(c => { let ok = true; dbLocal.config.figura.forEach((m, idx) => { if(m && c.numeros[mapeoCarton[idx]]!==0 && !dbLocal.juego.includes(c.numeros[mapeoCarton[idx]])) ok = false; }); if(ok && dbLocal.config.figura.some(f=>f)) wins.push(c.carton); }); if (wins.length > 0 && wins.length !== lastWinCount) { if (winRef && !winRef.closed) winRef.close(); winRef = window.open("", "W", "width=350,height=500"); winRef.document.write(`<html><head><title>🏆 GANADORES</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;}.btn{background:#6f42c1;color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-weight:bold;cursor:pointer;}</style></head><body><h2>🏆 GANADORES</h2><div id="l"></div><script>function rev(n){window.opener.manualCheckById(n);}<\/script></body></html>`); wins.forEach(n => { let b = winRef.document.createElement('button'); b.className="btn"; b.innerText="CARTÓN #"+n; b.onclick = () => winRef.rev(n); winRef.document.getElementById('l').appendChild(b); }); lastWinCount = wins.length; } else if(wins.length === 0) lastWinCount = 0; }
+    window.abrirConfig = () => { 
+        if(!checkSecurity()) return; 
+        document.getElementById('modal-config').style.display = "block"; 
+        window.figTemporal = new Array(25).fill(false);
+        document.getElementById('input-nombre').value = "";
+        if(!dbLocal.config.figurasMultiples) dbLocal.config.figurasMultiples = [];
+        renderGrid(); 
+        window.renderListaFiguras();
+    }; 
+    window.guardarConfigLocal = () => {
+        // Si el usuario dibujó una figura en la cuadrícula pero olvidó darle a "Añadir a la lista", la guardamos por él
+        if (window.figTemporal && window.figTemporal.some(x => x)) {
+            window.agregarFiguraLista();
+        }
+        
+        // 1. Ocultamos el modal (ventana flotante)
+        document.getElementById('modal-config').style.display = 'none';
+        
+        // 2. Guardamos los cambios en la base de datos local y actualizamos la pantalla
+        guardarDatos(); 
+    };
+    const renderGrid = () => { 
+        document.getElementById('selector-figura').innerHTML = ""; 
+        for(let i=0; i<25; i++) { 
+            let s = document.createElement('div'); 
+            s.className = "celda-config" + (window.figTemporal[i] ? " seleccionada" : ""); 
+            s.onclick = function() { window.figTemporal[i] = !window.figTemporal[i]; this.classList.toggle('seleccionada'); document.getElementById('preset-selector').value = "PERSONALIZADA"; }; 
+            document.getElementById('selector-figura').appendChild(s); 
+        } 
+    }; 
+    
+    window.aplicarPreset = (val) => { 
+        if(val === "PERSONALIZADA") return; 
+        if(PRESET_FIGURAS[val]) { window.figTemporal = PRESET_FIGURAS[val].map(x => x === 1); document.getElementById('input-nombre').value = val; renderGrid(); } 
+    }; 
+    
+    window.agregarFiguraLista = () => {
+        if(!dbLocal.config.figurasMultiples) dbLocal.config.figurasMultiples = [];
+        if(dbLocal.config.figurasMultiples.length >= 5) return alert("Máximo 5 figuras permitidas al mismo tiempo.");
+        if(!window.figTemporal.some(x => x)) return alert("Dibuja una figura antes de añadirla.");
+        let nom = document.getElementById('input-nombre').value.toUpperCase() || "FIGURA " + (dbLocal.config.figurasMultiples.length + 1);
+        
+        // Ahora guardamos la figura indicando que está ACTIVA (activa: true)
+        dbLocal.config.figurasMultiples.push({ nombre: nom, patron: [...window.figTemporal], activa: true });
+        
+        window.figTemporal = new Array(25).fill(false);
+        document.getElementById('input-nombre').value = "";
+        document.getElementById('preset-selector').value = "PERSONALIZADA";
+        renderGrid();
+        window.renderListaFiguras();
+    };
+
+    // Nueva función para apagar/prender figuras
+    window.toggleFiguraActiva = (idx, estado) => {
+        dbLocal.config.figurasMultiples[idx].activa = estado;
+        window.renderListaFiguras();
+        guardarDatos(); // Esto actualiza la pantalla principal inmediatamente
+    };
+
+    window.renderListaFiguras = () => {
+        const listDiv = document.getElementById('lista-figuras-jugar');
+        listDiv.innerHTML = "";
+        if(!dbLocal.config.figurasMultiples) return;
+        dbLocal.config.figurasMultiples.forEach((fig, idx) => {
+            if(typeof fig.activa === 'undefined') fig.activa = true; // Por compatibilidad si hay viejas
+            
+            let colorFondo = fig.activa ? '#333' : '#555';
+            let colorTexto = fig.activa ? 'white' : '#aaa';
+            let tachado = fig.activa ? 'none' : 'line-through';
+            
+            listDiv.innerHTML += `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:${colorFondo}; margin-bottom:5px; padding:5px 10px; border-radius:3px; color:${colorTexto}; font-size:12px; text-decoration:${tachado};">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" ${fig.activa ? 'checked' : ''} onchange="toggleFiguraActiva(${idx}, this.checked)" title="Dejar de buscar esta figura" style="cursor:pointer; width:15px; height:15px;">
+                    <span>${fig.nombre}</span>
+                </div>
+                <button onclick="eliminarFiguraLista(${idx})" style="background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">X</button>
+            </div>`;
+        });
+    };
+
+    window.eliminarFiguraLista = (idx) => {
+        if(confirm("¿Eliminar esta figura de la lista de juego?")) {
+            dbLocal.config.figurasMultiples.splice(idx, 1);
+            window.renderListaFiguras();
+            guardarDatos();
+        }
+    };
+    window.limpiarFigurasLista = () => {
+        if(confirm("¿Estás seguro de que quieres borrar TODAS las figuras de la lista?")) {
+            dbLocal.config.figurasMultiples = []; // Vaciamos la lista
+            window.renderListaFiguras(); // Actualizamos la vista para que desaparezcan
+            guardarDatos(); // Guardamos los cambios para que se reflejen en la pantalla principal
+        }
+    };
+    function detectarGanadores() { 
+        if (!dbLocal.config.autoWin) return; 
+        let wins = []; 
+        let todasLasFigs = dbLocal.config.figurasMultiples || [ {nombre: dbLocal.config.nombre || "FIGURA", patron: dbLocal.config.figura, activa: true} ];
+        
+        // Solo buscamos ganadores en las figuras que tengan el checkbox ACTIVO
+        let figsAComprobar = todasLasFigs.filter(f => f.activa !== false);
+        if (figsAComprobar.length === 0) return; 
+        
+        cartonesActuales.forEach(c => { 
+            let figurasGanadas = []; // Guardará los nombres de las figuras ganadoras
+            
+            for(let f of figsAComprobar) {
+                let ok = true; 
+                let tienePatron = false;
+                f.patron.forEach((m, idx) => { 
+                    if(m) {
+                        tienePatron = true;
+                        if(c.numeros[mapeoCarton[idx]]!==0 && !dbLocal.juego.includes(c.numeros[mapeoCarton[idx]])) ok = false; 
+                    }
+                }); 
+                if(ok && tienePatron) { 
+                    figurasGanadas.push(f.nombre); // Agregamos el nombre de la figura
+                }
+            }
+            // Si el cartón ganó al menos en una figura, lo guardamos con sus datos
+            if(figurasGanadas.length > 0) {
+                wins.push({ carton: c.carton, figuras: figurasGanadas.join(" + ") }); 
+            }
+        }); 
+        
+        if (wins.length > 0 && wins.length !== lastWinCount) { 
+            if (winRef && !winRef.closed) winRef.close(); 
+            winRef = window.open("", "W75", "width=350,height=500"); 
+            
+            // Creamos los botones incluyendo el nombre de la figura ganadora en amarillo
+            let botonesHTML = wins.map(w => `
+                <button class="btn" onclick="window.opener.manualCheckById(${w.carton})">
+                    CARTÓN #${w.carton}<br>
+                    <span style="font-size:14px; color:#ffeb3b;">⭐ ${w.figuras}</span>
+                </button>
+            `).join('');
+
+            winRef.document.write(`<html><head><title>🏆 GANADORES 75</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:${dbLocal.colores.cartonExport};color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.5);transition:0.2s;} .btn:hover{filter:brightness(1.2);}</style></head><body><h2>🏆 GANADORES 75</h2><div id="l">${botonesHTML}</div></body></html>`); 
+            
+            winRef.document.close();
+            lastWinCount = wins.length; 
+        } else if(wins.length === 0) lastWinCount = 0; 
+    }
+
+   window.manualCheck = () => {
+        if(!checkSecurity()) return;
+        let n = parseInt(document.getElementById('num-revisar').value);
+        let c = cartonesActuales.find(x => x.carton == n);
+        if(!c) return alert("No existe el cartón en el serial activo.");
+
+        const winR = window.open("", "R75", "width=500,height=600");
+        
+        // 1. Validar si hay logo superior cargado para mostrarlo en la verificación
+        let imgHeaderHtml = dbLocal.headerCartonBase64 ? `<div style="background:white; text-align:center; border-bottom: 3px solid ${dbLocal.colores.cartonExport}; padding:5px;"><img src="${dbLocal.headerCartonBase64}" style="max-width:100%; max-height:80px; display:block; margin:auto;"></div>` : '';
+        
+        // 2. Extraer el color personalizado del texto "CARTÓN", si no existe, usa blanco
+        let colorTexto = dbLocal.colores.cartonTexto || "#ffffff";
+
+        winR.document.write(`<html><head><title>VERIFICAR</title><style>body{background:#121212;color:white;text-align:center;font-family:Arial;} .g-main{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#000;border:5px solid #000;} .c-num{background:white;color:black;height:80px;display:flex;align-items:center;justify-content:center;font-size:35px;font-weight:900;} .marked{background:${dbLocal.colores.cartonExport} !important; color:white;}</style></head><body><div style="background:${dbLocal.colores.cartonFondo};padding:15px;margin:auto;width:450px;">${imgHeaderHtml}<div style="background:${dbLocal.colores.cartonExport}; color:white; font-size:40px; font-weight:900; padding:10px; text-transform:uppercase;">BINGO 75</div><div class="g-main">`);
+
+        mapeoCarton.forEach((m, i) => {
+            let num = c.numeros[m];
+            let isMarked = (num === 0) || dbLocal.juego.includes(num);
+            
+            // Reemplazar el 0 por la X o el logo central si existe
+            let displayTxt = num;
+            if (num === 0) {
+                displayTxt = dbLocal.centerLogoBase64 ? `<img src="${dbLocal.centerLogoBase64}" style="width:80%; height:80%; object-fit:contain;">` : "X";
+            }
+
+            // Revisar si forma parte de alguna figura activa para resaltar el borde
+            let isFig = false;
+            if(dbLocal.config.figurasMultiples) {
+                let figsAComprobar = dbLocal.config.figurasMultiples.filter(f => f.activa !== false);
+                for(let f of figsAComprobar) {
+                    if(f.patron[i]) { isFig = true; break; }
+                }
+            }
+
+            let figClass = (isFig && !isMarked) ? 'border:6px solid #ffeb3b; box-sizing:border-box;' : '';
+            winR.document.write(`<div class="c-num ${isMarked ? 'marked' : ''}" style="${figClass}">${displayTxt}</div>`);
+        });
+
+        // 3. Aplicamos el color de texto a la palabra CARTÓN #X
+        winR.document.write(`</div><h2 style="color:${colorTexto}; margin-top:15px; font-size:28px;">CARTÓN #${n}</h2></div></body></html>`);
+        winR.document.close(); 
+    };
+
+    window.manualCheckById = (n) => {
+        document.getElementById('num-revisar').value = n;
+        window.manualCheck();
+    };
+
     window.toggleAutomatico = () => { if(!checkSecurity()) return; const clock = document.getElementById('timer-auto-container'), btn = document.getElementById('btn-auto'); if(timerAuto) { clearInterval(timerAuto); timerAuto = null; clearInterval(timerVisual); clock.style.display="none"; btn.innerText="AUTO (↑)"; } else { timerAuto = setInterval(sacarBalota, 6000); clock.style.display="block"; btn.innerText="PARAR (↑)"; resetReloj(); } };
     function resetReloj() { let tl = 6; document.getElementById('timer-count').innerText = "06"; if(timerVisual) clearInterval(timerVisual); timerVisual = setInterval(() => { tl--; document.getElementById('timer-count').innerText = "0"+tl; if(tl<=0) tl=6; }, 1000); }
     
@@ -2148,6 +2932,8 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     }
 
     // Ejecutar inmediatamente al abrir el archivo para poner la vista predeterminada
+    // Ejecutar inmediatamente al abrir el archivo para poner la vista predeterminada
+    // Ejecutar inmediatamente al abrir el archivo para poner la vista predeterminada
     document.addEventListener('DOMContentLoaded', () => {
         // Inicializamos el selector de color en el panel admin
         const savedColor = localStorage.getItem('casino_color_softblue_global') || COLOR_SOFT_BLUE_DEF;
@@ -2155,6 +2941,182 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         if(inputColor) inputColor.value = savedColor;
 
         aplicarVistaGlobal();
+        
+        // Inyectar la capacidad de arrastrar a las pantallas multimedia
+        document.querySelectorAll('.media-zone').forEach(zona => {
+            hacerArrastrable(zona);
+        });
+
+        // Hacer arrastrable el bloque de las figuras a jugar
+       // Hacer arrastrable el bloque de las figuras a jugar
+        let zonaFiguras = document.getElementById('zona-figuras');
+        if(zonaFiguras) {
+            hacerArrastrable(zonaFiguras);
+            
+            // ¡MAGIA CORREGIDA! El zoom ya no se vuelve loco
+            new ResizeObserver(entries => {
+                // Obtenemos el tamaño exacto al que tú estiraste la caja
+                let anchoActual = entries[0].target.offsetWidth; 
+                
+                // Lo dividimos entre el ancho original (280px) para sacar la escala
+                let escala = anchoActual / 280; 
+                
+                // Se lo aplicamos a las figuras
+                let contFiguras = document.getElementById('figuras-multiples-container');
+                if(contFiguras) contFiguras.style.zoom = escala;
+                
+                // Se lo aplicamos al título
+                let titulo = zonaFiguras.querySelector('strong');
+                if(titulo) titulo.style.zoom = escala;
+                
+            }).observe(zonaFiguras);
+        }
+    });
+
+    setInterval(() => {
+        // Obtenemos el usuario que inició sesión y lo pasamos a minúsculas
+        const usuarioActual = (localStorage.getItem('bingo_user') || "").toLowerCase().trim();
+        
+        // Validamos si el usuario es "jorge"
+        const esJorge = (usuarioActual === 'jorge');
+        
+        // Buscamos todas las cajas de secuencia en las 4 salas
+        document.querySelectorAll('button').forEach(btn => {
+            if (btn.innerText.includes('COPIAR JUGADA MEZCLADA')) {
+                // Si es Jorge, mostramos la caja (flex). Si no, la desaparecemos (none).
+                btn.parentElement.style.display = esJorge ? 'flex' : 'none';
+            }
+        });
+    }, 1000); // Revisa la seguridad cada 1 segundo automáticamente
+// ==========================================
+    // LÓGICA DE LA CÁMARA FLOTANTE
+    // ==========================================
+    let camaraStream = null;
+
+    window.toggleCamaraFlotante = async () => {
+        let container = document.getElementById('camara-flotante');
+        
+        // Si la cajita no existe en el HTML, la creamos y la inyectamos
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'camara-flotante';
+            
+            container.innerHTML = `
+                <video id="camara-video" autoplay playsinline muted></video>
+                <div style="position: absolute; bottom: 0; right: 0; width: 25px; height: 25px; background: transparent; cursor: nwse-resize; pointer-events: none;" title="Arrastra de aquí para redimensionar">
+                   <div style="position:absolute; bottom:2px; right:2px; width:0; height:0; border-style:solid; border-width:0 0 15px 15px; border-color:transparent transparent #facc15 transparent;"></div>
+                </div>
+            `;
+            
+            // ¡EL OTRO CAMBIO CLAVE! 
+            // Inyectamos la cámara dentro de 'pantalla-principal' para que haga scroll junto con el tablero.
+            let tablero = document.getElementById('pantalla-principal');
+            if (tablero) {
+                tablero.appendChild(container);
+            } else {
+                document.body.appendChild(container);
+            }
+            
+            // Le aplicamos la función para que se pueda arrastrar
+            hacerArrastrable(container);
+        }
+
+        const videoEl = document.getElementById('camara-video');
+
+        // Si está oculta, prendemos la cámara y la mostramos
+        if (container.style.display === 'none' || container.style.display === '') {
+            try {
+                // Pedimos permiso para usar el video
+                camaraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                videoEl.srcObject = camaraStream;
+                container.style.display = 'block';
+                
+                // Aseguramos que siempre aparezca en la parte superior donde estás viendo
+                container.style.top = "20px";
+                container.style.left = "30px";
+            } catch (err) {
+                alert("No se pudo acceder a la cámara. Asegúrate de darle permisos al navegador. Error: " + err.message);
+            }
+        } else {
+            // Si está visible, apagamos la cámara y ocultamos la caja
+            if (camaraStream) {
+                camaraStream.getTracks().forEach(track => track.stop());
+                camaraStream = null;
+            }
+            videoEl.srcObject = null;
+            container.style.display = 'none';
+        }
+    };
+// Función mágica que permite arrastrar la cámara por la pantalla
+    // Función mágica que permite arrastrar cualquier elemento por la pantalla
+    // Función mágica que permite arrastrar cualquier elemento por la pantalla
+    function hacerArrastrable(elmnt) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        
+        // Soportar Mouse (PC) y Touch (Celulares)
+        elmnt.onmousedown = dragMouseDown;
+        elmnt.ontouchstart = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            
+            // ¡VITAL! Si hacen clic en un Checkbox, etiqueta o texto, NO arrastramos.
+            if(['INPUT', 'LABEL', 'SMALL', 'BUTTON'].includes(e.target.tagName)) return;
+            
+            // Si el usuario hace clic en la esquina inferior derecha (para cambiar tamaño), NO arrastramos.
+            let rect = elmnt.getBoundingClientRect();
+            let clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            let clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            
+            let isResizeZone = (clientX > rect.right - 25 && clientY > rect.bottom - 25);
+            if(isResizeZone) return; 
+            
+            if (!e.type.includes('touch')) e.preventDefault();
+            
+            pos3 = clientX;
+            pos4 = clientY;
+            
+            // IMPORTANTÍSIMO: Liberamos el anclaje de abajo para poder moverlo libremente hacia arriba
+            elmnt.style.bottom = "auto";
+            
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+            document.ontouchend = closeDragElement;
+            document.ontouchmove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            if (!e.type.includes('touch')) e.preventDefault();
+
+            let clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            let clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+            pos1 = pos3 - clientX;
+            pos2 = pos4 - clientY;
+            pos3 = clientX;
+            pos4 = clientY;
+            
+            // Calculamos y aplicamos la nueva posición
+            elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+            elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+            document.ontouchend = null;
+            document.ontouchmove = null;
+        }
+    }
+
+    window.addEventListener('storage', (e) => {
+        // Si otra pestaña actualizó la base de datos del Bingo 75...
+        if (e.key === 'bingoSala2_V15_MASTER' && e.newValue) {
+            // Actualizamos la memoria de esta pestaña y redibujamos la pantalla al instante
+            dbLocal = JSON.parse(e.newValue);
+            if(typeof renderizar === 'function') renderizar();
+        }
     });
 </script>
 </body>
