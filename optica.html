@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tindallvision | Distribuidora de Elementos Ópticos</title>
+  <title>Tyndallvision | Distribuidora de Elementos Ópticos</title>
   <style>
     :root {
       --primary: #07157a;
@@ -724,9 +724,9 @@
   <header>
     <div class="topbar">
       <div class="brand">
-        <div class="brand-logo" aria-label="Logo Tindallvision"></div>
+        <div class="brand-logo" aria-label="Logo Tyndallvision"></div>
         <div>
-          <h1>Tindallvision</h1>
+          <h1>Tyndallvision</h1>
           <p>Distribuidora de elementos ópticos</p>
         </div>
       </div>
@@ -802,7 +802,7 @@
   </main>
 
   <footer>
-    <h3>Tindallvision</h3>
+    <h3>Tyndallvision</h3>
     <p>Distribuidora de elementos ópticos · Catálogo digital editable</p>
   </footer>
 
@@ -852,7 +852,7 @@
     <div class="modal-card">
       <div class="panel-header">
         <div>
-          <h2>Panel de productos Tindallvision</h2>
+          <h2>Panel de productos Tyndallvision</h2>
           <p style="color: var(--muted); margin-top: 4px;">Solo el usuario autorizado puede agregar, editar o eliminar productos.</p>
           <p id="adminUserStatus" style="color: var(--muted); margin-top: 4px; font-size: 13px;"></p>
         </div>
@@ -1104,7 +1104,7 @@
 
       if (user && !isAuthorizedUser(user)) {
         signOut(auth);
-        alert("Este usuario no está autorizado para administrar Tindallvision.");
+        alert("Este usuario no está autorizado para administrar Tyndallvision.");
         closeAdmin();
       }
     });
@@ -1282,7 +1282,7 @@
       }
 
       drawPdfFooter(pdf, pageW, pageH);
-      pdf.save(`Catalogo_Tindallvision_${new Date().toISOString().slice(0, 10)}.pdf`);
+      pdf.save(`Catalogo_Tyndallvision_${new Date().toISOString().slice(0, 10)}.pdf`);
     }
 
     function drawPdfCover(pdf, pageW, pageH, totalProducts) {
@@ -1299,7 +1299,7 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(28);
-      pdf.text("Tindallvision", marginPdf(), 58);
+      pdf.text("Tyndallvision", marginPdf(), 58);
 
       pdf.setFontSize(15);
       pdf.setFont("helvetica", "normal");
@@ -1331,7 +1331,7 @@
 
       pdf.setTextColor(210, 220, 255);
       pdf.setFontSize(9);
-      pdf.text("Catalogo generado desde la plataforma digital Tindallvision", marginPdf(), pageH - 18);
+      pdf.text("Catalogo generado desde la plataforma digital Tyndallvision", marginPdf(), pageH - 18);
     }
 
     function marginPdf() {
@@ -1344,7 +1344,7 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(13);
-      pdf.text("Tindallvision", 12, 13);
+      pdf.text("Tyndallvision", 12, 13);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(8);
       pdf.text("Distribuidora de elementos opticos", 52, 13);
@@ -1535,7 +1535,7 @@
       }
       const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
       const detail = cart.map(item => `• ${item.name} x${item.qty} - ${formatMoney(item.price * item.qty)}`).join("\n");
-      const message = `Hola Tindallvision, quiero cotizar/realizar este pedido:\n\n${detail}\n\nTotal estimado: ${formatMoney(total)}\n\nQuedo atento(a) para confirmar disponibilidad, fórmula y envío.`;
+      const message = `Hola Tyndallvision, quiero cotizar/realizar este pedido:\n\n${detail}\n\nTotal estimado: ${formatMoney(total)}\n\nQuedo atento(a) para confirmar disponibilidad, fórmula y envío.`;
       window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, "_blank");
     }
 
