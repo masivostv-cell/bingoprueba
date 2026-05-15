@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tindallvision | Distribuidora de Elementos Ópticos</title>
+  <style>
+    :root {
+      --primary: #07157a;
+      --primary-2: #111fb0;
+      --gold: #f6c431;
+      --gold-dark: #d7a915;
+      --dark: #0b1020;
+      --muted: #64748b;
+      --light: #f5f7fb;
+      --white: #ffffff;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --shadow: 0 12px 35px rgba(15, 23, 42, 0.12);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    header {
+      background: linear-gradient(135deg, #050b3d, var(--primary) 45%, #0c1aa5);
+      padding: 16px 5%;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.22);
+      color: white;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      background: radial-gradient(circle at 50% 45%, #d9f7ff 0 12%, #1f8db5 13% 24%, #061368 25% 47%, var(--gold) 48% 55%, transparent 56%), #020617;
+      border: 2px solid rgba(246, 196, 49, 0.8);
+      box-shadow: 0 8px 20px rgba(246, 196, 49, 0.25);
+    }
+
+    .brand h1 {
+      font-size: 25px;
+      line-height: 1;
+      letter-spacing: 0.5px;
+    }
+
+    .brand p {
+      font-size: 13px;
+      color: #dbeafe;
+      margin-top: 5px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cart-pill,
+    .admin-lock {
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 11px 15px;
+      font-weight: 800;
+      background: var(--white);
+      color: var(--primary);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cart-pill:hover,
+    .admin-lock:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
+    }
+
+    .admin-lock {
+      width: 47px;
+      height: 47px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      background: var(--gold);
+      color: #111827;
+    }
+
+    .hero {
+      padding: 34px 5% 18px;
+      background: radial-gradient(circle at top right, rgba(246,196,49,0.26), transparent 34%), linear-gradient(180deg, #eef3ff, var(--light));
+    }
+
+    .hero-box {
+      background: var(--white);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      padding: 30px;
+      display: grid;
+      grid-template-columns: 1.45fr 0.9fr;
+      gap: 24px;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(7, 21, 122, 0.08);
+    }
+
+    .hero-box::after {
+      content: "";
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      background: rgba(7, 21, 122, 0.08);
+      border-radius: 50%;
+      right: -80px;
+      bottom: -80px;
+    }
+
+    .hero h2 {
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.05;
+      margin-bottom: 12px;
+      color: var(--primary);
+    }
+
+    .hero h2 span {
+      color: var(--gold-dark);
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 17px;
+      max-width: 720px;
+      margin-bottom: 20px;
+      line-height: 1.55;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .badge {
+      background: #fff8dc;
+      border: 1px solid #f4d46f;
+      padding: 9px 13px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #5f4300;
+    }
+
+    .hero-visual {
+      position: relative;
+      z-index: 2;
+      min-height: 230px;
+      display: grid;
+      place-items: center;
+    }
+
+    .lens-graphic {
+      width: min(270px, 75vw);
+      aspect-ratio: 1.3;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #020617 0 12%, #8ee8ff 13% 16%, #034b82 17% 31%, #020617 32% 39%, transparent 40%),
+                  radial-gradient(ellipse at 55% 55%, rgba(255,255,255,0.95), rgba(191,219,254,0.9) 45%, rgba(96,165,250,0.25) 75%, transparent 78%);
+      transform: rotate(-10deg);
+      box-shadow: 0 24px 50px rgba(7, 21, 122, 0.25);
+      border: 12px solid rgba(246,196,49,0.78);
+    }
+
+    main {
+      padding: 20px 5% 60px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1.35fr 0.8fr 0.8fr auto;
+      gap: 14px;
+      margin: 20px 0;
+    }
+
+    $1.pdf-btn {
+      border: none;
+      background: var(--gold);
+      color: #111827;
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .pdf-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 9px 22px rgba(0, 0, 0, 0.14);
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 28px 0 16px;
+      gap: 12px;
+    }
+
+    .section-title h2 {
+      font-size: 28px;
+      color: var(--primary);
+    }
+
+    .count {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+      gap: 18px;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+      border: 1px solid var(--border);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+
+    .product-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .offer-ribbon {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: var(--gold);
+      color: #111827;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      z-index: 2;
+    }
+
+    .selected-ribbon {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--primary);
+      color: white;
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 900;
+      z-index: 3;
+      box-shadow: 0 8px 18px rgba(7, 21, 122, 0.28);
+    }
+
+    .product-card.selected {
+      border: 2px solid var(--primary);
+      box-shadow: 0 14px 32px rgba(7, 21, 122, 0.18);
+    }
+
+    .product-image {
+      height: 158px;
+      background: linear-gradient(135deg, #eaf1ff, #ffffff 45%, #fff5cc);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .emoji-image {
+      font-size: 76px;
+      filter: drop-shadow(0 10px 15px rgba(0,0,0,0.12));
+    }
+
+    .product-info {
+      padding: 16px;
+    }
+
+    .category-tag {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--primary);
+      background: #eef3ff;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+
+    .product-info h3 {
+      font-size: 18px;
+      margin-bottom: 6px;
+      min-height: 43px;
+    }
+
+    .product-info p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      min-height: 70px;
+      line-height: 1.42;
+    }
+
+    .product-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .price {
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--dark);
+    }
+
+    .stock {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .add-btn {
+      border: none;
+      background: var(--primary);
+      color: white;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .add-btn:hover {
+      background: var(--primary-2);
+      transform: scale(1.04);
+    }
+
+    .empty-state {
+      background: white;
+      border: 1px dashed #cbd5e1;
+      padding: 35px;
+      border-radius: 22px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .policy-section {
+      margin-top: 38px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .policy-card {
+      background: white;
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 10px 28px rgba(15,23,42,0.08);
+      border: 1px solid var(--border);
+    }
+
+    .policy-card h3 {
+      color: var(--primary);
+      margin-bottom: 10px;
+    }
+
+    .policy-card ul {
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .drawer,
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+    }
+
+    .drawer.active,
+    .modal.active {
+      display: block;
+    }
+
+    .backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.52);
+      backdrop-filter: blur(4px);
+    }
+
+    .drawer-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(430px, 92vw);
+      height: 100%;
+      background: white;
+      padding: 24px;
+      box-shadow: -15px 0 35px rgba(0, 0, 0, 0.18);
+      overflow-y: auto;
+    }
+
+    .modal-card {
+      position: relative;
+      background: white;
+      width: min(980px, 94vw);
+      max-height: 92vh;
+      overflow-y: auto;
+      margin: 4vh auto;
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .modal-small {
+      width: min(430px, 92vw);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      gap: 12px;
+    }
+
+    .close-btn {
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    .cart-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cart-item h4 {
+      font-size: 15px;
+      margin-bottom: 5px;
+    }
+
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .qty-controls button,
+    .mini-btn {
+      border: none;
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .cart-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 0;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .checkout-btn,
+    .primary-btn,
+    .danger-btn,
+    .secondary-btn {
+      width: 100%;
+      border: none;
+      border-radius: 15px;
+      padding: 13px 16px;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 15px;
+    }
+
+    .checkout-btn,
+    .primary-btn {
+      background: var(--success);
+      color: white;
+    }
+
+    .secondary-btn {
+      background: #111827;
+      color: white;
+    }
+
+    .danger-btn {
+      background: var(--danger);
+      color: white;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 900;
+      color: #334155;
+    }
+
+    input,
+    select,
+    textarea {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 13px;
+      outline: none;
+      font-size: 15px;
+      background: white;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .admin-box {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 18px;
+      background: #fafafa;
+    }
+
+    .admin-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 570px;
+      overflow-y: auto;
+    }
+
+    .admin-item {
+      display: grid;
+      grid-template-columns: 54px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px;
+      background: white;
+    }
+
+    .admin-thumb {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      background: #eef3ff;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      font-size: 28px;
+    }
+
+    .admin-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .admin-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .admin-actions button {
+      border: none;
+      border-radius: 10px;
+      padding: 8px 9px;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .edit-btn {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .delete-btn {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .notice {
+      margin-top: 12px;
+      padding: 12px;
+      background: #fff8d7;
+      border: 1px solid #f6de7a;
+      border-radius: 14px;
+      font-size: 13px;
+      color: #6b4e00;
+      line-height: 1.45;
+    }
+
+    .login-error {
+      color: #dc2626;
+      font-weight: 800;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+
+    footer {
+      background: #050b3d;
+      color: white;
+      padding: 28px 5%;
+      text-align: center;
+    }
+
+    footer p {
+      color: #dbeafe;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 900px) {
+      .hero-box,
+      .controls,
+      .admin-layout,
+      .form-grid,
+      .policy-section {
+        grid-template-columns: 1fr;
+      }
+
+      .section-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand h1 {
+        font-size: 19px;
+      }
+
+      .brand p {
+        display: none;
+      }
+
+      .cart-pill span {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-logo" aria-label="Logo Tindallvision"></div>
+        <div>
+          <h1>Tindallvision</h1>
+          <p>Distribuidora de elementos ópticos</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="cart-pill" onclick="openCart()">🛍️ <span>Pedido</span> <strong id="cartCount">0</strong></button>
+        <button class="admin-lock" onclick="openLogin()" title="Ingresar como administrador autorizado">🔒</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-box">
+      <div>
+        <h2>Portafolio óptico <span>profesional</span></h2>
+        <p>Catálogo de lentes de contacto, lentes blandos convencionales, lentes RGP, soluciones, limpiadores, accesorios y servicios para ópticas y profesionales de la salud visual.</p>
+        <div class="hero-badges">
+          <span class="badge">👁️ Lentes de contacto</span>
+          <span class="badge">🧪 Soluciones y limpiadores</span>
+          <span class="badge">🔬 Diagnóstico</span>
+          <span class="badge">📦 Pedidos por WhatsApp</span>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="lens-graphic"></div>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <div class="controls">
+      <input class="control" id="searchInput" type="search" placeholder="Buscar producto, marca, material, rango o descripción..." oninput="renderProducts()" />
+      <select class="control" id="categoryFilter" onchange="renderProducts()">
+        <option value="Todos">Todas las categorías</option>
+      </select>
+      <select class="control" id="sortFilter" onchange="renderProducts()">
+        <option value="featured">Orden destacado</option>
+        <option value="priceAsc">Menor precio</option>
+        <option value="priceDesc">Mayor precio</option>
+        <option value="nameAsc">Nombre A-Z</option>
+      </select>
+      <button class="pdf-btn" onclick="exportCatalogPdf()">📄 Catálogo PDF</button>
+    </div>
+
+    <div class="section-title">
+      <h2>Productos del portafolio</h2>
+      <div class="count" id="productCount"></div>
+    </div>
+
+    <div id="productsGrid" class="products-grid"></div>
+
+    <section class="policy-section">
+      <div class="policy-card">
+        <h3>Políticas importantes para lentes de contacto</h3>
+        <ul>
+          <li>Cambio máximo dentro de 30 días desde factura o remisión.</li>
+          <li>La caja debe estar sellada, en perfecto estado y con vencimiento mínimo superior a 12 meses.</li>
+          <li>El cambio debe tener carta del profesional con motivo, factura o remisión inicial y nueva fórmula.</li>
+          <li>Pedidos especiales, importaciones y extra-rangos no tienen cambio ni devolución.</li>
+          <li>Convencionales y fabricación a medida requieren anticipo del 50%.</li>
+        </ul>
+      </div>
+      <div class="policy-card">
+        <h3>Información de venta</h3>
+        <ul>
+          <li>Precios cargados en pesos colombianos según el portafolio suministrado.</li>
+          <li>Productos técnicos pueden requerir confirmación de fórmula, disponibilidad y tiempos de entrega.</li>
+          <li>El pedido por WhatsApp envía el listado de productos y total estimado.</li>
+          <li>Las imágenes pueden cargarse desde el panel administrador con el candado.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <h3>Tindallvision</h3>
+    <p>Distribuidora de elementos ópticos · Catálogo digital editable</p>
+  </footer>
+
+  <div id="cartDrawer" class="drawer">
+    <div class="backdrop" onclick="closeCart()"></div>
+    <aside class="drawer-panel">
+      <div class="panel-header">
+        <h2>Pedido</h2>
+        <button class="close-btn" onclick="closeCart()">×</button>
+      </div>
+      <div id="cartItems"></div>
+      <div class="cart-total">
+        <span>Total estimado</span>
+        <span id="cartTotal">$0</span>
+      </div>
+      <button class="checkout-btn" onclick="sendOrderWhatsApp()">Enviar pedido por WhatsApp</button>
+      <button class="danger-btn" style="margin-top:10px;" onclick="clearCart()">Vaciar pedido</button>
+    </aside>
+  </div>
+
+  <div id="loginModal" class="modal">
+    <div class="backdrop" onclick="closeLogin()"></div>
+    <div class="modal-card modal-small">
+      <div class="panel-header">
+        <h2>🔒 Administrador</h2>
+        <button class="close-btn" onclick="closeLogin()">×</button>
+      </div>
+      <div class="form-group">
+        <label>Usuario autorizado</label>
+        <input id="loginEmail" type="email" placeholder="Ingresa tu correo" autocomplete="username" />
+      </div>
+      <br />
+      <div class="form-group">
+        <label>Contraseña de Firebase</label>
+        <input id="loginPassword" type="password" placeholder="Ingresa la contraseña" autocomplete="current-password" />
+      </div>
+      <div id="loginError" class="login-error"></div>
+      <button class="primary-btn" onclick="loginAdmin()">Ingresar</button>
+      <div class="notice">
+        Ingresa con el correo y contraseña autorizados.
+      </div>
+    </div>
+  </div>
+
+  <div id="adminModal" class="modal">
+    <div class="backdrop" onclick="closeAdmin()"></div>
+    <div class="modal-card">
+      <div class="panel-header">
+        <div>
+          <h2>Panel de productos Tindallvision</h2>
+          <p style="color: var(--muted); margin-top: 4px;">Solo el usuario autorizado puede agregar, editar o eliminar productos.</p>
+          <p id="adminUserStatus" style="color: var(--muted); margin-top: 4px; font-size: 13px;"></p>
+        </div>
+        <button class="close-btn" onclick="closeAdmin()">×</button>
+      </div>
+
+      <div class="admin-layout">
+        <div class="admin-box">
+          <h3 id="formTitle">Agregar nuevo producto</h3>
+          <br />
+          <form id="productForm" onsubmit="saveProduct(event)">
+            <input type="hidden" id="productId" />
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Nombre del producto</label>
+                <input id="productName" type="text" required placeholder="Ej: Biofinity Toric" />
+              </div>
+              <div class="form-group">
+                <label>Categoría</label>
+                <input id="productCategory" type="text" required placeholder="Ej: Lentes CooperVision" />
+              </div>
+              <div class="form-group">
+                <label>Precio</label>
+                <input id="productPrice" type="number" required min="0" placeholder="Ej: 220000" />
+              </div>
+              <div class="form-group">
+                <label>Existencias</label>
+                <input id="productStock" type="number" required min="0" placeholder="Ej: 10" />
+              </div>
+              <div class="form-group full">
+                <label>Descripción / parámetros</label>
+                <textarea id="productDescription" required placeholder="Material, curva base, diámetro, rango, reemplazo, caja..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Emoji del producto</label>
+                <input id="productEmoji" type="text" maxlength="4" placeholder="Ej: 👁️" />
+              </div>
+              <div class="form-group">
+                <label>¿Destacado?</label>
+                <select id="productOffer">
+                  <option value="false">No</option>
+                  <option value="true">Sí</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label>Imagen del producto</label>
+                <input id="productImage" type="file" accept="image/*" />
+                <small style="color: var(--muted);">Opcional. La imagen se convierte a texto Base64 y se guarda en Firestore, sin usar Storage. Usa imágenes livianas.</small>
+              </div>
+              <div class="form-group full">
+                <label>O pega una URL de imagen</label>
+                <input id="productImageUrl" type="url" placeholder="https://..." />
+              </div>
+            </div>
+            <br />
+            <button class="primary-btn" type="submit">Guardar producto</button>
+            <button class="secondary-btn" type="button" style="margin-top:10px;" onclick="resetForm()">Limpiar formulario</button>
+          </form>
+        </div>
+
+        <div class="admin-box">
+          <div class="panel-header">
+            <h3>Productos cargados</h3>
+            <button class="mini-btn" onclick="resetProducts()">Restaurar portafolio</button>
+          </div>
+          <div id="adminProductsList" class="admin-list"></div>
+          <div class="notice">
+            Los cambios se guardan en <strong>Firebase Firestore</strong>. Solo el UID autorizado puede escribir. Las imágenes se guardan como <strong>texto Base64</strong>, sin Firebase Storage.
+            <br><br>
+            <button class="danger-btn" type="button" onclick="logoutAdmin()">Cerrar sesión de administrador</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      doc,
+      onSnapshot,
+      serverTimestamp,
+      getDocs,
+      writeBatch
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAdDVbpsIAwwVZQT5g2fVv0v5ErQDq6tIg",
+      authDomain: "tindallvision.firebaseapp.com",
+      projectId: "tindallvision",
+      storageBucket: "tindallvision.firebasestorage.app",
+      messagingSenderId: "883370416968",
+      appId: "1:883370416968:web:cdfa72985f3076b884717d",
+      measurementId: "G-G2BDLN4CWW"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    isSupported().then((supported) => {
+      if (supported) getAnalytics(app);
+    });
+
+    const PRODUCTS_COLLECTION = "productos";
+    const WHATSAPP_NUMBER = "573164326679";
+    const AUTHORIZED_EMAIL = "perez_mafer_92@hotmail.com";
+    const AUTHORIZED_UID = "QCliDQoXyxfa25qmAw6zzAn9OO32";
+
+    let currentAdminUser = null;
+    let products = [];
+    let cart = JSON.parse(localStorage.getItem("cart_tindallvision")) || [];
+
+    const defaultProducts = [
+      { name: "Biofinity", category: "CooperVision", price: 188000, stock: 10, description: "Comfilcon A. CB 8.6, diámetro 14.00, reemplazo mensual, esfera +8.00 a -12.00, caja x6, 48% H2O, DK/T 160.", emoji: "👁️", image: "", offer: true },
+      { name: "Biofinity XR", category: "CooperVision", price: 220000, stock: 10, description: "Comfilcon A. CB 8.6, diámetro 14.00, reemplazo mensual, esfera +8.50 a +15.00 y -12.50 a -20.00, caja x6.", emoji: "👁️", image: "", offer: false },
+      { name: "Biofinity Energys", category: "CooperVision", price: 207000, stock: 10, description: "Lente con diseño Digital Boost. Comfilcon A, CB 8.6, diámetro 14.00, reemplazo mensual, esfera +8.00 a -12.00, caja x6.", emoji: "💻", image: "", offer: true },
+      { name: "Biofinity Toric", category: "CooperVision", price: 220000, stock: 10, description: "Comfilcon A. CB 8.7, diámetro 14.50, mensual. Esfera +8.00 a -10.00, cilindros -0.75 a -2.25, ejes 10 en 10, caja x6.", emoji: "👁️", image: "", offer: false },
+      { name: "Biofinity Toric XR", category: "CooperVision", price: 460000, stock: 10, description: "Comfilcon A. CB 8.7, diámetro 14.50, mensual. Esfera +8.50 a +20.00 / -10.50 a -20.00. Cilindros hasta -5.75, ejes 5 en 5.", emoji: "👁️", image: "", offer: false },
+      { name: "Biofinity Multifocal", category: "CooperVision", price: 290000, stock: 10, description: "Comfilcon A. CB 8.7, diámetro 14.50, mensual. Esfera +6.00 a -10.00, ADD +1.00 a +2.50, caja x6, diseño D y N.", emoji: "🔎", image: "", offer: true },
+      { name: "Biofinity Multifocal Toric", category: "CooperVision", price: 500000, stock: 10, description: "Comfilcon A. CB 8.6, diámetro 14.50, mensual. Esfera +10.00 a -10.00, ADD +1.00 a +2.50, cilindros -0.75 a -5.75, ejes 5° a 180°.", emoji: "🔎", image: "", offer: false },
+      { name: "Avaira Vitality", category: "CooperVision", price: 142000, stock: 10, description: "Fanfilcon A. CB 8.4, diámetro 14.2, reemplazo mensual, esfera +8.00 a -12.00, caja x6, 55% H2O, protección UV clase 1.", emoji: "👁️", image: "", offer: false },
+      { name: "Avaira Vitality Toric", category: "CooperVision", price: 167000, stock: 10, description: "Fanfilcon A. CB 8.5, diámetro 14.5, mensual. Esfera +8.00 a -10.00, cilindros -0.75 a -2.25, ejes 10 en 10, caja x6.", emoji: "👁️", image: "", offer: false },
+      { name: "Clariti 1 Day Esférico", category: "CooperVision", price: 134000, stock: 10, description: "Lente diario. Material Somofilcon A, 56% agua, CB 8.6, diámetro 14.1, caja x30, protección UV.", emoji: "☀️", image: "", offer: false },
+      { name: "Clariti 1 Day Toric", category: "CooperVision", price: 159000, stock: 10, description: "Lente diario tórico. CB 8.6, diámetro 14.3, caja x30, protección UV. Rangos esféricos y cilindros según disponibilidad.", emoji: "☀️", image: "", offer: false },
+      { name: "Clariti 1 Day Multifocal", category: "CooperVision", price: 225000, stock: 10, description: "Lente diario multifocal. Somofilcon A, 56% agua, CB 8.6, diámetro 14.3, caja x30, ADD Low/Med/High.", emoji: "🔎", image: "", offer: true },
+
+      { name: "Air Optix HydraGlyde", category: "Alcon", price: 211900, stock: 10, description: "Lotrafilcon B, uso diario o extendido, tecnología Smartshield, CB 8.6, diámetro 14.2, reemplazo mensual, caja x6, 33% agua.", emoji: "👁️", image: "", offer: true },
+      { name: "Air Optix HydraGlyde Multifocal", category: "Alcon", price: 299000, stock: 10, description: "Lotrafilcon B, uso diario y/o extendido, CB 8.6, diámetro 14.2, mensual, caja x6. Adiciones LO, MED, HI. Diseño Precision Profile.", emoji: "🔎", image: "", offer: false },
+      { name: "Air Optix HydraGlyde Toric", category: "Alcon", price: 218900, stock: 10, description: "Lotrafilcon B, superficie posterior tórica, CB 8.7, diámetro 14.5. Cilindros -0.75 a -2.25 y ejes según rango.", emoji: "👁️", image: "", offer: false },
+      { name: "Air Optix Colors", category: "Alcon", price: 36800, stock: 10, description: "Lentes de color. Colores: azul, gris, verde, miel, café, azul brillante, pure hazel, gris intenso y verde esmeralda. Caja x2.", emoji: "🌈", image: "", offer: true },
+      { name: "Precision 1", category: "Alcon", price: 123200, stock: 10, description: "Verofilcon A. 51% agua, diámetro 14.2, tinte VISITINT, tecnología SMARTSURFACE, caja x30, protección UV clase 1, CB 8.3.", emoji: "👁️", image: "", offer: false },
+      { name: "Precision 1 Toric", category: "Alcon", price: 178100, stock: 10, description: "Verofilcon A. 51% agua, diámetro 14.2, tecnología SMARTSURFACE, caja x30, protección UV clase 1. Cilindros -0.75 a -2.25.", emoji: "👁️", image: "", offer: false },
+
+      { name: "1-Day Acuvue Moist", category: "Johnson & Johnson", price: 133040, stock: 10, description: "Lente diario. Tecnología LACREON, Etafilcon A, 58% agua, caja x30, protección UV clase 2, CB 8.5 / diámetro 14.2.", emoji: "☀️", image: "", offer: true },
+      { name: "1-Day Acuvue Moist para Astigmatismo", category: "Johnson & Johnson", price: 155800, stock: 10, description: "Lente diario para astigmatismo. Tecnología LACREON, Etafilcon A, 58% agua, caja x30, protección UV clase 2.", emoji: "👁️", image: "", offer: false },
+      { name: "Acuvue Oasys", category: "Johnson & Johnson", price: 155730, stock: 10, description: "Lente reusable de uso diario o extendido. Tecnología HYDRACLEAR PLUS, Senofilcon A, 38% agua, caja x6, protección UV clase 1.", emoji: "👁️", image: "", offer: false },
+      { name: "Acuvue Oasys Astigmatismo", category: "Johnson & Johnson", price: 180765, stock: 10, description: "Para astigmatismo. HYDRACLEAR PLUS, Senofilcon A, 38% agua, caja x6, CB 8.6 / diámetro 14.5, protección UV.", emoji: "👁️", image: "", offer: false },
+      { name: "Acuvue Oasys Multifocal", category: "Johnson & Johnson", price: 209500, stock: 10, description: "Multifocal de uso diario o extendido. Senofilcon A, caja x6, adiciones baja, media y alta. Rango -9.00D a +6.00D.", emoji: "🔎", image: "", offer: false },
+      { name: "Acuvue 2", category: "Johnson & Johnson", price: 139700, stock: 10, description: "Lente reusable. Etafilcon A, 58% agua, caja x6, protección UV clase 2. Rangos negativos y positivos según curva base.", emoji: "👁️", image: "", offer: false },
+      { name: "Acuvue Vita", category: "Johnson & Johnson", price: 185260, stock: 10, description: "Lente mensual reusable. Tecnología HYDRAMAX, Senofilcon C, 41% agua, caja x6, protección UV clase 2.", emoji: "👁️", image: "", offer: true },
+      { name: "Acuvue Vita para Astigmatismo", category: "Johnson & Johnson", price: 213020, stock: 10, description: "Mensual para astigmatismo. HYDRAMAX, Senofilcon C, 41% agua, caja x6, CB 8.6 / diámetro 14.5, cilindros y ejes según rango.", emoji: "👁️", image: "", offer: false },
+
+      { name: "Xtensa Premium Asférico", category: "Spectrum", price: 74500, stock: 10, description: "Hioxifilcon A 43%, contenido de agua 57%, CB 8.60, diámetro 14.20mm, potencia -12.00 a +6.00D, azul claro, pack 6 lentes.", emoji: "👁️", image: "", offer: true },
+      { name: "Xtensa Premium Tórico", category: "Spectrum", price: 123000, stock: 10, description: "Hioxifilcon A 43%, agua 57%, CB 8.70, diámetro 14.40mm, potencia -8.00 a +4.00D, cilindros -0.75 a -2.75D, ejes 10° a 180°.", emoji: "👁️", image: "", offer: false },
+      { name: "Xtensa Premium Tórico CYL 2.75 EJE 180°", category: "Spectrum", price: 134500, stock: 10, description: "Referencia tórica especial Xtensa Premium con CYL 2.75 eje 180°. Pack 6 lentes, tecnología Aquagrip.", emoji: "👁️", image: "", offer: false },
+      { name: "Claria Asférico", category: "Spectrum", price: 122000, stock: 10, description: "Hidrogel de silicona. Contenido de agua 45%, CB 8.60, diámetro 14.2mm, potencia +6.00 a -10.00, pack 6, bloqueo UV.", emoji: "👁️", image: "", offer: false },
+      { name: "Claria Tórico", category: "Spectrum", price: 153000, stock: 10, description: "Hidrogel de silicona. Agua 45%, CB 8.60, diámetro 14.2mm, cilindros -0.75 a -2.75, ejes 10° a 180°, pack 6.", emoji: "👁️", image: "", offer: false },
+      { name: "Claria H Esférico", category: "Spectrum", price: 74000, stock: 10, description: "Hioxifilcon D, 55% agua, diámetro 14.20mm, CB 8.60mm, potencia +12.00 a +6.50D y -6.50 a -20.00D, UV clase II, pack 6.", emoji: "👁️", image: "", offer: true },
+      { name: "Claria H Tórico", category: "Spectrum", price: 132000, stock: 10, description: "Hioxifilcon D, 55% agua, CB 8.60mm, diámetro 14.20mm, potencia +6.00 a +4.50D y -6.50 a -12.00D, cilindros -0.75 a -2.25, ejes 10° a 180°.", emoji: "👁️", image: "", offer: false },
+
+      { name: "Seesoft Caja x3", category: "Lentes blandos convencionales", price: 55000, stock: 10, description: "Lente descartable. CB 8.60, diámetro 14.2, RX +12.00 a -20.00, uso diario, reemplazo mensual.", emoji: "👁️", image: "", offer: true },
+      { name: "Seesoft Caja x6", category: "Lentes blandos convencionales", price: 83000, stock: 10, description: "Lente descartable. CB 8.60, diámetro 14.2, RX +12.00 a -20.00, uso diario, reemplazo mensual.", emoji: "👁️", image: "", offer: false },
+      { name: "Hydrosoft Esférico Unisil/Silicona", category: "Lentes blandos convencionales", price: 362000, stock: 10, description: "Lente blando convencional torneado. Material Unisil/Silicona, parámetros según tabla de diseño del portafolio.", emoji: "👁️", image: "", offer: false },
+      { name: "Hydrosoft Esférico GM3", category: "Lentes blandos convencionales", price: 220000, stock: 10, description: "Lente blando convencional torneado. Material GM3, parámetros personalizados según fórmula.", emoji: "👁️", image: "", offer: false },
+      { name: "Hydrosoft Esférico Contaflex", category: "Lentes blandos convencionales", price: 200000, stock: 10, description: "Lente blando convencional torneado. Material Contaflex, parámetros personalizados según fórmula.", emoji: "👁️", image: "", offer: false },
+      { name: "Hydrosoft Bifocal", category: "Lentes blandos convencionales", price: 345000, stock: 10, description: "Lente blando convencional bifocal. Disponible según parámetros del portafolio y fórmula requerida.", emoji: "🔎", image: "", offer: false },
+      { name: "Hydrosoft Tórico", category: "Lentes blandos convencionales", price: 416000, stock: 10, description: "Lente blando convencional tórico. Parámetros de cilindro y eje según diseño y material.", emoji: "👁️", image: "", offer: false },
+      { name: "Nyquy / Piggyback", category: "Lentes blandos convencionales", price: 470000, stock: 10, description: "Diseño convencional para adaptación especial. Parámetros según evaluación profesional.", emoji: "👁️", image: "", offer: false },
+      { name: "Hydrosoft Protésico", category: "Lentes blandos convencionales", price: 362000, stock: 10, description: "Lente protésico. Colores disponibles según portafolio: miel, azul, verde, platino, café y otros tonos.", emoji: "🌈", image: "", offer: false },
+      { name: "Esencia", category: "Lentes blandos convencionales", price: 645000, stock: 10, description: "Lente blando convencional de diseño especial. Parámetros según tabla del portafolio.", emoji: "👁️", image: "", offer: false },
+      { name: "Rose K2 Soft", category: "Lentes blandos convencionales", price: 645000, stock: 10, description: "Diseño Rose K2 Soft para casos especiales. Parámetros de adaptación según profesional.", emoji: "👁️", image: "", offer: false },
+
+      { name: "Hydrocolor X2", category: "Lentes blandos centrifugados", price: 36000, stock: 10, description: "Colores: verde, miel, azul y platino. CB 8.60, diámetro 14.2, RX neutro.", emoji: "🌈", image: "", offer: true },
+      { name: "Terapéutico", category: "Lentes blandos centrifugados", price: 68000, stock: 10, description: "Lente blando terapéutico. Características y disponibilidad según necesidad clínica.", emoji: "🩺", image: "", offer: false },
+
+      { name: "Rose K K2 - Optimum Infinite", category: "Lentes RGP corneales", price: 837000, stock: 10, description: "Material Optimum Infinite. DK 180, tinte verde. Diseño Rose K K2 para adaptación corneal especializada.", emoji: "🔬", image: "", offer: false },
+      { name: "Rose K K2 - Optimum Infinite / WO2", category: "Lentes RGP corneales", price: 675000, stock: 10, description: "Material Optimum Infinite / WO2. DK 125, tinte azul. Diseño Rose K K2.", emoji: "🔬", image: "", offer: false },
+      { name: "Rose K K2 - Optimum Extra / 3WGP", category: "Lentes RGP corneales", price: 669000, stock: 10, description: "Material Optimum Extra / 3WGP. DK 100, tinte lila/gris. Diseño Rose K K2.", emoji: "🔬", image: "", offer: false },
+      { name: "Rose K K2 - Boston XO2", category: "Lentes RGP corneales", price: 777000, stock: 10, description: "Material Boston XO2. DK 141, tinte azul. Diseño Rose K K2.", emoji: "🔬", image: "", offer: false },
+      { name: "Rose K K2 - Boston XO", category: "Lentes RGP corneales", price: 734000, stock: 10, description: "Material Boston XO. DK 100, tinte lila. Diseño Rose K K2.", emoji: "🔬", image: "", offer: false },
+      { name: "FIBA / Tórico / Bifocal - Optimum Infinite", category: "Lentes RGP corneales", price: 750000, stock: 10, description: "Diseño FIBA, tórico o bifocal. Material Optimum Infinite, DK 180, tinte verde.", emoji: "🔬", image: "", offer: false },
+      { name: "FIBA / Tórico / Bifocal - Boston XO", category: "Lentes RGP corneales", price: 653000, stock: 10, description: "Diseño FIBA, tórico o bifocal. Material Boston XO, DK 100, tinte lila.", emoji: "🔬", image: "", offer: false },
+      { name: "Ital Lent Asférico / Esférico", category: "Lentes RGP corneales", price: 522000, stock: 10, description: "Diseño Ital Lent asférico o esférico. Parámetros según tabla del portafolio.", emoji: "🔬", image: "", offer: false },
+      { name: "Alexa AR", category: "Lentes RGP corneales", price: 648000, stock: 10, description: "Diseño Alexa AR. Parámetros CKm, CPm y diámetro según adaptación profesional.", emoji: "🔬", image: "", offer: false },
+      { name: "Valley Contax Custom Stable", category: "Lentes esclerales", price: 1096000, stock: 10, description: "Fabricados en tornos de control numérico bajo certificación Valley Contax. Precio por lente. Material Optimum Infinite o Extra según referencia.", emoji: "🔬", image: "", offer: true },
+      { name: "Menicon Rose K2 XL / Rose K XL Oblato", category: "Lentes esclerales", price: 1096000, stock: 10, description: "Entrega estimada 4 días hábiles. Diámetro especial 14.8 o 15.8 precio normal; 16.8 o 17.8 con recargo adicional del 15%.", emoji: "🔬", image: "", offer: false },
+
+      { name: "Hydrosol 60ml", category: "Soluciones y limpiadores", price: 16000, stock: 10, description: "Solución multipropósito para lentes blandos. IVA incluido.", emoji: "🧴", image: "", offer: true },
+      { name: "Hydrosol 120ml", category: "Soluciones y limpiadores", price: 27000, stock: 10, description: "Solución multipropósito para lentes blandos. IVA incluido.", emoji: "🧴", image: "", offer: false },
+      { name: "Hydrosol 240ml", category: "Soluciones y limpiadores", price: 43000, stock: 10, description: "Solución multipropósito para lentes blandos. IVA incluido.", emoji: "🧴", image: "", offer: false },
+      { name: "Humecsol 60ml", category: "Soluciones y limpiadores", price: 18000, stock: 10, description: "Multipropósito para lentes GP. IVA incluido.", emoji: "🧴", image: "", offer: false },
+      { name: "Humecsol 120ml", category: "Soluciones y limpiadores", price: 31000, stock: 10, description: "Multipropósito para lentes GP. IVA incluido.", emoji: "🧴", image: "", offer: false },
+      { name: "Humecsol 240ml", category: "Soluciones y limpiadores", price: 50000, stock: 10, description: "Multipropósito para lentes GP. IVA incluido.", emoji: "🧴", image: "", offer: false },
+      { name: "Limpisol", category: "Soluciones y limpiadores", price: 24000, stock: 10, description: "Limpiador para lentes GP. Presentación 30ml. IVA incluido.", emoji: "🧴", image: "", offer: false },
+      { name: "MeniCare 250ml", category: "Soluciones y limpiadores", price: 61000, stock: 10, description: "Mantenimiento y enjuague de lentes GP. Presentación 250ml.", emoji: "🧴", image: "", offer: false },
+      { name: "Progent 5 unidosis", category: "Soluciones y limpiadores", price: 100000, stock: 10, description: "Limpieza profunda de lentes GP. Presentación 5 tratamientos.", emoji: "🧪", image: "", offer: false },
+      { name: "Fluoresceína", category: "Test de diagnóstico", price: 100000, stock: 10, description: "Test de diagnóstico. Presentación 120 tirillas.", emoji: "🧪", image: "", offer: false },
+      { name: "Test de Schirmer", category: "Test de diagnóstico", price: 100000, stock: 10, description: "Test de diagnóstico. Presentación 50 tirillas.", emoji: "🧪", image: "", offer: false },
+      { name: "Kerasolution 50ml", category: "Soluciones y limpiadores", price: 9600, stock: 10, description: "Solución multipropósito para lentes blandos. Presentación 50ml, IVA incluido.", emoji: "🧴", image: "", offer: true },
+      { name: "Prolub Hyfresh 60ml", category: "Soluciones y limpiadores", price: 16700, stock: 10, description: "Solución multipropósito. Limpieza profunda y máxima. IVA incluido.", emoji: "🧴", image: "", offer: false },
+      { name: "Prolub Hyfresh 100ml", category: "Soluciones y limpiadores", price: 24975, stock: 10, description: "Solución multipropósito. Limpieza profunda y máxima. IVA incluido.", emoji: "🧴", image: "", offer: false },
+      { name: "Prolub Hyfresh 350ml", category: "Soluciones y limpiadores", price: 53839, stock: 10, description: "Solución multipropósito. Limpieza profunda y máxima. IVA incluido.", emoji: "🧴", image: "", offer: false },
+
+      { name: "Estuche portalentes", category: "Accesorios y servicios", price: 6000, stock: 10, description: "Accesorio para lentes de contacto. IVA incluido.", emoji: "📦", image: "", offer: false },
+      { name: "Chupa estándar", category: "Accesorios y servicios", price: 16000, stock: 10, description: "Accesorio para manipulación de lentes. IVA incluido.", emoji: "🧰", image: "", offer: false },
+      { name: "Reglilla diamétrica", category: "Accesorios y servicios", price: 24000, stock: 10, description: "Accesorio de medición. IVA incluido.", emoji: "📏", image: "", offer: false },
+      { name: "Chupa inserción escleral", category: "Accesorios y servicios", price: 33000, stock: 10, description: "Accesorio para inserción de lentes esclerales. IVA incluido.", emoji: "🧰", image: "", offer: false },
+      { name: "Toma de parámetros", category: "Accesorios y servicios", price: 28000, stock: 10, description: "Servicio técnico de toma de parámetros. IVA incluido.", emoji: "📋", image: "", offer: false },
+      { name: "Modificación", category: "Accesorios y servicios", price: 48000, stock: 10, description: "Servicio de modificación. IVA incluido.", emoji: "🛠️", image: "", offer: false },
+      { name: "Préstamo por lente RGP", category: "Accesorios y servicios", price: 85000, stock: 10, description: "Servicio de préstamo por lente RGP. IVA incluido.", emoji: "🔬", image: "", offer: false },
+      { name: "Limpieza lentes blandos", category: "Accesorios y servicios", price: 48000, stock: 10, description: "Servicio de limpieza para lentes blandos. IVA incluido.", emoji: "🧼", image: "", offer: false },
+      { name: "Esterilización lentes blandos", category: "Accesorios y servicios", price: 48000, stock: 10, description: "Servicio de esterilización para lentes blandos. IVA incluido.", emoji: "🧼", image: "", offer: false },
+      { name: "Limpieza profunda lentes RGP", category: "Accesorios y servicios", price: 37000, stock: 10, description: "Servicio de limpieza profunda para lentes RGP. IVA incluido.", emoji: "🧼", image: "", offer: false },
+      { name: "Pulido superficies lentes RGP", category: "Accesorios y servicios", price: 48000, stock: 10, description: "Servicio de pulido de superficies para lentes RGP. IVA incluido.", emoji: "🛠️", image: "", offer: false },
+      { name: "Tratamiento plasma lentes RGP", category: "Accesorios y servicios", price: 48000, stock: 10, description: "Servicio de tratamiento plasma para lentes RGP. IVA incluido.", emoji: "🧪", image: "", offer: false }
+    ];
+
+    function cryptoId() {
+      return "p_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function isAuthorizedUser(user) {
+      return Boolean(
+        user &&
+        user.uid === AUTHORIZED_UID &&
+        String(user.email || "").toLowerCase() === AUTHORIZED_EMAIL.toLowerCase()
+      );
+    }
+
+    function requireAdmin(showAlert = true) {
+      if (isAuthorizedUser(currentAdminUser)) return true;
+      if (showAlert) alert("Solo el usuario autorizado puede administrar productos.");
+      openLogin();
+      return false;
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      currentAdminUser = isAuthorizedUser(user) ? user : null;
+      const status = document.getElementById("adminUserStatus");
+      if (status) {
+        status.textContent = currentAdminUser
+          ? `Sesión iniciada como: ${currentAdminUser.email}`
+          : "Administrador no autenticado.";
+      }
+
+      if (user && !isAuthorizedUser(user)) {
+        signOut(auth);
+        alert("Este usuario no está autorizado para administrar Tindallvision.");
+        closeAdmin();
+      }
+    });
+
+    function loadProducts() {
+      const productsRef = collection(db, PRODUCTS_COLLECTION);
+
+      onSnapshot(productsRef, async (snapshot) => {
+        if (snapshot.empty) {
+          products = defaultProducts.map((p, index) => ({ ...p, id: `demo_${index}` }));
+          renderProducts();
+          renderAdminList();
+          await seedInitialProducts();
+          return;
+        }
+
+        products = snapshot.docs
+          .map(docSnap => ({ ...docSnap.data(), id: docSnap.id }))
+          .sort((a, b) => {
+            const dateA = a.createdAt?.seconds || 0;
+            const dateB = b.createdAt?.seconds || 0;
+            return dateB - dateA;
+          });
+
+        renderProducts();
+        renderAdminList();
+      }, (error) => {
+        console.error("Error conectando con Firebase:", error);
+        products = defaultProducts.map((p, index) => ({ ...p, id: `demo_${index}` }));
+        renderProducts();
+        alert("No se pudo conectar con Firebase. Revisa reglas de Firestore y conexión.");
+      });
+    }
+
+    async function seedInitialProducts() {
+      if (localStorage.getItem("seeded_products_tindallvision")) return;
+      localStorage.setItem("seeded_products_tindallvision", "true");
+
+      try {
+        const batch = writeBatch(db);
+        defaultProducts.forEach(product => {
+          const productRef = doc(collection(db, PRODUCTS_COLLECTION));
+          batch.set(productRef, {
+            ...product,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+        });
+        await batch.commit();
+      } catch (error) {
+        console.error("No se pudo cargar el portafolio inicial:", error);
+      }
+    }
+
+    function formatMoney(value) {
+      return new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0
+      }).format(Number(value || 0));
+    }
+
+    function renderCategories() {
+      const select = document.getElementById("categoryFilter");
+      const current = select.value;
+      const categories = ["Todos", ...new Set(products.map(p => p.category).filter(Boolean))];
+      select.innerHTML = categories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join("");
+      if (categories.includes(current)) select.value = current;
+    }
+
+    function renderProducts() {
+      renderCategories();
+      const grid = document.getElementById("productsGrid");
+      const count = document.getElementById("productCount");
+      const search = document.getElementById("searchInput").value.toLowerCase().trim();
+      const category = document.getElementById("categoryFilter").value;
+      const sort = document.getElementById("sortFilter").value;
+
+      let filtered = products.filter(product => {
+        const matchSearch = `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(search);
+        const matchCategory = category === "Todos" || product.category === category;
+        return matchSearch && matchCategory;
+      });
+
+      if (sort === "priceAsc") filtered.sort((a, b) => a.price - b.price);
+      if (sort === "priceDesc") filtered.sort((a, b) => b.price - a.price);
+      if (sort === "nameAsc") filtered.sort((a, b) => a.name.localeCompare(b.name));
+      if (sort === "featured") filtered.sort((a, b) => Number(b.offer) - Number(a.offer));
+
+      count.textContent = `${filtered.length} producto${filtered.length !== 1 ? "s" : ""}`;
+
+      if (!filtered.length) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">No encontramos productos con esa búsqueda.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(product => {
+        const selectedQty = getCartQty(product.id);
+        return `
+          <article class="product-card ${selectedQty > 0 ? "selected" : ""}">
+            ${product.offer ? `<div class="offer-ribbon">DESTACADO</div>` : ""}
+            ${selectedQty > 0 ? `<div class="selected-ribbon">PEDIDO: ${selectedQty}</div>` : ""}
+            <div class="product-image">
+              ${product.image ? `<img src="${product.image}" alt="${escapeHtml(product.name)}">` : `<div class="emoji-image">${escapeHtml(product.emoji || "👁️")}</div>`}
+            </div>
+            <div class="product-info">
+              <span class="category-tag">${escapeHtml(product.category)}</span>
+              <h3>${escapeHtml(product.name)}</h3>
+              <p>${escapeHtml(product.description)}</p>
+              <div class="product-bottom">
+                <div>
+                  <div class="price">${formatMoney(product.price)}</div>
+                  <div class="stock">Disponible: ${product.stock}</div>
+                </div>
+                <button class="add-btn" onclick="addToCart('${product.id}')">${selectedQty > 0 ? `+ Agregar (${selectedQty})` : "Agregar"}</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function getProductsForCurrentView() {
+      const search = document.getElementById("searchInput").value.toLowerCase().trim();
+      const category = document.getElementById("categoryFilter").value;
+      const sort = document.getElementById("sortFilter").value;
+
+      let filtered = products.filter(product => {
+        const matchSearch = `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(search);
+        const matchCategory = category === "Todos" || product.category === category;
+        return matchSearch && matchCategory;
+      });
+
+      if (sort === "priceAsc") filtered.sort((a, b) => a.price - b.price);
+      if (sort === "priceDesc") filtered.sort((a, b) => b.price - a.price);
+      if (sort === "nameAsc") filtered.sort((a, b) => a.name.localeCompare(b.name));
+      if (sort === "featured") filtered.sort((a, b) => Number(b.offer) - Number(a.offer));
+
+      return filtered;
+    }
+
+    async function exportCatalogPdf() {
+      const list = getProductsForCurrentView();
+      if (!list.length) {
+        alert("No hay productos para exportar en PDF.");
+        return;
+      }
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 12;
+      const gap = 8;
+      const cardW = (pageW - margin * 2 - gap) / 2;
+      const cardH = 112;
+      const topY = 28;
+
+      drawPdfCover(pdf, pageW, pageH, list.length);
+      pdf.addPage();
+      drawPdfHeader(pdf, pageW);
+
+      for (let i = 0; i < list.length; i++) {
+        if (i > 0 && i % 4 === 0) {
+          drawPdfFooter(pdf, pageW, pageH);
+          pdf.addPage();
+          drawPdfHeader(pdf, pageW);
+        }
+
+        const pageIndex = i % 4;
+        const col = pageIndex % 2;
+        const row = Math.floor(pageIndex / 2);
+        const x = margin + col * (cardW + gap);
+        const y = topY + row * (cardH + gap);
+        await drawPdfProductCard(pdf, list[i], x, y, cardW, cardH);
+      }
+
+      drawPdfFooter(pdf, pageW, pageH);
+      pdf.save(`Catalogo_Tindallvision_${new Date().toISOString().slice(0, 10)}.pdf`);
+    }
+
+    function drawPdfCover(pdf, pageW, pageH, totalProducts) {
+      pdf.setFillColor(5, 11, 61);
+      pdf.rect(0, 0, pageW, pageH, "F");
+
+      pdf.setFillColor(246, 196, 49);
+      pdf.circle(pageW - 35, 35, 24, "F");
+      pdf.setFillColor(7, 21, 122);
+      pdf.circle(pageW - 35, 35, 12, "F");
+      pdf.setFillColor(255, 255, 255);
+      pdf.circle(pageW - 35, 35, 4, "F");
+
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(28);
+      pdf.text("Tindallvision", marginPdf(), 58);
+
+      pdf.setFontSize(15);
+      pdf.setFont("helvetica", "normal");
+      pdf.text("Distribuidora de elementos opticos", marginPdf(), 69);
+
+      pdf.setDrawColor(246, 196, 49);
+      pdf.setLineWidth(1.2);
+      pdf.line(marginPdf(), 78, pageW - marginPdf(), 78);
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(20);
+      pdf.text("Catalogo profesional de productos", marginPdf(), 103);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(12);
+      const intro = "Lentes de contacto, lentes blandos convencionales, lentes RGP, soluciones, limpiadores, accesorios y servicios para opticas y profesionales de la salud visual.";
+      pdf.text(pdf.splitTextToSize(intro, pageW - marginPdf() * 2), marginPdf(), 116);
+
+      pdf.setFillColor(255, 255, 255);
+      pdf.roundedRect(marginPdf(), 160, pageW - marginPdf() * 2, 52, 5, 5, "F");
+      pdf.setTextColor(5, 11, 61);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
+      pdf.text("Informacion comercial", marginPdf() + 8, 176);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(11);
+      pdf.text(`Productos incluidos: ${totalProducts}`, marginPdf() + 8, 188);
+      pdf.text("Pedidos por WhatsApp: 316 432 6679", marginPdf() + 8, 199);
+
+      pdf.setTextColor(210, 220, 255);
+      pdf.setFontSize(9);
+      pdf.text("Catalogo generado desde la plataforma digital Tindallvision", marginPdf(), pageH - 18);
+    }
+
+    function marginPdf() {
+      return 16;
+    }
+
+    function drawPdfHeader(pdf, pageW) {
+      pdf.setFillColor(5, 11, 61);
+      pdf.rect(0, 0, pageW, 20, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
+      pdf.text("Tindallvision", 12, 13);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.text("Distribuidora de elementos opticos", 52, 13);
+      pdf.setTextColor(246, 196, 49);
+      pdf.text("WhatsApp: 316 432 6679", pageW - 57, 13);
+    }
+
+    function drawPdfFooter(pdf, pageW, pageH) {
+      pdf.setDrawColor(226, 232, 240);
+      pdf.line(12, pageH - 15, pageW - 12, pageH - 15);
+      pdf.setTextColor(100, 116, 139);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.text("Precios en pesos colombianos. Disponibilidad, formula y tiempos sujetos a confirmacion.", 12, pageH - 8);
+      pdf.text(`Pagina ${pdf.internal.getNumberOfPages()}`, pageW - 30, pageH - 8);
+    }
+
+    async function drawPdfProductCard(pdf, product, x, y, w, h) {
+      pdf.setDrawColor(226, 232, 240);
+      pdf.setFillColor(255, 255, 255);
+      pdf.roundedRect(x, y, w, h, 4, 4, "FD");
+
+      pdf.setFillColor(238, 243, 255);
+      pdf.roundedRect(x + 4, y + 4, w - 8, 28, 3, 3, "F");
+
+      const img = await getPdfImage(product.image);
+      if (img) {
+        try {
+          const type = img.includes("image/png") ? "PNG" : "JPEG";
+          pdf.addImage(img, type, x + 5, y + 6, 28, 24, undefined, "FAST");
+        } catch (error) {
+          drawPdfImagePlaceholder(pdf, x + 5, y + 6, 28, 24);
+        }
+      } else {
+        drawPdfImagePlaceholder(pdf, x + 5, y + 6, 28, 24);
+      }
+
+      pdf.setTextColor(7, 21, 122);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      pdf.text(pdf.splitTextToSize(product.category || "Producto", w - 42).slice(0, 1), x + 37, y + 12);
+
+      pdf.setTextColor(11, 16, 32);
+      pdf.setFontSize(10.5);
+      pdf.text(pdf.splitTextToSize(product.name || "Producto", w - 42).slice(0, 2), x + 37, y + 20);
+
+      if (product.offer) {
+        pdf.setFillColor(246, 196, 49);
+        pdf.roundedRect(x + w - 31, y + 6, 24, 7, 2, 2, "F");
+        pdf.setTextColor(17, 24, 39);
+        pdf.setFontSize(6.5);
+        pdf.text("DESTACADO", x + w - 29, y + 11);
+      }
+
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      const descLines = pdf.splitTextToSize(product.description || "", w - 10).slice(0, 8);
+      pdf.text(descLines, x + 5, y + 43);
+
+      pdf.setFillColor(245, 247, 251);
+      pdf.roundedRect(x + 5, y + h - 24, w - 10, 16, 3, 3, "F");
+      pdf.setTextColor(5, 11, 61);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.text(formatMoney(product.price || 0), x + 9, y + h - 14);
+      pdf.setTextColor(100, 116, 139);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7.5);
+      pdf.text(`Disponible: ${product.stock ?? 0}`, x + w - 35, y + h - 14);
+    }
+
+    function drawPdfImagePlaceholder(pdf, x, y, w, h) {
+      pdf.setFillColor(255, 255, 255);
+      pdf.roundedRect(x, y, w, h, 2, 2, "F");
+      pdf.setDrawColor(203, 213, 225);
+      pdf.roundedRect(x, y, w, h, 2, 2, "S");
+      pdf.setTextColor(7, 21, 122);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      pdf.text("TV", x + w / 2 - 4, y + h / 2 + 2);
+    }
+
+    async function getPdfImage(src) {
+      if (!src) return null;
+      if (src.startsWith("data:image")) return src;
+      try {
+        const response = await fetch(src, { mode: "cors" });
+        if (!response.ok) return null;
+        const blob = await response.blob();
+        return await blobToDataURL(blob);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function blobToDataURL(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function getCartQty(productId) {
+      const item = cart.find(i => i.id === productId);
+      return item ? item.qty : 0;
+    }
+
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      const item = cart.find(i => i.id === productId);
+      if (item) item.qty += 1;
+      else cart.push({ id: product.id, name: product.name, price: product.price, qty: 1 });
+      saveCart();
+      renderCart();
+      renderProducts();
+    }
+
+    function saveCart() {
+      localStorage.setItem("cart_tindallvision", JSON.stringify(cart));
+      document.getElementById("cartCount").textContent = cart.reduce((sum, item) => sum + item.qty, 0);
+    }
+
+    function renderCart() {
+      const cartItems = document.getElementById("cartItems");
+      const totalEl = document.getElementById("cartTotal");
+      saveCart();
+
+      if (!cart.length) {
+        cartItems.innerHTML = `<div class="empty-state">Tu pedido está vacío.</div>`;
+        totalEl.textContent = formatMoney(0);
+        return;
+      }
+
+      cartItems.innerHTML = cart.map(item => `
+        <div class="cart-item">
+          <div>
+            <h4>${escapeHtml(item.name)}</h4>
+            <div>${formatMoney(item.price)} c/u</div>
+            <div class="qty-controls">
+              <button onclick="changeQty('${item.id}', -1)">−</button>
+              <strong>${item.qty}</strong>
+              <button onclick="changeQty('${item.id}', 1)">+</button>
+              <button onclick="removeFromCart('${item.id}')">Eliminar</button>
+            </div>
+          </div>
+          <strong>${formatMoney(item.price * item.qty)}</strong>
+        </div>
+      `).join("");
+
+      totalEl.textContent = formatMoney(cart.reduce((sum, item) => sum + item.price * item.qty, 0));
+    }
+
+    function changeQty(id, amount) {
+      const item = cart.find(i => i.id === id);
+      if (!item) return;
+      item.qty += amount;
+      if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+      saveCart();
+      renderCart();
+      renderProducts();
+    }
+
+    function removeFromCart(id) {
+      cart = cart.filter(item => item.id !== id);
+      saveCart();
+      renderCart();
+      renderProducts();
+    }
+
+    function clearCart() {
+      if (!cart.length) return;
+      if (confirm("¿Deseas vaciar el pedido?")) {
+        cart = [];
+        saveCart();
+        renderCart();
+        renderProducts();
+      }
+    }
+
+    function sendOrderWhatsApp() {
+      if (!cart.length) {
+        alert("Agrega productos al pedido antes de enviarlo.");
+        return;
+      }
+      const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const detail = cart.map(item => `• ${item.name} x${item.qty} - ${formatMoney(item.price * item.qty)}`).join("\n");
+      const message = `Hola Tindallvision, quiero cotizar/realizar este pedido:\n\n${detail}\n\nTotal estimado: ${formatMoney(total)}\n\nQuedo atento(a) para confirmar disponibilidad, fórmula y envío.`;
+      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, "_blank");
+    }
+
+    function openCart() {
+      document.getElementById("cartDrawer").classList.add("active");
+      renderCart();
+    }
+
+    function closeCart() {
+      document.getElementById("cartDrawer").classList.remove("active");
+    }
+
+    function openLogin() {
+      if (isAuthorizedUser(currentAdminUser)) {
+        openAdmin();
+        return;
+      }
+      document.getElementById("loginModal").classList.add("active");
+      document.getElementById("loginError").textContent = "";
+      setTimeout(() => document.getElementById("loginPassword").focus(), 100);
+    }
+
+    function closeLogin() {
+      document.getElementById("loginModal").classList.remove("active");
+    }
+
+    async function loginAdmin() {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      const error = document.getElementById("loginError");
+      error.textContent = "";
+
+      if (email.toLowerCase() !== AUTHORIZED_EMAIL.toLowerCase()) {
+        error.textContent = "Este correo no está autorizado.";
+        return;
+      }
+
+      try {
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        if (!isAuthorizedUser(credential.user)) {
+          await signOut(auth);
+          error.textContent = "El UID de este usuario no está autorizado.";
+          return;
+        }
+        currentAdminUser = credential.user;
+        document.getElementById("loginPassword").value = "";
+        closeLogin();
+        openAdmin();
+      } catch (err) {
+        console.error("Error de autenticación:", err);
+        error.textContent = "No se pudo iniciar sesión. Revisa la contraseña y que Email/Password esté habilitado en Firebase Auth.";
+      }
+    }
+
+    async function logoutAdmin() {
+      await signOut(auth);
+      currentAdminUser = null;
+      closeAdmin();
+      alert("Sesión de administrador cerrada.");
+    }
+
+    function openAdmin() {
+      if (!requireAdmin(false)) return;
+      document.getElementById("adminModal").classList.add("active");
+      renderAdminList();
+    }
+
+    function closeAdmin() {
+      document.getElementById("adminModal").classList.remove("active");
+      resetForm();
+    }
+
+    async function saveProduct(event) {
+      event.preventDefault();
+      if (!requireAdmin()) return;
+
+      const existingId = document.getElementById("productId").value;
+      const fileInput = document.getElementById("productImage");
+      const urlInput = document.getElementById("productImageUrl").value.trim();
+      const existing = products.find(p => p.id === existingId);
+      let image = existing?.image || "";
+
+      try {
+        if (fileInput.files && fileInput.files[0]) {
+          image = await compressImageToDataURL(fileInput.files[0]);
+        } else if (urlInput) {
+          image = urlInput;
+        }
+
+        const product = {
+          name: document.getElementById("productName").value.trim(),
+          category: document.getElementById("productCategory").value.trim(),
+          price: Number(document.getElementById("productPrice").value),
+          stock: Number(document.getElementById("productStock").value),
+          description: document.getElementById("productDescription").value.trim(),
+          emoji: document.getElementById("productEmoji").value.trim() || "👁️",
+          image,
+          offer: document.getElementById("productOffer").value === "true",
+          updatedAt: serverTimestamp()
+        };
+
+        if (existingId) await updateDoc(doc(db, PRODUCTS_COLLECTION, existingId), product);
+        else await addDoc(collection(db, PRODUCTS_COLLECTION), { ...product, createdAt: serverTimestamp() });
+
+        resetForm();
+        alert("Producto guardado correctamente en Firebase.");
+      } catch (error) {
+        console.error("Error guardando producto:", error);
+        alert("No se pudo guardar el producto. Revisa Firestore, el tamaño de la imagen y las reglas de seguridad.");
+      }
+    }
+
+    function compressImageToDataURL(file, maxWidth = 650, quality = 0.72) {
+      return new Promise((resolve, reject) => {
+        if (!file.type.startsWith("image/")) {
+          reject(new Error("El archivo debe ser una imagen."));
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth || height > maxWidth) {
+              if (width > height) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              } else {
+                width = Math.round((width * maxWidth) / height);
+                height = maxWidth;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL("image/jpeg", quality);
+            if (dataUrl.length > 850000) {
+              reject(new Error("La imagen sigue siendo muy pesada. Usa una imagen más pequeña."));
+              return;
+            }
+            resolve(dataUrl);
+          };
+          img.onerror = () => reject(new Error("No se pudo procesar la imagen."));
+          img.src = reader.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderAdminList() {
+      const list = document.getElementById("adminProductsList");
+      if (!products.length) {
+        list.innerHTML = `<div class="empty-state">No hay productos creados.</div>`;
+        return;
+      }
+
+      list.innerHTML = products.map(product => `
+        <div class="admin-item">
+          <div class="admin-thumb">
+            ${product.image ? `<img src="${product.image}" alt="${escapeHtml(product.name)}">` : escapeHtml(product.emoji || "👁️")}
+          </div>
+          <div>
+            <strong>${escapeHtml(product.name)}</strong><br>
+            <small>${escapeHtml(product.category)} · ${formatMoney(product.price)} · Stock: ${product.stock}</small>
+          </div>
+          <div class="admin-actions">
+            <button class="edit-btn" onclick="editProduct('${product.id}')">Editar</button>
+            <button class="delete-btn" onclick="deleteProduct('${product.id}')">X</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function editProduct(id) {
+      if (!requireAdmin()) return;
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+      document.getElementById("formTitle").textContent = "Editar producto";
+      document.getElementById("productId").value = product.id;
+      document.getElementById("productName").value = product.name;
+      document.getElementById("productCategory").value = product.category;
+      document.getElementById("productPrice").value = product.price;
+      document.getElementById("productStock").value = product.stock;
+      document.getElementById("productDescription").value = product.description;
+      document.getElementById("productEmoji").value = product.emoji || "";
+      document.getElementById("productOffer").value = String(Boolean(product.offer));
+      document.getElementById("productImageUrl").value = product.image && !product.image.startsWith("data:") ? product.image : "";
+      document.getElementById("productImage").value = "";
+      document.querySelector("#adminModal .modal-card").scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function deleteProduct(id) {
+      if (!requireAdmin()) return;
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+      if (!confirm(`¿Eliminar el producto "${product.name}"?`)) return;
+
+      try {
+        await deleteDoc(doc(db, PRODUCTS_COLLECTION, id));
+        cart = cart.filter(item => item.id !== id);
+        saveCart();
+        renderCart();
+        renderProducts();
+      } catch (error) {
+        console.error("Error eliminando producto:", error);
+        alert("No se pudo eliminar el producto. Revisa las reglas de Firestore.");
+      }
+    }
+
+    function resetForm() {
+      document.getElementById("formTitle").textContent = "Agregar nuevo producto";
+      document.getElementById("productForm").reset();
+      document.getElementById("productId").value = "";
+    }
+
+    async function resetProducts() {
+      if (!requireAdmin()) return;
+      if (!confirm("¿Deseas restaurar los productos del portafolio? Se reemplazará tu lista actual en Firebase.")) return;
+
+      try {
+        const productsRef = collection(db, PRODUCTS_COLLECTION);
+        const snapshot = await getDocs(productsRef);
+        const batch = writeBatch(db);
+
+        snapshot.forEach(docSnap => batch.delete(doc(db, PRODUCTS_COLLECTION, docSnap.id)));
+
+        defaultProducts.forEach(product => {
+          const productRef = doc(collection(db, PRODUCTS_COLLECTION));
+          batch.set(productRef, {
+            ...product,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+        });
+
+        await batch.commit();
+        resetForm();
+        alert("Portafolio restaurado correctamente en Firebase.");
+      } catch (error) {
+        console.error("Error restaurando productos:", error);
+        alert("No se pudo restaurar el portafolio. Revisa las reglas de Firestore.");
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        closeCart();
+        closeLogin();
+        closeAdmin();
+      }
+    });
+
+    Object.assign(window, {
+      openCart,
+      closeCart,
+      openLogin,
+      closeLogin,
+      loginAdmin,
+      logoutAdmin,
+      openAdmin,
+      closeAdmin,
+      renderProducts,
+      exportCatalogPdf,
+      addToCart,
+      changeQty,
+      removeFromCart,
+      clearCart,
+      sendOrderWhatsApp,
+      saveProduct,
+      resetForm,
+      resetProducts,
+      editProduct,
+      deleteProduct
+    });
+
+    loadProducts();
+    renderCart();
+  </script>
+</body>
+</html>
