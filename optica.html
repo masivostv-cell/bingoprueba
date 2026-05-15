@@ -731,6 +731,42 @@
       background: #fafafa;
     }
 
+
+
+    .admin-tools {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin: 12px 0 16px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: white;
+    }
+
+    .admin-tools-title {
+      font-weight: 900;
+      color: var(--primary);
+      margin-bottom: 2px;
+    }
+
+    .admin-tools small {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .admin-tools-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .admin-tools .secondary-btn,
+    .admin-tools .primary-btn,
+    .admin-tools .danger-btn {
+      margin: 0;
+    }
+
     .admin-list {
       display: flex;
       flex-direction: column;
@@ -845,6 +881,12 @@
 
       .cart-pill span {
         display: none;
+      }
+
+
+
+      .admin-tools-row {
+        grid-template-columns: 1fr;
       }
 
       .product-bottom {
@@ -1071,6 +1113,20 @@
             <h3>Productos cargados</h3>
             <button class="mini-btn" onclick="resetProducts()">Restaurar portafolio</button>
           </div>
+
+          <div class="admin-tools">
+            <div>
+              <div class="admin-tools-title">Herramientas de administrador</div>
+              <small>Exporta tus productos a Excel, vuelve a importarlos o sube el portafolio base a Firebase. Estas acciones solo funcionan con sesión de administrador.</small>
+            </div>
+            <div class="admin-tools-row">
+              <button class="secondary-btn" type="button" onclick="uploadDefaultProductsToFirebase()">Subir portafolio base</button>
+              <button class="secondary-btn" type="button" onclick="exportProductsExcel()">Exportar Excel</button>
+            </div>
+            <button class="primary-btn" type="button" onclick="document.getElementById('importProductsFile').click()">Importar Excel a Firebase</button>
+            <input id="importProductsFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importProductsFromExcel(event)" />
+          </div>
+
           <div id="adminProductsList" class="admin-list"></div>
           <div class="notice">
             Los cambios se guardan en <strong>Firebase Firestore</strong>. Solo el usuario autorizado puede escribir. Las imágenes se guardan como <strong>texto Base64</strong>, sin Firebase Storage.
@@ -1104,6 +1160,7 @@
       signOut
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
+    import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAdDVbpsIAwwVZQT5g2fVv0v5ErQDq6tIg",
@@ -1913,6 +1970,217 @@
       }
     }
 
+
+
+    function productToExcelRow(product) {
+      const images = getProductImages(product);
+      return {
+        ID: product.id && !String(product.id).startsWith("demo_") ? product.id : "",
+        Nombre: product.name || "",
+        Categoria: product.category || "",
+        Precio: Number(product.price || 0),
+        Existencias: Number(product.stock || 0),
+        Descripcion: product.description || "",
+        Emoji: product.emoji || "👁️",
+        Destacado: product.offer ? "SI" : "NO",
+        Imagen1: images[0] || "",
+        Imagen2: images[1] || "",
+        Imagen3: images[2] || "",
+        Imagen4: images[3] || "",
+        Imagen5: images[4] || ""
+      };
+    }
+
+    function exportProductsExcel() {
+      if (!requireAdmin()) return;
+
+      const rows = products
+        .filter(product => product.id && !String(product.id).startsWith("demo_"))
+        .map(productToExcelRow);
+
+      if (!rows.length) {
+        alert("No hay productos guardados en Firebase para exportar. Primero sube o crea productos.");
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      worksheet["!cols"] = [
+        { wch: 26 }, { wch: 35 }, { wch: 28 }, { wch: 12 }, { wch: 12 },
+        { wch: 70 }, { wch: 10 }, { wch: 12 }, { wch: 45 }, { wch: 45 },
+        { wch: 45 }, { wch: 45 }, { wch: 45 }
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Productos");
+      XLSX.writeFile(workbook, `Productos_Tyndallvision_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+
+    function normalizeExcelHeader(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    }
+
+    function getRowValue(row, possibleNames) {
+      const entries = Object.entries(row);
+      for (const name of possibleNames) {
+        const normalizedName = normalizeExcelHeader(name);
+        const found = entries.find(([key]) => normalizeExcelHeader(key) === normalizedName);
+        if (found) return found[1];
+      }
+      return "";
+    }
+
+    function parseExcelNumber(value) {
+      if (typeof value === "number") return value;
+      const clean = String(value || "")
+        .replace(/\$/g, "")
+        .replace(/\s/g, "")
+        .replace(/\./g, "")
+        .replace(/,/g, ".");
+      const number = Number(clean);
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function parseExcelBoolean(value) {
+      const text = String(value || "").trim().toLowerCase();
+      return ["si", "sí", "true", "verdadero", "1", "x", "destacado"].includes(text);
+    }
+
+    function rowToProductFromExcel(row) {
+      const images = [
+        getRowValue(row, ["Imagen1", "Imagen 1", "image1"]),
+        getRowValue(row, ["Imagen2", "Imagen 2", "image2"]),
+        getRowValue(row, ["Imagen3", "Imagen 3", "image3"]),
+        getRowValue(row, ["Imagen4", "Imagen 4", "image4"]),
+        getRowValue(row, ["Imagen5", "Imagen 5", "image5"])
+      ].map(value => String(value || "").trim()).filter(Boolean).slice(0, 5);
+
+      return {
+        id: String(getRowValue(row, ["ID", "Id", "id"]) || "").trim(),
+        name: String(getRowValue(row, ["Nombre", "name", "Producto", "producto"]) || "").trim(),
+        category: String(getRowValue(row, ["Categoria", "Categoría", "category"]) || "General").trim(),
+        price: parseExcelNumber(getRowValue(row, ["Precio", "price", "Valor"])),
+        stock: parseExcelNumber(getRowValue(row, ["Existencias", "Stock", "stock"])),
+        description: String(getRowValue(row, ["Descripcion", "Descripción", "description", "Parametros", "Parámetros"]) || "").trim(),
+        emoji: String(getRowValue(row, ["Emoji", "emoji"]) || "👁️").trim() || "👁️",
+        offer: parseExcelBoolean(getRowValue(row, ["Destacado", "Oferta", "offer"])),
+        images,
+        image: images[0] || ""
+      };
+    }
+
+    async function importProductsFromExcel(event) {
+      if (!requireAdmin()) return;
+
+      const input = event.target;
+      const file = input.files && input.files[0];
+      if (!file) return;
+
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        const importedProducts = rows
+          .map(rowToProductFromExcel)
+          .filter(product => product.name && product.category);
+
+        if (!importedProducts.length) {
+          alert("No encontré productos válidos en el archivo. Revisa que tenga columnas como Nombre, Categoria, Precio, Existencias y Descripcion.");
+          return;
+        }
+
+        const message = `Se encontraron ${importedProducts.length} productos.\n\nSi el archivo trae columna ID, esos productos se actualizan. Si no trae ID, se crean nuevos.\n\n¿Deseas subirlos a Firebase?`;
+        if (!confirm(message)) return;
+
+        const batch = writeBatch(db);
+        importedProducts.forEach(product => {
+          const { id, ...data } = product;
+          const cleanData = {
+            ...data,
+            updatedAt: serverTimestamp()
+          };
+
+          if (id && !id.startsWith("demo_")) {
+            batch.set(doc(db, PRODUCTS_COLLECTION, id), cleanData, { merge: true });
+          } else {
+            const productRef = doc(collection(db, PRODUCTS_COLLECTION));
+            batch.set(productRef, {
+              ...cleanData,
+              createdAt: serverTimestamp()
+            });
+          }
+        });
+
+        await batch.commit();
+        alert(`Importación completada. Productos procesados: ${importedProducts.length}`);
+      } catch (error) {
+        console.error("Error importando Excel:", error);
+        alert(
+          "No se pudo importar el archivo.\n\n" +
+          "Código: " + (error.code || "sin código") + "\n" +
+          "Mensaje: " + (error.message || error)
+        );
+      } finally {
+        input.value = "";
+      }
+    }
+
+    async function uploadDefaultProductsToFirebase() {
+      if (!requireAdmin()) return;
+
+      if (!confirm("Esto subirá el portafolio base a Firebase sin borrar productos existentes. Se evitarán duplicados por Nombre + Categoría. ¿Continuar?")) return;
+
+      try {
+        const snapshot = await getDocs(collection(db, PRODUCTS_COLLECTION));
+        const existingKeys = new Set(
+          snapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return `${String(data.name || "").trim().toLowerCase()}|${String(data.category || "").trim().toLowerCase()}`;
+          })
+        );
+
+        const batch = writeBatch(db);
+        let added = 0;
+
+        defaultProducts.forEach(product => {
+          const key = `${String(product.name || "").trim().toLowerCase()}|${String(product.category || "").trim().toLowerCase()}`;
+          if (existingKeys.has(key)) return;
+
+          const productRef = doc(collection(db, PRODUCTS_COLLECTION));
+          batch.set(productRef, {
+            ...product,
+            images: product.images || [],
+            image: product.image || "",
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          added++;
+        });
+
+        if (added === 0) {
+          alert("No se subió nada porque todos los productos base ya parecen existir en Firebase.");
+          return;
+        }
+
+        await batch.commit();
+        localStorage.setItem("seeded_products_tyndallvision", "true");
+        alert(`Portafolio base subido correctamente. Productos nuevos: ${added}`);
+      } catch (error) {
+        console.error("Error subiendo portafolio base:", error);
+        alert(
+          "No se pudo subir el portafolio base.\n\n" +
+          "Código: " + (error.code || "sin código") + "\n" +
+          "Mensaje: " + (error.message || error)
+        );
+      }
+    }
+
     async function exportCatalogPdf() {
       const list = getProductsForCurrentView();
 
@@ -2149,6 +2417,9 @@
       openAdmin,
       closeAdmin,
       renderProducts,
+      exportProductsExcel,
+      importProductsFromExcel,
+      uploadDefaultProductsToFirebase,
       exportCatalogPdf,
       addToCart,
       changeQty,
