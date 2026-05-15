@@ -1711,6 +1711,17 @@
           updatedAt: serverTimestamp()
         };
 
+        const estimatedSize = JSON.stringify({
+          ...product,
+          createdAt: "",
+          updatedAt: ""
+        }).length;
+
+        if (estimatedSize > 850000) {
+          alert("El producto quedó muy pesado para Firestore. Sube menos imágenes o imágenes más livianas.");
+          return;
+        }
+
         if (existingId && !existingId.startsWith("demo_")) {
           await updateDoc(doc(db, PRODUCTS_COLLECTION, existingId), product);
         } else {
@@ -1724,11 +1735,15 @@
         alert("Producto guardado correctamente en Firebase.");
       } catch (error) {
         console.error("Error guardando producto:", error);
-        alert("No se pudo guardar el producto. Revisa Firestore, el tamaño de la imagen y las reglas de seguridad.");
+        alert(
+          "No se pudo guardar el producto.\n\n" +
+          "Código: " + (error.code || "sin código") + "\n" +
+          "Mensaje: " + (error.message || error)
+        );
       }
     }
 
-    function compressImageToDataURL(file, maxWidth = 520, quality = 0.62) {
+    function compressImageToDataURL(file, maxWidth = 420, quality = 0.55) {
       return new Promise((resolve, reject) => {
         if (!file.type.startsWith("image/")) {
           reject(new Error("El archivo debe ser una imagen."));
@@ -1765,8 +1780,8 @@
 
             const dataUrl = canvas.toDataURL("image/jpeg", quality);
 
-            if (dataUrl.length > 175000) {
-              reject(new Error("La imagen sigue siendo muy pesada. Usa una imagen más pequeña o más comprimida."));
+            if (dataUrl.length > 140000) {
+              reject(new Error("La imagen sigue siendo muy pesada. Usa una imagen más pequeña o sube menos imágenes."));
               return;
             }
 
