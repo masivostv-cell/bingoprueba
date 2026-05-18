@@ -9,7 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://meet.jit.si/external_api.js"></script>
     
     <style>
         /* RESET TOTAL */
@@ -348,7 +347,7 @@
                     ❌ CERRAR RADIO
                 </button>
                 <small style="color:#ccc; display:block; margin-top:5px; text-align:center;">
-                    Los jugadores se conectan automáticamente como oyentes: no usan micrófono ni cámara.
+                    Los jugadores se conectan automáticamente como oyentes: no usan micrófono ni cámara. Esta versión no depende de Jitsi.
                 </small>
                 <div id="jitsi-admin-container" style="display:none; width:100%; height:360px; margin-top:10px; border-radius:10px; overflow:hidden; background:#000;"></div>
             </div>
@@ -906,106 +905,220 @@ window.copiarSecuenciaJugada = () => {
     navigator.clipboard.writeText(txt).then(() => alert("✅ Secuencia copiada."));
 };
 
-let jitsiAdminApi = null;
-let radioPublicada = false;
 
-async function publicarRadioEnFirebase(roomName) {
-    if (radioPublicada) return;
-    radioPublicada = true;
-    try {
-        if (window.db && window.firebaseTools) {
-            const usuarioActivo = (localStorage.getItem('bingo_user') || "ADMIN").toUpperCase();
-            const salaRef = window.firebaseTools.doc(window.db, "salas", window.MI_CODIGO_SALA);
-            await window.firebaseTools.setDoc(salaRef, {
-                comunicacionActiva: true,
-                comunicacionModo: "radio",
-                meetRoom: roomName,
-                meetAdmin: usuarioActivo,
-                meetCreadaEn: Date.now()
-            }, { merge: true });
-        }
-    } catch(e) {
-        console.error("No se pudo avisar a los jugadores sobre la radio:", e);
+
+let radioStream = null;
+let radioListenersUnsub = null;
+let radioPeers = {};
+let radioUnsubs = {};
+let radioSessionActual = null;
+
+const rtcRadioConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
+
+function radioSetEstado(html) {
+    const cont = document.getElementById('jitsi-admin-container');
+    if (!cont) return;
+    cont.style.display = 'block';
+    cont.innerHTML = html;
+}
+
+function esperarIceCompleto(pc, maxMs = 6000) {
+    return new Promise((resolve) => {
+        if (!pc || pc.iceGatheringState === 'complete') return resolve();
+        const timer = setTimeout(resolve, maxMs);
+        const check = () => {
+            if (pc.iceGatheringState === 'complete') {
+                clearTimeout(timer);
+                pc.removeEventListener('icegatheringstatechange', check);
+                resolve();
+            }
+        };
+        pc.addEventListener('icegatheringstatechange', check);
+    });
+}
+
+function limpiarConexionRadioAdmin(listenerId) {
+    if (radioPeers[listenerId]) {
+        try { radioPeers[listenerId].close(); } catch(e) {}
+        delete radioPeers[listenerId];
     }
+    if (radioUnsubs[listenerId]) {
+        radioUnsubs[listenerId].forEach(fn => { try { fn(); } catch(e) {} });
+        delete radioUnsubs[listenerId];
+    }
+    actualizarContadorRadioAdmin();
+}
+
+async function atenderOyenteRadio(listenerId, listenerData) {
+    if (!radioStream || radioPeers[listenerId]) return;
+    if (!listenerData || listenerData.radioSession !== radioSessionActual) return;
+
+    const pinSeguro = String(window.MI_CODIGO_SALA).trim();
+    const listenerRef = window.firebaseTools.doc(window.db, 'salas', pinSeguro, 'jugadores', listenerId);
+
+    const pc = new RTCPeerConnection(rtcRadioConfig);
+    radioPeers[listenerId] = pc;
+
+    radioStream.getTracks().forEach(track => pc.addTrack(track, radioStream));
+
+    pc.onconnectionstatechange = () => {
+        actualizarContadorRadioAdmin();
+        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+            limpiarConexionRadioAdmin(listenerId);
+        }
+    };
+
+    const unsubAnswer = window.firebaseTools.onSnapshot(listenerRef, async (snap) => {
+        const data = snap.data();
+        if (data && data.radioSession === radioSessionActual && data.radioAnswer && !pc.currentRemoteDescription) {
+            try {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.radioAnswer));
+                await window.firebaseTools.setDoc(listenerRef, {
+                    radioStatus: 'conectado_admin',
+                    radioConectadoEn: Date.now()
+                }, { merge: true });
+                actualizarContadorRadioAdmin();
+            } catch(e) {
+                console.error('Error aceptando respuesta del oyente:', e);
+            }
+        }
+    });
+
+    radioUnsubs[listenerId] = [unsubAnswer];
+
+    try {
+        const offer = await pc.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false });
+        await pc.setLocalDescription(offer);
+        await esperarIceCompleto(pc);
+
+        await window.firebaseTools.setDoc(listenerRef, {
+            radioOffer: {
+                type: pc.localDescription.type,
+                sdp: pc.localDescription.sdp
+            },
+            radioStatus: 'oferta_enviada',
+            radioAtendidoEn: Date.now()
+        }, { merge: true });
+
+        actualizarContadorRadioAdmin();
+    } catch (e) {
+        console.error('Error creando oferta de radio:', e);
+        limpiarConexionRadioAdmin(listenerId);
+    }
+}
+
+function actualizarContadorRadioAdmin() {
+    const el = document.getElementById('radio-admin-count');
+    if (!el) return;
+    const conectados = Object.values(radioPeers).filter(pc => pc.connectionState === 'connected').length;
+    const intentando = Object.keys(radioPeers).length;
+    el.innerText = conectados + (intentando !== conectados ? ` / ${intentando} intentando` : '');
 }
 
 window.abrirComunicacionJugadores = async () => {
     if(!checkSecurity()) return;
-    const cont = document.getElementById('jitsi-admin-container');
-    if(!cont) return;
-    if(!window.MI_CODIGO_SALA) return alert("Primero debes iniciar sesión y tener un PIN de sala.");
+    if(!window.MI_CODIGO_SALA) return alert('Primero debes iniciar sesión y tener un PIN de sala.');
 
-    const usuarioActivo = (localStorage.getItem('bingo_user') || "ADMIN").toUpperCase();
-    const roomName = ("BingoRadio_" + String(window.MI_CODIGO_SALA).trim() + "_" + usuarioActivo).replace(/[^a-zA-Z0-9_]/g, "");
-    cont.style.display = "block";
-    cont.innerHTML = "";
-    radioPublicada = false;
-
-    if (jitsiAdminApi) {
-        try { jitsiAdminApi.dispose(); } catch(e) {}
-        jitsiAdminApi = null;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Este navegador no permite usar el micrófono aquí. Abre la página con HTTPS o en localhost.');
+        return;
     }
 
-    jitsiAdminApi = new JitsiMeetExternalAPI("meet.jit.si", {
-        roomName: roomName,
-        parentNode: cont,
-        width: "100%",
-        height: 360,
-        userInfo: { displayName: "ADMIN RADIO - " + usuarioActivo },
-        configOverwrite: {
-            prejoinPageEnabled: false,
-            startWithAudioMuted: false,
-            startWithVideoMuted: true,
-            startAudioOnly: true,
-            disableSelfView: true,
-            toolbarButtons: ['microphone', 'hangup']
-        },
-        interfaceConfigOverwrite: {
-            TOOLBAR_BUTTONS: ['microphone', 'hangup'],
-            VIDEO_LAYOUT_FIT: 'nocrop'
-        }
-    });
+    const pinSeguro = String(window.MI_CODIGO_SALA).trim();
+    const usuarioActivo = (localStorage.getItem('bingo_user') || 'ADMIN').toUpperCase();
 
-    jitsiAdminApi.addEventListener('participantRoleChanged', async (event) => {
-        if(event && event.role === 'moderator') {
-            try { jitsiAdminApi.executeCommand('subject', 'Radio Bingo Sala ' + window.MI_CODIGO_SALA); } catch(e) {}
-            await publicarRadioEnFirebase(roomName);
-            alert("✅ Radio abierta. Tú quedaste como administrador de la llamada. Los jugadores escucharán automáticamente.");
-        }
-    });
+    try {
+        await window.cerrarComunicacionJugadores(false);
 
-    jitsiAdminApi.addEventListener('videoConferenceJoined', async () => {
-        // Respaldo: si Jitsi no dispara participantRoleChanged, publica después de entrar.
-        setTimeout(async () => {
-            if(!radioPublicada) await publicarRadioEnFirebase(roomName);
-        }, 2500);
-    });
+        radioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            },
+            video: false
+        });
+        radioSessionActual = Date.now();
+
+        radioSetEstado(`
+            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; text-align:center; padding:20px; box-sizing:border-box; background:#101820;">
+                <div style="font-size:46px; margin-bottom:8px;">🎙️</div>
+                <h2 style="color:#00ffff; margin:0 0 8px 0;">RADIO EN VIVO ACTIVA</h2>
+                <p style="margin:5px 0;">Habla por tu micrófono. Los jugadores solo escuchan.</p>
+                <p style="margin:5px 0; color:#ffc107; font-weight:bold;">Oyentes conectados: <span id="radio-admin-count">0</span></p>
+                <p style="font-size:13px; color:#aaa; max-width:650px;">Versión corregida: usa los documentos de jugadores para conectar el audio, sin Jitsi y sin subcolecciones extra.</p>
+            </div>
+        `);
+
+        const salaRef = window.firebaseTools.doc(window.db, 'salas', pinSeguro);
+        await window.firebaseTools.setDoc(salaRef, {
+            comunicacionActiva: true,
+            comunicacionModo: 'webrtc-radio-v2',
+            radioSession: radioSessionActual,
+            meetAdmin: usuarioActivo,
+            meetCreadaEn: Date.now()
+        }, { merge: true });
+
+        const jugadoresRef = window.firebaseTools.collection(window.db, 'salas', pinSeguro, 'jugadores');
+        radioListenersUnsub = window.firebaseTools.onSnapshot(jugadoresRef, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added' || change.type === 'modified') {
+                    const data = change.doc.data();
+                    if (data && data.radioSession === radioSessionActual && !radioPeers[change.doc.id]) {
+                        atenderOyenteRadio(change.doc.id, data);
+                    }
+                }
+            });
+        });
+
+        alert('✅ Radio abierta. Habla por tu micrófono. Los jugadores entrarán como oyentes.');
+    } catch(e) {
+        console.error('No se pudo abrir la radio WebRTC:', e);
+        alert('No se pudo abrir la radio. Revisa que hayas permitido el micrófono y que la página esté en HTTPS o localhost.');
+    }
 };
 
-window.cerrarComunicacionJugadores = async () => {
-    if(!checkSecurity()) return;
+window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
+    const pinSeguro = String(window.MI_CODIGO_SALA || '').trim();
     const cont = document.getElementById('jitsi-admin-container');
 
-    if (jitsiAdminApi) {
-        try { jitsiAdminApi.dispose(); } catch(e) {}
-        jitsiAdminApi = null;
+    if (radioListenersUnsub) {
+        try { radioListenersUnsub(); } catch(e) {}
+        radioListenersUnsub = null;
     }
-    radioPublicada = false;
+
+    Object.keys(radioPeers).forEach(limpiarConexionRadioAdmin);
+    radioPeers = {};
+    radioUnsubs = {};
+
+    if (radioStream) {
+        radioStream.getTracks().forEach(t => t.stop());
+        radioStream = null;
+    }
+
+    radioSessionActual = null;
+
     if(cont) {
-        cont.innerHTML = "";
-        cont.style.display = "none";
+        cont.innerHTML = '';
+        cont.style.display = 'none';
     }
 
     try {
-        if (window.db && window.firebaseTools) {
-            const salaRef = window.firebaseTools.doc(window.db, "salas", window.MI_CODIGO_SALA);
+        if (avisarFirebase && window.db && window.firebaseTools && pinSeguro) {
+            const salaRef = window.firebaseTools.doc(window.db, 'salas', pinSeguro);
             await window.firebaseTools.setDoc(salaRef, {
                 comunicacionActiva: false,
-                comunicacionModo: "radio"
+                comunicacionModo: 'webrtc-radio-v2',
+                radioCerradaEn: Date.now()
             }, { merge: true });
         }
     } catch(e) {
-        console.error("No se pudo cerrar la radio en Firebase:", e);
+        console.error('No se pudo cerrar la radio en Firebase:', e);
     }
 };
 

@@ -155,10 +155,9 @@
         <button id="btn-bingo" onclick="cantarBingo()">¡CANTAR BINGO!</button>
     </div>
 
-    <script src="https://meet.jit.si/external_api.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDGlCcqIxjX3c_GustIB7_vjtyFwZ_q010",
@@ -178,75 +177,181 @@
         let figuraGlobal = [];
         let miSalaActual = "";
         let miNombreActual = "";
+        let miJugadorDocId = "";
         let meetRoomActual = "";
-        let jitsiPlayerApi = null;
-        window.entrarRadioAdministrador = () => {
-            const cont = document.getElementById('jitsi-player-container');
+        let radioSessionActual = null;
+        let radioPc = null;
+        let radioJugadorRef = null;
+        let radioUnsubDoc = null;
+
+        const rtcRadioConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        function esperarIceCompleto(pc, maxMs = 6000) {
+            return new Promise((resolve) => {
+                if (!pc || pc.iceGatheringState === 'complete') return resolve();
+                const timer = setTimeout(resolve, maxMs);
+                const check = () => {
+                    if (pc.iceGatheringState === 'complete') {
+                        clearTimeout(timer);
+                        pc.removeEventListener('icegatheringstatechange', check);
+                        resolve();
+                    }
+                };
+                pc.addEventListener('icegatheringstatechange', check);
+            });
+        }
+
+        function asegurarAudioRadio() {
+            let audio = document.getElementById('audio-radio-stream');
+            if (!audio) {
+                audio = document.createElement('audio');
+                audio.id = 'audio-radio-stream';
+                audio.autoplay = true;
+                audio.playsInline = true;
+                audio.controls = false;
+                document.getElementById('comunicacion-box').appendChild(audio);
+            }
+            return audio;
+        }
+
+        window.entrarRadioAdministrador = async () => {
+            const comunicacionBox = document.getElementById('comunicacion-box');
             const estado = document.getElementById('estado-radio');
             const btnAudio = document.getElementById('btn-activar-audio-radio');
-            if(!cont) return;
-            if(!meetRoomActual) meetRoomActual = "BingoRadio_" + String(miSalaActual).trim();
-            if(!meetRoomActual || !miSalaActual) return;
+            const audio = asegurarAudioRadio();
 
-            if (jitsiPlayerApi) return; // Ya está conectado como oyente.
+            if (radioPc && ['failed', 'closed', 'disconnected'].includes(radioPc.connectionState)) {
+                window.salirRadioAdministrador(false);
+            }
 
-            cont.innerHTML = "";
-            if(estado) estado.innerText = "Conectando al audio del administrador...";
-            if(btnAudio) btnAudio.style.display = "none";
+            if (radioPc) {
+                try {
+                    await audio.play();
+                    if (estado) estado.innerText = '✅ Audio en vivo conectado. Solo estás escuchando.';
+                    if (btnAudio) btnAudio.style.display = 'none';
+                } catch(e) {
+                    if (estado) estado.innerText = 'Toca el botón para activar el audio.';
+                    if (btnAudio) btnAudio.style.display = 'block';
+                }
+                return;
+            }
+
+            if(!miSalaActual || !radioSessionActual || !miJugadorDocId) {
+                if (estado) estado.innerText = 'La radio aún no está disponible.';
+                return;
+            }
+
+            if (comunicacionBox) comunicacionBox.style.display = 'block';
+            if (estado) estado.innerText = 'Conectando al audio del administrador...';
+            if (btnAudio) btnAudio.style.display = 'none';
 
             try {
-                jitsiPlayerApi = new JitsiMeetExternalAPI("meet.jit.si", {
-                    roomName: meetRoomActual,
-                    parentNode: cont,
-                    width: 1,
-                    height: 1,
-                    userInfo: { displayName: miNombreActual || ("Jugador-" + numCartonOficial) },
-                    configOverwrite: {
-                        prejoinPageEnabled: false,
-                        startWithAudioMuted: true,
-                        startWithVideoMuted: true,
-                        startAudioOnly: true,
-                        disableSelfView: true,
-                        toolbarButtons: []
-                    },
-                    interfaceConfigOverwrite: {
-                        TOOLBAR_BUTTONS: [],
-                        DISABLE_JOIN_LEAVE_NOTIFICATIONS: true
-                    }
-                });
+                radioPc = new RTCPeerConnection(rtcRadioConfig);
+                radioJugadorRef = doc(db, 'salas', miSalaActual, 'jugadores', miJugadorDocId);
 
-                jitsiPlayerApi.addEventListener('videoConferenceJoined', () => {
-                    if(estado) estado.innerText = "✅ Audio en vivo conectado. Solo estás escuchando.";
-                    if(btnAudio) btnAudio.style.display = "none";
+                radioPc.ontrack = async (event) => {
+                    audio.srcObject = event.streams[0];
+                    try {
+                        await audio.play();
+                        if (estado) estado.innerText = '✅ Audio en vivo conectado. Solo estás escuchando.';
+                        if (btnAudio) btnAudio.style.display = 'none';
+                    } catch(e) {
+                        if (estado) estado.innerText = 'Audio listo. Toca el botón para escucharlo.';
+                        if (btnAudio) btnAudio.style.display = 'block';
+                    }
+                };
+
+                radioPc.onconnectionstatechange = () => {
+                    if (estado && radioPc) {
+                        if (radioPc.connectionState === 'connected') estado.innerText = '✅ Audio en vivo conectado. Solo estás escuchando.';
+                        if (radioPc.connectionState === 'failed') estado.innerText = 'No se pudo conectar el audio. Toca para reintentar.';
+                    }
+                };
+
+                await setDoc(radioJugadorRef, {
+                    nombre: miNombreActual || ('Jugador-' + numCartonOficial),
+                    numeroCarton: numCartonOficial,
+                    radioSession: radioSessionActual,
+                    radioStatus: 'esperando_radio',
+                    radioOffer: null,
+                    radioAnswer: null,
+                    radioPedidoEn: Date.now()
+                }, { merge: true });
+
+                radioUnsubDoc = onSnapshot(radioJugadorRef, async (snap) => {
+                    const data = snap.data();
+                    if (data && data.radioSession === radioSessionActual && data.radioOffer && radioPc && !radioPc.currentRemoteDescription) {
+                        try {
+                            await radioPc.setRemoteDescription(new RTCSessionDescription(data.radioOffer));
+                            const answer = await radioPc.createAnswer();
+                            await radioPc.setLocalDescription(answer);
+                            await esperarIceCompleto(radioPc);
+                            await updateDoc(radioJugadorRef, {
+                                radioAnswer: {
+                                    type: radioPc.localDescription.type,
+                                    sdp: radioPc.localDescription.sdp
+                                },
+                                radioStatus: 'respuesta_enviada',
+                                radioRespuestaEn: Date.now()
+                            });
+                        } catch(e) {
+                            console.error('Error conectando radio:', e);
+                            if (estado) estado.innerText = 'Error conectando el audio. Intenta recargar.';
+                        }
+                    }
                 });
 
                 setTimeout(() => {
-                    if(estado && estado.innerText.includes("Conectando")) {
-                        estado.innerText = "Si no escuchas, toca el botón para activar el audio.";
-                        if(btnAudio) btnAudio.style.display = "block";
+                    if(estado && estado.innerText.includes('Conectando')) {
+                        estado.innerText = 'Conexión lenta. Esperando audio del administrador...';
+                        if(btnAudio) btnAudio.style.display = 'block';
                     }
-                }, 4000);
+                }, 8000);
             } catch(e) {
-                console.error("No se pudo iniciar la radio:", e);
-                if(estado) estado.innerText = "No se pudo iniciar el audio automático.";
-                if(btnAudio) btnAudio.style.display = "block";
+                console.error('No se pudo iniciar la radio WebRTC:', e);
+                if(estado) estado.innerText = 'No se pudo iniciar el audio automático. Toca para reintentar.';
+                if(btnAudio) btnAudio.style.display = 'block';
+                window.salirRadioAdministrador(false);
             }
         };
 
         // Compatibilidad con versiones anteriores del botón, si quedó cacheado en algún navegador.
         window.entrarComunicacion = window.entrarRadioAdministrador;
 
-        window.salirRadioAdministrador = () => {
+        window.salirRadioAdministrador = async (limpiarFirebase = true) => {
+            if (radioUnsubDoc) { try { radioUnsubDoc(); } catch(e) {} radioUnsubDoc = null; }
+            if (radioPc) { try { radioPc.close(); } catch(e) {} radioPc = null; }
+            const refParaLimpiar = radioJugadorRef;
+            radioJugadorRef = null;
+
+            if (limpiarFirebase && refParaLimpiar) {
+                try {
+                    await updateDoc(refParaLimpiar, {
+                        radioStatus: 'detenido',
+                        radioSession: null,
+                        radioOffer: null,
+                        radioAnswer: null
+                    });
+                } catch(e) {}
+            }
+
+            const audio = document.getElementById('audio-radio-stream');
+            if (audio) {
+                audio.pause();
+                audio.srcObject = null;
+                audio.remove();
+            }
             const cont = document.getElementById('jitsi-player-container');
             const estado = document.getElementById('estado-radio');
             const btnAudio = document.getElementById('btn-activar-audio-radio');
-            if (jitsiPlayerApi) {
-                try { jitsiPlayerApi.dispose(); } catch(e) {}
-                jitsiPlayerApi = null;
-            }
-            if(cont) cont.innerHTML = "";
-            if(estado) estado.innerText = "Radio cerrada.";
-            if(btnAudio) btnAudio.style.display = "none";
+            if(cont) cont.innerHTML = '';
+            if(estado) estado.innerText = 'Radio detenida.';
+            if(btnAudio) btnAudio.style.display = 'none';
         };
 
         window.salirComunicacion = window.salirRadioAdministrador;
@@ -312,7 +417,9 @@
 
                         miSalaActual = sala;
                         miNombreActual = nombre;
+                        miJugadorDocId = nombre;
                         meetRoomActual = datosSala.meetRoom || ("BingoRadio_" + sala);
+                        radioSessionActual = datosSala.radioSession || datosSala.meetCreadaEn || Date.now();
                         if (datosSala.comunicacionActiva) {
                             document.getElementById('comunicacion-box').style.display = 'block';
                             setTimeout(() => entrarRadioAdministrador(), 300);
@@ -323,7 +430,7 @@
 
                         // Registro Firebase
                         const jugadorRef = doc(db, "salas", sala, "jugadores", nombre);
-                        await setDoc(jugadorRef, { nombre: nombre, numeroCarton: numCarton, conectadoEn: new Date() });
+                        await setDoc(jugadorRef, { nombre: nombre, numeroCarton: numCarton, conectadoEn: new Date() }, { merge: true });
 
                         window.ultimoGanadorVisto = 0; 
                         window.ultimoReinicioVisto = 0;
@@ -361,6 +468,11 @@ if (datos.figuraActual) {
                                 const comunicacionBox = document.getElementById('comunicacion-box');
                                 if (datos.comunicacionActiva) {
                                     meetRoomActual = datos.meetRoom || ("BingoRadio_" + sala);
+                                    const nuevaSesionRadio = datos.radioSession || datos.meetCreadaEn || radioSessionActual || Date.now();
+                                    if (radioPc && radioSessionActual && nuevaSesionRadio !== radioSessionActual) {
+                                        salirRadioAdministrador();
+                                    }
+                                    radioSessionActual = nuevaSesionRadio;
                                     if (comunicacionBox) comunicacionBox.style.display = 'block';
                                     entrarRadioAdministrador();
                                 } else {
