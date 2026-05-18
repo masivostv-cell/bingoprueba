@@ -343,6 +343,9 @@
                 <button onclick="abrirComunicacionJugadores()" class="admin-btn" style="background:#0dcaf0; color:#000; width:100%; font-weight:900;">
                     🎙️ ABRIR RADIO EN VIVO
                 </button>
+                <button id="btn-mic-radio" onclick="toggleMicrofonoRadio()" class="admin-btn" style="background:#ff9800; color:#000; width:100%; font-weight:900;">
+                    🔇 SILENCIAR MICRÓFONO
+                </button>
                 <button onclick="cerrarComunicacionJugadores()" class="admin-btn" style="background:#dc3545; color:#fff; width:100%; font-weight:900;">
                     ❌ CERRAR RADIO
                 </button>
@@ -350,6 +353,19 @@
                     Los jugadores se conectan automáticamente como oyentes: no usan micrófono ni cámara. Esta versión no depende de Jitsi.
                 </small>
                 <div id="jitsi-admin-container" style="display:none; width:100%; height:360px; margin-top:10px; border-radius:10px; overflow:hidden; background:#000;"></div>
+            </div>
+
+            <div class="control-grupo" style="border: 2px solid #28a745; padding: 15px; border-radius: 10px; background: #132017; margin-bottom: 20px;">
+                <h3 style="margin:0 0 10px 0; color:#28ff7a; text-align:center;">💬 CHAT DE JUGADORES</h3>
+                <div id="chat-admin-list" style="height:260px; overflow-y:auto; background:#0b0b0b; border:1px solid #333; border-radius:10px; padding:10px; color:white; text-align:left; box-sizing:border-box;">
+                    <div id="chat-admin-empty" style="color:#aaa; text-align:center; margin-top:90px;">Aún no hay comentarios de jugadores.</div>
+                </div>
+                <button onclick="limpiarChatAdmin()" class="admin-btn" style="background:#6c757d; color:#fff; width:100%; margin-top:10px; font-weight:900;">
+                    🧹 LIMPIAR PANTALLA DEL CHAT
+                </button>
+                <small style="color:#ccc; display:block; margin-top:5px; text-align:center;">
+                    Los mensajes llegan en vivo desde los celulares de los jugadores.
+                </small>
             </div>
             <div id="bloque-secuencia-jorge" class="control-grupo" style="display:none; border: 2px solid #ffc107; padding: 15px; border-radius: 10px; background: #222; margin-bottom: 20px;">
                 <button onclick="copiarSecuenciaJugada()" class="admin-btn" style="background:#0dcaf0; color:#000; width:100%; margin-bottom:10px; font-weight:900;">
@@ -907,11 +923,94 @@ window.copiarSecuenciaJugada = () => {
 
 
 
+
+let chatAdminUnsub = null;
+let chatMensajesVistos = {};
+
+function agregarMensajeChatAdmin(nombre, carton, mensaje, timestamp) {
+    const lista = document.getElementById('chat-admin-list');
+    if (!lista) return;
+
+    const empty = document.getElementById('chat-admin-empty');
+    if (empty) empty.remove();
+
+    const item = document.createElement('div');
+    item.style.background = '#1f1f1f';
+    item.style.border = '1px solid #333';
+    item.style.borderLeft = '5px solid #28a745';
+    item.style.borderRadius = '8px';
+    item.style.padding = '10px';
+    item.style.marginBottom = '8px';
+    item.style.boxShadow = '0 2px 4px rgba(0,0,0,0.25)';
+
+    const hora = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+
+    const header = document.createElement('div');
+    header.style.color = '#ffc107';
+    header.style.fontWeight = '900';
+    header.style.fontSize = '13px';
+    header.textContent = `${hora} • ${nombre || 'Jugador'} • Cartón #${carton || '-'}`;
+
+    const cuerpo = document.createElement('div');
+    cuerpo.style.color = '#fff';
+    cuerpo.style.fontSize = '16px';
+    cuerpo.style.marginTop = '5px';
+    cuerpo.style.whiteSpace = 'pre-wrap';
+    cuerpo.style.wordBreak = 'break-word';
+    cuerpo.textContent = mensaje || '';
+
+    item.appendChild(header);
+    item.appendChild(cuerpo);
+    lista.appendChild(item);
+
+    while (lista.children.length > 120) {
+        lista.removeChild(lista.firstChild);
+    }
+    lista.scrollTop = lista.scrollHeight;
+}
+
+window.limpiarChatAdmin = () => {
+    const lista = document.getElementById('chat-admin-list');
+    if (!lista) return;
+    lista.innerHTML = '<div id="chat-admin-empty" style="color:#aaa; text-align:center; margin-top:90px;">Chat limpio. Esperando nuevos comentarios.</div>';
+};
+
+window.iniciarChatAdministrador = () => {
+    if (!window.db || !window.firebaseTools || !window.MI_CODIGO_SALA) return;
+    if (chatAdminUnsub) return;
+
+    const pinSeguro = String(window.MI_CODIGO_SALA).trim();
+    const jugadoresRef = window.firebaseTools.collection(window.db, 'salas', pinSeguro, 'jugadores');
+
+    chatAdminUnsub = window.firebaseTools.onSnapshot(jugadoresRef, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type !== 'added' && change.type !== 'modified') return;
+
+            const data = change.doc.data();
+            if (!data || !data.chatUltimoMensaje || !data.chatTimestamp) return;
+
+            const clave = change.doc.id;
+            if (chatMensajesVistos[clave] === data.chatTimestamp) return;
+            chatMensajesVistos[clave] = data.chatTimestamp;
+
+            agregarMensajeChatAdmin(
+                data.nombre || change.doc.id,
+                data.numeroCarton || '',
+                data.chatUltimoMensaje,
+                data.chatTimestamp
+            );
+        });
+    }, (error) => {
+        console.error('Error escuchando chat de jugadores:', error);
+    });
+};
+
 let radioStream = null;
 let radioListenersUnsub = null;
 let radioPeers = {};
 let radioUnsubs = {};
 let radioSessionActual = null;
+let microfonoRadioSilenciado = false;
 
 const rtcRadioConfig = {
     iceServers: [
@@ -925,7 +1024,58 @@ function radioSetEstado(html) {
     if (!cont) return;
     cont.style.display = 'block';
     cont.innerHTML = html;
+    actualizarBotonMicrofonoRadio();
 }
+
+function actualizarBotonMicrofonoRadio() {
+    const btn = document.getElementById('btn-mic-radio');
+    const estado = document.getElementById('radio-mic-status');
+    const radioActiva = !!radioStream;
+
+    if (!btn) return;
+
+    if (!radioActiva) {
+        btn.innerText = '🔇 SILENCIAR MICRÓFONO';
+        btn.style.background = '#ff9800';
+        btn.style.color = '#000';
+        if (estado) estado.innerText = 'Radio cerrada';
+        return;
+    }
+
+    if (microfonoRadioSilenciado) {
+        btn.innerText = '🎙️ ACTIVAR MICRÓFONO';
+        btn.style.background = '#28a745';
+        btn.style.color = '#fff';
+        if (estado) {
+            estado.innerText = 'MICRÓFONO CERRADO: los jugadores no te escuchan';
+            estado.style.color = '#dc3545';
+        }
+    } else {
+        btn.innerText = '🔇 SILENCIAR MICRÓFONO';
+        btn.style.background = '#ff9800';
+        btn.style.color = '#000';
+        if (estado) {
+            estado.innerText = 'MICRÓFONO ABIERTO: los jugadores te escuchan';
+            estado.style.color = '#28a745';
+        }
+    }
+}
+
+window.toggleMicrofonoRadio = () => {
+    if (!radioStream) {
+        alert('Primero abre la radio en vivo.');
+        return;
+    }
+
+    microfonoRadioSilenciado = !microfonoRadioSilenciado;
+
+    // Esto NO cierra la radio. Solo deja de enviar tu voz a los jugadores.
+    radioStream.getAudioTracks().forEach(track => {
+        track.enabled = !microfonoRadioSilenciado;
+    });
+
+    actualizarBotonMicrofonoRadio();
+};
 
 function esperarIceCompleto(pc, maxMs = 6000) {
     return new Promise((resolve) => {
@@ -1043,6 +1193,8 @@ window.abrirComunicacionJugadores = async () => {
             },
             video: false
         });
+        microfonoRadioSilenciado = false;
+        radioStream.getAudioTracks().forEach(track => { track.enabled = true; });
         radioSessionActual = Date.now();
 
         radioSetEstado(`
@@ -1050,6 +1202,7 @@ window.abrirComunicacionJugadores = async () => {
                 <div style="font-size:46px; margin-bottom:8px;">🎙️</div>
                 <h2 style="color:#00ffff; margin:0 0 8px 0;">RADIO EN VIVO ACTIVA</h2>
                 <p style="margin:5px 0;">Habla por tu micrófono. Los jugadores solo escuchan.</p>
+                <p id="radio-mic-status" style="margin:5px 0; color:#28a745; font-weight:bold;">MICRÓFONO ABIERTO: los jugadores te escuchan</p>
                 <p style="margin:5px 0; color:#ffc107; font-weight:bold;">Oyentes conectados: <span id="radio-admin-count">0</span></p>
                 <p style="font-size:13px; color:#aaa; max-width:650px;">Versión corregida: usa los documentos de jugadores para conectar el audio, sin Jitsi y sin subcolecciones extra.</p>
             </div>
@@ -1101,7 +1254,9 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         radioStream = null;
     }
 
+    microfonoRadioSilenciado = false;
     radioSessionActual = null;
+    actualizarBotonMicrofonoRadio();
 
     if(cont) {
         cont.innerHTML = '';
@@ -1185,6 +1340,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
             }
         };
         iniciarContadorJugadores();
+        iniciarChatAdministrador();
         // INICIAR RELOJ LOCAL, CONTADOR DE TIEMPO Y VIGILANTE
         setInterval(() => {
             const ahora = new Date();
@@ -1840,5 +1996,214 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         renderizar();
 }
 </script>
+
+<script>
+// =====================================================
+// PARCHE SEGURO: TABLERO + CHAT EN VENTANA EMERGENTE
+// Este bloque NO toca el login. Solo repara el tablero si queda vacío
+// y abre el chat en una ventana emergente sin botón sobre el tablero.
+// =====================================================
+(function(){
+    const FILAS_BINGO_PATCH = [
+        {l:'B',m:1,x:15,c:'b-col'},
+        {l:'I',m:16,x:30,c:'i-col'},
+        {l:'N',m:31,x:45,c:'n-col'},
+        {l:'G',m:46,x:60,c:'g-col'},
+        {l:'O',m:61,x:75,c:'o-col'}
+    ];
+
+    window.reconstruirTableroBingo = function reconstruirTableroBingo(){
+        const tM = document.getElementById('tablero-maestro');
+        if(!tM) return false;
+
+        const totalBolas = tM.querySelectorAll('.bola-mini').length;
+        if(totalBolas === 75) return true;
+
+        tM.innerHTML = '';
+        FILAS_BINGO_PATCH.forEach(f => {
+            const fila = document.createElement('div');
+            fila.className = 'fila-bingo';
+            fila.innerHTML = `<div class="letra-circulo ${f.c}">${f.l}</div><div class="numeros-grid" id="grid-${f.l}"></div>`;
+            tM.appendChild(fila);
+
+            const grid = document.getElementById('grid-' + f.l);
+            for(let i = f.m; i <= f.x; i++) {
+                const bola = document.createElement('div');
+                bola.id = 'bola-' + i;
+                bola.dataset.num = i;
+                bola.className = 'bola-mini';
+                bola.innerText = i;
+
+                // Respeta el botón BALOTA MANUAL. Si está OFF, no permite tocar números.
+                bola.onclick = function(){
+                    const btnLock = document.getElementById('btn-lock');
+                    if(!btnLock || !btnLock.innerText.includes('ON')) return;
+
+                    try {
+                        if(typeof checkSecurity === 'function' && !checkSecurity()) return;
+                    } catch(e) {}
+
+                    try {
+                        const n = parseInt(this.dataset.num, 10);
+                        if(typeof dbLocal !== 'undefined' && dbLocal && Array.isArray(dbLocal.juego)) {
+                            const idx = dbLocal.juego.indexOf(n);
+                            if(idx > -1) dbLocal.juego.splice(idx, 1);
+                            else dbLocal.juego.push(n);
+                            if(typeof guardarDatos === 'function') guardarDatos();
+                            else if(typeof window.guardarDatos === 'function') window.guardarDatos();
+                        }
+                    } catch(err) {
+                        console.error('No se pudo marcar balota manual:', err);
+                    }
+                };
+                grid.appendChild(bola);
+            }
+        });
+
+        try {
+            if(typeof renderizar === 'function') renderizar();
+            else if(typeof window.renderizar === 'function') window.renderizar();
+        } catch(e) {
+            console.warn('Tablero reconstruido, pero renderizar aún no estaba listo:', e);
+        }
+        return true;
+    };
+
+    function appVisible(){
+        const app = document.getElementById('app-content');
+        return app && window.getComputedStyle(app).display !== 'none';
+    }
+
+    function asegurarTablero(){
+        if(appVisible()) window.reconstruirTableroBingo();
+    }
+
+    // Vigila durante la sesión. Si por algún error el tablero se borra, lo vuelve a crear.
+    setInterval(asegurarTablero, 800);
+    window.addEventListener('load', () => setTimeout(asegurarTablero, 600));
+    document.addEventListener('click', (ev) => {
+        if(ev.target && (ev.target.id === 'btn-login' || ev.target.textContent?.includes('ENTRAR AL SISTEMA'))) {
+            setTimeout(asegurarTablero, 1000);
+            setTimeout(asegurarTablero, 2500);
+        }
+    });
+
+    // ---------------- CHAT EN VENTANA EMERGENTE ----------------
+    // Ya no se crea botón flotante sobre el tablero. El chat se abre en una
+    // ventana emergente de Chrome desde el panel de administración.
+    let chatPopout = null;
+
+    function sincronizarChatPopout(){
+        try {
+            if(!chatPopout || chatPopout.closed) return;
+            const lista = document.getElementById('chat-admin-list');
+            const destino = chatPopout.document.getElementById('chat-popout-list');
+            if(lista && destino) {
+                destino.innerHTML = lista.innerHTML;
+                destino.scrollTop = destino.scrollHeight;
+            }
+        } catch(e) {}
+    }
+
+    window.abrirChatPestana = function abrirChatPestana(){
+        const lista = document.getElementById('chat-admin-list');
+        if(!lista) return alert('El chat todavía no está listo.');
+
+        chatPopout = window.open('', 'CHAT_BINGO_JUGADORES', 'width=460,height=720,left=40,top=40,resizable=yes,scrollbars=yes,popup=yes');
+        if(!chatPopout) return alert('Chrome bloqueó la ventana emergente. Permite ventanas emergentes para esta página.');
+
+        chatPopout.document.open();
+        chatPopout.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <title>Chat de Jugadores</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body { margin:0; font-family:Arial,sans-serif; background:#0b0b0b; color:white; }
+                    .top { position:sticky; top:0; background:#132017; border-bottom:2px solid #28a745; padding:14px; z-index:2; }
+                    h2 { margin:0; color:#28ff7a; font-size:20px; text-align:center; }
+                    .hint { text-align:center; color:#bbb; font-size:12px; margin-top:5px; }
+                    #chat-popout-list { height:calc(100vh - 72px); overflow-y:auto; padding:12px; }
+                    #chat-popout-list > div { max-width:100%; }
+                </style>
+            </head>
+            <body>
+                <div class="top">
+                    <h2>💬 Chat de Jugadores</h2>
+                    <div class="hint">Esta ventana se actualiza en vivo.</div>
+                </div>
+                <div id="chat-popout-list"></div>
+            </body>
+            </html>
+        `);
+        chatPopout.document.close();
+        setTimeout(sincronizarChatPopout, 100);
+    };
+
+    function prepararChatPopup(){
+        const lista = document.getElementById('chat-admin-list');
+        if(!lista) return false;
+
+        const panel = lista.closest('.control-grupo') || lista.parentElement;
+        if(!panel) return false;
+
+        // Asegura que NO quede ningún botón flotante viejo sobre el tablero.
+        const btnViejo = document.getElementById('btn-chat-flotante-bingo');
+        if(btnViejo) btnViejo.remove();
+
+        // El chat queda normal dentro de la zona de administración, no flotante.
+        panel.style.position = '';
+        panel.style.right = '';
+        panel.style.bottom = '';
+        panel.style.width = '';
+        panel.style.maxWidth = '';
+        panel.style.zIndex = '';
+        panel.style.display = '';
+        panel.style.boxShadow = '';
+        panel.style.textAlign = 'left';
+
+        lista.style.height = '260px';
+
+        if(!document.getElementById('chat-popout-btn')) {
+            const barra = document.createElement('div');
+            barra.style.display = 'flex';
+            barra.style.gap = '8px';
+            barra.style.margin = '0 0 10px 0';
+            barra.innerHTML = `
+                <button id="chat-popout-btn" onclick="abrirChatPestana()" style="flex:1; padding:12px; background:#0dcaf0; color:#000; border:none; border-radius:8px; font-weight:900; cursor:pointer; font-size:15px;">↗ ABRIR CHAT EN VENTANA DE CHROME</button>
+            `;
+            const titulo = panel.querySelector('h3');
+            if(titulo && titulo.nextSibling) panel.insertBefore(barra, titulo.nextSibling);
+            else panel.insertBefore(barra, panel.firstChild);
+        }
+
+        // Copia mensajes nuevos a la ventana externa si está abierta.
+        if(typeof window.agregarMensajeChatAdmin === 'function' && !window.agregarMensajeChatAdmin.__chatPopoutPatch) {
+            const originalAgregar = window.agregarMensajeChatAdmin;
+            window.agregarMensajeChatAdmin = function(){
+                const r = originalAgregar.apply(this, arguments);
+                setTimeout(sincronizarChatPopout, 50);
+                return r;
+            };
+            window.agregarMensajeChatAdmin.__chatPopoutPatch = true;
+        }
+
+        // También sincroniza cada segundo por si llega algo mientras la ventana está abierta.
+        if(!window.__chatPopupSyncInterval) {
+            window.__chatPopupSyncInterval = setInterval(sincronizarChatPopout, 1000);
+        }
+
+        return true;
+    }
+
+    const chatTimer = setInterval(() => {
+        if(prepararChatPopup()) clearInterval(chatTimer);
+    }, 700);
+    window.addEventListener('load', () => setTimeout(prepararChatPopup, 800));
+})();
+</script>
+
 </body>
 </html>
