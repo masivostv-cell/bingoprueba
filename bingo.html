@@ -112,7 +112,7 @@
         /* TABLERO */
         #tablero-maestro { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
         .fila-bingo { display: flex; align-items: center; gap: 10px; flex: 1; }
-        .letra-circulo { width: 8vh; height: 8vh; border-radius: 50%; color: white; font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 4.5vh; border: 4px solid #fff; flex-shrink: 0; }
+        .letra-circulo { width: 12vh; height: 12vh; border-radius: 50%; color: white; font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 6.5vh; border: 4px solid #fff; flex-shrink: 0; }
         .b-col { background: #004080; } .i-col { background: #d32f2f; } .n-col { background: #757575; } .g-col { background: #28a745; } .o-col { background: #fbc02d; }
         .numeros-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 6px; flex-grow: 1; height: 100%; }
         
@@ -121,7 +121,7 @@
             border-radius: 8px; 
             background: #e9ecef; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 4vh; font-weight: 800; border: 1px solid #adb5bd; 
+            font-size: 8vh; font-weight: 800; border: 1px solid #adb5bd; 
             height: 100%; transition: 0.1s; color: #333; 
         }
         .bola-mini.activa { background-color: #ffeb3b !important; color: #000 !important; border: 3px solid #000; }
@@ -2205,5 +2205,111 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 })();
 </script>
 
+
+<script>
+// =====================================================
+// PARCHE FINAL SEGURO: LOGIN + TECLAS
+// Este bloque se agrega al FINAL del archivo. No toca Firebase, radio, chat ni tablero.
+// Flecha abajo: sacar balota | Flecha arriba: automático | Espacio: verificar cartón
+// =====================================================
+(function(){
+    if (window.__BINGO_LOGIN_TECLAS_FINAL__) return;
+    window.__BINGO_LOGIN_TECLAS_FINAL__ = true;
+
+    function loginVisible(){
+        const login = document.getElementById('login-overlay');
+        return !!login && window.getComputedStyle(login).display !== 'none';
+    }
+
+    function appAbierta(){
+        const app = document.getElementById('app-content');
+        return !!app && window.getComputedStyle(app).display !== 'none' && !loginVisible();
+    }
+
+    function campoVisible(el){
+        if (!el) return false;
+        const tag = (el.tagName || '').toUpperCase();
+        if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) && !el.isContentEditable) return false;
+        const st = window.getComputedStyle(el);
+        return st.display !== 'none' && st.visibility !== 'hidden' && el.offsetParent !== null;
+    }
+
+    function ejecutarLogin(ev){
+        if (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+        }
+        try {
+            if (typeof window.validarLogin === 'function') return window.validarLogin();
+            if (typeof validarLogin === 'function') return validarLogin();
+            alert('No se encontró la función validarLogin. Revisa que el script principal haya cargado completo.');
+        } catch (e) {
+            console.error('Error ejecutando login:', e);
+            alert('Error al intentar iniciar sesión. Abre la consola para ver el detalle.');
+        }
+    }
+
+    function asegurarBotonLogin(){
+        const btn = document.getElementById('btn-login');
+        if (!btn || btn.__loginFinalOk) return;
+        btn.__loginFinalOk = true;
+
+        // Quitamos el inline para evitar doble ejecución y dejamos un listener controlado.
+        btn.onclick = null;
+        btn.addEventListener('click', ejecutarLogin, false);
+
+        const user = document.getElementById('user-email');
+        const pass = document.getElementById('user-pass');
+        [user, pass].forEach(input => {
+            if (!input || input.__enterLoginOk) return;
+            input.__enterLoginOk = true;
+            input.addEventListener('keydown', function(e){
+                if (e.key === 'Enter') ejecutarLogin(e);
+            });
+        });
+    }
+
+    function manejarAtajo(e){
+        // Mientras estés en usuario/clave, no tocamos las flechas ni espacio.
+        if (!appAbierta()) return;
+
+        // Si estás escribiendo en un campo visible del panel, no interrumpimos.
+        if (campoVisible(e.target)) return;
+        if (e.repeat) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (typeof window.sacarBalota === 'function') window.sacarBalota();
+            else alert('La función sacarBalota todavía no está lista.');
+        }
+
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (typeof window.toggleAutomatico === 'function') window.toggleAutomatico();
+            else alert('La función automático todavía no está lista.');
+        }
+
+        if (e.code === 'Space' || e.key === ' ') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const n = prompt('N° Cartón:');
+            if (n) {
+                const input = document.getElementById('num-revisar');
+                if (input) input.value = n;
+                if (typeof window.manualCheck === 'function') window.manualCheck();
+                else alert('La función verificar todavía no está lista.');
+            }
+        }
+    }
+
+    document.addEventListener('keydown', manejarAtajo, true);
+    document.addEventListener('DOMContentLoaded', asegurarBotonLogin);
+    window.addEventListener('load', asegurarBotonLogin);
+    setTimeout(asegurarBotonLogin, 500);
+    setTimeout(asegurarBotonLogin, 1500);
+})();
+</script>
 </body>
 </html>
