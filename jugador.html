@@ -148,6 +148,15 @@
             <button id="btn-activar-audio-radio" onclick="entrarRadioAdministrador()" style="display:none; padding:12px; background:#ffc107; color:#000; border:none; border-radius:8px; font-weight:900; width:100%; cursor:pointer; margin-top:8px;">🔊 TOCAR PARA ACTIVAR AUDIO</button>
             <div id="jitsi-player-container" style="position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
         </div>
+
+        <div id="chat-jugador-box" style="background:#132017; border:2px solid #28a745; border-radius:12px; padding:10px; margin:15px auto; max-width:450px; box-sizing:border-box; text-align:left;">
+            <h3 style="margin:0 0 8px 0; color:#28ff7a; text-align:center;">💬 Enviar comentario al administrador</h3>
+            <div style="display:flex; gap:8px; width:100%;">
+                <input id="chat-jugador-input" maxlength="180" placeholder="Escribe tu comentario..." style="flex:1; padding:12px; border-radius:8px; border:1px solid #555; background:#fff; color:#000; font-size:15px; box-sizing:border-box; min-width:0;">
+                <button onclick="enviarMensajeChat()" style="padding:12px 14px; background:#28a745; color:white; border:none; border-radius:8px; font-weight:900; cursor:pointer;">Enviar</button>
+            </div>
+            <small id="chat-jugador-status" style="display:block; color:#aaa; margin-top:6px; text-align:center;">El administrador leerá tu mensaje en vivo.</small>
+        </div>
         <h3 style="margin: 0 0 10px 0; color: #ffc107; font-size: 24px;">CARTÓN #<span id="display-num-carton"></span></h3>
 
         <div id="mi-carton" style="width: 100%; max-width: 450px; margin: 0 auto;"></div>
@@ -356,6 +365,64 @@
 
         window.salirComunicacion = window.salirRadioAdministrador;
 
+        let chatEnterConfigurado = false;
+
+        function configurarEnterChatJugador() {
+            if (chatEnterConfigurado) return;
+            const input = document.getElementById('chat-jugador-input');
+            if (!input) return;
+            chatEnterConfigurado = true;
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    window.enviarMensajeChat();
+                }
+            });
+        }
+
+        window.enviarMensajeChat = async () => {
+            const input = document.getElementById('chat-jugador-input');
+            const status = document.getElementById('chat-jugador-status');
+            if (!input) return;
+
+            const mensaje = input.value.trim();
+            if (!mensaje) {
+                if (status) status.innerText = 'Escribe un comentario antes de enviar.';
+                return;
+            }
+
+            if (!miSalaActual || !miJugadorDocId) {
+                alert('Primero debes ingresar a la sala.');
+                return;
+            }
+
+            try {
+                const jugadorRef = doc(db, 'salas', miSalaActual, 'jugadores', miJugadorDocId);
+                await setDoc(jugadorRef, {
+                    nombre: miNombreActual || ('Jugador-' + numCartonOficial),
+                    numeroCarton: numCartonOficial,
+                    chatUltimoMensaje: mensaje.slice(0, 180),
+                    chatTimestamp: Date.now()
+                }, { merge: true });
+
+                input.value = '';
+                if (status) {
+                    status.innerText = '✅ Comentario enviado al administrador.';
+                    status.style.color = '#28ff7a';
+                    setTimeout(() => {
+                        status.innerText = 'El administrador leerá tu mensaje en vivo.';
+                        status.style.color = '#aaa';
+                    }, 2500);
+                }
+            } catch (e) {
+                console.error('Error enviando comentario:', e);
+                if (status) {
+                    status.innerText = 'No se pudo enviar. Revisa tu conexión.';
+                    status.style.color = '#ff6b6b';
+                }
+            }
+        };
+
         window.entrarSala = async () => {
             const sala = document.getElementById('codigo-sala').value.toUpperCase();
             const numCarton = document.getElementById('numero-carton').value;
@@ -410,6 +477,7 @@
                         document.getElementById('login-section').style.display = 'none';
                         document.getElementById('encabezado-fijo').style.display = 'flex';
                         document.getElementById('game-section').style.display = 'block';
+                        configurarEnterChatJugador();
                         
                         document.getElementById('display-sala').innerText = sala;
                         document.getElementById('display-nombre').innerText = nombre;
