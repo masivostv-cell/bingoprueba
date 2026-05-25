@@ -1,0 +1,1438 @@
+
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QB8RR22B5E"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-QB8RR22B5E');
+    </script>
+
+    <title>PERIFONEO.AI - Estudio Web</title>
+    
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1158029388863806');
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1158029388863806&ev=PageView&noscript=1"/></noscript>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://checkout.bold.co/library/boldPaymentButton.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = { darkMode: "class", theme: { extend: { fontFamily: { "h1": ["Manrope"], "h3": ["Manrope"], "body-md": ["Inter"] } } } }
+    </script>
+    <style>
+        body { background-color: #0a0a0a; color: #e5e2e1; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+        .glass-card { background: rgba(18, 18, 18, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .opcion-seleccionada { border-color: #8b5cf6 !important; background-color: rgba(139, 92, 246, 0.1) !important; box-shadow: 0 0 15px rgba(139, 92, 246, 0.2); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        
+        .custom-slider { -webkit-appearance: none; width: 100%; background: transparent; height: 16px; }
+        .custom-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #3f3f46; border-radius: 2px; }
+        .custom-slider::-webkit-slider-thumb { height: 14px; width: 14px; border-radius: 50%; cursor: pointer; -webkit-appearance: none; margin-top: -5px; box-shadow: 0 0 5px rgba(0,0,0,0.5); background: var(--thumb-color, #10B981); }
+        .slider-label { display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px; text-transform: uppercase; font-weight: bold;}
+        
+        .loader-audio { border: 4px solid rgba(16, 185, 129, 0.1); border-top: 4px solid #10B981; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* ESTILOS DEL TOUR LUMINOSO */
+        .glow-step {
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4), 0 0 15px rgba(139, 92, 246, 0.6) !important;
+            border-color: #a78bfa !important;
+            animation: pulse-glow-violet 2s infinite;
+            transition: all 0.3s ease;
+        }
+        @keyframes pulse-glow-violet {
+            0%, 100% { box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4), 0 0 15px rgba(139, 92, 246, 0.6); }
+            50% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.2), 0 0 25px rgba(139, 92, 246, 0.4); }
+        }
+        .glow-step-emerald {
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4), 0 0 15px rgba(16, 185, 129, 0.6) !important;
+            border-color: #34d399 !important;
+            animation: pulse-glow-emerald 2s infinite;
+            transition: all 0.3s ease;
+        }
+        @keyframes pulse-glow-emerald {
+            0%, 100% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4), 0 0 15px rgba(16, 185, 129, 0.6); }
+            50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.2), 0 0 25px rgba(16, 185, 129, 0.4); }
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+
+    <header class="bg-neutral-950/80 backdrop-blur-xl border-b border-white/10 shadow-2xl flex items-center justify-between px-6 py-4 w-full z-50 sticky top-0">
+        <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
+            <span class="material-symbols-outlined text-emerald-500">graphic_eq</span>
+            <h1 class="text-lg font-bold tracking-tight text-white font-manrope hidden sm:block">PERIFONEO.AI <span class="text-[10px] text-emerald-400 font-mono align-top">PRO</span></h1>
+        </a>
+        <div class="flex items-center gap-3">
+            <button onclick="alert('Tu cuenta está en modo ilimitado.')" class="text-slate-300 hover:text-white text-sm font-semibold px-2 py-2 transition-colors flex items-center gap-1">
+                <span class="material-symbols-outlined text-base">sell</span> <span class="hidden sm:inline">Ilimitado</span>
+            </button>
+            <span id="user-info" class="text-xs text-white hidden font-bold bg-white/5 px-3 py-1.5 rounded-full border border-white/10"></span>
+            <button id="btnLogout" class="hidden bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-semibold px-4 py-2 rounded-full flex items-center gap-2 border border-red-500/20 active:scale-95 duration-200">
+                <span class="material-symbols-outlined text-base">logout</span><span class="hidden sm:inline">Salir</span>
+            </button>
+            <button id="btnLogin" class="bg-white/5 hover:bg-white/10 transition-colors text-white text-sm font-semibold px-4 py-2 rounded-full flex items-center gap-2 border border-white/10 active:scale-95 duration-200">
+                <span class="material-symbols-outlined text-base">login</span>Acceder
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-md md:max-w-2xl lg:max-w-5xl mx-auto px-4 pt-8 pb-40">
+        
+        <div class="text-center space-y-2 mb-10">
+            <h2 class="font-h1 text-3xl md:text-4xl font-black text-white uppercase">Estudio de Grabación</h2>
+            <p class="text-zinc-400 text-sm md:text-base font-medium tracking-wide">Tecnología de Universal Digital Solutions</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <section class="glass-card rounded-3xl p-6 space-y-4 shadow-xl flex flex-col h-full">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-lg">edit_note</span>
+                    </div>
+                    <h3 class="font-h3 font-bold text-white uppercase tracking-wider text-sm">1. Redacción con IA</h3>
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-1 flex items-center gap-1">¿A qué sector pertenece tu negocio?</label>
+                    <select id="nicho_negocio" class="w-full bg-black/50 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-violet-500 text-slate-300 text-sm cursor-pointer hover:bg-white/5 transition-all">
+                        <option value="general" selected disabled hidden>👇 Selecciona una opción...</option>
+                        <option value="general">🏪 Sector General (Comercio)</option>
+                        <option value="texto_propio">✍️ Tengo mi propio texto</option>
+                        <option value="locucion_neutral">🎙️ Locución Neutral (Profesional)</option>
+                        <option value="fruver_mercado">🍎 Fruver, Verduras y Mercado</option>
+                        <option value="farmacia">💊 Farmacia y Salud</option>
+                        <option value="belleza_cosmeticos_fragancias">💄 Belleza, Cosméticos y Fragancias</option>
+                        <option value="restaurantes_comidas">🍔 Restaurantes y Comidas Rápidas</option>
+                        <option value="discoteca_eventos">🎉 Discotecas, Bares y Eventos</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2 flex-grow">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-1 mt-2">Datos para el anuncio</label>
+                    <textarea id="datos_negocio" class="w-full h-24 bg-black/50 border border-white/10 rounded-2xl p-4 focus:ring-2 focus:ring-violet-500 outline-none text-white text-sm transition-all" placeholder="Ej: Venta de empanadas a 2000 pesos, domicilios al 350 828 9874..."></textarea>
+                </div>
+                <button id="btnGenerarGuiones" class="w-full bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all mt-auto uppercase tracking-widest text-xs">
+                    <span class="material-symbols-outlined text-lg">auto_awesome</span> Escribir Guiones
+                </button>
+                
+                <div id="loader_ia" class="hidden flex-col items-center justify-center p-8 bg-violet-900/20 border border-violet-500/30 rounded-2xl mt-4">
+                    <div class="loader-audio mb-4" style="border-color: rgba(139, 92, 246, 0.2); border-top-color: #8b5cf6; width: 50px; height: 50px; border-width: 4px;"></div>
+                    <span class="text-violet-400 font-black tracking-widest uppercase text-lg animate-pulse text-center">Pensando...<br><span class="text-xs font-normal text-violet-300 mt-2 block">Analizando tu negocio y escribiendo magia creativa</span></span>
+                </div>
+
+                <div id="opciones_guion" class="hidden grid grid-cols-1 gap-4 mt-4">
+                    <div id="card_perifoneo" onclick="seleccionarGuion('perifoneo')" class="opcion-guion cursor-pointer border border-white/10 bg-black/40 p-5 rounded-2xl hover:border-violet-500 transition-all">
+                        <h3 class="font-bold text-emerald-400 uppercase text-xs mb-2 tracking-widest">📣 Opción 1</h3>
+                        <p id="txt_perifoneo" class="text-slate-300 text-sm italic"></p>
+                    </div>
+                    <div id="card_pregoneo" onclick="seleccionarGuion('pregoneo')" class="opcion-guion cursor-pointer border border-white/10 bg-black/40 p-5 rounded-2xl hover:border-violet-500 transition-all">
+                        <h3 class="font-bold text-amber-400 uppercase text-xs mb-2 tracking-widest">🗣️ Opción 2</h3>
+                        <p id="txt_pregoneo" class="text-slate-300 text-sm italic"></p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card rounded-3xl p-6 space-y-4 shadow-xl flex flex-col h-full relative">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-lg">mic</span>
+                    </div>
+                    <h3 class="font-h3 font-bold text-white uppercase tracking-wider text-sm">2. Producción y Mezcla</h3>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-zinc-400 px-1">Guion Final a Grabar</label>
+                    <textarea id="texto_final" readonly class="w-full h-24 bg-black/50 border border-white/10 rounded-xl p-3 outline-none text-white cursor-not-allowed opacity-70 transition-all text-sm" placeholder="⚠️ Genera un guion en el Paso 1 para poder editarlo aquí..."></textarea>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-1">Voz del Locutor</label>
+                    <div class="relative w-full" id="custom_select_voz_container">
+                        <input type="hidden" id="voz" value="ScRIyJnWtz9zMjMIJ0Kv">
+                        <button type="button" id="btn_dropdown_voz" class="w-full flex justify-between items-center bg-black/50 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 text-white text-sm transition-all">
+                            <span id="selected_voz_text">Alejandro (Perifoneo)</span>
+                            <span class="material-symbols-outlined text-[18px]">expand_more</span>
+                        </button>
+                        <div id="dropdown_voz" class="hidden absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-[60] max-h-60 overflow-y-auto">
+                            </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 border-t border-white/10 pt-4">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-1 flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">music_note</span> Música de Fondo</label>
+                    
+                    <div class="flex flex-col gap-3" id="contenedor_musica">
+                        <label class="flex items-center p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer">
+                            <input type="radio" name="tipo_musica" value="galeria" checked onchange="cambiarModoMusica()" class="w-4 h-4 text-emerald-500 bg-transparent border-white/20">
+                            <span class="ml-3 text-white text-sm">Pista de la Galería</span>
+                        </label>
+                        <div class="ml-7 w-[calc(100%-1.75rem)] relative">
+                            <input type="hidden" id="select_galeria" value="">
+                            <button type="button" id="btn_dropdown_musica" class="w-full flex justify-between items-center bg-black/50 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-sky-500 text-white text-sm transition-all">
+                                <span id="selected_musica_text">👇 Selecciona una pista...</span>
+                                <span class="material-symbols-outlined text-[18px]">expand_more</span>
+                            </button>
+                            <div id="dropdown_musica" class="hidden absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-[60] max-h-60 overflow-y-auto">
+                                </div>
+                        </div>
+
+                        <label class="flex items-center p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer">
+                            <input type="radio" name="tipo_musica" value="subir" onchange="cambiarModoMusica()" class="w-4 h-4 text-emerald-500 bg-transparent border-white/20">
+                            <span class="ml-3 text-white text-sm">Subir mi propia música</span>
+                        </label>
+                        <div id="caja_subir" class="hidden ml-7 w-[calc(100%-1.75rem)] transition-all">
+                            <input type="file" id="archivoMusica" accept="audio/*" class="w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-emerald-500/20 file:text-emerald-400 cursor-pointer transition-all">
+                            <label class="flex items-center gap-2 mt-2 text-[10px] text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="check_derechos" class="rounded accent-emerald-500 w-3 h-3"> Declaro poseer derechos.
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btnGenerarTodo" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-5 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-[0_0_30px_rgba(16,185,129,0.3)] active:scale-95 transition-all">
+                    <span class="uppercase tracking-widest text-sm flex items-center gap-2"><span class="material-symbols-outlined">bolt</span> PRODUCIR CUÑA FINAL</span>
+                    <span id="costo_produccion" class="text-[10px] font-normal text-emerald-200">Uso ilimitado</span>
+                </button>
+            </section>
+        </div>
+        
+        <div id="loader_master" class="hidden w-full mt-8 p-12 bg-zinc-900/90 backdrop-blur-xl border-2 border-emerald-500/50 rounded-3xl text-center shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+            <div class="loader-audio mb-6" style="width: 60px; height: 60px; border-width: 5px;"></div>
+            <h2 class="text-emerald-400 font-black uppercase tracking-widest text-xl mb-3 animate-pulse" id="estadoProceso">Conectando con la IA...</h2>
+            <p class="text-sm text-zinc-400 font-medium">Aplicando ecualización, compresión y efectos de estudio profesional...</p>
+        </div>
+
+        <div id="wrapperFinal" class="hidden w-full mt-8 bg-black/60 border border-white/10 rounded-3xl p-6 lg:p-8 shadow-2xl relative">
+            
+            <div class="flex flex-col mb-4 gap-2">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <p class="text-sm text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined">celebration</span> ¡Tu cuña está lista!</p>
+                    <div class="flex items-center gap-2">
+                        <span id="badge_recuperado" class="hidden bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider animate-pulse">
+                            <span class="material-symbols-outlined text-[12px] align-middle">cloud_done</span> Sesión Recuperada
+                        </span>
+                        
+                        <div class="flex gap-2">
+                            <button id="btnDescargar" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase flex items-center gap-1 shadow-lg">
+                                <span class="material-symbols-outlined text-sm">download</span> Descarga cuña MP3
+                            </button>
+                            <button id="btnEnlace" class="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase flex items-center gap-1 shadow-lg transition-colors" title="Obtener enlace para compartir o Facebook">
+                                <span class="material-symbols-outlined text-sm">link</span> Enlace
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="box_enlace_generado" class="hidden w-full bg-black/80 border border-emerald-500/30 p-2 rounded-xl flex items-center gap-2 mt-1">
+                    <input type="text" id="input_enlace" readonly class="w-full bg-transparent text-xs text-emerald-400 outline-none px-2" value="">
+                    <button onclick="copiarEnlace()" class="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/50 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0">Copiar</button>
+                </div>
+            </div>
+            
+            <audio id="reproductorFinal" controls controlsList="nodownload noplaybackrate" class="w-full accent-emerald-500 h-12 mb-6"></audio>
+            
+            <button onclick="enviarVozDirectaAlDaw()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 px-4 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)] flex justify-center items-center gap-2 transition-all active:scale-95 text-sm uppercase tracking-wider mb-6">
+                <span class="material-symbols-outlined">add_to_queue</span> Enviar al Estudio (Solo para usuarios del plan de $30mil en adelante)
+            </button>
+
+            <div class="bg-zinc-900/80 border border-emerald-500/20 rounded-2xl p-4 mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-sm text-emerald-400">auto_fix_high</span> Estilos de Mezcla Globales</h4>
+                    <span class="text-[10px] text-zinc-500 bg-zinc-800 px-2 py-1 rounded">Aplicación Instantánea</span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button onclick="aplicarEstiloGlobal('classic')" id="btn_estilo_classic" class="estilo-btn px-2 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white flex flex-col items-center gap-1"><span class="text-lg">🎙️</span> Clásico</button>
+                    <button onclick="aplicarEstiloGlobal('promo')" id="btn_estilo_promo" class="estilo-btn px-2 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-emerald-500 bg-emerald-500/20 text-emerald-400 flex flex-col items-center gap-1"><span class="text-lg">💥</span> Promo (Eco)</button>
+                    <button onclick="aplicarEstiloGlobal('dj')" id="btn_estilo_dj" class="estilo-btn px-2 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white flex flex-col items-center gap-1"><span class="text-lg">🎧</span> DJ Efectos</button>
+                    <button onclick="aplicarEstiloGlobal('urbano')" id="btn_estilo_urbano" class="estilo-btn px-2 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white flex flex-col items-center gap-1"><span class="text-lg">☎️</span> Radio AM</button>
+                </div>
+            </div>
+
+            <button onclick="toggleEstudioAvanzado()" class="w-full bg-zinc-950 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 py-3 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors">
+                <span class="material-symbols-outlined text-sm">tune</span> Mostrar Ajustes Avanzados de Masterización
+            </button>
+
+            <div id="estudioAvanzado" class="hidden mt-4 bg-[#1c1c1e] border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-inner animate-fade-in">
+                
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-zinc-800 pb-3 mb-4 gap-3">
+                    <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">sliders</span> Rack de Efectos 
+                        <span class="text-zinc-600 font-normal hidden sm:inline">| En Tiempo Real</span>
+                        <span id="inline_render_status" class="hidden text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded flex items-center gap-1 ml-2">
+                            <span class="material-symbols-outlined text-[12px] animate-spin">sync</span> Procesando...
+                        </span>
+                    </h2>
+                    
+                    <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                        <label class="flex items-center gap-2 cursor-pointer bg-zinc-900 border border-zinc-700 px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors flex-grow justify-center md:flex-grow-0">
+                            <span class="text-[10px] font-bold uppercase text-zinc-400">Auto-Ducking</span>
+                            <input type="checkbox" id="checkDucking" checked onchange="cambiarDucking()" class="w-3 h-3 accent-emerald-500 rounded">
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer bg-zinc-900 border border-zinc-700 px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors flex-grow justify-center md:flex-grow-0">
+                            <span class="text-[10px] font-bold uppercase text-purple-400 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">flash_on</span> Matasilencios</span>
+                            <input type="checkbox" id="checkMatasilencios" onchange="toggleMatasilencios()" class="w-3 h-3 accent-purple-500 rounded">
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="space-y-4 bg-black/40 p-4 rounded-xl border border-white/5">
+                        <div class="border-b border-zinc-800 pb-1 mb-2"><span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Color & Dinámica</span></div>
+                        
+                        <div><div class="slider-label"><span>Soundgoodizer</span><span id="val_sg">50%</span></div>
+                        <input type="range" id="sl_sg" min="0" max="100" value="50" oninput="actualizarFX('soundgoodizer', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #10B981"></div>
+                        
+                        <div><div class="slider-label"><span>Compresión</span><span id="val_comp">60%</span></div>
+                        <input type="range" id="sl_comp" min="0" max="100" value="60" oninput="actualizarFX('compresion', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #10B981"></div>
+                        
+                        <div><div class="slider-label"><span>De-Esser (Matasibilancia)</span><span id="val_dess">20%</span></div>
+                        <input type="range" id="sl_dess" min="0" max="100" value="20" oninput="actualizarFX('deEsser', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #38bdf8"></div>
+                    </div>
+
+                    <div class="space-y-4 bg-black/40 p-4 rounded-xl border border-white/5">
+                        <div class="border-b border-zinc-800 pb-1 mb-2"><span class="text-[10px] font-bold text-sky-400 uppercase tracking-widest">Ecualizador 5-Bandas</span></div>
+                        
+                        <div><div class="slider-label"><span>Sub Graves</span><span id="val_sub">0 dB</span></div>
+                        <input type="range" id="sl_sub" min="-12" max="12" step="0.5" value="0" oninput="actualizarFX_EQ('sub', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #38bdf8"></div>
+                        
+                        <div><div class="slider-label"><span>Bajos</span><span id="val_low">0 dB</span></div>
+                        <input type="range" id="sl_low" min="-12" max="12" step="0.5" value="0" oninput="actualizarFX_EQ('low', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #38bdf8"></div>
+                        
+                        <div><div class="slider-label"><span>Medios</span><span id="val_mid">0 dB</span></div>
+                        <input type="range" id="sl_mid" min="-12" max="12" step="0.5" value="0" oninput="actualizarFX_EQ('mid', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #38bdf8"></div>
+                        
+                        <div><div class="slider-label"><span>Presencia</span><span id="val_himid">0 dB</span></div>
+                        <input type="range" id="sl_himid" min="-12" max="12" step="0.5" value="0" oninput="actualizarFX_EQ('highMid', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #38bdf8"></div>
+                        
+                        <div><div class="slider-label"><span>Agudos</span><span id="val_hi">0 dB</span></div>
+                        <input type="range" id="sl_hi" min="-12" max="12" step="0.5" value="0" oninput="actualizarFX_EQ('high', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #38bdf8"></div>
+                    </div>
+
+                    <div class="space-y-4 bg-black/40 p-4 rounded-xl border border-white/5">
+                        <div class="border-b border-zinc-800 pb-1 mb-2"><span class="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Modulación y Espacio</span></div>
+                        
+                        <div><div class="slider-label"><span>Chorus</span><span id="val_chorus">0%</span></div>
+                        <input type="range" id="sl_chorus" min="0" max="100" value="0" oninput="actualizarFX('chorus', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #f59e0b"></div>
+                        
+                        <div><div class="slider-label"><span>Flanger</span><span id="val_flan">0%</span></div>
+                        <input type="range" id="sl_flan" min="0" max="100" value="0" oninput="actualizarFX('flanger', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #f59e0b"></div>
+                        
+                        <div><div class="slider-label"><span>Eco / Reverb</span><span id="val_eco">0%</span></div>
+                        <input type="range" id="sl_eco" min="0" max="100" value="0" oninput="actualizarFX('ecoReverb', this.value)" onchange="renderizarMix()" class="custom-slider" style="--thumb-color: #c084fc"></div>
+                        
+                        <div class="border-b border-zinc-800 pb-1 mb-2 mt-4"><span class="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Salida</span></div>
+                        <div><div class="slider-label"><span>Master Volume</span><span id="val_master">100%</span></div>
+                        <input type="range" id="sl_master" min="0.1" max="2" step="0.05" value="1" oninput="actualizarMasterUI(this.value)" onchange="actualizarMaster(this.value); renderizarMix();" class="custom-slider" style="--thumb-color: #ef4444"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="abrirDawVip()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-4 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center gap-2 transition-all active:scale-95 text-sm uppercase tracking-wider">
+                    <span class="material-symbols-outlined">tune</span> Abrir Estudio PRO
+            </button>
+
+
+        </div>
+
+        <footer class="mt-16 text-center border-t border-white/10 pt-6 px-4">
+            <a href="#" onclick="alert('Los términos y condiciones están siendo actualizados. Estarán disponibles pronto.'); return false;" class="text-xs font-bold text-slate-500 hover:text-violet-400 transition-colors tracking-widest uppercase">Términos y Condiciones</a>
+            <p class="text-[10px] text-zinc-600 mt-3 font-medium uppercase">© 2026 Perifoneo.AI. Todos los derechos reservados.</p>
+        </footer>
+    </main>
+
+    <div id="modalCreditos" class="fixed inset-0 z-[100] flex items-center justify-center hidden bg-black/80 backdrop-blur-sm">
+        <div class="bg-zinc-900 border border-amber-500 rounded-3xl p-8 max-w-sm w-full mx-4 text-center">
+            <h3 class="text-2xl font-black text-white uppercase mb-2">Modo ilimitado</h3>
+            <p class="text-zinc-400 mb-6 text-sm">La producción ya no usa créditos en este frontend.</p>
+            <button onclick="abrirModalPrecios()" class="w-full bg-amber-600 text-white font-bold py-3 rounded-xl mb-2">🛒 Ver Paquetes</button>
+            <button onclick="cerrarModalCreditos()" class="text-zinc-500 text-xs">Volver</button>
+        </div>
+    </div>
+    
+    <div id="modalPlan" class="fixed inset-0 z-[100] flex items-center justify-center hidden bg-black/80 backdrop-blur-sm">
+        <div class="bg-zinc-900 border border-violet-500 rounded-3xl p-8 max-w-sm w-full mx-4 text-center">
+            <h3 class="text-2xl font-black text-white uppercase mb-2">¡Activa tu Plan!</h3>
+            <p class="text-zinc-400 mb-6 text-sm">Para descargarla en MP3 necesitas un plan activo.</p>
+            <button onclick="abrirModalPrecios()" class="w-full bg-violet-600 text-white font-bold py-3 rounded-xl mb-2">🚀 Ver Planes</button>
+            <button onclick="cerrarModalPlan()" class="text-zinc-500 text-xs">Volver</button>
+        </div>
+    </div>
+
+    <div id="modalVipDaw" class="fixed inset-0 z-[100] flex items-center justify-center hidden bg-black/80 backdrop-blur-sm">
+        <div class="bg-zinc-900 border border-emerald-500 rounded-3xl p-8 max-w-sm w-full mx-4 text-center shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+            <span class="material-symbols-outlined text-emerald-500 text-5xl mb-2">workspace_premium</span>
+            <h3 class="text-2xl font-black text-white uppercase mb-2">Función PRO</h3>
+            <p class="text-zinc-400 mb-6 text-sm">El Estudio Multipista es exclusivo para usuarios con un <b>Plan Básico ($30.000) o superior</b> activo. <br><br>¡Sube de nivel para desbloquearlo!</p>
+            <button onclick="abrirModalPreciosDesdeVip()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl mb-2 shadow-lg transition-transform hover:scale-105 uppercase tracking-wider text-sm">🚀 Ver Planes PRO</button>
+            <button onclick="cerrarModalVipDaw()" class="text-zinc-500 hover:text-white text-xs transition-colors mt-2">Volver a la herramienta básica</button>
+        </div>
+    </div>
+    
+    <div id="modalPrecios" class="fixed inset-0 z-[100] hidden bg-black/95 backdrop-blur-xl overflow-y-auto">
+        <button onclick="cerrarModalPrecios()" class="fixed top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 z-[110] transition-colors border border-white/20 flex items-center justify-center shadow-2xl backdrop-blur-md">
+            <span class="material-symbols-outlined" style="font-size: 32px;">close</span>
+        </button>
+
+        <div class="w-full max-w-6xl mx-auto px-4 pt-24 pb-12">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter mb-4">Elige tu Paquete</h2>
+                <p class="text-slate-400 max-w-2xl mx-auto text-sm px-4">Modo ilimitado activo para producción sin créditos.</p>
+                <div class="mt-6 bg-amber-500/10 border border-amber-500/30 text-amber-400 p-4 rounded-xl max-w-xl mx-auto text-xs md:text-sm font-bold flex items-center justify-center gap-2 text-left animate-pulse">
+                    <span class="material-symbols-outlined text-2xl">warning</span>
+                    <p><b>¡NO CIERRES LA VENTANA DE PAGO!</b> Al finalizar en Bold o en tu banco, espera unos segundos a que el sistema te devuelva automáticamente a esta página para que tus créditos se carguen.</p>
+                </div>
+                </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch w-full pb-8">
+                <div class="bg-zinc-900/50 rounded-3xl p-6 border border-white/10 flex flex-col h-full hover:border-white/20 transition-colors">
+                    <div class="text-slate-400 font-bold uppercase text-xs mb-2 tracking-widest">Recarga Básica</div>
+                    <div class="text-3xl font-black text-white mb-1">$15.000 <span class="text-xs font-normal text-slate-500">COP</span></div>
+                    <span class="text-base font-extrabold text-violet-300 mt-1 block"> $4.00 USD</span>
+                    <div class="text-amber-400 font-bold mb-4 flex items-center gap-2 bg-amber-500/10 w-max px-3 py-1 rounded-full text-xs">🪙 12.000 Créditos</div>
+                    <ul class="text-xs text-slate-300 space-y-2.5 mb-6 flex-grow">
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span> <span>Ideal para pruebas rápidas</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span> <span>Audio masterizado listo para usar</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span> <span>Voces realistas de IA</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span> <span class="font-bold text-white">Descarga de cuña sin marca de agua.</span></li>
+                    </ul>
+                    <button onclick="iniciarPago('Recarga Básica', 15000, 12000)" class="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors uppercase text-xs tracking-wide mt-auto">Elegir</button>
+                </div>
+                <div class="bg-zinc-900/50 rounded-3xl p-6 border border-white/10 flex flex-col h-full hover:border-emerald-500/50 transition-colors">
+                    <div class="text-emerald-400 font-bold uppercase text-xs mb-2 tracking-widest">Plan Básico</div>
+                    <div class="text-3xl font-black text-white mb-1">$30.000 <span class="text-xs font-normal text-slate-500">COP</span></div>
+                    <span class="text-base font-extrabold text-violet-300 mt-1 block"> $8.00 USD</span>
+                    <div class="text-amber-400 font-bold mb-4 flex items-center gap-2 bg-amber-500/10 w-max px-3 py-1 rounded-full text-xs">🪙 27.000 Créditos</div>
+                    <ul class="text-xs text-slate-300 space-y-2.5 mb-6 flex-grow">
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span> <span>Genera y masteriza múltiples opciones</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span> <span>Voces realistas de IA</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span> <span>Audio masterizado listo para usar</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-amber-400 text-lg">check_circle</span> <span class="font-bold text-white">Acceso a Estudio de edicion.</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span> <span class="font-bold text-white">Descarga de cuña sin marca de agua.</span></li>
+                    </ul>
+                    <button onclick="iniciarPago('Plan Básico', 30000, 27000)" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors uppercase text-xs tracking-wide mt-auto">Comprar</button>
+                </div>
+                <div class="bg-gradient-to-b from-indigo-900 to-black rounded-3xl p-8 border border-indigo-500 flex flex-col relative transform md:-translate-y-4 shadow-[0_0_30px_rgba(99,102,241,0.2)] h-full z-10 mt-4 md:mt-0">
+                    <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold text-[10px] py-1 px-4 rounded-full uppercase tracking-widest whitespace-nowrap">Más Popular</div>
+                    <div class="text-indigo-300 font-bold uppercase text-xs mb-2 tracking-widest">Plan Emprendedor</div>
+                    <div class="text-4xl font-black text-white mb-1">$100.000 <span class="text-xs font-normal text-slate-400">COP</span></div>
+                    <span class="text-base font-extrabold text-violet-300 mt-1 block"> $27.00 USD</span>
+
+                    <div class="text-amber-400 font-bold text-sm mb-4 flex items-center gap-2 bg-amber-500/20 w-max px-4 py-1.5 rounded-full">🪙 98.500 Créditos</div>
+                    <ul class="text-xs text-indigo-100 space-y-2.5 mb-6 flex-grow">
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-amber-400 text-lg">check_circle</span> <span>Para Agencias y Emprendedores</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-amber-400 text-lg">check_circle</span> <span>Mas creditos</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-amber-400 text-lg">check_circle</span> <span>Audio masterizado listo para usar</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-amber-400 text-lg">check_circle</span> <span class="font-bold text-white">Acceso a Estudio de edicion.</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-amber-400 text-lg">check_circle</span> <span class="font-bold text-white">Descarga de cuña sin marca de agua.</span></li>
+                    </ul>
+                    <button onclick="iniciarPago('Plan Emprendedor', 100000, 98500)" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl transition-all uppercase text-xs tracking-widest mt-auto shadow-lg shadow-indigo-500/30">Activar Plan</button>
+                </div>
+                <div class="bg-zinc-900/50 rounded-3xl p-6 border border-white/10 flex flex-col h-full hover:border-fuchsia-500/50 transition-colors">
+                    <div class="text-fuchsia-400 font-bold uppercase text-xs mb-2 tracking-widest">Plan Empresario</div>
+                    <div class="text-3xl font-black text-white mb-1">$300.000 <span class="text-xs font-normal text-slate-500">COP</span></div>
+                    <span class="text-base font-extrabold text-violet-300 mt-1 block"> $80.00 USD</span>
+
+                    <div class="text-amber-400 font-bold mb-4 flex items-center gap-2 bg-amber-500/10 w-max px-3 py-1 rounded-full text-xs">🪙 300.000 Créditos</div>
+                    <ul class="text-xs text-slate-300 space-y-2.5 mb-6 flex-grow">
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-zinc-500 text-lg">check_circle</span> <span>El mejor margen (1 Peso = 1 Crédito)</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-zinc-500 text-lg">check_circle</span> <span>Producción a escala.</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-zinc-500 text-lg">check_circle</span> <span>Licencia de uso comercial</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-amber-400 text-lg">check_circle</span> <span class="font-bold text-white">Acceso a Estudio de edicion.</span></li>
+                        <li class="flex items-start gap-2"><span class="material-symbols-outlined text-zinc-500 text-lg">check_circle</span> <span class="font-bold text-white">Descarga de cuña sin marca de agua.</span></li>
+                    </ul>
+                    <button onclick="iniciarPago('Plan Empresario', 300000, 300000)" class="w-full bg-white/10 hover:bg-fuchsia-600 text-white font-bold py-3 rounded-xl transition-colors uppercase text-xs tracking-wide mt-auto">Elegir</button>
+                </div>
+            </div>
+
+            <div class="mt-4 pb-10 w-full text-center">
+                <button onclick="cerrarModalPrecios()" class="bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-8 rounded-2xl border border-white/10 transition-colors uppercase tracking-widest active:scale-95 inline-flex items-center justify-center gap-2 mx-auto">
+                    <span class="material-symbols-outlined">arrow_back</span> Volver al Estudio
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- VARIABLES GLOBALES PARA EVITAR COBROS DOBLES ---
+        window.hasPaidForCurrentMix = false; 
+        window.currentAudioEnlace = null;    
+
+        // --- 0. SISTEMA DE GUÍA VISUAL (TOUR LUMINOSO) ---
+        let currentTourStep = 1;
+        function updateTour() {
+            document.querySelectorAll('.glow-step, .glow-step-emerald').forEach(el => {
+                el.classList.remove('glow-step', 'glow-step-emerald');
+            });
+            if (currentTourStep === 1) document.getElementById('nicho_negocio').classList.add('glow-step');
+            else if (currentTourStep === 2) document.getElementById('datos_negocio').classList.add('glow-step');
+            else if (currentTourStep === 3) document.getElementById('btnGenerarGuiones').classList.add('glow-step');
+            else if (currentTourStep === 4) { document.getElementById('card_perifoneo').classList.add('glow-step'); document.getElementById('card_pregoneo').classList.add('glow-step'); }
+            else if (currentTourStep === 5) document.getElementById('custom_select_voz_container').classList.add('glow-step-emerald');
+            else if (currentTourStep === 6) document.getElementById('contenedor_musica').classList.add('glow-step-emerald', 'rounded-2xl', 'p-2', '-m-2');
+            else if (currentTourStep === 7) document.getElementById('btnGenerarTodo').classList.add('glow-step-emerald');
+        }
+
+        // --- 1. SISTEMA DE ALMACENAMIENTO SEGURO (IndexedDB) ---
+        const DB_NAME = "PerifoneoVault";
+        const STORE_NAME = "audioSessions";
+        const EXPIRATION_MS = 24 * 60 * 60 * 1000;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: "id" });
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function saveAudioSession(blob) {
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).put({ 
+                    id: "lastAudio", 
+                    blob: blob, 
+                    timestamp: Date.now(),
+                    vozCruda: window.vozCrudaMemoria ? window.vozCrudaMemoria.slice(0) : null,
+                    musicaCruda: window.musicaCrudaMemoria ? window.musicaCrudaMemoria.slice(0) : null,
+                    nombreMusica: window.nombreMusicaActual || 'Música de Fondo'
+                });
+            } catch (err) { console.warn("No se pudo guardar la sesión", err); }
+        }
+
+        async function recoverAudioSession() {
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, "readonly");
+                const request = tx.objectStore(STORE_NAME).get("lastAudio");
+                return new Promise((resolve) => {
+                    request.onsuccess = () => {
+                        const data = request.result;
+                        if (data && data.blob) {
+                            if (Date.now() - data.timestamp < EXPIRATION_MS) resolve(data);
+                            else { db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).delete("lastAudio"); resolve(null); }
+                        } else resolve(null);
+                    };
+                    request.onerror = () => resolve(null);
+                });
+            } catch (err) { return null; }
+        }
+
+        // --- ESTADO GLOBAL NLE ---
+        let audioContext = null;
+        let p_clips = []; 
+        let p_base_clips = []; 
+        let p_globalStyle = 'promo';
+        let p_autoDucking = true;
+        let p_matasilencios = false;
+        let p_masterGain = 1.0;
+        
+        let isRenderingActive = false;
+        let pendingRender = false;
+        
+        const audioBufferToWav = (buffer) => {
+            const numChannels = buffer.numberOfChannels; const sampleRate = buffer.sampleRate;
+            const format = 1; const bitDepth = 16;
+            const result = new Float32Array(buffer.length * numChannels);
+            for (let channel = 0; channel < numChannels; channel++) {
+                const channelData = buffer.getChannelData(channel);
+                for (let i = 0; i < buffer.length; i++) result[i * numChannels + channel] = channelData[i];
+            }
+            const dataLength = result.length * (bitDepth / 8);
+            const bufferArray = new ArrayBuffer(44 + dataLength);
+            const view = new DataView(bufferArray);
+            const writeString = (v, offset, str) => { for (let i=0; i<str.length; i++) v.setUint8(offset+i, str.charCodeAt(i)); };
+            writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + dataLength, true); writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, format, true); view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * numChannels * (bitDepth/8), true); view.setUint16(32, numChannels * (bitDepth/8), true);
+            view.setUint16(34, bitDepth, true); writeString(view, 36, 'data'); view.setUint32(40, dataLength, true);
+            let offset = 44; for (let i = 0; i < result.length; i++) { const s = Math.max(-1, Math.min(1, result[i])); view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true); offset += 2; }
+            return new Blob([view], { type: 'audio/wav' });
+        };
+
+        const audioBufferToRealMp3 = (buffer) => {
+            const channels = buffer.numberOfChannels; const sampleRate = buffer.sampleRate;
+            const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, 128);
+            const mp3Data = []; const sampleBlockSize = 1152;
+            const left = buffer.getChannelData(0); const right = channels === 2 ? buffer.getChannelData(1) : left;
+            const leftInt16 = new Int16Array(left.length); const rightInt16 = new Int16Array(right.length);
+            for (let i = 0; i < left.length; i++) {
+                leftInt16[i] = Math.max(-32768, Math.min(32767, left[i] * 32768)); rightInt16[i] = Math.max(-32768, Math.min(32767, right[i] * 32768));
+            }
+            for (let i = 0; i < leftInt16.length; i += sampleBlockSize) {
+                const leftChunk = leftInt16.subarray(i, i + sampleBlockSize); const rightChunk = rightInt16.subarray(i, i + sampleBlockSize);
+                const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk); if (mp3buf.length > 0) mp3Data.push(mp3buf);
+            }
+            const mp3buf = mp3encoder.flush(); if (mp3buf.length > 0) mp3Data.push(mp3buf);
+            return new Blob(mp3Data, { type: 'audio/mp3' });
+        };
+
+        const getPresetFx = (preset) => {
+            let t = { soundgoodizer: 10, eq: {sub:0, low:0, mid:0, highMid:0, high:0}, compresion: 30, ecoReverb: 0, deEsser: 10, chorus: 0, flanger: 0 };
+            if(preset==='neutro') t = { ...t, soundgoodizer: 30, eq: {sub:1, low:1, mid:0, highMid:1, high:2}, compresion: 50 };
+            if(preset==='radio') t = { ...t, soundgoodizer: 40, eq: {sub:1.5, low:2, mid:-1, highMid:2, high:3}, compresion: 60, deEsser: 30 };
+            if(preset==='perifoneo') t = { ...t, soundgoodizer: 60, eq: {sub:-6, low:-4, mid:3, highMid:5, high:2}, compresion: 80, deEsser: 60 };
+            if(preset==='promo') t = { ...t, soundgoodizer: 80, eq: {sub:3, low:1, mid:-1, highMid:2, high:4}, compresion: 70, ecoReverb: 35, deEsser: 40 };
+            if(preset==='telefono') t = { ...t, soundgoodizer: 10, eq: {sub:-15, low:-15, mid:10, highMid:-2, high:-15}, compresion: 90, deEsser: 0 };
+            if(preset==='dj_flanger') t = { ...t, soundgoodizer: 40, eq: {sub:1, low:1, mid:0, highMid:1, high:2}, compresion: 60, flanger: 80 };
+            if(preset==='urbano') t = { ...t, soundgoodizer: 60, eq: {sub:2, low:3, mid:0, highMid:2, high:1}, compresion: 80, chorus: 50 };
+            return t;
+        };
+
+        const makeDistortionCurve = (amount) => {
+            let k = amount; const n_samples = 44100; const curve = new Float32Array(n_samples); const deg = Math.PI / 180;
+            for (let i = 0; i < n_samples; ++i) { let x = i * 2 / n_samples - 1; curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x)); }
+            return curve;
+        };
+
+        const findNearestSilence = (buffer, targetTime) => {
+            const data = buffer.getChannelData(0); const sr = buffer.sampleRate; const targetSample = Math.floor(targetTime * sr);
+            const searchRange = sr * 1.0; let bestSample = targetSample; let minEnergy = Infinity;
+            for(let i = Math.max(0, targetSample - searchRange); i < Math.min(data.length, targetSample + searchRange); i+= 441) { 
+                let energy = 0; for(let j=0; j<441; j++) energy += Math.abs(data[i+j] || 0);
+                if(energy < minEnergy) { minEnergy = energy; bestSample = i; }
+            }
+            return bestSample / sr;
+        };
+
+        async function getWatermarkBuffer(audioCtx) {
+            if (window.watermarkBuffer) return window.watermarkBuffer;
+            try {
+                const resp = await fetch('/static/watermark.mp3'); 
+                if (resp.ok) { window.watermarkBuffer = await audioCtx.decodeAudioData(await resp.arrayBuffer()); return window.watermarkBuffer; }
+            } catch(e) {}
+            
+            const sr = audioCtx.sampleRate; const buf = audioCtx.createBuffer(1, sr * 0.5, sr); const data = buf.getChannelData(0);
+            for(let i=0; i<data.length; i++) { const t = i/sr; data[i] = Math.sin(2 * Math.PI * 1200 * t) * Math.exp(-6 * t) * 0.8; }
+            window.watermarkBuffer = buf; return buf;
+        }
+
+        const buildClipDSP = (ctx, clip, trackType, ctxStart) => {
+            const clipGain = ctx.createGain(); 
+            const fi = Math.max(0.01, clip.fadeIn || 0); const fo = Math.max(0.01, clip.fadeOut || 0);
+            
+            clipGain.gain.setValueAtTime(0, ctxStart); clipGain.gain.linearRampToValueAtTime(clip.volume, ctxStart + fi);
+            
+            if (p_autoDucking && trackType === 'music') {
+                const voiceClips = p_clips.filter(c => c.type === 'voice').sort((a,b)=>a.startTime - b.startTime);
+                const duckDropTime = 0.15; const duckPreRiseTime = 0.8; const dipAmount = clip.volume * 0.25;
+                const mergedVoices = [];
+                if (voiceClips.length > 0) {
+                    let current = { start: voiceClips[0].startTime, end: voiceClips[0].startTime + voiceClips[0].duration };
+                    for (let i = 1; i < voiceClips.length; i++) {
+                        if (voiceClips[i].startTime <= current.end + 0.5) current.end = Math.max(current.end, voiceClips[i].startTime + voiceClips[i].duration);
+                        else { mergedVoices.push(current); current = { start: voiceClips[i].startTime, end: voiceClips[i].startTime + voiceClips[i].duration }; }
+                    }
+                    mergedVoices.push(current);
+                }
+                let lastTime = ctxStart + fi;
+                mergedVoices.forEach(block => {
+                    const duckStart = Math.max(lastTime, block.start); const duckFull = duckStart + duckDropTime;
+                    const releaseStart = Math.max(duckFull, block.end - duckPreRiseTime); const releaseEnd = block.end + 0.1;
+                    if (duckStart > lastTime) clipGain.gain.setValueAtTime(clip.volume, duckStart);
+                    clipGain.gain.linearRampToValueAtTime(dipAmount, duckFull); clipGain.gain.setValueAtTime(dipAmount, releaseStart); clipGain.gain.linearRampToValueAtTime(clip.volume, releaseEnd);
+                    lastTime = releaseEnd;
+                });
+            }
+
+            clipGain.gain.setValueAtTime(clip.volume, Math.max(ctxStart + fi, (ctxStart + clip.duration) - fo));
+            clipGain.gain.linearRampToValueAtTime(0, ctxStart + clip.duration);
+
+            if(trackType === 'music') return { inputNode: clipGain, outputNode: clipGain }; 
+
+            const fx = clip.fx; const headroomGain = ctx.createGain(); headroomGain.gain.value = 0.7; 
+            
+            const eqSub = ctx.createBiquadFilter(); eqSub.type = 'lowshelf'; eqSub.frequency.value = 90; eqSub.gain.value = fx.eq.sub;
+            const eqLow = ctx.createBiquadFilter(); eqLow.type = 'peaking'; eqLow.frequency.value = 250; eqLow.Q.value = 0.8; eqLow.gain.value = fx.eq.low;
+            const eqMid = ctx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.frequency.value = 1500; eqMid.Q.value = 0.8; eqMid.gain.value = fx.eq.mid;
+            const eqHighMid = ctx.createBiquadFilter(); eqHighMid.type = 'peaking'; eqHighMid.frequency.value = 4000; eqHighMid.Q.value = 0.8; eqHighMid.gain.value = fx.eq.highMid;
+            const eqHigh = ctx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 8000; eqHigh.gain.value = fx.eq.high;
+            const deEsser = ctx.createBiquadFilter(); deEsser.type = 'peaking'; deEsser.frequency.value = 6500; deEsser.Q.value = 2.5; deEsser.gain.value = -(fx.deEsser/100)*18;
+            
+            const exciterHPF = ctx.createBiquadFilter(); exciterHPF.type = 'highpass'; exciterHPF.frequency.value = 3000;
+            const exciterGain = ctx.createGain(); exciterGain.gain.value = (fx.soundgoodizer/100) * 0.15; 
+            const waveShaper = ctx.createWaveShaper(); waveShaper.curve = makeDistortionCurve(10 + ((fx.soundgoodizer/100)*100));
+            
+            const comp = ctx.createDynamicsCompressor(); comp.knee.value = 5; comp.attack.value = 0.005; comp.release.value = 0.1;
+            const compMakeUp = ctx.createGain(); const compPct = fx.compresion / 100; 
+            comp.threshold.value = -12 - (compPct * 18); comp.ratio.value = 2 + (compPct * 6); compMakeUp.gain.value = 1 + (compPct * 1.5); 
+            
+            const flangerDry = ctx.createGain(); flangerDry.gain.value = 1 - ((fx.flanger||0)/100*0.5);
+            const flangerWet = ctx.createGain(); flangerWet.gain.value = (fx.flanger||0)/100;
+            const flangerDelay = ctx.createDelay(0.02); flangerDelay.delayTime.value = 0.005;
+            
+            const chorusDry = ctx.createGain(); chorusDry.gain.value = 1 - ((fx.chorus||0)/100*0.5);
+            const chorusWet = ctx.createGain(); chorusWet.gain.value = (fx.chorus||0)/100;
+            const chorusDelay = ctx.createDelay(0.05); chorusDelay.delayTime.value = 0.025;
+            
+            const dryGain = ctx.createGain(); dryGain.gain.value = Math.max(0, 1 - ((fx.ecoReverb/100)*0.4));
+            const delayMix = ctx.createGain(); delayMix.gain.value = (fx.ecoReverb/100) * 0.8;
+            const delayNode = ctx.createDelay(2.0); delayNode.delayTime.value = 0.35;
+            const clipOutGain = ctx.createGain();
+
+            clipGain.connect(headroomGain); 
+            headroomGain.connect(eqSub); eqSub.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHighMid); eqHighMid.connect(eqHigh); eqHigh.connect(deEsser);
+            deEsser.connect(comp); deEsser.connect(exciterHPF); exciterHPF.connect(waveShaper); waveShaper.connect(exciterGain); exciterGain.connect(comp);
+            comp.connect(compMakeUp); compMakeUp.connect(flangerDry); compMakeUp.connect(flangerDelay); flangerDelay.connect(flangerWet);
+            flangerDry.connect(chorusDry); flangerDry.connect(chorusDelay); flangerWet.connect(chorusDry); flangerWet.connect(chorusDelay); chorusDelay.connect(chorusWet);
+            chorusDry.connect(dryGain); chorusDry.connect(delayNode); chorusWet.connect(dryGain); chorusWet.connect(delayNode);
+            delayNode.connect(delayMix); dryGain.connect(clipOutGain); delayMix.connect(clipOutGain);
+            
+            return { inputNode: clipGain, outputNode: clipOutGain };
+        };
+
+        // --- MOTOR RENDER OFFLINE DOBLE (TIEMPO REAL MEJORADO) ---
+        async function renderizarMix(isForCleanRender = false) {
+            if(p_clips.length === 0) return null;
+            
+            if (!isForCleanRender) {
+                window.hasPaidForCurrentMix = false;
+                window.currentAudioEnlace = null;
+                document.getElementById('box_enlace_generado')?.classList.add('hidden');
+
+                if (isRenderingActive) { pendingRender = true; return; }
+                isRenderingActive = true;
+                
+                if (document.getElementById('wrapperFinal').classList.contains('hidden')) {
+                    document.getElementById('loader_master').classList.remove('hidden'); 
+                } else {
+                    document.getElementById('inline_render_status').classList.remove('hidden');
+                }
+            }
+            
+            try {
+                if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+                let duration = 0; p_clips.forEach(c => { if(c.startTime + c.duration > duration) duration = c.startTime + c.duration; });
+                
+                const lengthInSamples = Math.ceil(audioContext.sampleRate * (duration + 1));
+                const oCtx = new OfflineAudioContext(2, lengthInSamples, audioContext.sampleRate);
+                
+                const preMasterGain = oCtx.createGain(); preMasterGain.gain.value = p_masterGain;
+                const masterLimiter = oCtx.createDynamicsCompressor(); masterLimiter.threshold.value = -0.1; masterLimiter.ratio.value = 20.0; 
+                
+                preMasterGain.connect(masterLimiter); masterLimiter.connect(oCtx.destination);
+                
+                for(let clip of p_clips) {
+                    const source = oCtx.createBufferSource(); source.buffer = clip.buffer;
+                    const { inputNode, outputNode } = buildClipDSP(oCtx, clip, clip.type, clip.startTime);
+                    outputNode.connect(preMasterGain); source.connect(inputNode);
+                    source.start(clip.startTime, clip.offset, clip.duration);
+                }
+
+                const isFree = false; // MODO ILIMITADO: no usar marca de agua ni validar plan
+                const needsWatermark = isFree && !isForCleanRender;
+
+                if (needsWatermark) {
+                    const wmBuffer = await getWatermarkBuffer(oCtx);
+                    for (let t = 1.5; t < duration; t += 7) {
+                        const wmSource = oCtx.createBufferSource(); wmSource.buffer = wmBuffer;
+                        const wmGain = oCtx.createGain(); wmGain.gain.value = 0.45; 
+                        wmSource.connect(wmGain); wmGain.connect(oCtx.destination); 
+                        wmSource.start(t);
+                    }
+                }
+
+                const renderedBuffer = await oCtx.startRendering();
+                if (isForCleanRender) return renderedBuffer;
+                
+                const wavBlob = audioBufferToWav(renderedBuffer);
+                window.urlAudioFinal = URL.createObjectURL(wavBlob);
+                
+                if (needsWatermark) {
+                    renderizarMix(true).then(cleanBuffer => {
+                        window.cleanRenderedBuffer = cleanBuffer;
+                        saveAudioSession(audioBufferToWav(cleanBuffer));
+                    });
+                } else {
+                    window.cleanRenderedBuffer = renderedBuffer;
+                    saveAudioSession(wavBlob); 
+                }
+                
+                const reproductor = document.getElementById('reproductorFinal');
+                const wasPlaying = !reproductor.paused;
+                const savedTime = reproductor.currentTime;
+
+                reproductor.src = window.urlAudioFinal;
+                reproductor.load();
+                if (wasPlaying && savedTime > 0) {
+                    reproductor.currentTime = savedTime;
+                    reproductor.play().catch(e => console.warn("No se pudo reanudar", e));
+                }
+                
+                document.getElementById('badge_recuperado').classList.add('hidden');
+                sincronizarUIParams();
+                document.getElementById('loader_master').classList.add('hidden'); 
+                document.getElementById('wrapperFinal').classList.remove('hidden');
+
+            } catch(err) {
+                console.error(err); 
+                if(!isForCleanRender) alert("Error de procesamiento interno de audio.");
+            } finally {
+                if (!isForCleanRender) {
+                    isRenderingActive = false;
+                    document.getElementById('inline_render_status').classList.add('hidden');
+                    if (pendingRender) { pendingRender = false; renderizarMix(); }
+                }
+            }
+        }
+
+        async function recalcularYRenderizar() {
+            if (p_base_clips.length === 0) return;
+            
+            if (!p_matasilencios) {
+                p_clips = p_base_clips.map(c => ({...c, fx: c.fx ? JSON.parse(JSON.stringify(c.fx)) : null}));
+            } else {
+                let newClips = [];
+                for (let clip of p_base_clips) {
+                    if (clip.type !== 'voice') { newClips.push({...clip, fx: clip.fx ? JSON.parse(JSON.stringify(clip.fx)) : null}); continue; }
+                    const buffer = clip.buffer; const channelData = buffer.getChannelData(0); const sampleRate = buffer.sampleRate;
+                    const startSample = Math.floor(clip.offset * sampleRate); const endSample = Math.floor((clip.offset + clip.duration) * sampleRate);
+
+                    let maxPeak = 0;
+                    for (let p = startSample; p < endSample; p += 10) if (Math.abs(channelData[p]) > maxPeak) maxPeak = Math.abs(channelData[p]);
+                    
+                    const threshold = Math.max(0.015, maxPeak * 0.08); 
+                    const minSilenceSamples = sampleRate * 0.15; const paddingSamples = sampleRate * 0.03; const chunkSize = Math.floor(sampleRate * 0.005); 
+
+                    let segments = []; let currentSegment = null; let silenceCounter = 0;
+
+                    for (let i = startSample; i < endSample; i += chunkSize) {
+                        let max = 0;
+                        for (let j = 0; j < chunkSize && i + j < endSample; j++) if (Math.abs(channelData[i + j]) > max) max = Math.abs(channelData[i + j]);
+                        if (max > threshold) {
+                            if (!currentSegment) currentSegment = { start: Math.max(startSample, i - paddingSamples), end: 0 };
+                            silenceCounter = 0; currentSegment.end = Math.min(endSample, i + chunkSize + paddingSamples);
+                        } else {
+                            if (currentSegment) {
+                                silenceCounter += chunkSize;
+                                if (silenceCounter >= minSilenceSamples) { segments.push(currentSegment); currentSegment = null; silenceCounter = 0; }
+                            }
+                        }
+                    }
+                    if (currentSegment) segments.push(currentSegment);
+
+                    if (segments.length > 1) { 
+                        let currentStartTime = clip.startTime; 
+                        segments.forEach((seg) => {
+                            const newOffset = seg.start / sampleRate; const newDuration = (seg.end - seg.start) / sampleRate;
+                            if (newDuration > 0) {
+                                newClips.push({ ...clip, startTime: currentStartTime, offset: newOffset, duration: newDuration, fx: JSON.parse(JSON.stringify(clip.fx)) });
+                                currentStartTime += newDuration; 
+                            }
+                        });
+                    } else { newClips.push({...clip, fx: JSON.parse(JSON.stringify(clip.fx))}); }
+                }
+                p_clips = newClips;
+            }
+            await renderizarMix();
+        }
+
+        async function initRecuperacionSesion() {
+            if (window.sessionRecovered) return;
+            window.sessionRecovered = true;
+            
+            const savedData = await recoverAudioSession(); 
+            if (savedData && savedData.blob) {
+                const savedBlob = savedData.blob; 
+                
+                if (savedData.vozCruda) window.vozCrudaMemoria = savedData.vozCruda;
+                if (savedData.musicaCruda) window.musicaCrudaMemoria = savedData.musicaCruda;
+                if (savedData.nombreMusica) window.nombreMusicaActual = savedData.nombreMusica;
+
+                document.getElementById('wrapperFinal').classList.remove('hidden');
+                document.getElementById('badge_recuperado').classList.remove('hidden');
+                
+                if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+                const arrayBuffer = await savedBlob.arrayBuffer();
+                window.cleanRenderedBuffer = await audioContext.decodeAudioData(arrayBuffer); 
+                
+                const isFree = false; // MODO ILIMITADO: no usar marca de agua ni validar plan
+                if (isFree) {
+                    const cleanBuffer = window.cleanRenderedBuffer;
+                    const oCtx = new OfflineAudioContext(cleanBuffer.numberOfChannels, cleanBuffer.length, cleanBuffer.sampleRate);
+                    const source = oCtx.createBufferSource();
+                    source.buffer = cleanBuffer; source.connect(oCtx.destination); source.start(0);
+                    
+                    const wmBuffer = await getWatermarkBuffer(oCtx);
+                    for (let t = 1.5; t < cleanBuffer.duration; t += 7) {
+                        const wmSource = oCtx.createBufferSource(); wmSource.buffer = wmBuffer;
+                        const wmGain = oCtx.createGain(); wmGain.gain.value = 0.45; 
+                        wmSource.connect(wmGain); wmGain.connect(oCtx.destination); wmSource.start(t);
+                    }
+                    const watermarkedBuffer = await oCtx.startRendering();
+                    window.urlAudioFinal = URL.createObjectURL(audioBufferToWav(watermarkedBuffer));
+                } else {
+                    window.urlAudioFinal = URL.createObjectURL(savedBlob);
+                }
+                
+                const reproductor = document.getElementById('reproductorFinal');
+                reproductor.src = window.urlAudioFinal; reproductor.load();
+                document.getElementById('wrapperFinal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function toggleMatasilencios() {
+            p_matasilencios = document.getElementById('checkMatasilencios').checked;
+            recalcularYRenderizar();
+        }
+
+        function toggleEstudioAvanzado() { document.getElementById('estudioAvanzado').classList.toggle('hidden'); }
+        function cambiarDucking() { p_autoDucking = document.getElementById('checkDucking').checked; renderizarMix(); }
+        function actualizarMasterUI(val) { document.getElementById('val_master').innerText = Math.round(val*100)+'%'; }
+        function actualizarMaster(val) { p_masterGain = parseFloat(val); }
+        
+        function aplicarEstiloGlobal(estilo) {
+            p_globalStyle = estilo;
+            document.querySelectorAll('.estilo-btn').forEach(b => { b.classList.remove('border-emerald-500','bg-emerald-500/20','text-emerald-400'); b.classList.add('border-zinc-700','bg-zinc-800','text-zinc-400'); });
+            document.getElementById('btn_estilo_'+estilo).classList.remove('border-zinc-700','bg-zinc-800','text-zinc-400');
+            document.getElementById('btn_estilo_'+estilo).classList.add('border-emerald-500','bg-emerald-500/20','text-emerald-400');
+
+            const vClips = p_base_clips.filter(c => c.type === 'voice').sort((a,b)=>a.startTime - b.startTime);
+            vClips.forEach((clip, index) => {
+                let p = 'neutro'; const isFirst = index===0; const isLast = index===vClips.length-1;
+                if(estilo==='promo') p = (isLast && vClips.length>1) ? 'promo' : 'neutro';
+                if(estilo==='dj') p = (isFirst && vClips.length>1) ? 'dj_flanger' : 'neutro';
+                if(estilo==='urbano') p = (isFirst && vClips.length>1) ? 'telefono' : 'neutro';
+                clip.fx = getPresetFx(p);
+            });
+            recalcularYRenderizar(); 
+        }
+
+        function actualizarFX(key, val) { 
+            const v = parseFloat(val); let id = key;
+            if(key==='soundgoodizer') id='sg'; else if(key==='compresion') id='comp'; else if(key==='deEsser') id='dess'; 
+            else if(key==='ecoReverb') id='eco'; else if(key==='flanger') id='flan'; else if(key==='chorus') id='chorus';
+            
+            document.getElementById('val_'+id).innerText = v + '%'; 
+            p_clips.filter(c=>c.type==='voice').forEach(c => c.fx[key] = v); 
+            p_base_clips.filter(c=>c.type==='voice').forEach(c => c.fx[key] = v); 
+        }
+        
+        function actualizarFX_EQ(key, val) { 
+            const v = parseFloat(val); let id = key;
+            if(key==='highMid') id='himid'; else if(key==='high') id='hi';
+            
+            document.getElementById('val_'+id).innerText = v + ' dB'; 
+            p_clips.filter(c=>c.type==='voice').forEach(c => c.fx.eq[key] = v); 
+            p_base_clips.filter(c=>c.type==='voice').forEach(c => c.fx.eq[key] = v); 
+        }
+        
+        function sincronizarUIParams() {
+            const fx = p_clips.find(c=>c.type==='voice')?.fx || getPresetFx('neutro');
+            document.getElementById('sl_sg').value = fx.soundgoodizer; document.getElementById('val_sg').innerText = fx.soundgoodizer+'%';
+            document.getElementById('sl_comp').value = fx.compresion; document.getElementById('val_comp').innerText = fx.compresion+'%';
+            document.getElementById('sl_dess').value = fx.deEsser; document.getElementById('val_dess').innerText = fx.deEsser+'%';
+            document.getElementById('sl_sub').value = fx.eq.sub; document.getElementById('val_sub').innerText = fx.eq.sub+' dB';
+            document.getElementById('sl_low').value = fx.eq.low; document.getElementById('val_low').innerText = fx.eq.low+' dB';
+            document.getElementById('sl_mid').value = fx.eq.mid; document.getElementById('val_mid').innerText = fx.eq.mid+' dB';
+            document.getElementById('sl_himid').value = fx.eq.highMid; document.getElementById('val_himid').innerText = fx.eq.highMid+' dB';
+            document.getElementById('sl_hi').value = fx.eq.high; document.getElementById('val_hi').innerText = fx.eq.high+' dB';
+            document.getElementById('sl_chorus').value = fx.chorus||0; document.getElementById('val_chorus').innerText = (fx.chorus||0)+'%';
+            document.getElementById('sl_flan').value = fx.flanger||0; document.getElementById('val_flan').innerText = (fx.flanger||0)+'%';
+            document.getElementById('sl_eco').value = fx.ecoReverb; document.getElementById('val_eco').innerText = fx.ecoReverb+'%';
+        }
+
+        const vocesDisponibles = [
+            { id: "ScRIyJnWtz9zMjMIJ0Kv", archivo: "alejandro.mp3", nombre: "Alejandro (Perifoneo)" },
+            { id: "2ZX9X5rkN9spJHY6KH93", archivo: "leonardo.mp3", nombre: "Leonardo (Comercial)" },
+            { id: "aUAtSGRioi7PlZytaYzD", archivo: "jessenia.mp3", nombre: "Jessenia (Belleza)" },
+            { id: "4tKyl50ue1dmvygEBNqW", archivo: "maira.mp3", nombre: "Maira (Ofertas)" },
+            { id: "LvLX7G5lh4xPrPYvGgDm", archivo: "fernando.mp3", nombre: "Fernando (Dinámico)" },
+            { id: "EqNrvtfePrXMMt1PdQPb", archivo: "jorge.mp3", nombre: "Jorge (Eventos)" },
+            { id: "I4gyeDTAEoEI1Alc4KlH", archivo: "danna.mp3", nombre: "Danna (Empática)" },
+            { id: "J3IzQTmCrqVaA0yy0p98", archivo: "jose.mp3", nombre: "Jose (Institucional)" },
+            { id: "2tOkSBzpAVPscSGTMgUC", archivo: "juan.mp3", nombre: "Juan (Energético)" },
+            { id: "OVrQL4B0SUv1rAiJV2rc", archivo: "alexis.mp3", nombre: "Alexis (Energico-eventos)" },
+            { id: "OYMJYj3nLLfaNqCbCpFd", archivo: "helena.mp3", nombre: "Helena (Amable-formal)" },
+            { id: "g1LEhdirkQz5XyqJ2gSf", archivo: "alfredo.mp3", nombre: "Alfredo (Amable-formal)" },
+            { id: "f0VLpYRhYDtVpy476Ndn", archivo: "manuel.mp3", nombre: "Manuel (Comercial)" },
+            { id: "kEJjO6VV5fM1oLN40c8P", archivo: "jhoana.mp3", nombre: "Jhoana (Comercial)" },
+            { id: "U3qpefvskfH1h4DANaNX", archivo: "ramon.mp3", nombre: "Ramon (Deportes)" },
+            { id: "mbFXxNaVUSVFNbbEslfy", archivo: "lyan.mp3", nombre: "Lyan (eventos)" },
+        ];
+
+        let globalAudio = new Audio(); let currentPlayingBtn = null;
+
+        function togglePlayInline(event, type, file, btnElement) {
+            event.stopPropagation(); 
+            if (!globalAudio.paused && globalAudio.dataset.currentFile === file) {
+                globalAudio.pause(); btnElement.innerHTML = 'play_arrow'; btnElement.classList.remove('text-emerald-400', 'text-sky-400'); return;
+            }
+            if(currentPlayingBtn) { currentPlayingBtn.innerHTML = 'play_arrow'; currentPlayingBtn.classList.remove('text-emerald-400', 'text-sky-400'); }
+            
+            globalAudio.dataset.currentFile = file; globalAudio.src = type === 'voz' ? '/api/muestra_voz/' + file : '/api/pista_preview/' + file;
+            btnElement.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span>'; currentPlayingBtn = btnElement;
+
+            globalAudio.play().then(() => { btnElement.innerHTML = 'pause'; btnElement.classList.add(type === 'voz' ? 'text-emerald-400' : 'text-sky-400');
+            }).catch(e => { alert("⚠️ Audio no encontrado en el servidor."); btnElement.innerHTML = 'play_arrow'; });
+        }
+
+        globalAudio.onended = () => { if(currentPlayingBtn) { currentPlayingBtn.innerHTML = 'play_arrow'; currentPlayingBtn.classList.remove('text-emerald-400', 'text-sky-400'); } };
+
+        function renderVoiceDropdown() {
+            document.getElementById('dropdown_voz').innerHTML = vocesDisponibles.map(v => `
+                <div class="flex justify-between items-center p-3 hover:bg-zinc-800 border-b border-zinc-800/50 cursor-pointer transition-colors" onclick="seleccionarVozCustom('${v.id}', '${v.nombre}')">
+                    <span class="text-sm text-zinc-200">${v.nombre}</span>
+                    <button type="button" onclick="togglePlayInline(event, 'voz', '${v.archivo}', this)" class="material-symbols-outlined text-zinc-400 hover:text-white p-1.5 rounded-full hover:bg-zinc-700 transition-all focus:outline-none">play_arrow</button>
+                </div>
+            `).join('');
+        }
+
+        function seleccionarVozCustom(id, nombre) {
+            document.getElementById('voz').value = id; document.getElementById('selected_voz_text').innerText = nombre; document.getElementById('dropdown_voz').classList.add('hidden');
+            if(!globalAudio.paused) { globalAudio.pause(); if(currentPlayingBtn) currentPlayingBtn.innerHTML = 'play_arrow'; }
+            if(currentTourStep === 5) { currentTourStep = 6; updateTour(); } 
+        }
+
+        document.getElementById('btn_dropdown_voz').onclick = () => { document.getElementById('dropdown_voz').classList.toggle('hidden'); document.getElementById('dropdown_musica').classList.add('hidden'); };
+
+        function renderMusicDropdown(pistas) {
+            if(pistas.length === 0) return;
+            document.getElementById('dropdown_musica').innerHTML = pistas.map(p => `
+                <div class="flex justify-between items-center p-3 hover:bg-zinc-800 border-b border-zinc-800/50 cursor-pointer transition-colors" onclick="seleccionarMusicaCustom('${p}')">
+                    <span class="text-sm text-zinc-200 truncate pr-2">${p.replace('.mp3', '').toUpperCase()}</span>
+                    <button type="button" onclick="togglePlayInline(event, 'musica', '${p}', this)" class="material-symbols-outlined text-zinc-400 hover:text-white p-1.5 rounded-full hover:bg-zinc-700 transition-all focus:outline-none shrink-0">play_arrow</button>
+                </div>
+            `).join('');
+        }
+
+        function seleccionarMusicaCustom(file) {
+            document.getElementById('select_galeria').value = file; document.getElementById('selected_musica_text').innerText = file.replace('.mp3', '').toUpperCase(); document.getElementById('dropdown_musica').classList.add('hidden');
+            if(!globalAudio.paused) { globalAudio.pause(); if(currentPlayingBtn) currentPlayingBtn.innerHTML = 'play_arrow'; }
+            if(currentTourStep === 6) { currentTourStep = 7; updateTour(); } 
+        }
+
+        document.getElementById('btn_dropdown_musica').onclick = () => {
+            if(document.getElementById('btn_dropdown_musica').disabled) return;
+            document.getElementById('dropdown_musica').classList.toggle('hidden'); document.getElementById('dropdown_voz').classList.add('hidden');
+        };
+
+        document.addEventListener('click', (e) => {
+            if(!e.target.closest('#custom_select_voz_container')) document.getElementById('dropdown_voz').classList.add('hidden');
+            if(!e.target.closest('.ml-7.w-\\[calc\\(100\\%-1\\.75rem\\)\\]')) { const el = document.getElementById('dropdown_musica'); if (el) el.classList.add('hidden'); }
+        });
+
+        renderVoiceDropdown();
+
+        document.getElementById('nicho_negocio').addEventListener('change', () => { if(currentTourStep === 1) { currentTourStep = 2; updateTour(); } });
+        document.getElementById('datos_negocio').addEventListener('input', (e) => { if(currentTourStep === 2 && e.target.value.length > 5) { currentTourStep = 3; updateTour(); } });
+        document.getElementById('archivoMusica').addEventListener('change', () => { if(currentTourStep === 6) { currentTourStep = 7; updateTour(); } });
+        window.addEventListener('DOMContentLoaded', updateTour);
+
+        function cambiarModoMusica() {
+            const m = document.querySelector('input[name="tipo_musica"]:checked').value;
+            document.getElementById('caja_subir').classList.toggle('hidden', m==='galeria');
+            const btnMusica = document.getElementById('btn_dropdown_musica');
+            if(m !== 'galeria') { btnMusica.disabled = true; btnMusica.classList.add('opacity-50', 'cursor-not-allowed'); } 
+            else { btnMusica.disabled = false; btnMusica.classList.remove('opacity-50', 'cursor-not-allowed'); }
+        }
+
+        fetch('/api/listar_pistas').then(r=>r.json()).then(p => { renderMusicDropdown(p); });
+
+        function seleccionarGuion(tipo) {
+            document.querySelectorAll('.opcion-guion').forEach(el => el.classList.remove('opcion-seleccionada'));
+            document.getElementById('card_' + tipo).classList.add('opcion-seleccionada');
+            const tf = document.getElementById('texto_final'); tf.value = document.getElementById('txt_' + tipo).innerText;
+            tf.removeAttribute('readonly'); tf.classList.remove('cursor-not-allowed', 'opacity-70');
+            actualizarCostoProduccion();
+            if(currentTourStep === 4) { currentTourStep = 5; updateTour(); }
+        }
+
+        document.getElementById('texto_final').addEventListener('input', actualizarCostoProduccion);
+        function actualizarCostoProduccion() {
+            document.getElementById('costo_produccion').innerText = 'Uso ilimitado';
+        }
+
+        document.getElementById('btnGenerarGuiones').onclick = async () => {
+            const text = document.getElementById('datos_negocio').value; const idToken = window.obtenerToken ? await window.obtenerToken() : null;
+            if(!text || !idToken) { alert("Llena los datos e inicia sesión."); return; }
+            if(currentTourStep === 3) document.getElementById('btnGenerarGuiones').classList.remove('glow-step');
+
+            const btnGuiones = document.getElementById('btnGenerarGuiones'); btnGuiones.disabled = true; btnGuiones.classList.add('opacity-50', 'cursor-not-allowed');
+            btnGuiones.innerHTML = '<div class="loader-audio" style="width:20px;height:20px;border-width:2px;border-top-color:#fff;"></div><span class="ml-2">PENSANDO...</span>';
+            
+            document.getElementById('loader_ia').classList.remove('hidden'); document.getElementById('loader_ia').classList.add('flex'); document.getElementById('opciones_guion').classList.add('hidden');
+            
+            try {
+                const res = await fetch('/api/generar_guiones', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({texto:text, idToken:idToken, nicho:document.getElementById('nicho_negocio').value}) });
+                const data = await res.json();
+                if(data.perifoneo) { 
+                    document.getElementById('txt_perifoneo').innerText=data.perifoneo; document.getElementById('txt_pregoneo').innerText=data.pregoneo; document.getElementById('opciones_guion').classList.remove('hidden'); 
+                    if(currentTourStep === 3) { currentTourStep = 4; updateTour(); }
+                }
+            } finally {
+                document.getElementById('loader_ia').classList.add('hidden'); document.getElementById('loader_ia').classList.remove('flex');
+                btnGuiones.disabled = false; btnGuiones.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnGuiones.innerHTML = '<span class="material-symbols-outlined text-lg">auto_awesome</span> Escribir Guiones';
+            }
+        };
+
+        document.getElementById('btnGenerarTodo').onclick = async () => {
+            const t = document.getElementById('texto_final').value; const modoMusica = document.querySelector('input[name="tipo_musica"]:checked').value;
+            const idToken = window.obtenerToken ? await window.obtenerToken() : null;
+            
+            if(!t) { alert("⚠️ El guion está vacío."); return; }
+            if(modoMusica==='galeria' && !document.getElementById('select_galeria').value) { alert("⚠️ Selecciona una pista musical."); return; }
+            if(modoMusica==='subir' && (!document.getElementById('archivoMusica').files[0] || !document.getElementById('check_derechos').checked)) { alert("⚠️ Sube tu pista y marca los derechos."); return; }
+            if(!idToken) { alert("Debes iniciar sesión con Google."); return; }
+
+            if(currentTourStep === 7) { document.getElementById('btnGenerarTodo').classList.remove('glow-step-emerald'); currentTourStep = 8; }
+            // MODO ILIMITADO: ya no se calcula costo por caracteres
+            const btnFinal = document.getElementById('btnGenerarTodo'); const originalHTML = btnFinal.innerHTML;
+            btnFinal.disabled = true; btnFinal.classList.add('opacity-50', 'cursor-not-allowed');
+            btnFinal.innerHTML = '<div class="loader-audio" style="width:24px;height:24px;border-width:3px;border-top-color:#fff;"></div><span class="ml-2 uppercase tracking-widest text-sm font-bold">TRABAJANDO...</span>';
+
+            const loader = document.getElementById('loader_master');
+            loader.classList.remove('hidden'); document.getElementById('wrapperFinal').classList.add('hidden');
+            
+            try {
+                if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if(audioContext.state === 'suspended') await audioContext.resume();
+
+                document.getElementById('estadoProceso').innerText = '1/3: Descargando Voz IA...';
+                const resVoz = await fetch('/api/generar_voz_base', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ texto:t, voz_id:document.getElementById('voz').value, idToken:idToken }) });
+                const dataVoz = await resVoz.json();
+                
+                if(!resVoz.ok) { throw new Error(dataVoz.error || "Error al consumir ElevenLabs."); }
+                
+                // MODO ILIMITADO: no actualizar saldo de créditos
+                document.getElementById('estadoProceso').innerText = "2/3: Descifrando ondas...";
+                
+                window.urlVozCruda = `/audio/${dataVoz.archivo}?token=${idToken}`;
+                const fetchAudioVoz = await fetch(window.urlVozCruda);
+                const arrayBufferRaw = await fetchAudioVoz.arrayBuffer();
+                window.vozCrudaMemoria = arrayBufferRaw.slice(0); 
+                const voiceBuffer = await audioContext.decodeAudioData(arrayBufferRaw);
+
+                let musicBuffer;
+                let musicArrayBuffer;
+                if(modoMusica==='subir') {
+                    musicArrayBuffer = await document.getElementById('archivoMusica').files[0].arrayBuffer();
+                    window.nombreMusicaActual = "Música Subida";
+                } else {
+                    const fetchM = await fetch(`/api/pista_preview/${document.getElementById('select_galeria').value}`);
+                    musicArrayBuffer = await fetchM.arrayBuffer();
+                    window.nombreMusicaActual = document.getElementById('selected_musica_text').innerText;
+                }
+                window.musicaCrudaMemoria = musicArrayBuffer.slice(0); 
+                musicBuffer = await audioContext.decodeAudioData(musicArrayBuffer);
+
+                document.getElementById('estadoProceso').innerText = "3/3: Ensamblando audio...";
+                
+                p_base_clips = []; const introTime = 2.0; const voiceLen = voiceBuffer.duration;
+                const t1 = findNearestSilence(voiceBuffer, voiceLen * 0.15); const t2 = findNearestSilence(voiceBuffer, voiceLen * 0.85);
+
+                p_base_clips.push({ buffer: musicBuffer, type: 'music', startTime: 0, offset: 0, duration: Math.min(musicBuffer.duration, introTime+voiceLen+3), volume: 0.7, fadeIn: 0, fadeOut: 2.5, fx: null });
+                p_base_clips.push({ buffer: voiceBuffer, type: 'voice', startTime: introTime, offset: 0, duration: t1, volume: 1.0, fx: getPresetFx('promo') });
+                p_base_clips.push({ buffer: voiceBuffer, type: 'voice', startTime: introTime+t1, offset: t1, duration: t2-t1, volume: 1.0, fx: getPresetFx('neutro') });
+                p_base_clips.push({ buffer: voiceBuffer, type: 'voice', startTime: introTime+t2, offset: t2, duration: voiceLen-t2, volume: 1.0, fx: getPresetFx('promo') });
+
+                document.getElementById('checkMatasilencios').checked = false; p_matasilencios = false;
+                
+                window.hasPaidForCurrentMix = false;
+                window.currentAudioEnlace = null;
+                document.getElementById('box_enlace_generado').classList.add('hidden');
+
+                aplicarEstiloGlobal('promo'); 
+
+            } catch (err) { alert(`Error: ${err.message}`); loader.classList.add('hidden');
+            } finally { btnFinal.disabled = false; btnFinal.classList.remove('opacity-50', 'cursor-not-allowed'); btnFinal.innerHTML = originalHTML; }
+        };
+
+        async function verifyPayment() {
+            // MODO ILIMITADO: no cobrar descarga ni consultar /api/cobrar_descarga
+            window.hasPaidForCurrentMix = true;
+            return true;
+        }
+
+        document.getElementById('btnDescargar').onclick = async () => {
+            // MODO ILIMITADO: descarga permitida sin validar plan
+            
+            const btn = document.getElementById('btnDescargar'); 
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Verificando...'; 
+            btn.disabled = true;
+
+            const isPaid = await verifyPayment();
+            if (!isPaid) { btn.innerHTML = originalHTML; btn.disabled = false; return; }
+
+            btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> MP3...';
+            
+            setTimeout(() => {
+                try {
+                    const mp3Blob = audioBufferToRealMp3(window.cleanRenderedBuffer); 
+                    const mp3Url = URL.createObjectURL(mp3Blob);
+                    const a = document.createElement('a'); a.href = mp3Url; a.download = 'Cuña_Magica_Final.mp3'; 
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                } catch (e) { alert("Error al codificar el MP3.");
+                } finally { btn.innerHTML = originalHTML; btn.disabled = false; }
+            }, 100);
+        };
+
+        document.getElementById('btnEnlace').onclick = async () => {
+            // MODO ILIMITADO: enlace permitido sin validar plan
+            
+            if (window.currentAudioEnlace) {
+                mostrarEnlace(window.currentAudioEnlace);
+                return;
+            }
+
+            const btn = document.getElementById('btnEnlace');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Verificando...';
+            btn.disabled = true;
+
+            const isPaid = await verifyPayment();
+            if (!isPaid) { btn.innerHTML = originalHTML; btn.disabled = false; return; }
+
+            btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Nube...';
+            
+            setTimeout(async () => {
+                try {
+                    const mp3Blob = audioBufferToRealMp3(window.cleanRenderedBuffer);
+                    const url = await window.subirAFirebase(mp3Blob);
+                    window.currentAudioEnlace = url;
+                    mostrarEnlace(url);
+                } catch (e) {
+                    console.error(e);
+                    alert("Error al subir el audio a la nube.");
+                } finally {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
+            }, 100);
+        };
+
+        function mostrarEnlace(url) {
+            const box = document.getElementById('box_enlace_generado');
+            box.classList.remove('hidden');
+            document.getElementById('input_enlace').value = url;
+        }
+
+        window.copiarEnlace = () => {
+            const input = document.getElementById('input_enlace');
+            input.select();
+            document.execCommand('copy');
+            alert("¡Enlace copiado al portapapeles!");
+        };
+
+        function cerrarModalCreditos() { document.getElementById('modalCreditos').classList.add('hidden'); }
+        function cerrarModalPlan() { document.getElementById('modalPlan').classList.add('hidden'); }
+        function abrirModalPrecios() { cerrarModalCreditos(); cerrarModalPlan(); document.getElementById('modalPrecios').classList.remove('hidden'); }
+        function cerrarModalPrecios() { document.getElementById('modalPrecios').classList.add('hidden'); }
+
+        async function iniciarPago(nombrePlan, precio, creditos) {
+            try {
+                const idToken = window.obtenerToken ? await window.obtenerToken() : null;
+                if (!idToken) { alert("Inicia sesión primero."); return; }
+                if(window.fbq) fbq('track', 'InitiateCheckout', { content_name: nombrePlan, value: precio, currency: 'COP' });
+                const LLAVE_IDENTIDAD_BOLD = "D_7IWOmKYiTrk3SkY3yJeYun8UYOJCmlBYLoAbL0LvE";
+                const orderId = 'PEDIDO-' + window.currentUserUid.substring(0,5) + '-' + Date.now();
+                const resFirma = await fetch('/api/generar_firma_bold', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: orderId, amount: precio.toString(), currency: 'COP', creditos: creditos, idToken: idToken }) });
+                const dataFirma = await resFirma.json();
+                const checkout = new BoldCheckout({ orderId: orderId, currency: 'COP', amount: precio.toString(), apiKey: LLAVE_IDENTIDAD_BOLD, integritySignature: dataFirma.firma, description: 'Compra de ' + nombrePlan, redirectionUrl: window.location.origin + '/pago_exitoso/' + orderId });
+                checkout.open();
+            } catch (err) { alert("Hubo un error de conexión."); }
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyACaKkoNEDZEfMgyP7rALJ24aDgr7mWRm8", authDomain: "perifoneoai.firebaseapp.com", projectId: "perifoneoai", storageBucket: "perifoneoai.firebasestorage.app", messagingSenderId: "615830838663", appId: "1:615830838663:web:84da82476f4acbade1c722" };
+        const app = initializeApp(firebaseConfig); 
+        const auth = getAuth(app); 
+        const provider = new GoogleAuthProvider();
+        const storage = getStorage(app); 
+        
+        window.obtenerToken = async () => { if (auth.currentUser) return await auth.currentUser.getIdToken(true); return null; };
+
+        window.subirAFirebase = async (blob) => {
+            const fileName = 'audios_finales/cuna_' + window.currentUserUid + '_' + Date.now() + '.mp3';
+            const storageRef = ref(storage, fileName);
+            await uploadBytes(storageRef, blob);
+            return await getDownloadURL(storageRef);
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const idToken = await user.getIdToken();
+                const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    document.getElementById('btnLogin').classList.add('hidden'); document.getElementById('btnLogout').classList.remove('hidden'); 
+                    const uInfo = document.getElementById('user-info'); uInfo.classList.remove('hidden'); uInfo.innerHTML = `👋 Hola, ${data.nombre} | Uso ilimitado`;
+                    
+                    window.currentUserUid = data.uid; 
+                    window.planActivo = true; // MODO ILIMITADO 
+                    window.esVip = data.es_vip === true; 
+                }
+            } else {
+                document.getElementById('btnLogin').classList.remove('hidden'); document.getElementById('btnLogout').classList.add('hidden'); document.getElementById('user-info').classList.add('hidden');
+                window.currentUserUid = null; window.planActivo = true; window.esVip = false;
+            }
+            if (typeof initRecuperacionSesion === 'function') initRecuperacionSesion();
+        });
+        document.getElementById('btnLogin').onclick = async () => { try { await signInWithPopup(auth, provider); } catch (e) { alert(`Error al entrar.`); } };
+        document.getElementById('btnLogout').onclick = async () => { await signOut(auth); location.reload(); };
+
+    </script>
+
+    <div id="modalDawVip" class="fixed inset-0 z-[150] flex flex-col hidden bg-black">
+        
+        <div class="h-14 bg-zinc-950 border-b border-emerald-500/30 flex justify-between items-center px-6 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-emerald-500">graphic_eq</span>
+                <h3 class="text-white font-black tracking-widest uppercase text-sm">Estudio Multipista PRO</h3>
+            </div>
+            
+            <button onclick="cerrarDawVip()" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2">
+                Volver al Generador <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+        </div>
+
+        <iframe 
+            id="iframeDaw" 
+            src="https://perifoneoai.web.app"
+            class="w-full flex-1 border-0"
+            allow="autoplay; clipboard-write"
+        ></iframe>
+    </div>
+
+
+
+
+    <script>
+        function cerrarModalVipDaw() { document.getElementById('modalVipDaw').classList.add('hidden'); }
+        function abrirModalPreciosDesdeVip() { cerrarModalVipDaw(); abrirModalPrecios(); }
+
+        window.abrirDawVip = function() {
+            // Guardián para el botón pequeño (Abre la ventana vacía)
+            if (!window.esVip) {
+                document.getElementById('modalVipDaw').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('modalDawVip').classList.remove('hidden');
+        }
+
+        window.cerrarDawVip = function() {
+            document.getElementById('modalDawVip').classList.add('hidden');
+        }
+
+        window.cursorTiempoDaw = 0;
+
+        window.enviarVozDirectaAlDaw = async function() {
+            
+            // 🔒 1. EL GUARDIÁN PRINCIPAL
+            if (!window.esVip) {
+                document.getElementById('modalVipDaw').classList.remove('hidden');
+                return; 
+            }
+
+            // 🧠 2. VALIDAR LA MEMORIA
+            if (!window.vozCrudaMemoria || !window.musicaCrudaMemoria) {
+                alert("⚠️ La memoria está vacía. Por favor dale al botón de PRODUCIR CUÑA FINAL de nuevo.");
+                return;
+            }
+
+            // 🛡️ 3. CANDADO ANTI-DOBLE CLIC
+            if (window.bloqueoPuenteDaw) return; 
+            window.bloqueoPuenteDaw = true;
+
+            const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const voiceBuffer = await tempCtx.decodeAudioData(window.vozCrudaMemoria.slice(0));
+            
+            const introTime = 2.0; 
+            const tailTime = 3.0;  
+            const duracionTotalMusica = introTime + voiceBuffer.duration + tailTime;
+
+            // 🎛️ LA RECETA EXACTA (Tomada de tu configuración Locutor FM)
+            const masterizacionFM = {
+                soundgoodizer: 40,
+                compresion: 60,
+                deEsser: 30,
+                ecoReverb: 0,
+                chorus: 0,
+                flanger: 0,
+                eq: { sub: 1.5, low: 2.0, mid: -1.0, highMid: 2.0, high: 3.0 }
+            };
+
+            // 4. ABRIMOS LA VENTANA
+            abrirDawVip();
+            
+            setTimeout(() => {
+                try {
+                    const iframeDaw = document.getElementById('iframeDaw').contentWindow;
+                    const idLote = Date.now(); 
+                    
+                    const tiempoInicioMusica = window.cursorTiempoDaw;
+                    const tiempoInicioVoz = window.cursorTiempoDaw + introTime;
+                    
+                    iframeDaw.postMessage({
+                        accion: 'ENVIAR_AUDIO_TIEMPO',
+                        msgId: 'voz-' + idLote,
+                        arrayBuffer: window.vozCrudaMemoria.slice(0),
+                        tipo: 'voice',
+                        nombre: 'Voz Principal IA',
+                        startTime: tiempoInicioVoz,
+                        fx: masterizacionFM // ⬅️ Inyectamos tus valores exactos aquí
+                    }, '*'); 
+
+                    setTimeout(() => {
+                        iframeDaw.postMessage({
+                            accion: 'ENVIAR_AUDIO_TIEMPO',
+                            msgId: 'musica-' + idLote,
+                            arrayBuffer: window.musicaCrudaMemoria.slice(0),
+                            tipo: 'music',
+                            nombre: window.nombreMusicaActual || 'Música de Fondo',
+                            startTime: tiempoInicioMusica,
+                            duration: duracionTotalMusica, 
+                            fadeOut: 2.5, 
+                            volume: 0.7 
+                        }, '*');
+                        
+                        window.cursorTiempoDaw += duracionTotalMusica + 2.0;
+
+                        setTimeout(() => { window.bloqueoPuenteDaw = false; }, 3000);
+
+                    }, 600); 
+
+                } catch (error) {
+                    console.error("Error enviando los audios:", error);
+                    alert("Hubo un problema al enviar la sesión.");
+                    window.bloqueoPuenteDaw = false;
+                }
+            }, 2000); 
+        }
+    </script>
+</body>
+</html>
