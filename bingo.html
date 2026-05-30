@@ -540,6 +540,12 @@
                 <input type="file" accept="image/*" onchange="cargarLogoCentro(this)">
                 <small style="color:#aaa;">Se recomienda una imagen PNG sin fondo.</small>
             </div>
+            <button onclick="sincronizarPersonalizacionJugadores(true)" class="admin-btn" style="background:#0dcaf0; color:#000; width:100%; margin-top:10px; font-weight:900;">
+                📲 ENVIAR COLORES / IMÁGENES AL JUGADOR
+            </button>
+            <small style="color:#9ee7ff; display:block; text-align:center; margin-top:5px;">
+                Las imágenes se comprimen y se guardan como texto WEBP dentro de la sala. No usa Firebase Storage.
+            </small>
             
             <div id="reloj-pc" style="margin-top: 25px; padding: 15px; background: #1a1a1a; border-radius: 10px; text-align: center; border: 2px solid #00ffff; color: #00ffff; font-family: monospace; font-size: 20px; font-weight: bold; box-shadow: 0 0 10px rgba(0,255,255,0.2);">
                 🕒 <span id="fecha-pc">--/--/----</span> - <span id="hora-pc">--:--:--</span>
@@ -905,16 +911,95 @@
         }
     }
 
-    function cargarLogoCentro(input) {
+    // Convierte la imagen en texto base64 comprimido.
+    // No usa Firebase Storage; se guarda como texto pequeño dentro del documento de la sala.
+    // Importante: Firestore sigue contando esos caracteres dentro del límite del documento.
+    async function comprimirImagenComoTexto(file, maxPx = 420, quality = 0.68) {
+        if (!file || !file.type || !file.type.startsWith('image/')) return null;
+
+        const dataUrlOriginal = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+
+        const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = dataUrlOriginal;
+        });
+
+        let ancho = img.width;
+        let alto = img.height;
+        const escala = Math.min(1, maxPx / Math.max(ancho, alto));
+        ancho = Math.max(1, Math.round(ancho * escala));
+        alto = Math.max(1, Math.round(alto * escala));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = ancho;
+        canvas.height = alto;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, ancho, alto);
+        ctx.drawImage(img, 0, 0, ancho, alto);
+
+        let salida = canvas.toDataURL('image/webp', quality);
+        // Algunos navegadores antiguos no generan WEBP y devuelven PNG.
+        if (!salida || !salida.startsWith('data:image/webp')) {
+            salida = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        // Si queda muy pesada, hacemos una segunda reducción automática.
+        if (salida.length > 160000 && maxPx > 260) {
+            return comprimirImagenComoTexto(file, 260, 0.56);
+        }
+        return salida;
+    }
+
+    function obtenerPersonalizacionJugador() {
+        const colores = dbLocal.colores || {};
+        return {
+            version: Date.now(),
+            colores: {
+                cartonFondo: colores.cartonFondo || '#002b5c',
+                cartonHeader: colores.cartonExport || '#004080',
+                cartonMarcado: colores.cartonExport || '#004080',
+                cartonNumero: '#ffffff',
+                textoNumero: '#000000'
+            },
+            headerLogoTexto: dbLocal.headerCartonBase64 || null,
+            centerLogoTexto: dbLocal.centerLogoBase64 || null
+        };
+    }
+
+    async function sincronizarPersonalizacionJugadores(mostrarAviso = false) {
+        try {
+            if (!window.db || !window.firebaseTools || !window.MI_CODIGO_SALA) return;
+            const salaRef = window.firebaseTools.doc(window.db, 'salas', String(window.MI_CODIGO_SALA).trim());
+            await window.firebaseTools.setDoc(salaRef, {
+                personalizacionJugador: obtenerPersonalizacionJugador()
+            }, { merge: true });
+            if (mostrarAviso) alert('✅ Personalización enviada a los jugadores.');
+        } catch (e) {
+            console.error('No se pudo sincronizar la personalización con jugadores:', e);
+            if (mostrarAviso) alert('No se pudo enviar la personalización. Revisa la conexión o reduce el tamaño de la imagen.');
+        }
+    }
+
+    async function cargarLogoCentro(input) {
         if(!checkSecurity()) return;
         const file = input.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onloadend = function() {
-            dbLocal.centerLogoBase64 = reader.result;
-            alert("✅ Logo central cargado temporalmente.");
+        try {
+            dbLocal.centerLogoBase64 = await comprimirImagenComoTexto(file, 320, 0.70);
+            guardarDatos();
+            await sincronizarPersonalizacionJugadores(false);
+            alert("✅ Logo central cargado y enviado al jugador.");
+        } catch(e) {
+            console.error('Error cargando logo central:', e);
+            alert('No se pudo cargar el logo central. Intenta con una imagen más pequeña.');
         }
-        reader.readAsDataURL(file);
     }
 
     function restaurarMediosGuardados() {
@@ -947,19 +1032,33 @@
         guardarDatos();
     }
 
-    function cambiarColorCartonExport(color) { if(!checkSecurity()) return; dbLocal.colores.cartonExport = color; guardarDatos(); }
-    function cambiarColorCartonFondo(color) { if(!checkSecurity()) return; dbLocal.colores.cartonFondo = color; guardarDatos(); }
+    function cambiarColorCartonExport(color) {
+        if(!checkSecurity()) return;
+        dbLocal.colores.cartonExport = color;
+        guardarDatos();
+        sincronizarPersonalizacionJugadores(false);
+    }
+    function cambiarColorCartonFondo(color) {
+        if(!checkSecurity()) return;
+        dbLocal.colores.cartonFondo = color;
+        guardarDatos();
+        sincronizarPersonalizacionJugadores(false);
+    }
 
-    function cargarHeaderCarton(input) {
+    async function cargarHeaderCarton(input) {
         if(!checkSecurity()) return;
         const file = input.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onloadend = function() {
-            dbLocal.headerCartonBase64 = reader.result; 
+        try {
+            dbLocal.headerCartonBase64 = await comprimirImagenComoTexto(file, 520, 0.68);
+            guardarDatos();
             mostrarPreviewHeader();
+            await sincronizarPersonalizacionJugadores(false);
+            alert('✅ Imagen superior cargada y enviada al jugador.');
+        } catch(e) {
+            console.error('Error cargando imagen superior:', e);
+            alert('No se pudo cargar la imagen. Intenta con una imagen más pequeña.');
         }
-        reader.readAsDataURL(file);
     }
 
     function mostrarPreviewHeader() {
@@ -975,7 +1074,9 @@
     function borrarHeaderCarton() {
          if(confirm("¿Eliminar la imagen del encabezado?")) {
              dbLocal.headerCartonBase64 = null;
+             guardarDatos();
              mostrarPreviewHeader();
+             sincronizarPersonalizacionJugadores(false);
              document.querySelector('input[type="file"][accept="image/*"][onchange="cargarHeaderCarton(this)"]').value = '';
          }
     }
@@ -1855,7 +1956,8 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
                         cartonesEmpaquetados: paqueteTexto, // Lo guardamos con un nuevo nombre
                         nombreSerial: serialActivo.nombre,
                         pinSala: window.MI_CODIGO_SALA,
-                        estado: "activo"
+                        estado: "activo",
+                        personalizacionJugador: obtenerPersonalizacionJugador()
                     }, { merge: true });
 
                     if(btn) {
@@ -1999,7 +2101,10 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
                 if (window.db && window.firebaseTools) {
                     const pinSeguro = String(window.MI_CODIGO_SALA).trim();
                     const salaRef = window.firebaseTools.doc(window.db, "salas", pinSeguro);
-                    await window.firebaseTools.setDoc(salaRef, { estadoSala: "abierta" }, { merge: true });
+                    await window.firebaseTools.setDoc(salaRef, {
+                        estadoSala: "abierta",
+                        personalizacionJugador: obtenerPersonalizacionJugador()
+                    }, { merge: true });
                     alert("✅ La sala está ABIERTA. Los jugadores ya pueden entrar.");
                 } else {
                     alert("⚠️ Firebase todavía no está conectado. Revisa tu internet, espera unos segundos y vuelve a intentar.");
@@ -2105,7 +2210,8 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
                         const salaRef = window.firebaseTools.doc(window.db, "salas", window.MI_CODIGO_SALA);
                         await window.firebaseTools.updateDoc(salaRef, {
                             figuraActual: dbLocal.config.figura,
-                            nombreFigura: dbLocal.config.nombre
+                            nombreFigura: dbLocal.config.nombre,
+                            personalizacionJugador: obtenerPersonalizacionJugador()
                         });
                     }
                 } catch (e) { console.error("Error guardando figura en internet:", e); }
@@ -2658,7 +2764,8 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
                 await window.firebaseTools.setDoc(salaRef, {
                     figuraActual: db.config.figura,
                     nombreFigura: db.config.nombre,
-                    figurasMultiples: db.config.figurasMultiples
+                    figurasMultiples: db.config.figurasMultiples,
+                    personalizacionJugador: obtenerPersonalizacionJugador()
                 }, { merge: true });
             }
         } catch(e) {
@@ -3785,5 +3892,276 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
     setTimeout(() => clearInterval(timer), 20000);
 })();
 </script>
+
+
+<!-- PATCH V10: control universal por usuario + login intacto + ocultar SYNC -->
+<style id="patch-v10-control-universal-sin-sync">
+    /* Oculta cualquier etiqueta técnica de sincronización del panel de figuras */
+    #figura-sync-status-v5,
+    .figura-sync-status-v5 {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+</style>
+<script id="patch-v10-control-universal-js">
+(function(){
+    if(window.__BINGO75_CONTROL_UNIVERSAL_V10__) return;
+    window.__BINGO75_CONTROL_UNIVERSAL_V10__ = true;
+
+    const LOCAL_KEY_V10 = 'bingoSala2_V15_MASTER';
+    let unsubControlV10 = null;
+    let salaEscuchadaV10 = '';
+    let aplicandoRemotoV10 = false;
+    let ultimoPushV10 = 0;
+    let ultimoEstadoAplicadoV10 = '';
+
+    function usuarioV10(){
+        return (localStorage.getItem('bingo_user') || '').trim().toLowerCase();
+    }
+
+    function salaV10(){
+        return String(window.MI_CODIGO_SALA || '').trim();
+    }
+
+    function dbLocalV10(){
+        try {
+            if(typeof dbLocal !== 'undefined' && dbLocal) return dbLocal;
+        } catch(e) {}
+        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V10) || 'null'); } catch(e) { return null; }
+    }
+
+    function guardarLocalV10(){
+        try {
+            if(typeof guardarDatos === 'function') guardarDatos();
+            else if(typeof window.guardarDatos === 'function') window.guardarDatos();
+            else {
+                const db = dbLocalV10();
+                if(db) localStorage.setItem(LOCAL_KEY_V10, JSON.stringify(db));
+            }
+        } catch(e) {
+            console.warn('No se pudo guardar estado local universal:', e);
+        }
+    }
+
+    function normalizarBalotasV10(arr){
+        if(!Array.isArray(arr)) return [];
+        const vistas = new Set();
+        return arr.map(n => parseInt(n, 10))
+            .filter(n => Number.isInteger(n) && n >= 1 && n <= 75)
+            .filter(n => {
+                if(vistas.has(n)) return false;
+                vistas.add(n);
+                return true;
+            });
+    }
+
+    function normalizarFigurasMultiplesV10(figs){
+        if(!Array.isArray(figs)) return null;
+        return figs
+            .filter(f => f && Array.isArray(f.patron))
+            .map(f => ({
+                nombre: String(f.nombre || 'FIGURA').toUpperCase(),
+                patron: f.patron.slice(0, 25).map(Boolean),
+                activa: f.activa !== false
+            }));
+    }
+
+    function serializarEstadoV10(data){
+        return JSON.stringify({
+            b: normalizarBalotasV10(data && data.balotasLlamadas),
+            f: Array.isArray(data && data.figuraActual) ? data.figuraActual.slice(0,25).map(Boolean) : null,
+            fm: normalizarFigurasMultiplesV10(data && data.figurasMultiples),
+            n: data && data.nombreFigura ? String(data.nombreFigura) : ''
+        });
+    }
+
+    function aplicarEstadoRemotoV10(data, forzar){
+        if(!data) return false;
+        const firma = serializarEstadoV10(data);
+        if(!forzar && firma === ultimoEstadoAplicadoV10) return false;
+        ultimoEstadoAplicadoV10 = firma;
+
+        const db = dbLocalV10();
+        if(!db) return false;
+        if(!Array.isArray(db.juego)) db.juego = [];
+        if(!db.config) db.config = {};
+
+        let cambio = false;
+
+        if(Array.isArray(data.balotasLlamadas)) {
+            const remotas = normalizarBalotasV10(data.balotasLlamadas);
+            if(JSON.stringify(db.juego || []) !== JSON.stringify(remotas)) {
+                db.juego = remotas;
+                cambio = true;
+            }
+        }
+
+        const figsLimpias = normalizarFigurasMultiplesV10(data.figurasMultiples);
+        if(figsLimpias) {
+            if(JSON.stringify(db.config.figurasMultiples || []) !== JSON.stringify(figsLimpias)) {
+                db.config.figurasMultiples = figsLimpias;
+                cambio = true;
+            }
+        }
+
+        if(Array.isArray(data.figuraActual)) {
+            const fig = data.figuraActual.slice(0, 25).map(Boolean);
+            if(JSON.stringify(db.config.figura || []) !== JSON.stringify(fig)) {
+                db.config.figura = fig;
+                cambio = true;
+            }
+        }
+
+        if(data.nombreFigura) {
+            const nombre = String(data.nombreFigura).toUpperCase();
+            if(db.config.nombre !== nombre) {
+                db.config.nombre = nombre;
+                cambio = true;
+            }
+        }
+
+        if(cambio) {
+            aplicandoRemotoV10 = true;
+            guardarLocalV10();
+            try { if(typeof window.renderizar === 'function') window.renderizar(); else if(typeof renderizar === 'function') renderizar(); } catch(e) {}
+            try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
+            try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
+            setTimeout(() => { aplicandoRemotoV10 = false; }, 180);
+        }
+        return cambio;
+    }
+
+    async function traerEstadoNubeV10(){
+        const sala = salaV10();
+        if(!sala || !window.db || !window.firebaseTools) return false;
+        try {
+            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
+            const snap = await window.firebaseTools.getDoc(salaRef);
+            if(snap && snap.exists()) return aplicarEstadoRemotoV10(snap.data(), true);
+        } catch(e) {
+            console.warn('No se pudo traer estado universal desde Firebase:', e);
+        }
+        return false;
+    }
+
+    async function subirEstadoLocalV10(motivo){
+        if(aplicandoRemotoV10) return;
+        const ahora = Date.now();
+        if(ahora - ultimoPushV10 < 220) return;
+        ultimoPushV10 = ahora;
+        const sala = salaV10();
+        const db = dbLocalV10();
+        if(!sala || !db || !window.db || !window.firebaseTools) return;
+        try {
+            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
+            await window.firebaseTools.setDoc(salaRef, {
+                balotasLlamadas: normalizarBalotasV10(db.juego || []),
+                figuraActual: Array.isArray(db.config && db.config.figura) ? db.config.figura.slice(0,25).map(Boolean) : [],
+                nombreFigura: (db.config && db.config.nombre) || 'BINGO',
+                figurasMultiples: normalizarFigurasMultiplesV10(db.config && db.config.figurasMultiples) || [],
+                controlUniversal: {
+                    usuario: usuarioV10() || 'admin',
+                    motivo: motivo || 'actualizacion',
+                    updatedAt: Date.now()
+                }
+            }, { merge: true });
+        } catch(e) {
+            console.warn('No se pudo subir estado universal:', e);
+        }
+    }
+
+    function instalarListenerControlV10(){
+        const sala = salaV10();
+        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.onSnapshot) return;
+        if(unsubControlV10 && salaEscuchadaV10 === sala) return;
+        if(unsubControlV10) { try { unsubControlV10(); } catch(e) {} unsubControlV10 = null; }
+        salaEscuchadaV10 = sala;
+        try {
+            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
+            unsubControlV10 = window.firebaseTools.onSnapshot(salaRef, (snap) => {
+                if(!snap.exists()) return;
+                aplicarEstadoRemotoV10(snap.data(), false);
+            });
+            traerEstadoNubeV10();
+        } catch(e) {
+            console.warn('No se pudo instalar control universal:', e);
+        }
+    }
+
+    function envolverSacarBalotaV10(){
+        const actual = window.sacarBalota;
+        if(typeof actual !== 'function' || actual.__controlUniversalV10) return;
+        const envuelta = async function(){
+            await traerEstadoNubeV10();
+            const resultado = await actual.apply(this, arguments);
+            setTimeout(() => subirEstadoLocalV10('sacar_balota'), 160);
+            return resultado;
+        };
+        envuelta.__controlUniversalV10 = true;
+        envuelta.__originalControlUniversalV10 = actual;
+        window.sacarBalota = envuelta;
+    }
+
+    function envolverConfigFigurasV10(){
+        ['guardarConfigLocal','agregarFiguraLista','eliminarFiguraLista','limpiarFigurasLista','toggleFiguraActivaGlobal'].forEach(nombre => {
+            const fn = window[nombre];
+            if(typeof fn !== 'function' || fn.__controlUniversalV10) return;
+            const wrap = function(){
+                const r = fn.apply(this, arguments);
+                setTimeout(() => subirEstadoLocalV10('figuras'), 180);
+                return r;
+            };
+            wrap.__controlUniversalV10 = true;
+            window[nombre] = wrap;
+        });
+    }
+
+    function ocultarSyncV10(){
+        document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
+            el.style.display = 'none';
+            el.style.visibility = 'hidden';
+            el.style.opacity = '0';
+            el.setAttribute('aria-hidden', 'true');
+        });
+    }
+
+    function instalarTodoV10(){
+        ocultarSyncV10();
+        instalarListenerControlV10();
+        envolverSacarBalotaV10();
+        envolverConfigFigurasV10();
+    }
+
+    function envolverInicioV10(){
+        const original = window.iniciarAppBingo;
+        if(typeof original !== 'function' || original.__controlUniversalV10Wrapped) return;
+        const wrapped = function(){
+            const r = original.apply(this, arguments);
+            setTimeout(instalarTodoV10, 100);
+            setTimeout(instalarTodoV10, 700);
+            setTimeout(traerEstadoNubeV10, 900);
+            return r;
+        };
+        wrapped.__controlUniversalV10Wrapped = true;
+        window.iniciarAppBingo = wrapped;
+    }
+
+    // Si se marca/desmarca una balota manual, también se replica a los otros dispositivos del mismo usuario.
+    document.addEventListener('click', function(e){
+        const bola = e.target && e.target.closest ? e.target.closest('.bola-mini') : null;
+        if(!bola) return;
+        setTimeout(() => subirEstadoLocalV10('balota_manual'), 180);
+    }, true);
+
+    document.addEventListener('DOMContentLoaded', () => { envolverInicioV10(); setTimeout(instalarTodoV10, 900); });
+    window.addEventListener('load', () => { envolverInicioV10(); setTimeout(instalarTodoV10, 1200); });
+    setTimeout(() => { envolverInicioV10(); instalarTodoV10(); }, 1600);
+    const timerV10 = setInterval(() => { envolverInicioV10(); instalarTodoV10(); }, 1000);
+    setTimeout(() => clearInterval(timerV10), 30000);
+})();
+</script>
+
 </body>
 </html>
