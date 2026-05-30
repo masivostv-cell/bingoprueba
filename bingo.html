@@ -2277,6 +2277,41 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 
 
 
+
+
+<!-- PATCH: fondo transparente para el panel de FIGURAS A JUGAR -->
+<style id="patch-fondo-transparente-figuras">
+    /* Quita el fondo blanco/oscuro y el efecto blur del bloque flotante de figuras,
+       para que el tablero se vea libre detrás del panel. */
+    #zona-figuras,
+    .figuras-flotantes,
+    #pantalla-principal .figuras-flotantes,
+    #pantalla-principal.vista-clasica .figuras-flotantes,
+    #pantalla-principal:not(.vista-clasica) .figuras-flotantes,
+    .vista-clasica .game-center-panel > div.figuras-flotantes {
+        background: transparent !important;
+        background-color: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        box-shadow: none !important;
+    }
+
+    #zona-figuras:hover,
+    .figuras-flotantes:hover,
+    #pantalla-principal .figuras-flotantes:hover {
+        background: transparent !important;
+        background-color: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    /* También deja transparente la etiqueta inferior de sincronización para que no tape el tablero. */
+    #figura-sync-status-v5 {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+</style>
+
 </body>
                 </html>
             `;
