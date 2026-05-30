@@ -146,84 +146,6 @@
         #btn-bingo { background-color: #d32f2f; color: white; border: 4px solid white; border-radius: 15px; font-size: 26px; font-weight: 900; padding: 15px; width: 100%; margin-top: 25px; cursor: pointer; box-shadow: 0 5px 15px rgba(211, 47, 47, 0.5); animation: latido 1.5s infinite; }
         #btn-bingo:active { transform: scale(0.95); }
         @keyframes latido { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-
-
-        /* PERSONALIZACIÓN RECIBIDA DEL ADMIN */
-        :root {
-            --jug-carton-fondo: #002b5c;
-            --jug-carton-header: #004080;
-            --jug-carton-numero: #ffffff;
-            --jug-carton-texto: #000000;
-            --jug-carton-marcado: #ffeb3b;
-        }
-        .carton-visual-jugador {
-            background: var(--jug-carton-fondo);
-            padding: 10px;
-            border-radius: 12px;
-            border: 2px solid rgba(255,255,255,.15);
-            box-shadow: 0 10px 22px rgba(0,0,0,.35);
-        }
-        .carton-logo-jugador {
-            display: none;
-            background: white;
-            border-radius: 8px 8px 0 0;
-            overflow: hidden;
-            border-bottom: 3px solid var(--jug-carton-header);
-            margin-bottom: 0;
-        }
-        .carton-logo-jugador img {
-            display: block;
-            width: 100%;
-            max-height: 95px;
-            object-fit: contain;
-            background: white;
-        }
-        .carton-title-jugador {
-            background: var(--jug-carton-header);
-            color: white;
-            font-size: 30px;
-            font-weight: 900;
-            padding: 8px 0;
-            letter-spacing: 2px;
-        }
-        .carton-visual-jugador .carton-container {
-            border-color: #000;
-            background-color: #000;
-        }
-        .carton-visual-jugador .letra-bingo {
-            background-color: var(--jug-carton-header) !important;
-        }
-        .carton-visual-jugador .numero-carton {
-            background-color: var(--jug-carton-numero);
-            color: var(--jug-carton-texto);
-        }
-        .carton-visual-jugador .numero-carton.marcado:not(.centro) {
-            background-color: var(--jug-carton-marcado) !important;
-            color: #111;
-        }
-        .carton-visual-jugador .numero-carton.centro img {
-            max-width: 78%;
-            max-height: 78%;
-            object-fit: contain;
-            display: block;
-        }
-        #imagenes-admin-jugador {
-            display: none;
-            gap: 8px;
-            justify-content: center;
-            align-items: center;
-            margin: 12px auto;
-            max-width: 450px;
-        }
-        #imagenes-admin-jugador img {
-            max-width: calc(50% - 4px);
-            max-height: 110px;
-            object-fit: contain;
-            background: #fff;
-            border-radius: 10px;
-            border: 2px solid rgba(255,255,255,.25);
-        }
-
     </style>
 </head>
 <body>
@@ -293,8 +215,6 @@
             </div>
             <small id="chat-jugador-status" style="display:block; color:#aaa; margin-top:6px; text-align:center;">El administrador leerá tu mensaje en vivo.</small>
         </div>
-        <div id="imagenes-admin-jugador"></div>
-
         <h3 style="margin: 0 0 10px 0; color: #ffc107; font-size: 24px;">CARTÓN #<span id="display-num-carton"></span></h3>
 
         <div id="mi-carton" style="width: 100%; max-width: 450px; margin: 0 auto;"></div>
@@ -323,8 +243,6 @@
         let balotasGlobales = [];
         let figuraGlobal = [];
         let figurasMultiplesGlobal = [];
-        let personalizacionJugadorGlobal = {};
-        let personalizacionVersionVista = null;
         let miSalaActual = "";
         let miNombreActual = "";
         let miJugadorDocId = "";
@@ -634,7 +552,6 @@
                             setTimeout(() => entrarRadioAdministrador(), 300);
                         }
 
-                        aplicarPersonalizacionJugador(datosSala, true);
                         renderizarCarton();
                         inicializarTablero75();
 
@@ -650,8 +567,6 @@
                             if (docSnapshot.exists()) {
                                 const datos = docSnapshot.data();
                                 
-                                aplicarPersonalizacionJugador(datos, false);
-
                                 // 1. Gatillo de Reinicio
                                 if (datos.senalReinicio && window.ultimoReinicioVisto !== datos.senalReinicio) {
                                     window.ultimoReinicioVisto = datos.senalReinicio;
@@ -796,81 +711,21 @@ actualizarFigurasDesdeSala(datos);
             actualizarTablero75(balotas);
         }
 
-        function obtenerMarcadosActualesJugador() {
-            const marcados = new Set();
-            document.querySelectorAll('.numero-carton.marcado:not(.centro)').forEach(el => {
-                const n = parseInt(el.dataset.num || '', 10);
-                if (!isNaN(n)) marcados.add(n);
-            });
-            return marcados;
-        }
-
         function renderizarCarton() {
             const container = document.getElementById('mi-carton');
-            const marcadosPrevios = obtenerMarcadosActualesJugador();
-            const p = personalizacionJugadorGlobal || {};
-            const headerLogo = p.headerLogoTexto || '';
-            const centerLogo = p.centerLogoTexto || '';
-            const logoDisplay = headerLogo ? 'block' : 'none';
-            let html = `<div class="carton-visual-jugador">
-                <div class="carton-logo-jugador" style="display:${logoDisplay};">${headerLogo ? `<img src="${headerLogo}" alt="Imagen superior del cartón">` : ''}</div>
-                <div class="carton-title-jugador">BINGO 75</div>
-                <div class="carton-container">`;
+            let html = '<div class="carton-container">';
             ['B', 'I', 'N', 'G', 'O'].forEach(l => html += `<div class="letra-bingo">${l}</div>`);
             
             const mapeoCarton = [0,5,10,15,20, 1,6,11,16,21, 2,7,12,17,22, 3,8,13,18,23, 4,9,14,19,24];
             mapeoCarton.forEach((idx) => {
                 let num = miCartonNumeros[idx];
-                const estabaMarcado = marcadosPrevios.has(num) ? ' marcado' : '';
-                if (num === 0) {
-                    const centro = centerLogo ? `<img src="${centerLogo}" alt="Logo central">` : 'X';
-                    html += `<div class="numero-carton centro marcado" data-num="0">${centro}</div>`;
-                } else {
-                    html += `<div class="numero-carton${estabaMarcado}" data-num="${num}" onclick="toggleMarca(this)">${num}</div>`;
-                }
+                if (num === 0) html += `<div class="numero-carton centro marcado">X</div>`;
+                else html += `<div class="numero-carton" onclick="toggleMarca(this)">${num}</div>`;
             });
-            container.innerHTML = html + '</div></div>';
+            container.innerHTML = html + '</div>';
         }
 
         const MAPEO_CARTON_75 = [0,5,10,15,20, 1,6,11,16,21, 2,7,12,17,22, 3,8,13,18,23, 4,9,14,19,24];
-
-        function aplicarPersonalizacionJugador(datos, forzarRender = false) {
-            const p = (datos && datos.personalizacionJugador) ? datos.personalizacionJugador : null;
-            if (!p) return;
-            personalizacionJugadorGlobal = p;
-
-            const colores = p.colores || {};
-            const root = document.documentElement;
-            root.style.setProperty('--jug-carton-fondo', colores.cartonFondo || '#002b5c');
-            root.style.setProperty('--jug-carton-header', colores.cartonHeader || '#004080');
-            root.style.setProperty('--jug-carton-numero', colores.cartonNumero || '#ffffff');
-            root.style.setProperty('--jug-carton-texto', colores.textoNumero || '#000000');
-            root.style.setProperty('--jug-carton-marcado', colores.cartonMarcado || '#ffeb3b');
-
-            const mediaBox = document.getElementById('imagenes-admin-jugador');
-            if (mediaBox) {
-                const imgs = [];
-                if (p.mediaLeftTexto) imgs.push(`<img src="${p.mediaLeftTexto}" alt="Imagen enviada por el administrador">`);
-                if (p.mediaRightTexto) imgs.push(`<img src="${p.mediaRightTexto}" alt="Imagen enviada por el administrador">`);
-                mediaBox.innerHTML = imgs.join('');
-                mediaBox.style.display = imgs.length ? 'flex' : 'none';
-            }
-
-            const version = p.version || JSON.stringify({
-                h: p.headerLogoTexto ? p.headerLogoTexto.length : 0,
-                c: p.centerLogoTexto ? p.centerLogoTexto.length : 0,
-                l: p.mediaLeftTexto ? p.mediaLeftTexto.length : 0,
-                r: p.mediaRightTexto ? p.mediaRightTexto.length : 0,
-                colores
-            });
-
-            if ((forzarRender || version !== personalizacionVersionVista) && Array.isArray(miCartonNumeros) && miCartonNumeros.length) {
-                personalizacionVersionVista = version;
-                renderizarCarton();
-            } else {
-                personalizacionVersionVista = version;
-            }
-        }
 
         function normalizarFigurasDesdeSala(datos) {
             let figuras = [];
