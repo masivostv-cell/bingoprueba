@@ -4538,5 +4538,346 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 })();
 </script>
 
+
+<!-- PATCH V13: figuras funcionando + guarda figura/lista sin tocar login -->
+<script id="patch-v13-figuras-ok">
+(function(){
+    if(window.__BINGO75_V13_FIGURAS_OK__) return;
+    window.__BINGO75_V13_FIGURAS_OK__ = true;
+
+    const KEY_V13 = 'bingoSala2_V15_MASTER';
+    let tempFiguraV13 = new Array(25).fill(false);
+
+    const PRESETS_V13 = {
+        "PLENO": [1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1],
+        "LINEA SUPERIOR": [1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+        "LINEA MEDIO": [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
+        "LINEA INFERIOR": [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1],
+        "DOS LINEAS HORIZ": [1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1],
+        "DOS LINEAS VERT": [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1],
+        "CUADRADO": [1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1],
+        "CUADRITO CENTRO": [0,0,0,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,0,0,0],
+        "CUATRO ESQUINAS": [1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,1],
+        "CRUZ": [0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0],
+        "EQUIS": [1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1],
+        "DIAGONAL": [1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,0,0,1],
+        "DIAGONAL INV": [0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0],
+        "DIAMANTE": [0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0],
+        "BANDERA": [1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0],
+        "COLUMNA B": [1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0],
+        "COLUMNA I": [0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0],
+        "COLUMNA N": [0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0],
+        "COLUMNA G": [0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0],
+        "COLUMNA O": [0,0,0,0,1, 0,0,0,0,1, 0,0,0,0,1, 0,0,0,0,1, 0,0,0,0,1],
+        "LETRA C": [1,1,1,1,1, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,1],
+        "LETRA E": [1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,0, 1,1,1,1,1],
+        "LETRA H": [1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1],
+        "LETRA L": [1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,1],
+        "LETRA N": [1,0,0,0,1, 1,1,0,0,1, 1,0,1,0,1, 1,0,0,1,1, 1,0,0,0,1],
+        "LETRA O": [1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1],
+        "LETRA T": [1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0],
+        "LETRA U": [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1],
+        "LETRA Z": [1,1,1,1,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,1,1,1,1],
+        "NUMERO 8": [0,1,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 1,0,0,0,1, 0,1,1,1,0]
+    };
+
+    function getDBV13(){
+        try { return JSON.parse(localStorage.getItem(KEY_V13) || 'null'); } catch(e) { return null; }
+    }
+
+    function crearDBMinimaV13(){
+        return {
+            juego: [],
+            serialesExtra: [],
+            serialActivoIndex: -1,
+            config: {
+                figura: new Array(25).fill(false),
+                nombre: '---',
+                figurasMultiples: [],
+                autoWin: false,
+                secuencia: [],
+                usoSecuencia: false
+            },
+            colores: {}
+        };
+    }
+
+    function asegurarDBV13(db){
+        db = db || crearDBMinimaV13();
+        if(!db.config) db.config = {};
+        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
+        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
+        if(!Array.isArray(db.juego)) db.juego = [];
+        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
+        if(!Number.isInteger(db.serialActivoIndex)) db.serialActivoIndex = -1;
+        db.config.figurasMultiples = db.config.figurasMultiples
+            .filter(f => f && Array.isArray(f.patron))
+            .map(f => ({
+                nombre: String(f.nombre || 'FIGURA').toUpperCase(),
+                patron: f.patron.slice(0,25).map(Boolean),
+                activa: f.activa !== false
+            }));
+        return db;
+    }
+
+    function figurasActivasV13(db){
+        db = asegurarDBV13(db);
+        return db.config.figurasMultiples.filter(f => f && f.activa !== false && Array.isArray(f.patron) && f.patron.some(Boolean));
+    }
+
+    function actualizarFiguraPrincipalV13(db){
+        const activas = figurasActivasV13(db);
+        if(activas.length){
+            db.config.figura = activas[0].patron.slice(0,25).map(Boolean);
+            db.config.nombre = activas.map(f => f.nombre).join(' + ');
+        } else if(db.config.figurasMultiples.length){
+            db.config.figura = db.config.figurasMultiples[0].patron.slice(0,25).map(Boolean);
+            db.config.nombre = db.config.figurasMultiples.map(f => f.nombre).join(' + ');
+        } else {
+            db.config.figura = new Array(25).fill(false);
+            db.config.nombre = '---';
+        }
+    }
+
+    function guardarDBV13(db, render = true){
+        db = asegurarDBV13(db);
+        actualizarFiguraPrincipalV13(db);
+        const json = JSON.stringify(db);
+        try { localStorage.setItem(KEY_V13, json); } catch(e) { console.warn('No se pudo guardar la figura localmente:', e); }
+        // El código principal actualiza su dbLocal con el evento storage; lo disparamos manualmente en esta misma pestaña.
+        try {
+            window.dispatchEvent(new StorageEvent('storage', { key: KEY_V13, oldValue: null, newValue: json, storageArea: localStorage }));
+        } catch(e) {
+            try {
+                const ev = document.createEvent('StorageEvent');
+                ev.initStorageEvent('storage', false, false, KEY_V13, null, json, location.href, localStorage);
+                window.dispatchEvent(ev);
+            } catch(_) {}
+        }
+        if(render){
+            setTimeout(() => { try { if(typeof window.renderizar === 'function') window.renderizar(); } catch(e){} }, 0);
+            setTimeout(() => { try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e){} }, 0);
+            setTimeout(() => { try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e){} }, 20);
+        }
+        return db;
+    }
+
+    function sincronizarFigurasV13(motivo){
+        setTimeout(() => {
+            try {
+                if(typeof window.sincronizarEstadoCompartidoV12 === 'function') {
+                    window.sincronizarEstadoCompartidoV12(motivo || 'figuras_v13');
+                    return;
+                }
+            } catch(e) {}
+            const db = asegurarDBV13(getDBV13());
+            const sala = (window.MI_CODIGO_SALA || '').toString().trim();
+            if(!sala || !window.db || !window.firebaseTools) return;
+            try {
+                const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
+                window.firebaseTools.setDoc(salaRef, {
+                    figuraActual: db.config.figura,
+                    nombreFigura: db.config.nombre,
+                    figurasMultiples: db.config.figurasMultiples
+                }, { merge: true });
+            } catch(e) { console.warn('No se pudo sincronizar figura V13:', e); }
+        }, 80);
+    }
+
+    function leerPatronVisualV13(){
+        const celdas = Array.from(document.querySelectorAll('#selector-figura .celda-config'));
+        if(celdas.length !== 25) return new Array(25).fill(false);
+        return celdas.map(c => c.classList.contains('seleccionada'));
+    }
+
+    function pintarGridV13(patron){
+        const sel = document.getElementById('selector-figura');
+        if(!sel) return;
+        tempFiguraV13 = (Array.isArray(patron) ? patron : tempFiguraV13).slice(0,25).map(Boolean);
+        while(tempFiguraV13.length < 25) tempFiguraV13.push(false);
+        sel.innerHTML = '';
+        for(let i = 0; i < 25; i++){
+            const celda = document.createElement('div');
+            celda.className = 'celda-config' + (tempFiguraV13[i] ? ' seleccionada' : '');
+            celda.addEventListener('click', function(){
+                tempFiguraV13[i] = !tempFiguraV13[i];
+                this.classList.toggle('seleccionada', tempFiguraV13[i]);
+                const ps = document.getElementById('preset-selector');
+                if(ps) ps.value = 'PERSONALIZADA';
+            });
+            sel.appendChild(celda);
+        }
+    }
+
+    function nombreNuevaFiguraV13(db){
+        const input = document.getElementById('input-nombre');
+        const manual = input && input.value ? input.value.trim() : '';
+        return (manual || ('FIGURA ' + ((db.config.figurasMultiples || []).length + 1))).toUpperCase();
+    }
+
+    function mutarFigurasV13(mutador, motivo){
+        const db = asegurarDBV13(getDBV13());
+        mutador(db);
+        guardarDBV13(db, true);
+        sincronizarFigurasV13(motivo || 'figuras_v13');
+        return db;
+    }
+
+    function renderListaV13(){
+        const listDiv = document.getElementById('lista-figuras-jugar');
+        if(!listDiv) return;
+        const db = asegurarDBV13(getDBV13());
+        listDiv.innerHTML = '';
+        if(!db.config.figurasMultiples.length){
+            listDiv.innerHTML = '<div style="color:#aaa; text-align:center; padding:25px 5px; font-size:13px;">Aún no hay figuras añadidas.</div>';
+            return;
+        }
+        db.config.figurasMultiples.forEach((fig, idx) => {
+            const activo = fig.activa !== false;
+            const item = document.createElement('div');
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            item.style.alignItems = 'center';
+            item.style.background = activo ? '#333' : '#555';
+            item.style.color = activo ? 'white' : '#aaa';
+            item.style.marginBottom = '6px';
+            item.style.padding = '7px 10px';
+            item.style.borderRadius = '5px';
+            item.style.fontSize = '12px';
+            item.style.textDecoration = activo ? 'none' : 'line-through';
+            item.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                    <input type="checkbox" ${activo ? 'checked' : ''} onchange="toggleFiguraActiva(${idx}, this.checked)" title="Activar o pausar esta figura" style="cursor:pointer; width:15px; height:15px; flex-shrink:0;">
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${fig.nombre}</span>
+                </div>
+                <button onclick="eliminarFiguraLista(${idx})" style="background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer; font-weight:bold; flex-shrink:0;">X</button>`;
+            listDiv.appendChild(item);
+        });
+    }
+
+    function instalarFigurasV13(){
+        window.aplicarPreset = function(val){
+            if(val === 'PERSONALIZADA') return;
+            const patron = PRESETS_V13[val];
+            if(!patron) return;
+            tempFiguraV13 = patron.map(Boolean);
+            const input = document.getElementById('input-nombre');
+            if(input) input.value = val;
+            pintarGridV13(tempFiguraV13);
+        };
+
+        window.abrirConfig = function(){
+            try { if(typeof checkSecurity === 'function' && !checkSecurity()) return; } catch(e) {}
+            const db = asegurarDBV13(getDBV13());
+            // Abrimos siempre limpio para crear una figura nueva. La lista de figuras guardadas queda a la derecha.
+            tempFiguraV13 = new Array(25).fill(false);
+            const input = document.getElementById('input-nombre');
+            if(input) input.value = '';
+            const ps = document.getElementById('preset-selector');
+            if(ps) ps.value = 'PERSONALIZADA';
+            const modal = document.getElementById('modal-config');
+            if(modal){
+                document.body.classList.add('modal-figura-abierto');
+                modal.style.zIndex = '300000';
+                modal.style.display = 'block';
+                setTimeout(() => { try { modal.scrollIntoView({ block:'center', inline:'center' }); } catch(e){} }, 0);
+            }
+            pintarGridV13(tempFiguraV13);
+            renderListaV13();
+        };
+
+        window.agregarFiguraLista = function(){
+            let patron = tempFiguraV13 && tempFiguraV13.some(Boolean) ? tempFiguraV13.slice(0,25).map(Boolean) : leerPatronVisualV13();
+            if(!patron.some(Boolean)) return alert('Dibuja una figura antes de añadirla.');
+            const dbAntes = asegurarDBV13(getDBV13());
+            if(dbAntes.config.figurasMultiples.length >= 5) return alert('Máximo 5 figuras permitidas al mismo tiempo.');
+            mutarFigurasV13(db => {
+                db.config.figurasMultiples.push({
+                    nombre: nombreNuevaFiguraV13(db),
+                    patron: patron,
+                    activa: true
+                });
+            }, 'figura_agregada_v13');
+            tempFiguraV13 = new Array(25).fill(false);
+            const input = document.getElementById('input-nombre');
+            if(input) input.value = '';
+            const ps = document.getElementById('preset-selector');
+            if(ps) ps.value = 'PERSONALIZADA';
+            pintarGridV13(tempFiguraV13);
+            renderListaV13();
+        };
+
+        window.toggleFiguraActiva = function(idx, estado){
+            mutarFigurasV13(db => {
+                if(db.config.figurasMultiples[idx]) db.config.figurasMultiples[idx].activa = estado;
+            }, 'figura_activa_v13');
+            renderListaV13();
+        };
+        window.toggleFiguraActivaGlobal = window.toggleFiguraActiva;
+
+        window.eliminarFiguraLista = function(idx){
+            if(!confirm('¿Eliminar esta figura de la lista de juego?')) return;
+            mutarFigurasV13(db => {
+                if(db.config.figurasMultiples[idx]) db.config.figurasMultiples.splice(idx, 1);
+            }, 'figura_eliminada_v13');
+            renderListaV13();
+        };
+
+        window.limpiarFigurasLista = function(){
+            if(!confirm('¿Borrar TODAS las figuras de la lista?')) return;
+            mutarFigurasV13(db => { db.config.figurasMultiples = []; }, 'figuras_limpiadas_v13');
+            tempFiguraV13 = new Array(25).fill(false);
+            pintarGridV13(tempFiguraV13);
+            renderListaV13();
+        };
+
+        window.guardarConfigLocal = function(){
+            const patronVisual = leerPatronVisualV13();
+            const patron = tempFiguraV13 && tempFiguraV13.some(Boolean) ? tempFiguraV13.slice(0,25).map(Boolean) : patronVisual;
+            if(patron.some(Boolean)) {
+                const dbAntes = asegurarDBV13(getDBV13());
+                if(dbAntes.config.figurasMultiples.length < 5) {
+                    mutarFigurasV13(db => {
+                        db.config.figurasMultiples.push({
+                            nombre: nombreNuevaFiguraV13(db),
+                            patron: patron,
+                            activa: true
+                        });
+                    }, 'figura_guardada_v13');
+                }
+            } else {
+                mutarFigurasV13(() => {}, 'figuras_aplicadas_v13');
+            }
+            const modal = document.getElementById('modal-config');
+            if(modal) modal.style.display = 'none';
+            document.body.classList.remove('modal-figura-abierto');
+        };
+
+        window.renderListaFiguras = renderListaV13;
+    }
+
+    function envolverInicioV13(){
+        const fn = window.iniciarAppBingo;
+        if(typeof fn !== 'function' || fn.__figurasV13Inicio) return;
+        const wrap = function(){
+            const r = fn.apply(this, arguments);
+            setTimeout(instalarFigurasV13, 60);
+            setTimeout(instalarFigurasV13, 350);
+            setTimeout(instalarFigurasV13, 1000);
+            return r;
+        };
+        wrap.__figurasV13Inicio = true;
+        window.iniciarAppBingo = wrap;
+    }
+
+    instalarFigurasV13();
+    envolverInicioV13();
+    document.addEventListener('DOMContentLoaded', () => { instalarFigurasV13(); envolverInicioV13(); setTimeout(instalarFigurasV13, 900); });
+    window.addEventListener('load', () => { instalarFigurasV13(); envolverInicioV13(); setTimeout(instalarFigurasV13, 1200); });
+    const t = setInterval(() => { instalarFigurasV13(); envolverInicioV13(); }, 700);
+    setTimeout(() => clearInterval(t), 45000);
+})();
+</script>
+
 </body>
 </html>
