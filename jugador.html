@@ -251,6 +251,9 @@
         let radioPc = null;
         let radioJugadorRef = null;
         let radioUnsubDoc = null;
+        let canalRapidoBalotasActivo = false;
+        let ultimaFirmaCanalRapido = "";
+        let ultimaFirmaFigurasSala = "";
 
         const rtcRadioConfig = {
             iceServers: [
@@ -570,34 +573,48 @@
                                 // 1. Gatillo de Reinicio
                                 if (datos.senalReinicio && window.ultimoReinicioVisto !== datos.senalReinicio) {
                                     window.ultimoReinicioVisto = datos.senalReinicio;
+                                    canalRapidoBalotasActivo = false;
+                                    ultimaFirmaCanalRapido = "";
                                     limpiarPantallaJugador();
                                 }
 
                                 // Reemplaza los pasos 2 y 3 del onSnapshot por esto:
 
-// 2. Actualizar Balotas
-if (datos.balotasLlamadas && datos.balotasLlamadas.length > 0) {
-    balotasGlobales = datos.balotasLlamadas; // <-- GUARDA EN MEMORIA
-    actualizarDatosBalotas(datos.balotasLlamadas);
-} else if (!datos.balotasLlamadas || datos.balotasLlamadas.length === 0) {
-    balotasGlobales = []; // <-- LIMPIA LA MEMORIA
-    limpiarPantallaJugador();
+// 2. Balotas: si el canal rápido está activo, NO dependemos del documento pesado de la sala.
+//    Esto evita que cada balota tenga que viajar junto con el paquete grande de cartones.
+if (!canalRapidoBalotasActivo) {
+    if (datos.balotasLlamadas && datos.balotasLlamadas.length > 0) {
+        balotasGlobales = datos.balotasLlamadas;
+        actualizarDatosBalotas(datos.balotasLlamadas);
+    } else if (!datos.balotasLlamadas || datos.balotasLlamadas.length === 0) {
+        balotasGlobales = [];
+        limpiarPantallaJugador();
+    }
 }
 
-// 3. Actualizar figuras: recibe una o varias figuras y respeta cuáles están activas
-actualizarFigurasDesdeSala(datos);
+// 3. Actualizar figuras solo cuando cambian, no en cada snapshot.
+const firmaFigurasSala = JSON.stringify({
+    figuraActual: datos.figuraActual || null,
+    nombreFigura: datos.nombreFigura || '',
+    figurasMultiples: datos.figurasMultiples || null
+});
+if (firmaFigurasSala !== ultimaFirmaFigurasSala) {
+    ultimaFirmaFigurasSala = firmaFigurasSala;
+    actualizarFigurasDesdeSala(datos);
+}
 
                                 // 4. Radio en vivo: jugadores solo escuchan, sin micrófono ni cámara
                                 const comunicacionBox = document.getElementById('comunicacion-box');
                                 if (datos.comunicacionActiva) {
                                     meetRoomActual = datos.meetRoom || ("BingoRadio_" + sala);
                                     const nuevaSesionRadio = datos.radioSession || datos.meetCreadaEn || radioSessionActual || Date.now();
+                                    const debeReconectarRadio = !radioPc || (radioSessionActual && nuevaSesionRadio !== radioSessionActual);
                                     if (radioPc && radioSessionActual && nuevaSesionRadio !== radioSessionActual) {
                                         salirRadioAdministrador();
                                     }
                                     radioSessionActual = nuevaSesionRadio;
                                     if (comunicacionBox) comunicacionBox.style.display = 'block';
-                                    entrarRadioAdministrador();
+                                    if (debeReconectarRadio) entrarRadioAdministrador();
                                 } else {
                                     if (comunicacionBox) comunicacionBox.style.display = 'none';
                                     salirRadioAdministrador();
@@ -612,6 +629,28 @@ actualizarFigurasDesdeSala(datos);
                                         document.getElementById('pantalla-ganador').style.display = 'flex';
                                     }
                                 }
+                            }
+                        });
+
+                        // Canal rápido de balotas: escucha un documento liviano aparte.
+                        // Así la balota aparece rápido sin recibir otra vez el paquete completo de cartones.
+                        const canalRapidoRef = doc(db, "salas", sala, "canalRapido", "estado");
+                        onSnapshot(canalRapidoRef, (liveSnapshot) => {
+                            if (!liveSnapshot.exists()) return;
+                            const live = liveSnapshot.data();
+                            if (!live || !Array.isArray(live.balotasLlamadas)) return;
+
+                            const firma = live.balotasLlamadas.join(',');
+                            if (firma === ultimaFirmaCanalRapido) return;
+
+                            canalRapidoBalotasActivo = true;
+                            ultimaFirmaCanalRapido = firma;
+                            balotasGlobales = live.balotasLlamadas;
+
+                            if (live.balotasLlamadas.length > 0) {
+                                actualizarDatosBalotas(live.balotasLlamadas);
+                            } else {
+                                limpiarPantallaJugador();
                             }
                         });
                     } else {
@@ -870,10 +909,11 @@ actualizarFigurasDesdeSala(datos);
         }
 
         function actualizarTablero75(balotas) {
+            const llamadas = new Set((Array.isArray(balotas) ? balotas : []).map(n => parseInt(n, 10)));
             for(let i=1; i<=75; i++) {
                 const celda = document.getElementById(`mini-${i}`);
                 if(celda) {
-                    if(balotas.includes(i)) celda.classList.add('activa');
+                    if(llamadas.has(i)) celda.classList.add('activa');
                     else celda.classList.remove('activa');
                 }
             }

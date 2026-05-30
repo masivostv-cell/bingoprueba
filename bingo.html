@@ -1745,7 +1745,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
             if (e.key === " ") { e.preventDefault(); let n = prompt("N° Cartón:"); if(n){ document.getElementById('num-revisar').value=n; manualCheck(); } }
         });
 
-        window.permitirSonido = () => { vozOK = true; document.getElementById('btn-activar-voz').style.display='none'; };
+        window.permitirSonido = () => { vozOK = true; window.__bingoVozOK = true; document.getElementById('btn-activar-voz').style.display='none'; };
 
         window.exportarSerialExcel = (idx) => {
             if(!checkSecurity()) return;
@@ -3404,6 +3404,113 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
             : '🎯 Filtro por figura activo: la figura solo usa el centro libre; no hay balotas necesarias.';
     }
 
+    function colorNumeroFiltroV16(num){
+        num = Number(num);
+        if(num <= 15) return '#004080';
+        if(num <= 30) return '#d32f2f';
+        if(num <= 45) return '#757575';
+        if(num <= 60) return '#28a745';
+        return '#fbc02d';
+    }
+
+    function letraNumeroFiltroV16(num){
+        num = Number(num);
+        return num <= 15 ? 'B' : num <= 30 ? 'I' : num <= 45 ? 'N' : num <= 60 ? 'G' : 'O';
+    }
+
+    function actualizarPantallaBalotaRapidaV16(db){
+        const balotas = Array.isArray(db.juego) ? db.juego : [];
+        const ultima = balotas[balotas.length - 1];
+        if(!ultima) return;
+
+        const mainNumero = document.getElementById('main-numero');
+        const mainLetra = document.getElementById('main-letra');
+        const contador = document.getElementById('contador-balotas');
+        const historial = document.getElementById('historial-4');
+        const timerCount = document.getElementById('timer-count');
+        const balotaGrande = document.querySelector('#app-content .balota-grande');
+
+        if(mainNumero) mainNumero.innerText = ultima;
+        if(mainLetra) mainLetra.innerText = letraNumeroFiltroV16(ultima);
+        if(contador) contador.innerText = balotas.length + '/75';
+        if(timerCount) timerCount.innerText = '06';
+
+        document.querySelectorAll('.bola-mini.ultima').forEach(el => el.classList.remove('ultima'));
+        const celda = document.getElementById('bola-' + ultima);
+        if(celda) {
+            celda.classList.add('activa', 'ultima');
+            celda.style.backgroundColor = '';
+        }
+
+        if(balotaGrande) {
+            const color = colorNumeroFiltroV16(ultima);
+            balotaGrande.style.setProperty('background', 'white', 'important');
+            balotaGrande.style.setProperty('color', '#111', 'important');
+            balotaGrande.style.setProperty('border-color', color, 'important');
+            balotaGrande.style.setProperty('border-width', '8px', 'important');
+            balotaGrande.style.setProperty('border-style', 'solid', 'important');
+            balotaGrande.style.setProperty('box-shadow', `0 10px 25px ${color}aa`, 'important');
+        }
+
+        if(historial) {
+            const ultimas = balotas.slice(-5, -1).reverse();
+            historial.innerHTML = '';
+            for(let i = 0; i < 4; i++) {
+                const n = ultimas[i];
+                if(n) {
+                    const color = colorNumeroFiltroV16(n);
+                    historial.innerHTML += `<div class="bola-historial" style="background:${color} !important; color:white !important; border:3px solid white !important;">${n}</div>`;
+                } else {
+                    historial.innerHTML += '<div class="bola-historial">-</div>';
+                }
+            }
+        }
+    }
+
+    let timerGuardarLocalV16 = null;
+    function guardarLocalDiferidoV16(db){
+        clearTimeout(timerGuardarLocalV16);
+        const ejecutar = () => {
+            try {
+                const copia = { ...db };
+                copia.headerCartonBase64 = null;
+                copia.centerLogoBase64 = null;
+                copia.media = { left: null, right: null };
+                localStorage.setItem(STORAGE_KEY_FILTRO, JSON.stringify(copia));
+            } catch(e) {
+                console.warn('No se pudo guardar localmente después de la balota:', e);
+            }
+        };
+        timerGuardarLocalV16 = setTimeout(() => {
+            if('requestIdleCallback' in window) requestIdleCallback(ejecutar, { timeout: 1200 });
+            else ejecutar();
+        }, 120);
+    }
+
+    let timerRenderCompletoV16 = null;
+    function renderCompletoDiferidoV16(){
+        clearTimeout(timerRenderCompletoV16);
+        timerRenderCompletoV16 = setTimeout(() => {
+            try { if(typeof window.renderizar === 'function') window.renderizar(); } catch(e) {}
+        }, 450);
+    }
+
+    async function enviarBalotasCanalRapidoV16(db, motivo){
+        if(!window.db || !window.firebaseTools || !window.MI_CODIGO_SALA) return;
+        const pin = String(window.MI_CODIGO_SALA).trim();
+        const balotas = Array.isArray(db.juego) ? db.juego.slice() : [];
+        const ultima = balotas[balotas.length - 1] || null;
+        const liveRef = window.firebaseTools.doc(window.db, 'salas', pin, 'canalRapido', 'estado');
+        await window.firebaseTools.setDoc(liveRef, {
+            balotasLlamadas: balotas,
+            ultimaBalota: ultima,
+            contadorBalotas: balotas.length,
+            motivo: motivo || 'sacar_balota',
+            actualizadoEn: Date.now(),
+            canal: 'rapido_v16'
+        }, { merge: true });
+    }
+
     async function sacarBalotaFiltradaPorFigura(){
         try { if(typeof checkSecurity === 'function' && !checkSecurity()) return; } catch(e) {}
 
@@ -3414,11 +3521,11 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         if(!Array.isArray(db.config.secuencia)) db.config.secuencia = [];
 
         const permitidos = obtenerNumerosPermitidosPorFigura75(db);
-        const pendientes = permitidos.filter(n => !db.juego.includes(n));
+        const yaSalieron = new Set(db.juego.map(Number));
+        const pendientes = permitidos.filter(n => !yaSalieron.has(Number(n)));
 
         if(pendientes.length === 0) {
             alert('⚠️ Ya no quedan balotas pendientes para la figura activa. Cambia la figura, activa otra figura o reinicia la partida.');
-            try { if(typeof timerAuto !== 'undefined' && timerAuto && typeof toggleAutomatico === 'function') toggleAutomatico(); } catch(e) {}
             actualizarAvisoFiltroBalotas();
             return;
         }
@@ -3426,9 +3533,9 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         let r;
         let usadoSecuencia = false;
 
-        // Secuencia protegida: solo usuario jorge puede usarla.
         if(esJorgeFiltro() && db.config.usoSecuencia && db.config.secuencia.length > 0) {
-            const proximo = db.config.secuencia.find(n => pendientes.includes(Number(n)));
+            const pendientesSet = new Set(pendientes.map(Number));
+            const proximo = db.config.secuencia.find(n => pendientesSet.has(Number(n)));
             if(proximo !== undefined) {
                 r = Number(proximo);
                 usadoSecuencia = true;
@@ -3438,28 +3545,40 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
             db.config.secuencia = [];
         }
 
-        // Si la secuencia no aplica o ya no tiene números válidos para esa figura,
-        // se elige aleatorio SOLO entre las columnas permitidas por la figura.
-        if(!usadoSecuencia) {
-            r = pendientes[Math.floor(Math.random() * pendientes.length)];
-        }
+        if(!usadoSecuencia) r = pendientes[Math.floor(Math.random() * pendientes.length)];
 
         db.juego.push(r);
 
-        try { if(typeof vozOK !== 'undefined' && vozOK) new Audio('Sonidos_bingo75/' + r + '.wav').play(); } catch(e) {}
-        try { if(typeof guardarDatos === 'function') guardarDatos(); else localStorage.setItem(STORAGE_KEY_FILTRO, JSON.stringify(db)); } catch(e) {}
-        try { if(typeof timerAuto !== 'undefined' && timerAuto && typeof resetReloj === 'function') resetReloj(); } catch(e) {}
+        try { if(window.__bingoVozOK) new Audio('Sonidos_bingo75/' + r + '.wav').play(); } catch(e) {}
+
+        // Primero se actualiza la pantalla local y se envía el dato liviano al jugador.
+        actualizarPantallaBalotaRapidaV16(db);
         actualizarAvisoFiltroBalotas();
 
         try {
-            if(window.db && window.firebaseTools && window.MI_CODIGO_SALA) {
-                const salaRef = window.firebaseTools.doc(window.db, 'salas', String(window.MI_CODIGO_SALA).trim());
-                await window.firebaseTools.setDoc(salaRef, { balotasLlamadas: db.juego }, { merge: true });
-            }
+            await enviarBalotasCanalRapidoV16(db, 'sacar_balota');
         } catch(error) {
-            console.error('No se pudo enviar la balota filtrada a internet:', error);
+            console.error('No se pudo enviar la balota por el canal rápido:', error);
+            // Respaldo: si el canal rápido falla, usamos el documento principal como antes.
+            try {
+                if(window.db && window.firebaseTools && window.MI_CODIGO_SALA) {
+                    const salaRef = window.firebaseTools.doc(window.db, 'salas', String(window.MI_CODIGO_SALA).trim());
+                    await window.firebaseTools.setDoc(salaRef, { balotasLlamadas: db.juego.slice() }, { merge: true });
+                }
+            } catch(e) {
+                console.error('Tampoco se pudo enviar la balota por respaldo:', e);
+            }
         }
+
+        // Lo pesado queda después: localStorage grande y detección automática no bloquean al jugador.
+        guardarLocalDiferidoV16(db);
+        renderCompletoDiferidoV16();
     }
+
+    sacarBalotaFiltradaPorFigura.__rapidaV16 = true;
+    sacarBalotaFiltradaPorFigura.__controlUniversalV10 = true;
+    sacarBalotaFiltradaPorFigura.__soloEstadoV12 = true;
+    sacarBalotaFiltradaPorFigura.__filtroFiguraWrapped = true;
 
     function instalarFiltroFigura(){
         window.sacarBalota = sacarBalotaFiltradaPorFigura;
@@ -4135,7 +4254,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
     function instalarTodoV10(){
         ocultarSyncV10();
         instalarListenerControlV10();
-        envolverSacarBalotaV10();
+        // V16 velocidad: no envolver sacarBalota; el canal rápido ya sincroniza las balotas.
         envolverConfigFigurasV10();
     }
 
@@ -4524,7 +4643,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 
     function instalarWrappersV12(){
         envolverFirebaseToolsV12();
-        envolverFuncionV12('sacarBalota', 'sacar_balota', true);
+        // V16 velocidad: no envolver sacarBalota; evita lectura y payload pesado antes de cada balota.
         envolverFuncionV12('guardarConfigLocal', 'figura', false);
         envolverFuncionV12('agregarFiguraLista', 'figura_multiple', false);
         envolverFuncionV12('eliminarFiguraLista', 'figura_multiple', false);
@@ -5157,6 +5276,73 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 })();
 </script>
 
+
+
+<script id="patch-v16-canal-rapido-balotas-admin">
+// =====================================================
+// PATCH V16: canal rápido de balotas administrador -> jugador.
+// Mantiene las funciones existentes, pero las balotas viajan por un
+// documento liviano para no reenviar todo el serial/cartones en cada jugada.
+// =====================================================
+(function(){
+    if(window.__BINGO75_CANAL_RAPIDO_ADMIN_V16__) return;
+    window.__BINGO75_CANAL_RAPIDO_ADMIN_V16__ = true;
+
+    const KEY = 'bingoSala2_V15_MASTER';
+
+    function getDB(){
+        try { if(typeof dbLocal !== 'undefined' && dbLocal) return dbLocal; } catch(e) {}
+        try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e) { return null; }
+    }
+
+    async function sincronizarCanalRapido(motivo){
+        try {
+            const db = getDB();
+            if(!db || !window.db || !window.firebaseTools || !window.MI_CODIGO_SALA) return;
+            const pin = String(window.MI_CODIGO_SALA).trim();
+            const balotas = Array.isArray(db.juego) ? db.juego.slice() : [];
+            const liveRef = window.firebaseTools.doc(window.db, 'salas', pin, 'canalRapido', 'estado');
+            await window.firebaseTools.setDoc(liveRef, {
+                balotasLlamadas: balotas,
+                ultimaBalota: balotas[balotas.length - 1] || null,
+                contadorBalotas: balotas.length,
+                motivo: motivo || 'sincronizar',
+                actualizadoEn: Date.now(),
+                canal: 'rapido_v16'
+            }, { merge: true });
+        } catch(e) {
+            console.warn('No se pudo sincronizar el canal rápido:', e);
+        }
+    }
+
+    function envolverDespues(nombre, motivo){
+        const fn = window[nombre];
+        if(typeof fn !== 'function' || fn.__canalRapidoV16) return;
+        const wrap = async function(){
+            const r = await fn.apply(this, arguments);
+            setTimeout(() => sincronizarCanalRapido(motivo || nombre), 250);
+            return r;
+        };
+        wrap.__canalRapidoV16 = true;
+        window[nombre] = wrap;
+    }
+
+    function instalar(){
+        envolverDespues('abrirSala', 'abrir_sala');
+        envolverDespues('cerrarSala', 'cerrar_sala');
+        envolverDespues('REINICIAR_JUEGO', 'reiniciar_juego');
+        envolverDespues('seleccionarSerial', 'seleccionar_serial');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => setTimeout(instalar, 900));
+    window.addEventListener('load', () => setTimeout(instalar, 1200));
+    setTimeout(instalar, 1500);
+    const t = setInterval(instalar, 1200);
+    setTimeout(() => clearInterval(t), 35000);
+
+    window.sincronizarCanalRapidoBalotasV16 = sincronizarCanalRapido;
+})();
+</script>
 
 </body>
 </html>
