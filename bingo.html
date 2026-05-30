@@ -541,7 +541,7 @@
                 <small style="color:#aaa;">Se recomienda una imagen PNG sin fondo.</small>
             </div>
             <button onclick="sincronizarPersonalizacionJugadores(true)" class="admin-btn" style="background:#0dcaf0; color:#000; width:100%; margin-top:10px; font-weight:900;">
-                💻 DISEÑO LOCAL DE ESTE EQUIPO
+                📲 ENVIAR COLORES / IMÁGENES AL JUGADOR
             </button>
             <small style="color:#9ee7ff; display:block; text-align:center; margin-top:5px;">
                 Las imágenes se comprimen y se guardan como texto WEBP dentro de la sala. No usa Firebase Storage.
@@ -2277,430 +2277,6 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 
 
 
-
-<script id="patch-v11-solo-estado-compartido">
-/*
-  PATCH V11:
-  - El diseño visual queda local por equipo.
-  - Solo se sincroniza por sala/usuario: balotas, figura(s) en juego y seriales.
-  - Se bloquea el envío de personalización/colores/imágenes/layout a Firebase.
-*/
-(function(){
-    if (window.__BINGO75_V11_SOLO_ESTADO__) return;
-    window.__BINGO75_V11_SOLO_ESTADO__ = true;
-
-    const LOCAL_KEY_V11 = 'bingoSala2_V15_MASTER';
-    let aplicandoRemotoV11 = false;
-    let ultimoPushV11 = 0;
-    let unsubEstadoV11 = null;
-    let salaEscuchadaV11 = '';
-    let firebaseToolsEnvueltoV11 = false;
-
-    function normalizarUsuarioV11(){
-        return (localStorage.getItem('bingo_user') || 'ADMIN').trim().toUpperCase();
-    }
-
-    function salaV11(){
-        if(window.MI_CODIGO_SALA) return String(window.MI_CODIGO_SALA).trim();
-        const usuario = normalizarUsuarioV11();
-        let hash = 0;
-        for (let i = 0; i < usuario.length; i++) {
-            hash = ((hash << 5) - hash) + usuario.charCodeAt(i);
-            hash |= 0;
-        }
-        return String((Math.abs(hash) % 900000) + 100000);
-    }
-
-    function getDBV11(){
-        try {
-            if (typeof dbLocal !== 'undefined' && dbLocal) return dbLocal;
-        } catch(e) {}
-        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V11)) || null; } catch(e) { return null; }
-    }
-
-    function guardarLocalV11(renderizarAhora){
-        try {
-            const db = getDBV11();
-            if(!db) return;
-            localStorage.setItem(LOCAL_KEY_V11, JSON.stringify({
-                ...db,
-                media: { left: null, right: null },
-                headerCartonBase64: null,
-                centerLogoBase64: null
-            }));
-            if(renderizarAhora !== false) {
-                try { if(typeof window.actualizarListaSeriales === 'function') window.actualizarListaSeriales(); } catch(e) {}
-                try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-                try { if(typeof window.renderizar === 'function') window.renderizar(); else if(typeof renderizar === 'function') renderizar(); } catch(e) {}
-                try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
-            }
-        } catch(e) {
-            console.warn('No se pudo guardar local V11:', e);
-        }
-    }
-
-    function limpiarPayloadV11(data){
-        if(!data || typeof data !== 'object' || Array.isArray(data)) return data;
-        const limpio = { ...data };
-        delete limpio.personalizacionJugador;
-        delete limpio.figurasPanelLayout;
-        delete limpio.coloresJugador;
-        delete limpio.headerJugador;
-        delete limpio.mediaJugador;
-        return limpio;
-    }
-
-    function envolverFirebaseV11(){
-        if(firebaseToolsEnvueltoV11) return;
-        if(!window.firebaseTools || !window.firebaseTools.setDoc || !window.firebaseTools.updateDoc) return;
-        firebaseToolsEnvueltoV11 = true;
-
-        const setDocOriginal = window.firebaseTools.setDoc.bind(window.firebaseTools);
-        const updateDocOriginal = window.firebaseTools.updateDoc.bind(window.firebaseTools);
-        window.firebaseTools.__setDocOriginalV11 = setDocOriginal;
-        window.firebaseTools.__updateDocOriginalV11 = updateDocOriginal;
-
-        window.firebaseTools.setDoc = function(ref, data, options){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return setDocOriginal(ref, limpio, options);
-        };
-
-        window.firebaseTools.updateDoc = function(ref, data){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return updateDocOriginal(ref, limpio);
-        };
-    }
-
-    async function limpiarCamposDisenoNubeV11(){
-        try {
-            envolverFirebaseV11();
-            const sala = salaV11();
-            if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.__setDocOriginalV11) return;
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.__setDocOriginalV11(salaRef, {
-                personalizacionJugador: null,
-                figurasPanelLayout: null
-            }, { merge: true });
-        } catch(e) {
-            console.warn('No se pudieron limpiar campos visuales remotos:', e);
-        }
-    }
-
-    function normalizarBalotasV11(arr){
-        return Array.isArray(arr) ? arr.map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= 75) : [];
-    }
-
-    function normalizarFigurasV11(figs){
-        if(!Array.isArray(figs)) return [];
-        return figs.filter(f => f && Array.isArray(f.patron))
-            .map((f, idx) => ({
-                nombre: String(f.nombre || ('FIGURA ' + (idx + 1))).toUpperCase(),
-                patron: f.patron.slice(0,25).map(Boolean).concat(new Array(Math.max(0,25 - f.patron.length)).fill(false)).slice(0,25),
-                activa: f.activa !== false
-            }))
-            .filter(f => f.patron.some(Boolean));
-    }
-
-    function obtenerSerialesV11(){
-        const db = getDBV11();
-        if(!db) return [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-        return db.serialesExtra.map(s => ({
-            nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-            lista: Array.isArray(s && s.lista) ? s.lista : []
-        }));
-    }
-
-    function serialesAtextoV11(){
-        try { return JSON.stringify(obtenerSerialesV11()); } catch(e) { return '[]'; }
-    }
-
-    function serialesDesdeTextoV11(txt){
-        try {
-            const arr = typeof txt === 'string' ? JSON.parse(txt) : txt;
-            if(!Array.isArray(arr)) return [];
-            return arr.map(s => ({
-                nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-                lista: Array.isArray(s && s.lista) ? s.lista : []
-            })).filter(s => s.lista.length);
-        } catch(e) { return []; }
-    }
-
-    function empaquetarSerialActivoV11(serial){
-        const compactos = {};
-        if(serial && Array.isArray(serial.lista)) {
-            serial.lista.forEach(c => {
-                if(c && c.carton != null && Array.isArray(c.numeros)) compactos[String(c.carton)] = c.numeros;
-            });
-        }
-        return JSON.stringify(compactos);
-    }
-
-    async function subirEstadoCompartidoV11(motivo){
-        if(aplicandoRemotoV11) return;
-        const ahora = Date.now();
-        if(ahora - ultimoPushV11 < 160) return;
-        ultimoPushV11 = ahora;
-
-        envolverFirebaseV11();
-        const sala = salaV11();
-        const db = getDBV11();
-        if(!sala || !db || !window.db || !window.firebaseTools) return;
-
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-
-        const seriales = obtenerSerialesV11();
-        let idx = Number.isInteger(db.serialActivoIndex) ? db.serialActivoIndex : -1;
-        if(idx < -1 || idx >= seriales.length) idx = -1;
-        db.serialActivoIndex = idx;
-        const serialActivo = idx >= 0 ? seriales[idx] : null;
-
-        const payload = {
-            balotasLlamadas: normalizarBalotasV11(db.juego || []),
-            figuraActual: db.config.figura.slice(0,25).map(Boolean),
-            nombreFigura: String(db.config.nombre || 'BINGO').toUpperCase(),
-            figurasMultiples: normalizarFigurasV11(db.config.figurasMultiples),
-            serialesExtraEmpaquetados: serialesAtextoV11(),
-            serialActivoIndexSync: idx,
-            nombreSerial: serialActivo ? serialActivo.nombre : null,
-            cartonesEmpaquetados: serialActivo ? empaquetarSerialActivoV11(serialActivo) : null,
-            pinSala: sala,
-            estado: 'activo',
-            controlUniversal: {
-                usuario: normalizarUsuarioV11(),
-                motivo: motivo || 'actualizacion',
-                soloComparte: 'balotas_figuras_seriales',
-                updatedAt: Date.now()
-            }
-        };
-
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
-        } catch(e) {
-            console.warn('No se pudo subir estado compartido V11:', e);
-        }
-    }
-
-    function aplicarEstadoCompartidoV11(data, forzar){
-        if(!data) return false;
-        const db = getDBV11();
-        if(!db) return false;
-
-        if(!Array.isArray(db.juego)) db.juego = [];
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-
-        let cambio = false;
-
-        if(Array.isArray(data.balotasLlamadas)) {
-            const remotas = normalizarBalotasV11(data.balotasLlamadas);
-            if(JSON.stringify(db.juego) !== JSON.stringify(remotas)) {
-                db.juego = remotas;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figurasMultiples)) {
-            const figs = normalizarFigurasV11(data.figurasMultiples);
-            if(JSON.stringify(db.config.figurasMultiples) !== JSON.stringify(figs)) {
-                db.config.figurasMultiples = figs;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figuraActual) && data.figuraActual.length === 25) {
-            const fig = data.figuraActual.slice(0,25).map(Boolean);
-            if(JSON.stringify(db.config.figura) !== JSON.stringify(fig)) {
-                db.config.figura = fig;
-                cambio = true;
-            }
-        }
-
-        if(data.nombreFigura) {
-            const nom = String(data.nombreFigura).toUpperCase();
-            if(db.config.nombre !== nom) {
-                db.config.nombre = nom;
-                cambio = true;
-            }
-        }
-
-        if(typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2) {
-            const serialesRemotos = serialesDesdeTextoV11(data.serialesExtraEmpaquetados);
-            if(serialesRemotos.length && JSON.stringify(db.serialesExtra) !== JSON.stringify(serialesRemotos)) {
-                db.serialesExtra = serialesRemotos;
-                cambio = true;
-            }
-        }
-
-        if(Number.isInteger(data.serialActivoIndexSync)) {
-            const idx = data.serialActivoIndexSync;
-            const valido = idx >= -1 && idx < (db.serialesExtra || []).length;
-            if(valido && db.serialActivoIndex !== idx) {
-                db.serialActivoIndex = idx;
-                cambio = true;
-            }
-        }
-
-        if(cambio || forzar) {
-            aplicandoRemotoV11 = true;
-            guardarLocalV11(true);
-            setTimeout(() => { aplicandoRemotoV11 = false; }, 220);
-        }
-
-        return cambio;
-    }
-
-    async function traerEstadoCompartidoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools) return false;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            const snap = await window.firebaseTools.getDoc(salaRef);
-            if(snap && snap.exists()) {
-                const data = snap.data();
-                const tieneSeriales = typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2;
-                const tieneFiguras = Array.isArray(data.figurasMultiples) || Array.isArray(data.figuraActual);
-                const tieneBalotas = Array.isArray(data.balotasLlamadas);
-
-                if(tieneSeriales || tieneFiguras || tieneBalotas) aplicarEstadoCompartidoV11(data, true);
-
-                // Si la nube aún no tiene seriales pero este equipo sí, los sube para los otros equipos.
-                const db = getDBV11();
-                if(db && Array.isArray(db.serialesExtra) && db.serialesExtra.length && !tieneSeriales) {
-                    setTimeout(() => subirEstadoCompartidoV11('subir_seriales_locales'), 300);
-                }
-                return true;
-            }
-        } catch(e) {
-            console.warn('No se pudo traer estado compartido V11:', e);
-        }
-        return false;
-    }
-
-    function instalarListenerEstadoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.onSnapshot) return;
-        if(unsubEstadoV11 && salaEscuchadaV11 === sala) return;
-        if(unsubEstadoV11) { try { unsubEstadoV11(); } catch(e) {} unsubEstadoV11 = null; }
-
-        salaEscuchadaV11 = sala;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            unsubEstadoV11 = window.firebaseTools.onSnapshot(salaRef, (snap) => {
-                if(!snap.exists()) return;
-                aplicarEstadoCompartidoV11(snap.data(), false);
-            });
-        } catch(e) {
-            console.warn('No se pudo escuchar estado compartido:', e);
-        }
-    }
-
-    function envolverFuncionV11(nombre, motivo, antes){
-        const fn = window[nombre];
-        if(typeof fn !== 'function' || fn.__estadoCompartidoV11) return;
-        const wrap = async function(){
-            if(antes) await traerEstadoCompartidoV11();
-            const r = await fn.apply(this, arguments);
-            setTimeout(() => subirEstadoCompartidoV11(motivo || nombre), 220);
-            return r;
-        };
-        wrap.__estadoCompartidoV11 = true;
-        window[nombre] = wrap;
-    }
-
-    function instalarWrappersV11(){
-        envolverFuncionV11('sacarBalota', 'sacar_balota', true);
-        envolverFuncionV11('seleccionarSerial', 'seleccionar_serial', false);
-        envolverFuncionV11('crearNuevoSerial', 'crear_serial', false);
-        envolverFuncionV11('eliminarSerial', 'eliminar_serial', false);
-        envolverFuncionV11('guardarConfigLocal', 'guardar_figura', false);
-        envolverFuncionV11('agregarFiguraLista', 'agregar_figura', false);
-        envolverFuncionV11('eliminarFiguraLista', 'eliminar_figura', false);
-        envolverFuncionV11('limpiarFigurasLista', 'limpiar_figuras', false);
-        envolverFuncionV11('toggleFiguraActivaGlobal', 'activar_figura', false);
-    }
-
-    // Importar Excel es asíncrono por FileReader; se sincroniza cuando el archivo ya quedó cargado.
-    document.addEventListener('change', function(e){
-        if(e.target && e.target.id === 'import-excel') {
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 1200);
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 2500);
-        }
-    }, true);
-
-    // Balota manual: solo se comparte el estado de balotas, no el diseño.
-    document.addEventListener('click', function(e){
-        const bola = e.target && e.target.closest ? e.target.closest('.bola-mini') : null;
-        if(!bola) return;
-        setTimeout(() => subirEstadoCompartidoV11('balota_manual'), 260);
-    }, true);
-
-    function ocultarElementosSyncV11(){
-        document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
-            el.style.display = 'none';
-            el.style.visibility = 'hidden';
-            el.style.opacity = '0';
-            el.setAttribute('aria-hidden', 'true');
-        });
-        const btnPersonalizacion = Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('DISEÑO LOCAL DE ESTE EQUIPO'));
-        if(btnPersonalizacion) {
-            btnPersonalizacion.onclick = function(){ alert('Este diseño es local: no se envía al jugador ni a otros equipos.'); };
-            btnPersonalizacion.style.background = '#6c757d';
-        }
-    }
-
-    function instalarTodoV11(){
-        envolverFirebaseV11();
-        ocultarElementosSyncV11();
-        instalarWrappersV11();
-        instalarListenerEstadoV11();
-        setTimeout(traerEstadoCompartidoV11, 200);
-        setTimeout(limpiarCamposDisenoNubeV11, 600);
-    }
-
-    function envolverInicioV11(){
-        const fn = window.iniciarAppBingo;
-        if(typeof fn !== 'function' || fn.__v11SoloEstado) return;
-        const wrap = function(){
-            const r = fn.apply(this, arguments);
-            setTimeout(instalarTodoV11, 120);
-            setTimeout(instalarTodoV11, 800);
-            setTimeout(() => subirEstadoCompartidoV11('inicio'), 1400);
-            return r;
-        };
-        wrap.__v11SoloEstado = true;
-        window.iniciarAppBingo = wrap;
-    }
-
-    window.sincronizarEstadoCompartidoV11 = subirEstadoCompartidoV11;
-    window.traerEstadoCompartidoV11 = traerEstadoCompartidoV11;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 900);
-    });
-    window.addEventListener('load', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 1200);
-    });
-    setTimeout(() => { envolverInicioV11(); instalarTodoV11(); }, 1600);
-    setInterval(() => { ocultarElementosSyncV11(); instalarWrappersV11(); }, 2500);
-})();
-</script>
-
 </body>
                 </html>
             `;
@@ -2733,431 +2309,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
                 // Cambiamos el nombre interno de "W" a "PREMIO"
                 winRef = window.open("", "PREMIO", "width=350,height=500");
                 // AQUÍ ESTÁ LA MAGIA: Agregamos <title>PREMIO</title> para OBS
-                winRef.document.write('<html><head><title>PREMIO</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;}.btn{background:#6f42c1;color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-weight:bold;cursor:pointer;}</style></head><body><h2>🏆 GANADORES</h2><div id="l"></div><script>function rev(n){window.opener.manualCheckById(n);}<\/script>
-<script id="patch-v11-solo-estado-compartido">
-/*
-  PATCH V11:
-  - El diseño visual queda local por equipo.
-  - Solo se sincroniza por sala/usuario: balotas, figura(s) en juego y seriales.
-  - Se bloquea el envío de personalización/colores/imágenes/layout a Firebase.
-*/
-(function(){
-    if (window.__BINGO75_V11_SOLO_ESTADO__) return;
-    window.__BINGO75_V11_SOLO_ESTADO__ = true;
-
-    const LOCAL_KEY_V11 = 'bingoSala2_V15_MASTER';
-    let aplicandoRemotoV11 = false;
-    let ultimoPushV11 = 0;
-    let unsubEstadoV11 = null;
-    let salaEscuchadaV11 = '';
-    let firebaseToolsEnvueltoV11 = false;
-
-    function normalizarUsuarioV11(){
-        return (localStorage.getItem('bingo_user') || 'ADMIN').trim().toUpperCase();
-    }
-
-    function salaV11(){
-        if(window.MI_CODIGO_SALA) return String(window.MI_CODIGO_SALA).trim();
-        const usuario = normalizarUsuarioV11();
-        let hash = 0;
-        for (let i = 0; i < usuario.length; i++) {
-            hash = ((hash << 5) - hash) + usuario.charCodeAt(i);
-            hash |= 0;
-        }
-        return String((Math.abs(hash) % 900000) + 100000);
-    }
-
-    function getDBV11(){
-        try {
-            if (typeof dbLocal !== 'undefined' && dbLocal) return dbLocal;
-        } catch(e) {}
-        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V11)) || null; } catch(e) { return null; }
-    }
-
-    function guardarLocalV11(renderizarAhora){
-        try {
-            const db = getDBV11();
-            if(!db) return;
-            localStorage.setItem(LOCAL_KEY_V11, JSON.stringify({
-                ...db,
-                media: { left: null, right: null },
-                headerCartonBase64: null,
-                centerLogoBase64: null
-            }));
-            if(renderizarAhora !== false) {
-                try { if(typeof window.actualizarListaSeriales === 'function') window.actualizarListaSeriales(); } catch(e) {}
-                try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-                try { if(typeof window.renderizar === 'function') window.renderizar(); else if(typeof renderizar === 'function') renderizar(); } catch(e) {}
-                try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
-            }
-        } catch(e) {
-            console.warn('No se pudo guardar local V11:', e);
-        }
-    }
-
-    function limpiarPayloadV11(data){
-        if(!data || typeof data !== 'object' || Array.isArray(data)) return data;
-        const limpio = { ...data };
-        delete limpio.personalizacionJugador;
-        delete limpio.figurasPanelLayout;
-        delete limpio.coloresJugador;
-        delete limpio.headerJugador;
-        delete limpio.mediaJugador;
-        return limpio;
-    }
-
-    function envolverFirebaseV11(){
-        if(firebaseToolsEnvueltoV11) return;
-        if(!window.firebaseTools || !window.firebaseTools.setDoc || !window.firebaseTools.updateDoc) return;
-        firebaseToolsEnvueltoV11 = true;
-
-        const setDocOriginal = window.firebaseTools.setDoc.bind(window.firebaseTools);
-        const updateDocOriginal = window.firebaseTools.updateDoc.bind(window.firebaseTools);
-        window.firebaseTools.__setDocOriginalV11 = setDocOriginal;
-        window.firebaseTools.__updateDocOriginalV11 = updateDocOriginal;
-
-        window.firebaseTools.setDoc = function(ref, data, options){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return setDocOriginal(ref, limpio, options);
-        };
-
-        window.firebaseTools.updateDoc = function(ref, data){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return updateDocOriginal(ref, limpio);
-        };
-    }
-
-    async function limpiarCamposDisenoNubeV11(){
-        try {
-            envolverFirebaseV11();
-            const sala = salaV11();
-            if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.__setDocOriginalV11) return;
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.__setDocOriginalV11(salaRef, {
-                personalizacionJugador: null,
-                figurasPanelLayout: null
-            }, { merge: true });
-        } catch(e) {
-            console.warn('No se pudieron limpiar campos visuales remotos:', e);
-        }
-    }
-
-    function normalizarBalotasV11(arr){
-        return Array.isArray(arr) ? arr.map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= 75) : [];
-    }
-
-    function normalizarFigurasV11(figs){
-        if(!Array.isArray(figs)) return [];
-        return figs.filter(f => f && Array.isArray(f.patron))
-            .map((f, idx) => ({
-                nombre: String(f.nombre || ('FIGURA ' + (idx + 1))).toUpperCase(),
-                patron: f.patron.slice(0,25).map(Boolean).concat(new Array(Math.max(0,25 - f.patron.length)).fill(false)).slice(0,25),
-                activa: f.activa !== false
-            }))
-            .filter(f => f.patron.some(Boolean));
-    }
-
-    function obtenerSerialesV11(){
-        const db = getDBV11();
-        if(!db) return [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-        return db.serialesExtra.map(s => ({
-            nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-            lista: Array.isArray(s && s.lista) ? s.lista : []
-        }));
-    }
-
-    function serialesAtextoV11(){
-        try { return JSON.stringify(obtenerSerialesV11()); } catch(e) { return '[]'; }
-    }
-
-    function serialesDesdeTextoV11(txt){
-        try {
-            const arr = typeof txt === 'string' ? JSON.parse(txt) : txt;
-            if(!Array.isArray(arr)) return [];
-            return arr.map(s => ({
-                nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-                lista: Array.isArray(s && s.lista) ? s.lista : []
-            })).filter(s => s.lista.length);
-        } catch(e) { return []; }
-    }
-
-    function empaquetarSerialActivoV11(serial){
-        const compactos = {};
-        if(serial && Array.isArray(serial.lista)) {
-            serial.lista.forEach(c => {
-                if(c && c.carton != null && Array.isArray(c.numeros)) compactos[String(c.carton)] = c.numeros;
-            });
-        }
-        return JSON.stringify(compactos);
-    }
-
-    async function subirEstadoCompartidoV11(motivo){
-        if(aplicandoRemotoV11) return;
-        const ahora = Date.now();
-        if(ahora - ultimoPushV11 < 160) return;
-        ultimoPushV11 = ahora;
-
-        envolverFirebaseV11();
-        const sala = salaV11();
-        const db = getDBV11();
-        if(!sala || !db || !window.db || !window.firebaseTools) return;
-
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-
-        const seriales = obtenerSerialesV11();
-        let idx = Number.isInteger(db.serialActivoIndex) ? db.serialActivoIndex : -1;
-        if(idx < -1 || idx >= seriales.length) idx = -1;
-        db.serialActivoIndex = idx;
-        const serialActivo = idx >= 0 ? seriales[idx] : null;
-
-        const payload = {
-            balotasLlamadas: normalizarBalotasV11(db.juego || []),
-            figuraActual: db.config.figura.slice(0,25).map(Boolean),
-            nombreFigura: String(db.config.nombre || 'BINGO').toUpperCase(),
-            figurasMultiples: normalizarFigurasV11(db.config.figurasMultiples),
-            serialesExtraEmpaquetados: serialesAtextoV11(),
-            serialActivoIndexSync: idx,
-            nombreSerial: serialActivo ? serialActivo.nombre : null,
-            cartonesEmpaquetados: serialActivo ? empaquetarSerialActivoV11(serialActivo) : null,
-            pinSala: sala,
-            estado: 'activo',
-            controlUniversal: {
-                usuario: normalizarUsuarioV11(),
-                motivo: motivo || 'actualizacion',
-                soloComparte: 'balotas_figuras_seriales',
-                updatedAt: Date.now()
-            }
-        };
-
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
-        } catch(e) {
-            console.warn('No se pudo subir estado compartido V11:', e);
-        }
-    }
-
-    function aplicarEstadoCompartidoV11(data, forzar){
-        if(!data) return false;
-        const db = getDBV11();
-        if(!db) return false;
-
-        if(!Array.isArray(db.juego)) db.juego = [];
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-
-        let cambio = false;
-
-        if(Array.isArray(data.balotasLlamadas)) {
-            const remotas = normalizarBalotasV11(data.balotasLlamadas);
-            if(JSON.stringify(db.juego) !== JSON.stringify(remotas)) {
-                db.juego = remotas;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figurasMultiples)) {
-            const figs = normalizarFigurasV11(data.figurasMultiples);
-            if(JSON.stringify(db.config.figurasMultiples) !== JSON.stringify(figs)) {
-                db.config.figurasMultiples = figs;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figuraActual) && data.figuraActual.length === 25) {
-            const fig = data.figuraActual.slice(0,25).map(Boolean);
-            if(JSON.stringify(db.config.figura) !== JSON.stringify(fig)) {
-                db.config.figura = fig;
-                cambio = true;
-            }
-        }
-
-        if(data.nombreFigura) {
-            const nom = String(data.nombreFigura).toUpperCase();
-            if(db.config.nombre !== nom) {
-                db.config.nombre = nom;
-                cambio = true;
-            }
-        }
-
-        if(typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2) {
-            const serialesRemotos = serialesDesdeTextoV11(data.serialesExtraEmpaquetados);
-            if(serialesRemotos.length && JSON.stringify(db.serialesExtra) !== JSON.stringify(serialesRemotos)) {
-                db.serialesExtra = serialesRemotos;
-                cambio = true;
-            }
-        }
-
-        if(Number.isInteger(data.serialActivoIndexSync)) {
-            const idx = data.serialActivoIndexSync;
-            const valido = idx >= -1 && idx < (db.serialesExtra || []).length;
-            if(valido && db.serialActivoIndex !== idx) {
-                db.serialActivoIndex = idx;
-                cambio = true;
-            }
-        }
-
-        if(cambio || forzar) {
-            aplicandoRemotoV11 = true;
-            guardarLocalV11(true);
-            setTimeout(() => { aplicandoRemotoV11 = false; }, 220);
-        }
-
-        return cambio;
-    }
-
-    async function traerEstadoCompartidoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools) return false;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            const snap = await window.firebaseTools.getDoc(salaRef);
-            if(snap && snap.exists()) {
-                const data = snap.data();
-                const tieneSeriales = typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2;
-                const tieneFiguras = Array.isArray(data.figurasMultiples) || Array.isArray(data.figuraActual);
-                const tieneBalotas = Array.isArray(data.balotasLlamadas);
-
-                if(tieneSeriales || tieneFiguras || tieneBalotas) aplicarEstadoCompartidoV11(data, true);
-
-                // Si la nube aún no tiene seriales pero este equipo sí, los sube para los otros equipos.
-                const db = getDBV11();
-                if(db && Array.isArray(db.serialesExtra) && db.serialesExtra.length && !tieneSeriales) {
-                    setTimeout(() => subirEstadoCompartidoV11('subir_seriales_locales'), 300);
-                }
-                return true;
-            }
-        } catch(e) {
-            console.warn('No se pudo traer estado compartido V11:', e);
-        }
-        return false;
-    }
-
-    function instalarListenerEstadoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.onSnapshot) return;
-        if(unsubEstadoV11 && salaEscuchadaV11 === sala) return;
-        if(unsubEstadoV11) { try { unsubEstadoV11(); } catch(e) {} unsubEstadoV11 = null; }
-
-        salaEscuchadaV11 = sala;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            unsubEstadoV11 = window.firebaseTools.onSnapshot(salaRef, (snap) => {
-                if(!snap.exists()) return;
-                aplicarEstadoCompartidoV11(snap.data(), false);
-            });
-        } catch(e) {
-            console.warn('No se pudo escuchar estado compartido:', e);
-        }
-    }
-
-    function envolverFuncionV11(nombre, motivo, antes){
-        const fn = window[nombre];
-        if(typeof fn !== 'function' || fn.__estadoCompartidoV11) return;
-        const wrap = async function(){
-            if(antes) await traerEstadoCompartidoV11();
-            const r = await fn.apply(this, arguments);
-            setTimeout(() => subirEstadoCompartidoV11(motivo || nombre), 220);
-            return r;
-        };
-        wrap.__estadoCompartidoV11 = true;
-        window[nombre] = wrap;
-    }
-
-    function instalarWrappersV11(){
-        envolverFuncionV11('sacarBalota', 'sacar_balota', true);
-        envolverFuncionV11('seleccionarSerial', 'seleccionar_serial', false);
-        envolverFuncionV11('crearNuevoSerial', 'crear_serial', false);
-        envolverFuncionV11('eliminarSerial', 'eliminar_serial', false);
-        envolverFuncionV11('guardarConfigLocal', 'guardar_figura', false);
-        envolverFuncionV11('agregarFiguraLista', 'agregar_figura', false);
-        envolverFuncionV11('eliminarFiguraLista', 'eliminar_figura', false);
-        envolverFuncionV11('limpiarFigurasLista', 'limpiar_figuras', false);
-        envolverFuncionV11('toggleFiguraActivaGlobal', 'activar_figura', false);
-    }
-
-    // Importar Excel es asíncrono por FileReader; se sincroniza cuando el archivo ya quedó cargado.
-    document.addEventListener('change', function(e){
-        if(e.target && e.target.id === 'import-excel') {
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 1200);
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 2500);
-        }
-    }, true);
-
-    // Balota manual: solo se comparte el estado de balotas, no el diseño.
-    document.addEventListener('click', function(e){
-        const bola = e.target && e.target.closest ? e.target.closest('.bola-mini') : null;
-        if(!bola) return;
-        setTimeout(() => subirEstadoCompartidoV11('balota_manual'), 260);
-    }, true);
-
-    function ocultarElementosSyncV11(){
-        document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
-            el.style.display = 'none';
-            el.style.visibility = 'hidden';
-            el.style.opacity = '0';
-            el.setAttribute('aria-hidden', 'true');
-        });
-        const btnPersonalizacion = Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('DISEÑO LOCAL DE ESTE EQUIPO'));
-        if(btnPersonalizacion) {
-            btnPersonalizacion.onclick = function(){ alert('Este diseño es local: no se envía al jugador ni a otros equipos.'); };
-            btnPersonalizacion.style.background = '#6c757d';
-        }
-    }
-
-    function instalarTodoV11(){
-        envolverFirebaseV11();
-        ocultarElementosSyncV11();
-        instalarWrappersV11();
-        instalarListenerEstadoV11();
-        setTimeout(traerEstadoCompartidoV11, 200);
-        setTimeout(limpiarCamposDisenoNubeV11, 600);
-    }
-
-    function envolverInicioV11(){
-        const fn = window.iniciarAppBingo;
-        if(typeof fn !== 'function' || fn.__v11SoloEstado) return;
-        const wrap = function(){
-            const r = fn.apply(this, arguments);
-            setTimeout(instalarTodoV11, 120);
-            setTimeout(instalarTodoV11, 800);
-            setTimeout(() => subirEstadoCompartidoV11('inicio'), 1400);
-            return r;
-        };
-        wrap.__v11SoloEstado = true;
-        window.iniciarAppBingo = wrap;
-    }
-
-    window.sincronizarEstadoCompartidoV11 = subirEstadoCompartidoV11;
-    window.traerEstadoCompartidoV11 = traerEstadoCompartidoV11;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 900);
-    });
-    window.addEventListener('load', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 1200);
-    });
-    setTimeout(() => { envolverInicioV11(); instalarTodoV11(); }, 1600);
-    setInterval(() => { ocultarElementosSyncV11(); instalarWrappersV11(); }, 2500);
-})();
-</script>
-
-</body></html>');
+                winRef.document.write('<html><head><title>PREMIO</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;}.btn{background:#6f42c1;color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-weight:bold;cursor:pointer;}</style></head><body><h2>🏆 GANADORES</h2><div id="l"></div><script>function rev(n){window.opener.manualCheckById(n);}<\/script></body></html>');
                 wins.forEach(n => { let b = winRef.document.createElement('button'); b.className="btn"; b.innerText="CARTÓN #"+n; b.onclick = () => winRef.rev(n); winRef.document.getElementById('l').appendChild(b); });
                 lastWinCount = wins.length;
             } else if(wins.length === 0) lastWinCount = 0;
@@ -3330,431 +2482,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
                     <div class="hint">Esta ventana se actualiza en vivo.</div>
                 </div>
                 <div id="chat-popout-list"></div>
-            
-<script id="patch-v11-solo-estado-compartido">
-/*
-  PATCH V11:
-  - El diseño visual queda local por equipo.
-  - Solo se sincroniza por sala/usuario: balotas, figura(s) en juego y seriales.
-  - Se bloquea el envío de personalización/colores/imágenes/layout a Firebase.
-*/
-(function(){
-    if (window.__BINGO75_V11_SOLO_ESTADO__) return;
-    window.__BINGO75_V11_SOLO_ESTADO__ = true;
-
-    const LOCAL_KEY_V11 = 'bingoSala2_V15_MASTER';
-    let aplicandoRemotoV11 = false;
-    let ultimoPushV11 = 0;
-    let unsubEstadoV11 = null;
-    let salaEscuchadaV11 = '';
-    let firebaseToolsEnvueltoV11 = false;
-
-    function normalizarUsuarioV11(){
-        return (localStorage.getItem('bingo_user') || 'ADMIN').trim().toUpperCase();
-    }
-
-    function salaV11(){
-        if(window.MI_CODIGO_SALA) return String(window.MI_CODIGO_SALA).trim();
-        const usuario = normalizarUsuarioV11();
-        let hash = 0;
-        for (let i = 0; i < usuario.length; i++) {
-            hash = ((hash << 5) - hash) + usuario.charCodeAt(i);
-            hash |= 0;
-        }
-        return String((Math.abs(hash) % 900000) + 100000);
-    }
-
-    function getDBV11(){
-        try {
-            if (typeof dbLocal !== 'undefined' && dbLocal) return dbLocal;
-        } catch(e) {}
-        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V11)) || null; } catch(e) { return null; }
-    }
-
-    function guardarLocalV11(renderizarAhora){
-        try {
-            const db = getDBV11();
-            if(!db) return;
-            localStorage.setItem(LOCAL_KEY_V11, JSON.stringify({
-                ...db,
-                media: { left: null, right: null },
-                headerCartonBase64: null,
-                centerLogoBase64: null
-            }));
-            if(renderizarAhora !== false) {
-                try { if(typeof window.actualizarListaSeriales === 'function') window.actualizarListaSeriales(); } catch(e) {}
-                try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-                try { if(typeof window.renderizar === 'function') window.renderizar(); else if(typeof renderizar === 'function') renderizar(); } catch(e) {}
-                try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
-            }
-        } catch(e) {
-            console.warn('No se pudo guardar local V11:', e);
-        }
-    }
-
-    function limpiarPayloadV11(data){
-        if(!data || typeof data !== 'object' || Array.isArray(data)) return data;
-        const limpio = { ...data };
-        delete limpio.personalizacionJugador;
-        delete limpio.figurasPanelLayout;
-        delete limpio.coloresJugador;
-        delete limpio.headerJugador;
-        delete limpio.mediaJugador;
-        return limpio;
-    }
-
-    function envolverFirebaseV11(){
-        if(firebaseToolsEnvueltoV11) return;
-        if(!window.firebaseTools || !window.firebaseTools.setDoc || !window.firebaseTools.updateDoc) return;
-        firebaseToolsEnvueltoV11 = true;
-
-        const setDocOriginal = window.firebaseTools.setDoc.bind(window.firebaseTools);
-        const updateDocOriginal = window.firebaseTools.updateDoc.bind(window.firebaseTools);
-        window.firebaseTools.__setDocOriginalV11 = setDocOriginal;
-        window.firebaseTools.__updateDocOriginalV11 = updateDocOriginal;
-
-        window.firebaseTools.setDoc = function(ref, data, options){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return setDocOriginal(ref, limpio, options);
-        };
-
-        window.firebaseTools.updateDoc = function(ref, data){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return updateDocOriginal(ref, limpio);
-        };
-    }
-
-    async function limpiarCamposDisenoNubeV11(){
-        try {
-            envolverFirebaseV11();
-            const sala = salaV11();
-            if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.__setDocOriginalV11) return;
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.__setDocOriginalV11(salaRef, {
-                personalizacionJugador: null,
-                figurasPanelLayout: null
-            }, { merge: true });
-        } catch(e) {
-            console.warn('No se pudieron limpiar campos visuales remotos:', e);
-        }
-    }
-
-    function normalizarBalotasV11(arr){
-        return Array.isArray(arr) ? arr.map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= 75) : [];
-    }
-
-    function normalizarFigurasV11(figs){
-        if(!Array.isArray(figs)) return [];
-        return figs.filter(f => f && Array.isArray(f.patron))
-            .map((f, idx) => ({
-                nombre: String(f.nombre || ('FIGURA ' + (idx + 1))).toUpperCase(),
-                patron: f.patron.slice(0,25).map(Boolean).concat(new Array(Math.max(0,25 - f.patron.length)).fill(false)).slice(0,25),
-                activa: f.activa !== false
-            }))
-            .filter(f => f.patron.some(Boolean));
-    }
-
-    function obtenerSerialesV11(){
-        const db = getDBV11();
-        if(!db) return [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-        return db.serialesExtra.map(s => ({
-            nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-            lista: Array.isArray(s && s.lista) ? s.lista : []
-        }));
-    }
-
-    function serialesAtextoV11(){
-        try { return JSON.stringify(obtenerSerialesV11()); } catch(e) { return '[]'; }
-    }
-
-    function serialesDesdeTextoV11(txt){
-        try {
-            const arr = typeof txt === 'string' ? JSON.parse(txt) : txt;
-            if(!Array.isArray(arr)) return [];
-            return arr.map(s => ({
-                nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-                lista: Array.isArray(s && s.lista) ? s.lista : []
-            })).filter(s => s.lista.length);
-        } catch(e) { return []; }
-    }
-
-    function empaquetarSerialActivoV11(serial){
-        const compactos = {};
-        if(serial && Array.isArray(serial.lista)) {
-            serial.lista.forEach(c => {
-                if(c && c.carton != null && Array.isArray(c.numeros)) compactos[String(c.carton)] = c.numeros;
-            });
-        }
-        return JSON.stringify(compactos);
-    }
-
-    async function subirEstadoCompartidoV11(motivo){
-        if(aplicandoRemotoV11) return;
-        const ahora = Date.now();
-        if(ahora - ultimoPushV11 < 160) return;
-        ultimoPushV11 = ahora;
-
-        envolverFirebaseV11();
-        const sala = salaV11();
-        const db = getDBV11();
-        if(!sala || !db || !window.db || !window.firebaseTools) return;
-
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-
-        const seriales = obtenerSerialesV11();
-        let idx = Number.isInteger(db.serialActivoIndex) ? db.serialActivoIndex : -1;
-        if(idx < -1 || idx >= seriales.length) idx = -1;
-        db.serialActivoIndex = idx;
-        const serialActivo = idx >= 0 ? seriales[idx] : null;
-
-        const payload = {
-            balotasLlamadas: normalizarBalotasV11(db.juego || []),
-            figuraActual: db.config.figura.slice(0,25).map(Boolean),
-            nombreFigura: String(db.config.nombre || 'BINGO').toUpperCase(),
-            figurasMultiples: normalizarFigurasV11(db.config.figurasMultiples),
-            serialesExtraEmpaquetados: serialesAtextoV11(),
-            serialActivoIndexSync: idx,
-            nombreSerial: serialActivo ? serialActivo.nombre : null,
-            cartonesEmpaquetados: serialActivo ? empaquetarSerialActivoV11(serialActivo) : null,
-            pinSala: sala,
-            estado: 'activo',
-            controlUniversal: {
-                usuario: normalizarUsuarioV11(),
-                motivo: motivo || 'actualizacion',
-                soloComparte: 'balotas_figuras_seriales',
-                updatedAt: Date.now()
-            }
-        };
-
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
-        } catch(e) {
-            console.warn('No se pudo subir estado compartido V11:', e);
-        }
-    }
-
-    function aplicarEstadoCompartidoV11(data, forzar){
-        if(!data) return false;
-        const db = getDBV11();
-        if(!db) return false;
-
-        if(!Array.isArray(db.juego)) db.juego = [];
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-
-        let cambio = false;
-
-        if(Array.isArray(data.balotasLlamadas)) {
-            const remotas = normalizarBalotasV11(data.balotasLlamadas);
-            if(JSON.stringify(db.juego) !== JSON.stringify(remotas)) {
-                db.juego = remotas;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figurasMultiples)) {
-            const figs = normalizarFigurasV11(data.figurasMultiples);
-            if(JSON.stringify(db.config.figurasMultiples) !== JSON.stringify(figs)) {
-                db.config.figurasMultiples = figs;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figuraActual) && data.figuraActual.length === 25) {
-            const fig = data.figuraActual.slice(0,25).map(Boolean);
-            if(JSON.stringify(db.config.figura) !== JSON.stringify(fig)) {
-                db.config.figura = fig;
-                cambio = true;
-            }
-        }
-
-        if(data.nombreFigura) {
-            const nom = String(data.nombreFigura).toUpperCase();
-            if(db.config.nombre !== nom) {
-                db.config.nombre = nom;
-                cambio = true;
-            }
-        }
-
-        if(typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2) {
-            const serialesRemotos = serialesDesdeTextoV11(data.serialesExtraEmpaquetados);
-            if(serialesRemotos.length && JSON.stringify(db.serialesExtra) !== JSON.stringify(serialesRemotos)) {
-                db.serialesExtra = serialesRemotos;
-                cambio = true;
-            }
-        }
-
-        if(Number.isInteger(data.serialActivoIndexSync)) {
-            const idx = data.serialActivoIndexSync;
-            const valido = idx >= -1 && idx < (db.serialesExtra || []).length;
-            if(valido && db.serialActivoIndex !== idx) {
-                db.serialActivoIndex = idx;
-                cambio = true;
-            }
-        }
-
-        if(cambio || forzar) {
-            aplicandoRemotoV11 = true;
-            guardarLocalV11(true);
-            setTimeout(() => { aplicandoRemotoV11 = false; }, 220);
-        }
-
-        return cambio;
-    }
-
-    async function traerEstadoCompartidoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools) return false;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            const snap = await window.firebaseTools.getDoc(salaRef);
-            if(snap && snap.exists()) {
-                const data = snap.data();
-                const tieneSeriales = typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2;
-                const tieneFiguras = Array.isArray(data.figurasMultiples) || Array.isArray(data.figuraActual);
-                const tieneBalotas = Array.isArray(data.balotasLlamadas);
-
-                if(tieneSeriales || tieneFiguras || tieneBalotas) aplicarEstadoCompartidoV11(data, true);
-
-                // Si la nube aún no tiene seriales pero este equipo sí, los sube para los otros equipos.
-                const db = getDBV11();
-                if(db && Array.isArray(db.serialesExtra) && db.serialesExtra.length && !tieneSeriales) {
-                    setTimeout(() => subirEstadoCompartidoV11('subir_seriales_locales'), 300);
-                }
-                return true;
-            }
-        } catch(e) {
-            console.warn('No se pudo traer estado compartido V11:', e);
-        }
-        return false;
-    }
-
-    function instalarListenerEstadoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.onSnapshot) return;
-        if(unsubEstadoV11 && salaEscuchadaV11 === sala) return;
-        if(unsubEstadoV11) { try { unsubEstadoV11(); } catch(e) {} unsubEstadoV11 = null; }
-
-        salaEscuchadaV11 = sala;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            unsubEstadoV11 = window.firebaseTools.onSnapshot(salaRef, (snap) => {
-                if(!snap.exists()) return;
-                aplicarEstadoCompartidoV11(snap.data(), false);
-            });
-        } catch(e) {
-            console.warn('No se pudo escuchar estado compartido:', e);
-        }
-    }
-
-    function envolverFuncionV11(nombre, motivo, antes){
-        const fn = window[nombre];
-        if(typeof fn !== 'function' || fn.__estadoCompartidoV11) return;
-        const wrap = async function(){
-            if(antes) await traerEstadoCompartidoV11();
-            const r = await fn.apply(this, arguments);
-            setTimeout(() => subirEstadoCompartidoV11(motivo || nombre), 220);
-            return r;
-        };
-        wrap.__estadoCompartidoV11 = true;
-        window[nombre] = wrap;
-    }
-
-    function instalarWrappersV11(){
-        envolverFuncionV11('sacarBalota', 'sacar_balota', true);
-        envolverFuncionV11('seleccionarSerial', 'seleccionar_serial', false);
-        envolverFuncionV11('crearNuevoSerial', 'crear_serial', false);
-        envolverFuncionV11('eliminarSerial', 'eliminar_serial', false);
-        envolverFuncionV11('guardarConfigLocal', 'guardar_figura', false);
-        envolverFuncionV11('agregarFiguraLista', 'agregar_figura', false);
-        envolverFuncionV11('eliminarFiguraLista', 'eliminar_figura', false);
-        envolverFuncionV11('limpiarFigurasLista', 'limpiar_figuras', false);
-        envolverFuncionV11('toggleFiguraActivaGlobal', 'activar_figura', false);
-    }
-
-    // Importar Excel es asíncrono por FileReader; se sincroniza cuando el archivo ya quedó cargado.
-    document.addEventListener('change', function(e){
-        if(e.target && e.target.id === 'import-excel') {
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 1200);
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 2500);
-        }
-    }, true);
-
-    // Balota manual: solo se comparte el estado de balotas, no el diseño.
-    document.addEventListener('click', function(e){
-        const bola = e.target && e.target.closest ? e.target.closest('.bola-mini') : null;
-        if(!bola) return;
-        setTimeout(() => subirEstadoCompartidoV11('balota_manual'), 260);
-    }, true);
-
-    function ocultarElementosSyncV11(){
-        document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
-            el.style.display = 'none';
-            el.style.visibility = 'hidden';
-            el.style.opacity = '0';
-            el.setAttribute('aria-hidden', 'true');
-        });
-        const btnPersonalizacion = Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('DISEÑO LOCAL DE ESTE EQUIPO'));
-        if(btnPersonalizacion) {
-            btnPersonalizacion.onclick = function(){ alert('Este diseño es local: no se envía al jugador ni a otros equipos.'); };
-            btnPersonalizacion.style.background = '#6c757d';
-        }
-    }
-
-    function instalarTodoV11(){
-        envolverFirebaseV11();
-        ocultarElementosSyncV11();
-        instalarWrappersV11();
-        instalarListenerEstadoV11();
-        setTimeout(traerEstadoCompartidoV11, 200);
-        setTimeout(limpiarCamposDisenoNubeV11, 600);
-    }
-
-    function envolverInicioV11(){
-        const fn = window.iniciarAppBingo;
-        if(typeof fn !== 'function' || fn.__v11SoloEstado) return;
-        const wrap = function(){
-            const r = fn.apply(this, arguments);
-            setTimeout(instalarTodoV11, 120);
-            setTimeout(instalarTodoV11, 800);
-            setTimeout(() => subirEstadoCompartidoV11('inicio'), 1400);
-            return r;
-        };
-        wrap.__v11SoloEstado = true;
-        window.iniciarAppBingo = wrap;
-    }
-
-    window.sincronizarEstadoCompartidoV11 = subirEstadoCompartidoV11;
-    window.traerEstadoCompartidoV11 = traerEstadoCompartidoV11;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 900);
-    });
-    window.addEventListener('load', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 1200);
-    });
-    setTimeout(() => { envolverInicioV11(); instalarTodoV11(); }, 1600);
-    setInterval(() => { ocultarElementosSyncV11(); instalarWrappersV11(); }, 2500);
-})();
-</script>
-
-</body>
+            </body>
             </html>
         `);
         chatPopout.document.close();
@@ -4226,431 +2954,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
             patchWinRef = window.open('', 'PREMIO', 'width=360,height=520');
             if(patchWinRef) {
                 const botonesHTML = wins.map(w => `<button class="btn" onclick="window.opener.manualCheckById(${w.carton})">CARTÓN #${w.carton}<br><span>⭐ ${w.figuras}</span></button>`).join('');
-                patchWinRef.document.write(`<html><head><title>PREMIO</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:#6f42c1;color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:19px;font-weight:bold;cursor:pointer;} .btn span{font-size:13px;color:#ffeb3b;}</style></head><body><h2>🏆 GANADORES</h2>${botonesHTML}
-<script id="patch-v11-solo-estado-compartido">
-/*
-  PATCH V11:
-  - El diseño visual queda local por equipo.
-  - Solo se sincroniza por sala/usuario: balotas, figura(s) en juego y seriales.
-  - Se bloquea el envío de personalización/colores/imágenes/layout a Firebase.
-*/
-(function(){
-    if (window.__BINGO75_V11_SOLO_ESTADO__) return;
-    window.__BINGO75_V11_SOLO_ESTADO__ = true;
-
-    const LOCAL_KEY_V11 = 'bingoSala2_V15_MASTER';
-    let aplicandoRemotoV11 = false;
-    let ultimoPushV11 = 0;
-    let unsubEstadoV11 = null;
-    let salaEscuchadaV11 = '';
-    let firebaseToolsEnvueltoV11 = false;
-
-    function normalizarUsuarioV11(){
-        return (localStorage.getItem('bingo_user') || 'ADMIN').trim().toUpperCase();
-    }
-
-    function salaV11(){
-        if(window.MI_CODIGO_SALA) return String(window.MI_CODIGO_SALA).trim();
-        const usuario = normalizarUsuarioV11();
-        let hash = 0;
-        for (let i = 0; i < usuario.length; i++) {
-            hash = ((hash << 5) - hash) + usuario.charCodeAt(i);
-            hash |= 0;
-        }
-        return String((Math.abs(hash) % 900000) + 100000);
-    }
-
-    function getDBV11(){
-        try {
-            if (typeof dbLocal !== 'undefined' && dbLocal) return dbLocal;
-        } catch(e) {}
-        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V11)) || null; } catch(e) { return null; }
-    }
-
-    function guardarLocalV11(renderizarAhora){
-        try {
-            const db = getDBV11();
-            if(!db) return;
-            localStorage.setItem(LOCAL_KEY_V11, JSON.stringify({
-                ...db,
-                media: { left: null, right: null },
-                headerCartonBase64: null,
-                centerLogoBase64: null
-            }));
-            if(renderizarAhora !== false) {
-                try { if(typeof window.actualizarListaSeriales === 'function') window.actualizarListaSeriales(); } catch(e) {}
-                try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-                try { if(typeof window.renderizar === 'function') window.renderizar(); else if(typeof renderizar === 'function') renderizar(); } catch(e) {}
-                try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
-            }
-        } catch(e) {
-            console.warn('No se pudo guardar local V11:', e);
-        }
-    }
-
-    function limpiarPayloadV11(data){
-        if(!data || typeof data !== 'object' || Array.isArray(data)) return data;
-        const limpio = { ...data };
-        delete limpio.personalizacionJugador;
-        delete limpio.figurasPanelLayout;
-        delete limpio.coloresJugador;
-        delete limpio.headerJugador;
-        delete limpio.mediaJugador;
-        return limpio;
-    }
-
-    function envolverFirebaseV11(){
-        if(firebaseToolsEnvueltoV11) return;
-        if(!window.firebaseTools || !window.firebaseTools.setDoc || !window.firebaseTools.updateDoc) return;
-        firebaseToolsEnvueltoV11 = true;
-
-        const setDocOriginal = window.firebaseTools.setDoc.bind(window.firebaseTools);
-        const updateDocOriginal = window.firebaseTools.updateDoc.bind(window.firebaseTools);
-        window.firebaseTools.__setDocOriginalV11 = setDocOriginal;
-        window.firebaseTools.__updateDocOriginalV11 = updateDocOriginal;
-
-        window.firebaseTools.setDoc = function(ref, data, options){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return setDocOriginal(ref, limpio, options);
-        };
-
-        window.firebaseTools.updateDoc = function(ref, data){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return updateDocOriginal(ref, limpio);
-        };
-    }
-
-    async function limpiarCamposDisenoNubeV11(){
-        try {
-            envolverFirebaseV11();
-            const sala = salaV11();
-            if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.__setDocOriginalV11) return;
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.__setDocOriginalV11(salaRef, {
-                personalizacionJugador: null,
-                figurasPanelLayout: null
-            }, { merge: true });
-        } catch(e) {
-            console.warn('No se pudieron limpiar campos visuales remotos:', e);
-        }
-    }
-
-    function normalizarBalotasV11(arr){
-        return Array.isArray(arr) ? arr.map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= 75) : [];
-    }
-
-    function normalizarFigurasV11(figs){
-        if(!Array.isArray(figs)) return [];
-        return figs.filter(f => f && Array.isArray(f.patron))
-            .map((f, idx) => ({
-                nombre: String(f.nombre || ('FIGURA ' + (idx + 1))).toUpperCase(),
-                patron: f.patron.slice(0,25).map(Boolean).concat(new Array(Math.max(0,25 - f.patron.length)).fill(false)).slice(0,25),
-                activa: f.activa !== false
-            }))
-            .filter(f => f.patron.some(Boolean));
-    }
-
-    function obtenerSerialesV11(){
-        const db = getDBV11();
-        if(!db) return [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-        return db.serialesExtra.map(s => ({
-            nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-            lista: Array.isArray(s && s.lista) ? s.lista : []
-        }));
-    }
-
-    function serialesAtextoV11(){
-        try { return JSON.stringify(obtenerSerialesV11()); } catch(e) { return '[]'; }
-    }
-
-    function serialesDesdeTextoV11(txt){
-        try {
-            const arr = typeof txt === 'string' ? JSON.parse(txt) : txt;
-            if(!Array.isArray(arr)) return [];
-            return arr.map(s => ({
-                nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-                lista: Array.isArray(s && s.lista) ? s.lista : []
-            })).filter(s => s.lista.length);
-        } catch(e) { return []; }
-    }
-
-    function empaquetarSerialActivoV11(serial){
-        const compactos = {};
-        if(serial && Array.isArray(serial.lista)) {
-            serial.lista.forEach(c => {
-                if(c && c.carton != null && Array.isArray(c.numeros)) compactos[String(c.carton)] = c.numeros;
-            });
-        }
-        return JSON.stringify(compactos);
-    }
-
-    async function subirEstadoCompartidoV11(motivo){
-        if(aplicandoRemotoV11) return;
-        const ahora = Date.now();
-        if(ahora - ultimoPushV11 < 160) return;
-        ultimoPushV11 = ahora;
-
-        envolverFirebaseV11();
-        const sala = salaV11();
-        const db = getDBV11();
-        if(!sala || !db || !window.db || !window.firebaseTools) return;
-
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-
-        const seriales = obtenerSerialesV11();
-        let idx = Number.isInteger(db.serialActivoIndex) ? db.serialActivoIndex : -1;
-        if(idx < -1 || idx >= seriales.length) idx = -1;
-        db.serialActivoIndex = idx;
-        const serialActivo = idx >= 0 ? seriales[idx] : null;
-
-        const payload = {
-            balotasLlamadas: normalizarBalotasV11(db.juego || []),
-            figuraActual: db.config.figura.slice(0,25).map(Boolean),
-            nombreFigura: String(db.config.nombre || 'BINGO').toUpperCase(),
-            figurasMultiples: normalizarFigurasV11(db.config.figurasMultiples),
-            serialesExtraEmpaquetados: serialesAtextoV11(),
-            serialActivoIndexSync: idx,
-            nombreSerial: serialActivo ? serialActivo.nombre : null,
-            cartonesEmpaquetados: serialActivo ? empaquetarSerialActivoV11(serialActivo) : null,
-            pinSala: sala,
-            estado: 'activo',
-            controlUniversal: {
-                usuario: normalizarUsuarioV11(),
-                motivo: motivo || 'actualizacion',
-                soloComparte: 'balotas_figuras_seriales',
-                updatedAt: Date.now()
-            }
-        };
-
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
-        } catch(e) {
-            console.warn('No se pudo subir estado compartido V11:', e);
-        }
-    }
-
-    function aplicarEstadoCompartidoV11(data, forzar){
-        if(!data) return false;
-        const db = getDBV11();
-        if(!db) return false;
-
-        if(!Array.isArray(db.juego)) db.juego = [];
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-
-        let cambio = false;
-
-        if(Array.isArray(data.balotasLlamadas)) {
-            const remotas = normalizarBalotasV11(data.balotasLlamadas);
-            if(JSON.stringify(db.juego) !== JSON.stringify(remotas)) {
-                db.juego = remotas;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figurasMultiples)) {
-            const figs = normalizarFigurasV11(data.figurasMultiples);
-            if(JSON.stringify(db.config.figurasMultiples) !== JSON.stringify(figs)) {
-                db.config.figurasMultiples = figs;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figuraActual) && data.figuraActual.length === 25) {
-            const fig = data.figuraActual.slice(0,25).map(Boolean);
-            if(JSON.stringify(db.config.figura) !== JSON.stringify(fig)) {
-                db.config.figura = fig;
-                cambio = true;
-            }
-        }
-
-        if(data.nombreFigura) {
-            const nom = String(data.nombreFigura).toUpperCase();
-            if(db.config.nombre !== nom) {
-                db.config.nombre = nom;
-                cambio = true;
-            }
-        }
-
-        if(typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2) {
-            const serialesRemotos = serialesDesdeTextoV11(data.serialesExtraEmpaquetados);
-            if(serialesRemotos.length && JSON.stringify(db.serialesExtra) !== JSON.stringify(serialesRemotos)) {
-                db.serialesExtra = serialesRemotos;
-                cambio = true;
-            }
-        }
-
-        if(Number.isInteger(data.serialActivoIndexSync)) {
-            const idx = data.serialActivoIndexSync;
-            const valido = idx >= -1 && idx < (db.serialesExtra || []).length;
-            if(valido && db.serialActivoIndex !== idx) {
-                db.serialActivoIndex = idx;
-                cambio = true;
-            }
-        }
-
-        if(cambio || forzar) {
-            aplicandoRemotoV11 = true;
-            guardarLocalV11(true);
-            setTimeout(() => { aplicandoRemotoV11 = false; }, 220);
-        }
-
-        return cambio;
-    }
-
-    async function traerEstadoCompartidoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools) return false;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            const snap = await window.firebaseTools.getDoc(salaRef);
-            if(snap && snap.exists()) {
-                const data = snap.data();
-                const tieneSeriales = typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2;
-                const tieneFiguras = Array.isArray(data.figurasMultiples) || Array.isArray(data.figuraActual);
-                const tieneBalotas = Array.isArray(data.balotasLlamadas);
-
-                if(tieneSeriales || tieneFiguras || tieneBalotas) aplicarEstadoCompartidoV11(data, true);
-
-                // Si la nube aún no tiene seriales pero este equipo sí, los sube para los otros equipos.
-                const db = getDBV11();
-                if(db && Array.isArray(db.serialesExtra) && db.serialesExtra.length && !tieneSeriales) {
-                    setTimeout(() => subirEstadoCompartidoV11('subir_seriales_locales'), 300);
-                }
-                return true;
-            }
-        } catch(e) {
-            console.warn('No se pudo traer estado compartido V11:', e);
-        }
-        return false;
-    }
-
-    function instalarListenerEstadoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.onSnapshot) return;
-        if(unsubEstadoV11 && salaEscuchadaV11 === sala) return;
-        if(unsubEstadoV11) { try { unsubEstadoV11(); } catch(e) {} unsubEstadoV11 = null; }
-
-        salaEscuchadaV11 = sala;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            unsubEstadoV11 = window.firebaseTools.onSnapshot(salaRef, (snap) => {
-                if(!snap.exists()) return;
-                aplicarEstadoCompartidoV11(snap.data(), false);
-            });
-        } catch(e) {
-            console.warn('No se pudo escuchar estado compartido:', e);
-        }
-    }
-
-    function envolverFuncionV11(nombre, motivo, antes){
-        const fn = window[nombre];
-        if(typeof fn !== 'function' || fn.__estadoCompartidoV11) return;
-        const wrap = async function(){
-            if(antes) await traerEstadoCompartidoV11();
-            const r = await fn.apply(this, arguments);
-            setTimeout(() => subirEstadoCompartidoV11(motivo || nombre), 220);
-            return r;
-        };
-        wrap.__estadoCompartidoV11 = true;
-        window[nombre] = wrap;
-    }
-
-    function instalarWrappersV11(){
-        envolverFuncionV11('sacarBalota', 'sacar_balota', true);
-        envolverFuncionV11('seleccionarSerial', 'seleccionar_serial', false);
-        envolverFuncionV11('crearNuevoSerial', 'crear_serial', false);
-        envolverFuncionV11('eliminarSerial', 'eliminar_serial', false);
-        envolverFuncionV11('guardarConfigLocal', 'guardar_figura', false);
-        envolverFuncionV11('agregarFiguraLista', 'agregar_figura', false);
-        envolverFuncionV11('eliminarFiguraLista', 'eliminar_figura', false);
-        envolverFuncionV11('limpiarFigurasLista', 'limpiar_figuras', false);
-        envolverFuncionV11('toggleFiguraActivaGlobal', 'activar_figura', false);
-    }
-
-    // Importar Excel es asíncrono por FileReader; se sincroniza cuando el archivo ya quedó cargado.
-    document.addEventListener('change', function(e){
-        if(e.target && e.target.id === 'import-excel') {
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 1200);
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 2500);
-        }
-    }, true);
-
-    // Balota manual: solo se comparte el estado de balotas, no el diseño.
-    document.addEventListener('click', function(e){
-        const bola = e.target && e.target.closest ? e.target.closest('.bola-mini') : null;
-        if(!bola) return;
-        setTimeout(() => subirEstadoCompartidoV11('balota_manual'), 260);
-    }, true);
-
-    function ocultarElementosSyncV11(){
-        document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
-            el.style.display = 'none';
-            el.style.visibility = 'hidden';
-            el.style.opacity = '0';
-            el.setAttribute('aria-hidden', 'true');
-        });
-        const btnPersonalizacion = Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('DISEÑO LOCAL DE ESTE EQUIPO'));
-        if(btnPersonalizacion) {
-            btnPersonalizacion.onclick = function(){ alert('Este diseño es local: no se envía al jugador ni a otros equipos.'); };
-            btnPersonalizacion.style.background = '#6c757d';
-        }
-    }
-
-    function instalarTodoV11(){
-        envolverFirebaseV11();
-        ocultarElementosSyncV11();
-        instalarWrappersV11();
-        instalarListenerEstadoV11();
-        setTimeout(traerEstadoCompartidoV11, 200);
-        setTimeout(limpiarCamposDisenoNubeV11, 600);
-    }
-
-    function envolverInicioV11(){
-        const fn = window.iniciarAppBingo;
-        if(typeof fn !== 'function' || fn.__v11SoloEstado) return;
-        const wrap = function(){
-            const r = fn.apply(this, arguments);
-            setTimeout(instalarTodoV11, 120);
-            setTimeout(instalarTodoV11, 800);
-            setTimeout(() => subirEstadoCompartidoV11('inicio'), 1400);
-            return r;
-        };
-        wrap.__v11SoloEstado = true;
-        window.iniciarAppBingo = wrap;
-    }
-
-    window.sincronizarEstadoCompartidoV11 = subirEstadoCompartidoV11;
-    window.traerEstadoCompartidoV11 = traerEstadoCompartidoV11;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 900);
-    });
-    window.addEventListener('load', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 1200);
-    });
-    setTimeout(() => { envolverInicioV11(); instalarTodoV11(); }, 1600);
-    setInterval(() => { ocultarElementosSyncV11(); instalarWrappersV11(); }, 2500);
-})();
-</script>
-
-</body></html>`);
+                patchWinRef.document.write(`<html><head><title>PREMIO</title><style>body{background:#1a1a1a;color:white;text-align:center;font-family:Arial;} .btn{background:#6f42c1;color:white;padding:15px;margin:10px;border:none;border-radius:8px;width:90%;font-size:19px;font-weight:bold;cursor:pointer;} .btn span{font-size:13px;color:#ffeb3b;}</style></head><body><h2>🏆 GANADORES</h2>${botonesHTML}</body></html>`);
                 patchWinRef.document.close();
             }
             patchLastWinCount = wins.length;
@@ -4818,431 +3122,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
             const figStyle = (isFig && !isMarked) ? 'border:6px solid #ffeb3b; box-sizing:border-box;' : '';
             winR.document.write(`<div class="c-num ${isMarked ? 'marked' : ''}" style="${figStyle}">${displayTxt}</div>`);
         });
-        winR.document.write(`</div><h2 style="color:${(db.colores && db.colores.cartonTexto) || '#ffffff'}; margin-top:15px; font-size:28px;">CARTÓN #${n}</h2><div style="font-size:13px;color:#ffeb3b;line-height:1.4;">Figuras activas: ${figs.map(f => f.nombre).join(' + ') || '---'}</div></div>
-<script id="patch-v11-solo-estado-compartido">
-/*
-  PATCH V11:
-  - El diseño visual queda local por equipo.
-  - Solo se sincroniza por sala/usuario: balotas, figura(s) en juego y seriales.
-  - Se bloquea el envío de personalización/colores/imágenes/layout a Firebase.
-*/
-(function(){
-    if (window.__BINGO75_V11_SOLO_ESTADO__) return;
-    window.__BINGO75_V11_SOLO_ESTADO__ = true;
-
-    const LOCAL_KEY_V11 = 'bingoSala2_V15_MASTER';
-    let aplicandoRemotoV11 = false;
-    let ultimoPushV11 = 0;
-    let unsubEstadoV11 = null;
-    let salaEscuchadaV11 = '';
-    let firebaseToolsEnvueltoV11 = false;
-
-    function normalizarUsuarioV11(){
-        return (localStorage.getItem('bingo_user') || 'ADMIN').trim().toUpperCase();
-    }
-
-    function salaV11(){
-        if(window.MI_CODIGO_SALA) return String(window.MI_CODIGO_SALA).trim();
-        const usuario = normalizarUsuarioV11();
-        let hash = 0;
-        for (let i = 0; i < usuario.length; i++) {
-            hash = ((hash << 5) - hash) + usuario.charCodeAt(i);
-            hash |= 0;
-        }
-        return String((Math.abs(hash) % 900000) + 100000);
-    }
-
-    function getDBV11(){
-        try {
-            if (typeof dbLocal !== 'undefined' && dbLocal) return dbLocal;
-        } catch(e) {}
-        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V11)) || null; } catch(e) { return null; }
-    }
-
-    function guardarLocalV11(renderizarAhora){
-        try {
-            const db = getDBV11();
-            if(!db) return;
-            localStorage.setItem(LOCAL_KEY_V11, JSON.stringify({
-                ...db,
-                media: { left: null, right: null },
-                headerCartonBase64: null,
-                centerLogoBase64: null
-            }));
-            if(renderizarAhora !== false) {
-                try { if(typeof window.actualizarListaSeriales === 'function') window.actualizarListaSeriales(); } catch(e) {}
-                try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-                try { if(typeof window.renderizar === 'function') window.renderizar(); else if(typeof renderizar === 'function') renderizar(); } catch(e) {}
-                try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
-            }
-        } catch(e) {
-            console.warn('No se pudo guardar local V11:', e);
-        }
-    }
-
-    function limpiarPayloadV11(data){
-        if(!data || typeof data !== 'object' || Array.isArray(data)) return data;
-        const limpio = { ...data };
-        delete limpio.personalizacionJugador;
-        delete limpio.figurasPanelLayout;
-        delete limpio.coloresJugador;
-        delete limpio.headerJugador;
-        delete limpio.mediaJugador;
-        return limpio;
-    }
-
-    function envolverFirebaseV11(){
-        if(firebaseToolsEnvueltoV11) return;
-        if(!window.firebaseTools || !window.firebaseTools.setDoc || !window.firebaseTools.updateDoc) return;
-        firebaseToolsEnvueltoV11 = true;
-
-        const setDocOriginal = window.firebaseTools.setDoc.bind(window.firebaseTools);
-        const updateDocOriginal = window.firebaseTools.updateDoc.bind(window.firebaseTools);
-        window.firebaseTools.__setDocOriginalV11 = setDocOriginal;
-        window.firebaseTools.__updateDocOriginalV11 = updateDocOriginal;
-
-        window.firebaseTools.setDoc = function(ref, data, options){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return setDocOriginal(ref, limpio, options);
-        };
-
-        window.firebaseTools.updateDoc = function(ref, data){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return updateDocOriginal(ref, limpio);
-        };
-    }
-
-    async function limpiarCamposDisenoNubeV11(){
-        try {
-            envolverFirebaseV11();
-            const sala = salaV11();
-            if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.__setDocOriginalV11) return;
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.__setDocOriginalV11(salaRef, {
-                personalizacionJugador: null,
-                figurasPanelLayout: null
-            }, { merge: true });
-        } catch(e) {
-            console.warn('No se pudieron limpiar campos visuales remotos:', e);
-        }
-    }
-
-    function normalizarBalotasV11(arr){
-        return Array.isArray(arr) ? arr.map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= 75) : [];
-    }
-
-    function normalizarFigurasV11(figs){
-        if(!Array.isArray(figs)) return [];
-        return figs.filter(f => f && Array.isArray(f.patron))
-            .map((f, idx) => ({
-                nombre: String(f.nombre || ('FIGURA ' + (idx + 1))).toUpperCase(),
-                patron: f.patron.slice(0,25).map(Boolean).concat(new Array(Math.max(0,25 - f.patron.length)).fill(false)).slice(0,25),
-                activa: f.activa !== false
-            }))
-            .filter(f => f.patron.some(Boolean));
-    }
-
-    function obtenerSerialesV11(){
-        const db = getDBV11();
-        if(!db) return [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-        return db.serialesExtra.map(s => ({
-            nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-            lista: Array.isArray(s && s.lista) ? s.lista : []
-        }));
-    }
-
-    function serialesAtextoV11(){
-        try { return JSON.stringify(obtenerSerialesV11()); } catch(e) { return '[]'; }
-    }
-
-    function serialesDesdeTextoV11(txt){
-        try {
-            const arr = typeof txt === 'string' ? JSON.parse(txt) : txt;
-            if(!Array.isArray(arr)) return [];
-            return arr.map(s => ({
-                nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-                lista: Array.isArray(s && s.lista) ? s.lista : []
-            })).filter(s => s.lista.length);
-        } catch(e) { return []; }
-    }
-
-    function empaquetarSerialActivoV11(serial){
-        const compactos = {};
-        if(serial && Array.isArray(serial.lista)) {
-            serial.lista.forEach(c => {
-                if(c && c.carton != null && Array.isArray(c.numeros)) compactos[String(c.carton)] = c.numeros;
-            });
-        }
-        return JSON.stringify(compactos);
-    }
-
-    async function subirEstadoCompartidoV11(motivo){
-        if(aplicandoRemotoV11) return;
-        const ahora = Date.now();
-        if(ahora - ultimoPushV11 < 160) return;
-        ultimoPushV11 = ahora;
-
-        envolverFirebaseV11();
-        const sala = salaV11();
-        const db = getDBV11();
-        if(!sala || !db || !window.db || !window.firebaseTools) return;
-
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-
-        const seriales = obtenerSerialesV11();
-        let idx = Number.isInteger(db.serialActivoIndex) ? db.serialActivoIndex : -1;
-        if(idx < -1 || idx >= seriales.length) idx = -1;
-        db.serialActivoIndex = idx;
-        const serialActivo = idx >= 0 ? seriales[idx] : null;
-
-        const payload = {
-            balotasLlamadas: normalizarBalotasV11(db.juego || []),
-            figuraActual: db.config.figura.slice(0,25).map(Boolean),
-            nombreFigura: String(db.config.nombre || 'BINGO').toUpperCase(),
-            figurasMultiples: normalizarFigurasV11(db.config.figurasMultiples),
-            serialesExtraEmpaquetados: serialesAtextoV11(),
-            serialActivoIndexSync: idx,
-            nombreSerial: serialActivo ? serialActivo.nombre : null,
-            cartonesEmpaquetados: serialActivo ? empaquetarSerialActivoV11(serialActivo) : null,
-            pinSala: sala,
-            estado: 'activo',
-            controlUniversal: {
-                usuario: normalizarUsuarioV11(),
-                motivo: motivo || 'actualizacion',
-                soloComparte: 'balotas_figuras_seriales',
-                updatedAt: Date.now()
-            }
-        };
-
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
-        } catch(e) {
-            console.warn('No se pudo subir estado compartido V11:', e);
-        }
-    }
-
-    function aplicarEstadoCompartidoV11(data, forzar){
-        if(!data) return false;
-        const db = getDBV11();
-        if(!db) return false;
-
-        if(!Array.isArray(db.juego)) db.juego = [];
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-
-        let cambio = false;
-
-        if(Array.isArray(data.balotasLlamadas)) {
-            const remotas = normalizarBalotasV11(data.balotasLlamadas);
-            if(JSON.stringify(db.juego) !== JSON.stringify(remotas)) {
-                db.juego = remotas;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figurasMultiples)) {
-            const figs = normalizarFigurasV11(data.figurasMultiples);
-            if(JSON.stringify(db.config.figurasMultiples) !== JSON.stringify(figs)) {
-                db.config.figurasMultiples = figs;
-                cambio = true;
-            }
-        }
-
-        if(Array.isArray(data.figuraActual) && data.figuraActual.length === 25) {
-            const fig = data.figuraActual.slice(0,25).map(Boolean);
-            if(JSON.stringify(db.config.figura) !== JSON.stringify(fig)) {
-                db.config.figura = fig;
-                cambio = true;
-            }
-        }
-
-        if(data.nombreFigura) {
-            const nom = String(data.nombreFigura).toUpperCase();
-            if(db.config.nombre !== nom) {
-                db.config.nombre = nom;
-                cambio = true;
-            }
-        }
-
-        if(typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2) {
-            const serialesRemotos = serialesDesdeTextoV11(data.serialesExtraEmpaquetados);
-            if(serialesRemotos.length && JSON.stringify(db.serialesExtra) !== JSON.stringify(serialesRemotos)) {
-                db.serialesExtra = serialesRemotos;
-                cambio = true;
-            }
-        }
-
-        if(Number.isInteger(data.serialActivoIndexSync)) {
-            const idx = data.serialActivoIndexSync;
-            const valido = idx >= -1 && idx < (db.serialesExtra || []).length;
-            if(valido && db.serialActivoIndex !== idx) {
-                db.serialActivoIndex = idx;
-                cambio = true;
-            }
-        }
-
-        if(cambio || forzar) {
-            aplicandoRemotoV11 = true;
-            guardarLocalV11(true);
-            setTimeout(() => { aplicandoRemotoV11 = false; }, 220);
-        }
-
-        return cambio;
-    }
-
-    async function traerEstadoCompartidoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools) return false;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            const snap = await window.firebaseTools.getDoc(salaRef);
-            if(snap && snap.exists()) {
-                const data = snap.data();
-                const tieneSeriales = typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2;
-                const tieneFiguras = Array.isArray(data.figurasMultiples) || Array.isArray(data.figuraActual);
-                const tieneBalotas = Array.isArray(data.balotasLlamadas);
-
-                if(tieneSeriales || tieneFiguras || tieneBalotas) aplicarEstadoCompartidoV11(data, true);
-
-                // Si la nube aún no tiene seriales pero este equipo sí, los sube para los otros equipos.
-                const db = getDBV11();
-                if(db && Array.isArray(db.serialesExtra) && db.serialesExtra.length && !tieneSeriales) {
-                    setTimeout(() => subirEstadoCompartidoV11('subir_seriales_locales'), 300);
-                }
-                return true;
-            }
-        } catch(e) {
-            console.warn('No se pudo traer estado compartido V11:', e);
-        }
-        return false;
-    }
-
-    function instalarListenerEstadoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.onSnapshot) return;
-        if(unsubEstadoV11 && salaEscuchadaV11 === sala) return;
-        if(unsubEstadoV11) { try { unsubEstadoV11(); } catch(e) {} unsubEstadoV11 = null; }
-
-        salaEscuchadaV11 = sala;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            unsubEstadoV11 = window.firebaseTools.onSnapshot(salaRef, (snap) => {
-                if(!snap.exists()) return;
-                aplicarEstadoCompartidoV11(snap.data(), false);
-            });
-        } catch(e) {
-            console.warn('No se pudo escuchar estado compartido:', e);
-        }
-    }
-
-    function envolverFuncionV11(nombre, motivo, antes){
-        const fn = window[nombre];
-        if(typeof fn !== 'function' || fn.__estadoCompartidoV11) return;
-        const wrap = async function(){
-            if(antes) await traerEstadoCompartidoV11();
-            const r = await fn.apply(this, arguments);
-            setTimeout(() => subirEstadoCompartidoV11(motivo || nombre), 220);
-            return r;
-        };
-        wrap.__estadoCompartidoV11 = true;
-        window[nombre] = wrap;
-    }
-
-    function instalarWrappersV11(){
-        envolverFuncionV11('sacarBalota', 'sacar_balota', true);
-        envolverFuncionV11('seleccionarSerial', 'seleccionar_serial', false);
-        envolverFuncionV11('crearNuevoSerial', 'crear_serial', false);
-        envolverFuncionV11('eliminarSerial', 'eliminar_serial', false);
-        envolverFuncionV11('guardarConfigLocal', 'guardar_figura', false);
-        envolverFuncionV11('agregarFiguraLista', 'agregar_figura', false);
-        envolverFuncionV11('eliminarFiguraLista', 'eliminar_figura', false);
-        envolverFuncionV11('limpiarFigurasLista', 'limpiar_figuras', false);
-        envolverFuncionV11('toggleFiguraActivaGlobal', 'activar_figura', false);
-    }
-
-    // Importar Excel es asíncrono por FileReader; se sincroniza cuando el archivo ya quedó cargado.
-    document.addEventListener('change', function(e){
-        if(e.target && e.target.id === 'import-excel') {
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 1200);
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 2500);
-        }
-    }, true);
-
-    // Balota manual: solo se comparte el estado de balotas, no el diseño.
-    document.addEventListener('click', function(e){
-        const bola = e.target && e.target.closest ? e.target.closest('.bola-mini') : null;
-        if(!bola) return;
-        setTimeout(() => subirEstadoCompartidoV11('balota_manual'), 260);
-    }, true);
-
-    function ocultarElementosSyncV11(){
-        document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
-            el.style.display = 'none';
-            el.style.visibility = 'hidden';
-            el.style.opacity = '0';
-            el.setAttribute('aria-hidden', 'true');
-        });
-        const btnPersonalizacion = Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('DISEÑO LOCAL DE ESTE EQUIPO'));
-        if(btnPersonalizacion) {
-            btnPersonalizacion.onclick = function(){ alert('Este diseño es local: no se envía al jugador ni a otros equipos.'); };
-            btnPersonalizacion.style.background = '#6c757d';
-        }
-    }
-
-    function instalarTodoV11(){
-        envolverFirebaseV11();
-        ocultarElementosSyncV11();
-        instalarWrappersV11();
-        instalarListenerEstadoV11();
-        setTimeout(traerEstadoCompartidoV11, 200);
-        setTimeout(limpiarCamposDisenoNubeV11, 600);
-    }
-
-    function envolverInicioV11(){
-        const fn = window.iniciarAppBingo;
-        if(typeof fn !== 'function' || fn.__v11SoloEstado) return;
-        const wrap = function(){
-            const r = fn.apply(this, arguments);
-            setTimeout(instalarTodoV11, 120);
-            setTimeout(instalarTodoV11, 800);
-            setTimeout(() => subirEstadoCompartidoV11('inicio'), 1400);
-            return r;
-        };
-        wrap.__v11SoloEstado = true;
-        window.iniciarAppBingo = wrap;
-    }
-
-    window.sincronizarEstadoCompartidoV11 = subirEstadoCompartidoV11;
-    window.traerEstadoCompartidoV11 = traerEstadoCompartidoV11;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 900);
-    });
-    window.addEventListener('load', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 1200);
-    });
-    setTimeout(() => { envolverInicioV11(); instalarTodoV11(); }, 1600);
-    setInterval(() => { ocultarElementosSyncV11(); instalarWrappersV11(); }, 2500);
-})();
-</script>
-
-</body></html>`);
+        winR.document.write(`</div><h2 style="color:${(db.colores && db.colores.cartonTexto) || '#ffffff'}; margin-top:15px; font-size:28px;">CARTÓN #${n}</h2><div style="font-size:13px;color:#ffeb3b;line-height:1.4;">Figuras activas: ${figs.map(f => f.nombre).join(' + ') || '---'}</div></div></body></html>`);
         winR.document.close();
     };
 
@@ -5803,22 +3683,10 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
     }
 
     async function sincronizarLayoutFirebaseV5(layout, forzar){
-        const ahora = Date.now();
-        if(!forzar && ahora - ultimoSync < 300) return;
-        ultimoSync = ahora;
-        const sala = getSalaV5();
-        if(!sala || !window.db || !window.firebaseTools) {
-            setStatusV5('LOCAL');
-            return;
-        }
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.setDoc(salaRef, { figurasPanelLayout: layout }, { merge: true });
-            setStatusV5('SYNC');
-        } catch(e) {
-            console.warn('No se pudo sincronizar tamaño/posición de figuras:', e);
-            setStatusV5('LOCAL');
-        }
+        // V12: el diseño del panel de figuras es LOCAL por equipo.
+        // No se sube ni se trae posición/tamaño desde Firebase.
+        setStatusV5('');
+        return;
     }
 
     function guardarYSincronizarV5(el, forzar){
@@ -5829,26 +3697,8 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
     }
 
     function instalarListenerFirebaseV5(el){
-        if(unsubLayout || !el || !window.db || !window.firebaseTools || !getSalaV5()) return;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', getSalaV5());
-            unsubLayout = window.firebaseTools.onSnapshot(salaRef, (snap) => {
-                if(!snap.exists()) return;
-                const data = snap.data() || {};
-                const layout = data.figurasPanelLayout;
-                if(!layout) return;
-                if(layout.usuario && layout.usuario !== usuarioActualV5()) return;
-                const localRaw = localStorage.getItem(LAYOUT_KEY);
-                let localTs = 0;
-                try { localTs = localRaw ? (JSON.parse(localRaw).updatedAt || 0) : 0; } catch(e) {}
-                if((layout.updatedAt || 0) < localTs && Date.now() - ultimaInteraccionLocal < 1200) return;
-                aplicarLayoutV5(el, layout);
-                try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch(e) {}
-                setStatusV5('SYNC');
-            });
-        } catch(e) {
-            console.warn('No se pudo escuchar layout de figuras:', e);
-        }
+        // V12: no escuchar layout remoto; la posición/tamaño de figuras queda local por equipo.
+        return;
     }
 
     function asegurarControlesV5(el){
@@ -6284,426 +4134,407 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 </script>
 
 
-<script id="patch-v11-solo-estado-compartido">
-/*
-  PATCH V11:
-  - El diseño visual queda local por equipo.
-  - Solo se sincroniza por sala/usuario: balotas, figura(s) en juego y seriales.
-  - Se bloquea el envío de personalización/colores/imágenes/layout a Firebase.
-*/
+<!-- PATCH V12: login intacto + solo estado compartido + seriales + diseño local -->
+<style id="patch-v12-diseno-local">
+    #figura-sync-status-v5,
+    .figura-sync-status-v5 {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+</style>
+<script id="patch-v12-login-ok-solo-estado-seriales">
 (function(){
-    if (window.__BINGO75_V11_SOLO_ESTADO__) return;
-    window.__BINGO75_V11_SOLO_ESTADO__ = true;
+    if(window.__BINGO75_V12_SOLO_ESTADO_SERIALES__) return;
+    window.__BINGO75_V12_SOLO_ESTADO_SERIALES__ = true;
 
-    const LOCAL_KEY_V11 = 'bingoSala2_V15_MASTER';
-    let aplicandoRemotoV11 = false;
-    let ultimoPushV11 = 0;
-    let unsubEstadoV11 = null;
-    let salaEscuchadaV11 = '';
-    let firebaseToolsEnvueltoV11 = false;
+    const LOCAL_KEY_V12 = 'bingoSala2_V15_MASTER';
+    let aplicandoRemotoV12 = false;
+    let ultimoPushV12 = 0;
+    let unsubV12 = null;
+    let salaEscuchadaV12 = '';
+    let firmaRemotaV12 = '';
+    let firebaseEnvueltoV12 = false;
 
-    function normalizarUsuarioV11(){
+    const CAMPOS_DISENO = new Set([
+        'personalizacionJugador',
+        'figurasPanelLayout',
+        'layoutPanelFiguras',
+        'coloresJugador',
+        'headerLogoTexto',
+        'centerLogoTexto',
+        'mediaLeftTexto',
+        'mediaRightTexto',
+        'headerCartonBase64',
+        'centerLogoBase64',
+        'mediaLeftBase64',
+        'mediaRightBase64',
+        'colorTablero',
+        'colorBalotas',
+        'colorCarton',
+        'colores'
+    ]);
+
+    function usuarioV12(){
         return (localStorage.getItem('bingo_user') || 'ADMIN').trim().toUpperCase();
     }
 
-    function salaV11(){
+    function salaV12(){
         if(window.MI_CODIGO_SALA) return String(window.MI_CODIGO_SALA).trim();
-        const usuario = normalizarUsuarioV11();
+        const u = usuarioV12();
         let hash = 0;
-        for (let i = 0; i < usuario.length; i++) {
-            hash = ((hash << 5) - hash) + usuario.charCodeAt(i);
+        for(let i = 0; i < u.length; i++) {
+            hash = ((hash << 5) - hash) + u.charCodeAt(i);
             hash |= 0;
         }
         return String((Math.abs(hash) % 900000) + 100000);
     }
 
-    function getDBV11(){
-        try {
-            if (typeof dbLocal !== 'undefined' && dbLocal) return dbLocal;
-        } catch(e) {}
-        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V11)) || null; } catch(e) { return null; }
+    function getDBV12(){
+        try { if(typeof dbLocal !== 'undefined' && dbLocal) return dbLocal; } catch(e) {}
+        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V12) || 'null'); } catch(e) { return null; }
     }
 
-    function guardarLocalV11(renderizarAhora){
-        try {
-            const db = getDBV11();
-            if(!db) return;
-            localStorage.setItem(LOCAL_KEY_V11, JSON.stringify({
-                ...db,
-                media: { left: null, right: null },
-                headerCartonBase64: null,
-                centerLogoBase64: null
-            }));
-            if(renderizarAhora !== false) {
-                try { if(typeof window.actualizarListaSeriales === 'function') window.actualizarListaSeriales(); } catch(e) {}
-                try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-                try { if(typeof window.renderizar === 'function') window.renderizar(); else if(typeof renderizar === 'function') renderizar(); } catch(e) {}
-                try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
-            }
-        } catch(e) {
-            console.warn('No se pudo guardar local V11:', e);
-        }
+    function guardarLocalV12(){
+        const db = getDBV12();
+        if(!db) return;
+        try { localStorage.setItem(LOCAL_KEY_V12, JSON.stringify(db)); } catch(e) {}
+        try { if(typeof window.renderizar === 'function') window.renderizar(); } catch(e) {}
+        try { if(typeof window.actualizarListaSeriales === 'function') window.actualizarListaSeriales(); } catch(e) {}
+        try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
+        try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
     }
 
-    function limpiarPayloadV11(data){
-        if(!data || typeof data !== 'object' || Array.isArray(data)) return data;
-        const limpio = { ...data };
-        delete limpio.personalizacionJugador;
-        delete limpio.figurasPanelLayout;
-        delete limpio.coloresJugador;
-        delete limpio.headerJugador;
-        delete limpio.mediaJugador;
-        return limpio;
+    function normalizarBalotasV12(arr){
+        if(!Array.isArray(arr)) return [];
+        const vistas = new Set();
+        return arr.map(n => parseInt(n, 10))
+            .filter(n => Number.isInteger(n) && n >= 1 && n <= 75)
+            .filter(n => {
+                if(vistas.has(n)) return false;
+                vistas.add(n);
+                return true;
+            });
     }
 
-    function envolverFirebaseV11(){
-        if(firebaseToolsEnvueltoV11) return;
-        if(!window.firebaseTools || !window.firebaseTools.setDoc || !window.firebaseTools.updateDoc) return;
-        firebaseToolsEnvueltoV11 = true;
-
-        const setDocOriginal = window.firebaseTools.setDoc.bind(window.firebaseTools);
-        const updateDocOriginal = window.firebaseTools.updateDoc.bind(window.firebaseTools);
-        window.firebaseTools.__setDocOriginalV11 = setDocOriginal;
-        window.firebaseTools.__updateDocOriginalV11 = updateDocOriginal;
-
-        window.firebaseTools.setDoc = function(ref, data, options){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return setDocOriginal(ref, limpio, options);
-        };
-
-        window.firebaseTools.updateDoc = function(ref, data){
-            const limpio = limpiarPayloadV11(data);
-            if(limpio && typeof limpio === 'object' && !Array.isArray(limpio) && Object.keys(limpio).length === 0) {
-                return Promise.resolve();
-            }
-            return updateDocOriginal(ref, limpio);
-        };
+    function normalizarFiguraV12(fig){
+        if(!Array.isArray(fig)) return [];
+        return fig.slice(0,25).map(Boolean);
     }
 
-    async function limpiarCamposDisenoNubeV11(){
-        try {
-            envolverFirebaseV11();
-            const sala = salaV11();
-            if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.__setDocOriginalV11) return;
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.__setDocOriginalV11(salaRef, {
-                personalizacionJugador: null,
-                figurasPanelLayout: null
-            }, { merge: true });
-        } catch(e) {
-            console.warn('No se pudieron limpiar campos visuales remotos:', e);
-        }
-    }
-
-    function normalizarBalotasV11(arr){
-        return Array.isArray(arr) ? arr.map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= 75) : [];
-    }
-
-    function normalizarFigurasV11(figs){
+    function normalizarFigurasMultiplesV12(figs){
         if(!Array.isArray(figs)) return [];
-        return figs.filter(f => f && Array.isArray(f.patron))
-            .map((f, idx) => ({
-                nombre: String(f.nombre || ('FIGURA ' + (idx + 1))).toUpperCase(),
-                patron: f.patron.slice(0,25).map(Boolean).concat(new Array(Math.max(0,25 - f.patron.length)).fill(false)).slice(0,25),
-                activa: f.activa !== false
-            }))
-            .filter(f => f.patron.some(Boolean));
-    }
-
-    function obtenerSerialesV11(){
-        const db = getDBV11();
-        if(!db) return [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-        return db.serialesExtra.map(s => ({
-            nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-            lista: Array.isArray(s && s.lista) ? s.lista : []
+        return figs.filter(f => f && Array.isArray(f.patron)).map(f => ({
+            nombre: String(f.nombre || 'FIGURA').toUpperCase(),
+            patron: normalizarFiguraV12(f.patron),
+            activa: f.activa !== false
         }));
     }
 
-    function serialesAtextoV11(){
-        try { return JSON.stringify(obtenerSerialesV11()); } catch(e) { return '[]'; }
+    function normalizarSerialesV12(seriales){
+        if(!Array.isArray(seriales)) return [];
+        return seriales.filter(s => s && Array.isArray(s.lista)).map(s => ({
+            nombre: String(s.nombre || 'SERIAL').toUpperCase(),
+            lista: s.lista.filter(c => c && Array.isArray(c.numeros)).map(c => ({
+                carton: parseInt(c.carton, 10),
+                numeros: c.numeros.slice(0,25).map(n => parseInt(n, 10))
+            })).filter(c => Number.isInteger(c.carton) && c.numeros.length >= 24)
+        })).filter(s => s.lista.length);
     }
 
-    function serialesDesdeTextoV11(txt){
-        try {
-            const arr = typeof txt === 'string' ? JSON.parse(txt) : txt;
-            if(!Array.isArray(arr)) return [];
-            return arr.map(s => ({
-                nombre: String((s && s.nombre) || 'SERIAL').toUpperCase(),
-                lista: Array.isArray(s && s.lista) ? s.lista : []
-            })).filter(s => s.lista.length);
-        } catch(e) { return []; }
-    }
-
-    function empaquetarSerialActivoV11(serial){
+    function empaquetarSerialActivoV12(db){
+        const serial = db && Array.isArray(db.serialesExtra) ? db.serialesExtra[db.serialActivoIndex] : null;
+        if(!serial || !Array.isArray(serial.lista)) return { texto: '', nombre: '' };
         const compactos = {};
-        if(serial && Array.isArray(serial.lista)) {
-            serial.lista.forEach(c => {
-                if(c && c.carton != null && Array.isArray(c.numeros)) compactos[String(c.carton)] = c.numeros;
-            });
-        }
-        return JSON.stringify(compactos);
+        serial.lista.forEach(c => {
+            if(c && c.carton != null && Array.isArray(c.numeros)) compactos[String(c.carton)] = c.numeros.slice(0,25);
+        });
+        return { texto: JSON.stringify(compactos), nombre: serial.nombre || 'SERIAL ACTIVO' };
     }
 
-    async function subirEstadoCompartidoV11(motivo){
-        if(aplicandoRemotoV11) return;
-        const ahora = Date.now();
-        if(ahora - ultimoPushV11 < 160) return;
-        ultimoPushV11 = ahora;
-
-        envolverFirebaseV11();
-        const sala = salaV11();
-        const db = getDBV11();
-        if(!sala || !db || !window.db || !window.firebaseTools) return;
-
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
-
-        const seriales = obtenerSerialesV11();
-        let idx = Number.isInteger(db.serialActivoIndex) ? db.serialActivoIndex : -1;
-        if(idx < -1 || idx >= seriales.length) idx = -1;
-        db.serialActivoIndex = idx;
-        const serialActivo = idx >= 0 ? seriales[idx] : null;
-
-        const payload = {
-            balotasLlamadas: normalizarBalotasV11(db.juego || []),
-            figuraActual: db.config.figura.slice(0,25).map(Boolean),
-            nombreFigura: String(db.config.nombre || 'BINGO').toUpperCase(),
-            figurasMultiples: normalizarFigurasV11(db.config.figurasMultiples),
-            serialesExtraEmpaquetados: serialesAtextoV11(),
-            serialActivoIndexSync: idx,
-            nombreSerial: serialActivo ? serialActivo.nombre : null,
-            cartonesEmpaquetados: serialActivo ? empaquetarSerialActivoV11(serialActivo) : null,
-            pinSala: sala,
-            estado: 'activo',
-            controlUniversal: {
-                usuario: normalizarUsuarioV11(),
-                motivo: motivo || 'actualizacion',
-                soloComparte: 'balotas_figuras_seriales',
-                updatedAt: Date.now()
-            }
-        };
-
+    function reconstruirSerialDesdePaqueteV12(data){
+        if(!data || !data.cartonesEmpaquetados) return null;
         try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
-        } catch(e) {
-            console.warn('No se pudo subir estado compartido V11:', e);
-        }
+            const obj = JSON.parse(data.cartonesEmpaquetados);
+            const lista = Object.keys(obj).map(k => ({ carton: parseInt(k,10), numeros: obj[k] }))
+                .filter(c => Number.isInteger(c.carton) && Array.isArray(c.numeros));
+            if(!lista.length) return null;
+            lista.sort((a,b) => a.carton - b.carton);
+            return { nombre: String(data.nombreSerial || 'SERIAL REMOTO').toUpperCase(), lista };
+        } catch(e) { return null; }
     }
 
-    function aplicarEstadoCompartidoV11(data, forzar){
-        if(!data) return false;
-        const db = getDBV11();
-        if(!db) return false;
+    function firmaEstadoV12(data){
+        return JSON.stringify({
+            b: normalizarBalotasV12(data && data.balotasLlamadas),
+            f: normalizarFiguraV12(data && data.figuraActual),
+            fm: normalizarFigurasMultiplesV12(data && data.figurasMultiples),
+            n: String((data && data.nombreFigura) || ''),
+            si: data && Number.isInteger(data.serialActivoIndex) ? data.serialActivoIndex : -1,
+            sn: String((data && data.nombreSerial) || ''),
+            cp: data && data.cartonesEmpaquetados ? String(data.cartonesEmpaquetados).length : 0,
+            sx: data && Array.isArray(data.serialesExtraCompartidos) ? data.serialesExtraCompartidos.length : 0
+        });
+    }
 
-        if(!Array.isArray(db.juego)) db.juego = [];
+    function aplicarEstadoRemotoV12(data, forzar){
+        if(!data) return false;
+        const firma = firmaEstadoV12(data);
+        if(!forzar && firma === firmaRemotaV12) return false;
+        firmaRemotaV12 = firma;
+
+        const db = getDBV12();
+        if(!db) return false;
         if(!db.config) db.config = {};
-        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
-        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
+        if(!Array.isArray(db.juego)) db.juego = [];
         if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
 
         let cambio = false;
-
-        if(Array.isArray(data.balotasLlamadas)) {
-            const remotas = normalizarBalotasV11(data.balotasLlamadas);
-            if(JSON.stringify(db.juego) !== JSON.stringify(remotas)) {
-                db.juego = remotas;
-                cambio = true;
-            }
+        const balotas = normalizarBalotasV12(data.balotasLlamadas);
+        if(JSON.stringify(db.juego || []) !== JSON.stringify(balotas)) {
+            db.juego = balotas;
+            cambio = true;
         }
 
-        if(Array.isArray(data.figurasMultiples)) {
-            const figs = normalizarFigurasV11(data.figurasMultiples);
-            if(JSON.stringify(db.config.figurasMultiples) !== JSON.stringify(figs)) {
-                db.config.figurasMultiples = figs;
-                cambio = true;
-            }
+        const figurasMultiples = normalizarFigurasMultiplesV12(data.figurasMultiples);
+        if(figurasMultiples.length && JSON.stringify(db.config.figurasMultiples || []) !== JSON.stringify(figurasMultiples)) {
+            db.config.figurasMultiples = figurasMultiples;
+            cambio = true;
         }
 
-        if(Array.isArray(data.figuraActual) && data.figuraActual.length === 25) {
-            const fig = data.figuraActual.slice(0,25).map(Boolean);
-            if(JSON.stringify(db.config.figura) !== JSON.stringify(fig)) {
-                db.config.figura = fig;
-                cambio = true;
-            }
+        const figura = normalizarFiguraV12(data.figuraActual);
+        if(figura.length && JSON.stringify(db.config.figura || []) !== JSON.stringify(figura)) {
+            db.config.figura = figura;
+            cambio = true;
         }
 
         if(data.nombreFigura) {
-            const nom = String(data.nombreFigura).toUpperCase();
-            if(db.config.nombre !== nom) {
-                db.config.nombre = nom;
+            const nombre = String(data.nombreFigura).toUpperCase();
+            if(db.config.nombre !== nombre) {
+                db.config.nombre = nombre;
                 cambio = true;
             }
         }
 
-        if(typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2) {
-            const serialesRemotos = serialesDesdeTextoV11(data.serialesExtraEmpaquetados);
-            if(serialesRemotos.length && JSON.stringify(db.serialesExtra) !== JSON.stringify(serialesRemotos)) {
-                db.serialesExtra = serialesRemotos;
+        const serialesCompartidos = normalizarSerialesV12(data.serialesExtraCompartidos);
+        if(serialesCompartidos.length) {
+            if(JSON.stringify(db.serialesExtra || []) !== JSON.stringify(serialesCompartidos)) {
+                db.serialesExtra = serialesCompartidos;
                 cambio = true;
+            }
+            if(Number.isInteger(data.serialActivoIndex) && data.serialActivoIndex >= -1 && db.serialActivoIndex !== data.serialActivoIndex) {
+                db.serialActivoIndex = data.serialActivoIndex;
+                cambio = true;
+            }
+        } else {
+            const serialRemoto = reconstruirSerialDesdePaqueteV12(data);
+            if(serialRemoto) {
+                const idxExistente = db.serialesExtra.findIndex(s => s && s.nombre === serialRemoto.nombre && Array.isArray(s.lista) && s.lista.length === serialRemoto.lista.length);
+                if(idxExistente >= 0) {
+                    if(db.serialActivoIndex !== idxExistente) {
+                        db.serialActivoIndex = idxExistente;
+                        cambio = true;
+                    }
+                } else {
+                    db.serialesExtra.push(serialRemoto);
+                    db.serialActivoIndex = db.serialesExtra.length - 1;
+                    cambio = true;
+                }
             }
         }
 
-        if(Number.isInteger(data.serialActivoIndexSync)) {
-            const idx = data.serialActivoIndexSync;
-            const valido = idx >= -1 && idx < (db.serialesExtra || []).length;
-            if(valido && db.serialActivoIndex !== idx) {
-                db.serialActivoIndex = idx;
-                cambio = true;
-            }
+        if(cambio) {
+            aplicandoRemotoV12 = true;
+            guardarLocalV12();
+            setTimeout(() => { aplicandoRemotoV12 = false; }, 250);
         }
-
-        if(cambio || forzar) {
-            aplicandoRemotoV11 = true;
-            guardarLocalV11(true);
-            setTimeout(() => { aplicandoRemotoV11 = false; }, 220);
-        }
-
         return cambio;
     }
 
-    async function traerEstadoCompartidoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools) return false;
+    async function traerEstadoNubeV12(){
+        const sala = salaV12();
+        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.getDoc) return false;
         try {
             const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
             const snap = await window.firebaseTools.getDoc(salaRef);
-            if(snap && snap.exists()) {
-                const data = snap.data();
-                const tieneSeriales = typeof data.serialesExtraEmpaquetados === 'string' && data.serialesExtraEmpaquetados.length > 2;
-                const tieneFiguras = Array.isArray(data.figurasMultiples) || Array.isArray(data.figuraActual);
-                const tieneBalotas = Array.isArray(data.balotasLlamadas);
-
-                if(tieneSeriales || tieneFiguras || tieneBalotas) aplicarEstadoCompartidoV11(data, true);
-
-                // Si la nube aún no tiene seriales pero este equipo sí, los sube para los otros equipos.
-                const db = getDBV11();
-                if(db && Array.isArray(db.serialesExtra) && db.serialesExtra.length && !tieneSeriales) {
-                    setTimeout(() => subirEstadoCompartidoV11('subir_seriales_locales'), 300);
-                }
-                return true;
-            }
+            if(snap && snap.exists()) return aplicarEstadoRemotoV12(snap.data(), true);
         } catch(e) {
-            console.warn('No se pudo traer estado compartido V11:', e);
+            console.warn('No se pudo traer estado compartido:', e);
         }
         return false;
     }
 
-    function instalarListenerEstadoV11(){
-        envolverFirebaseV11();
-        const sala = salaV11();
-        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.onSnapshot) return;
-        if(unsubEstadoV11 && salaEscuchadaV11 === sala) return;
-        if(unsubEstadoV11) { try { unsubEstadoV11(); } catch(e) {} unsubEstadoV11 = null; }
+    function crearPayloadCompartidoV12(motivo){
+        const db = getDBV12();
+        if(!db) return null;
+        const paquete = empaquetarSerialActivoV12(db);
+        const payload = {
+            balotasLlamadas: normalizarBalotasV12(db.juego || []),
+            figuraActual: normalizarFiguraV12(db.config && db.config.figura),
+            nombreFigura: (db.config && db.config.nombre) || 'BINGO',
+            figurasMultiples: normalizarFigurasMultiplesV12(db.config && db.config.figurasMultiples),
+            serialActivoIndex: Number.isInteger(db.serialActivoIndex) ? db.serialActivoIndex : -1,
+            serialesExtraCompartidos: normalizarSerialesV12(db.serialesExtra || []),
+            nombreSerial: paquete.nombre || ((db.serialesExtra && db.serialesExtra[db.serialActivoIndex] && db.serialesExtra[db.serialActivoIndex].nombre) || ''),
+            pinSala: salaV12(),
+            estado: 'activo',
+            estadoCompartidoV12: {
+                usuario: usuarioV12(),
+                motivo: motivo || 'actualizacion',
+                updatedAt: Date.now()
+            }
+        };
+        if(paquete.texto) payload.cartonesEmpaquetados = paquete.texto;
+        return payload;
+    }
 
-        salaEscuchadaV11 = sala;
+    async function subirEstadoCompartidoV12(motivo){
+        if(aplicandoRemotoV12) return;
+        const ahora = Date.now();
+        if(ahora - ultimoPushV12 < 250) return;
+        ultimoPushV12 = ahora;
+        const sala = salaV12();
+        if(!sala || !window.db || !window.firebaseTools) return;
+        const payload = crearPayloadCompartidoV12(motivo);
+        if(!payload) return;
         try {
             const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            unsubEstadoV11 = window.firebaseTools.onSnapshot(salaRef, (snap) => {
-                if(!snap.exists()) return;
-                aplicarEstadoCompartidoV11(snap.data(), false);
-            });
+            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
         } catch(e) {
-            console.warn('No se pudo escuchar estado compartido:', e);
+            console.warn('No se pudo subir estado compartido/seriales:', e);
+            // Si el serial completo pesa demasiado, al menos subimos estado + serial activo empaquetado.
+            try {
+                const ligero = Object.assign({}, payload);
+                delete ligero.serialesExtraCompartidos;
+                const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
+                await window.firebaseTools.setDoc(salaRef, ligero, { merge: true });
+            } catch(err) {
+                console.warn('Tampoco se pudo subir el estado ligero:', err);
+            }
         }
     }
 
-    function envolverFuncionV11(nombre, motivo, antes){
+    function instalarListenerV12(){
+        const sala = salaV12();
+        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.onSnapshot) return;
+        if(unsubV12 && salaEscuchadaV12 === sala) return;
+        if(unsubV12) { try { unsubV12(); } catch(e) {} unsubV12 = null; }
+        salaEscuchadaV12 = sala;
+        try {
+            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
+            unsubV12 = window.firebaseTools.onSnapshot(salaRef, snap => {
+                if(!snap.exists()) return;
+                aplicarEstadoRemotoV12(snap.data(), false);
+            });
+            setTimeout(traerEstadoNubeV12, 150);
+        } catch(e) {
+            console.warn('No se pudo instalar listener compartido:', e);
+        }
+    }
+
+    function clonarSinDisenoV12(valor){
+        if(!valor || typeof valor !== 'object' || Array.isArray(valor)) return valor;
+        const limpio = {};
+        Object.keys(valor).forEach(k => {
+            if(CAMPOS_DISENO.has(k)) return;
+            limpio[k] = valor[k];
+        });
+        return limpio;
+    }
+
+    function objetoVacioV12(obj){
+        return obj && typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).length === 0;
+    }
+
+    function envolverFirebaseToolsV12(){
+        if(firebaseEnvueltoV12 || !window.firebaseTools) return;
+        ['setDoc','updateDoc'].forEach(nombre => {
+            const original = window.firebaseTools[nombre];
+            if(typeof original !== 'function' || original.__soloEstadoV12) return;
+            const envuelta = function(ref, data, options){
+                const limpio = clonarSinDisenoV12(data);
+                if(objetoVacioV12(limpio)) return Promise.resolve();
+                return original.call(this, ref, limpio, options);
+            };
+            envuelta.__soloEstadoV12 = true;
+            window.firebaseTools[nombre] = envuelta;
+        });
+        firebaseEnvueltoV12 = true;
+    }
+
+    function envolverFuncionV12(nombre, motivo, antesNube){
         const fn = window[nombre];
-        if(typeof fn !== 'function' || fn.__estadoCompartidoV11) return;
+        if(typeof fn !== 'function' || fn.__soloEstadoV12) return;
         const wrap = async function(){
-            if(antes) await traerEstadoCompartidoV11();
+            if(antesNube) await traerEstadoNubeV12();
             const r = await fn.apply(this, arguments);
-            setTimeout(() => subirEstadoCompartidoV11(motivo || nombre), 220);
+            setTimeout(() => subirEstadoCompartidoV12(motivo || nombre), 220);
             return r;
         };
-        wrap.__estadoCompartidoV11 = true;
+        wrap.__soloEstadoV12 = true;
+        wrap.__originalSoloEstadoV12 = fn;
         window[nombre] = wrap;
     }
 
-    function instalarWrappersV11(){
-        envolverFuncionV11('sacarBalota', 'sacar_balota', true);
-        envolverFuncionV11('seleccionarSerial', 'seleccionar_serial', false);
-        envolverFuncionV11('crearNuevoSerial', 'crear_serial', false);
-        envolverFuncionV11('eliminarSerial', 'eliminar_serial', false);
-        envolverFuncionV11('guardarConfigLocal', 'guardar_figura', false);
-        envolverFuncionV11('agregarFiguraLista', 'agregar_figura', false);
-        envolverFuncionV11('eliminarFiguraLista', 'eliminar_figura', false);
-        envolverFuncionV11('limpiarFigurasLista', 'limpiar_figuras', false);
-        envolverFuncionV11('toggleFiguraActivaGlobal', 'activar_figura', false);
-    }
-
-    // Importar Excel es asíncrono por FileReader; se sincroniza cuando el archivo ya quedó cargado.
-    document.addEventListener('change', function(e){
-        if(e.target && e.target.id === 'import-excel') {
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 1200);
-            setTimeout(() => subirEstadoCompartidoV11('importar_excel'), 2500);
-        }
-    }, true);
-
-    // Balota manual: solo se comparte el estado de balotas, no el diseño.
-    document.addEventListener('click', function(e){
-        const bola = e.target && e.target.closest ? e.target.closest('.bola-mini') : null;
-        if(!bola) return;
-        setTimeout(() => subirEstadoCompartidoV11('balota_manual'), 260);
-    }, true);
-
-    function ocultarElementosSyncV11(){
+    function ocultarSyncV12(){
         document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
+            el.textContent = '';
             el.style.display = 'none';
             el.style.visibility = 'hidden';
             el.style.opacity = '0';
-            el.setAttribute('aria-hidden', 'true');
+            el.setAttribute('aria-hidden','true');
         });
-        const btnPersonalizacion = Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('DISEÑO LOCAL DE ESTE EQUIPO'));
-        if(btnPersonalizacion) {
-            btnPersonalizacion.onclick = function(){ alert('Este diseño es local: no se envía al jugador ni a otros equipos.'); };
-            btnPersonalizacion.style.background = '#6c757d';
-        }
     }
 
-    function instalarTodoV11(){
-        envolverFirebaseV11();
-        ocultarElementosSyncV11();
-        instalarWrappersV11();
-        instalarListenerEstadoV11();
-        setTimeout(traerEstadoCompartidoV11, 200);
-        setTimeout(limpiarCamposDisenoNubeV11, 600);
+    function instalarWrappersV12(){
+        envolverFirebaseToolsV12();
+        envolverFuncionV12('sacarBalota', 'sacar_balota', true);
+        envolverFuncionV12('guardarConfigLocal', 'figura', false);
+        envolverFuncionV12('agregarFiguraLista', 'figura_multiple', false);
+        envolverFuncionV12('eliminarFiguraLista', 'figura_multiple', false);
+        envolverFuncionV12('limpiarFigurasLista', 'figura_multiple', false);
+        envolverFuncionV12('toggleFiguraActivaGlobal', 'figura_activa', false);
+        envolverFuncionV12('toggleFiguraActiva', 'figura_activa', false);
+        envolverFuncionV12('seleccionarSerial', 'serial_activo', false);
+        envolverFuncionV12('crearNuevoSerial', 'serial_creado', false);
+        envolverFuncionV12('eliminarSerial', 'serial_eliminado', false);
     }
 
-    function envolverInicioV11(){
+    function instalarTodoV12(){
+        ocultarSyncV12();
+        instalarWrappersV12();
+        instalarListenerV12();
+    }
+
+    function envolverInicioV12(){
         const fn = window.iniciarAppBingo;
-        if(typeof fn !== 'function' || fn.__v11SoloEstado) return;
+        if(typeof fn !== 'function' || fn.__soloEstadoV12Inicio) return;
         const wrap = function(){
             const r = fn.apply(this, arguments);
-            setTimeout(instalarTodoV11, 120);
-            setTimeout(instalarTodoV11, 800);
-            setTimeout(() => subirEstadoCompartidoV11('inicio'), 1400);
+            setTimeout(instalarTodoV12, 120);
+            setTimeout(traerEstadoNubeV12, 450);
+            setTimeout(instalarTodoV12, 900);
             return r;
         };
-        wrap.__v11SoloEstado = true;
+        wrap.__soloEstadoV12Inicio = true;
         window.iniciarAppBingo = wrap;
     }
 
-    window.sincronizarEstadoCompartidoV11 = subirEstadoCompartidoV11;
-    window.traerEstadoCompartidoV11 = traerEstadoCompartidoV11;
+    document.addEventListener('click', function(e){
+        if(e.target && e.target.closest && e.target.closest('.bola-mini')) {
+            setTimeout(() => subirEstadoCompartidoV12('balota_manual'), 220);
+        }
+    }, true);
 
-    document.addEventListener('DOMContentLoaded', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 900);
-    });
-    window.addEventListener('load', () => {
-        envolverInicioV11();
-        setTimeout(instalarTodoV11, 1200);
-    });
-    setTimeout(() => { envolverInicioV11(); instalarTodoV11(); }, 1600);
-    setInterval(() => { ocultarElementosSyncV11(); instalarWrappersV11(); }, 2500);
+    window.sincronizarEstadoCompartidoV12 = subirEstadoCompartidoV12;
+    window.traerEstadoCompartidoV12 = traerEstadoNubeV12;
+
+    document.addEventListener('DOMContentLoaded', () => { envolverInicioV12(); setTimeout(instalarTodoV12, 800); });
+    window.addEventListener('load', () => { envolverInicioV12(); setTimeout(instalarTodoV12, 1000); });
+    setTimeout(() => { envolverInicioV12(); instalarTodoV12(); }, 1200);
+    const timerV12 = setInterval(() => { envolverInicioV12(); instalarTodoV12(); }, 1200);
+    setTimeout(() => clearInterval(timerV12), 30000);
 })();
 </script>
 
