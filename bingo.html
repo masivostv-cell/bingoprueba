@@ -2277,330 +2277,6 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 
 
 
-
-
-<!-- PATCH V14: Guardar y aplicar reemplaza/limpia la figura online inmediatamente -->
-<script id="patch-v14-guardar-aplicar-figura-online">
-(function(){
-    if(window.__BINGO75_V14_GUARDAR_APLICAR_ONLINE__) return;
-    window.__BINGO75_V14_GUARDAR_APLICAR_ONLINE__ = true;
-
-    const KEY_V14 = 'bingoSala2_V15_MASTER';
-    let unsubV14 = null;
-    let salaEscuchadaV14 = '';
-    let aplicandoRemotoV14 = false;
-    let ultimaFirmaRemotaV14 = '';
-
-    function getDBV14(){
-        try { return JSON.parse(localStorage.getItem(KEY_V14) || 'null') || {}; } catch(e) { return {}; }
-    }
-
-    function saveDBV14(db){
-        try { localStorage.setItem(KEY_V14, JSON.stringify(db)); } catch(e) { console.warn('No se pudo guardar estado local V14:', e); }
-        try {
-            window.dispatchEvent(new StorageEvent('storage', { key: KEY_V14, oldValue: null, newValue: JSON.stringify(db), storageArea: localStorage }));
-        } catch(e) {}
-        try { if(typeof window.renderizar === 'function') window.renderizar(); } catch(e) {}
-        try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-        try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
-    }
-
-    function normalizarFiguraV14(fig){
-        const base = Array.isArray(fig) ? fig.slice(0,25).map(Boolean) : [];
-        while(base.length < 25) base.push(false);
-        return base.slice(0,25);
-    }
-
-    function normalizarFigurasV14(figs){
-        if(!Array.isArray(figs)) return [];
-        return figs.filter(f => f && Array.isArray(f.patron)).map((f, idx) => ({
-            nombre: String(f.nombre || ('FIGURA ' + (idx + 1))).toUpperCase(),
-            patron: normalizarFiguraV14(f.patron),
-            activa: f.activa !== false
-        })).filter(f => f.patron.length === 25);
-    }
-
-    function normalizarBalotasV14(balotas){
-        if(!Array.isArray(balotas)) return [];
-        return balotas.map(n => parseInt(n, 10)).filter(n => Number.isInteger(n) && n >= 1 && n <= 75);
-    }
-
-    function asegurarDBV14(db){
-        db = db || {};
-        if(!db.config) db.config = {};
-        if(!Array.isArray(db.juego)) db.juego = [];
-        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
-        if(!Number.isInteger(db.serialActivoIndex)) db.serialActivoIndex = -1;
-        db.config.figura = normalizarFiguraV14(db.config.figura);
-        db.config.figurasMultiples = normalizarFigurasV14(db.config.figurasMultiples);
-        if(typeof db.config.nombre !== 'string') db.config.nombre = '---';
-        return db;
-    }
-
-    function recalcularPrincipalV14(db){
-        db = asegurarDBV14(db);
-        const activas = db.config.figurasMultiples.filter(f => f.activa !== false && f.patron.some(Boolean));
-        if(activas.length){
-            db.config.figura = activas[0].patron.slice(0,25).map(Boolean);
-            db.config.nombre = activas.map(f => f.nombre).join(' + ');
-        } else if(db.config.figurasMultiples.length){
-            db.config.figura = db.config.figurasMultiples[0].patron.slice(0,25).map(Boolean);
-            db.config.nombre = db.config.figurasMultiples.map(f => f.nombre).join(' + ');
-        } else {
-            db.config.figura = new Array(25).fill(false);
-            db.config.nombre = '---';
-        }
-        return db;
-    }
-
-    function leerPatronGridV14(){
-        const celdas = Array.from(document.querySelectorAll('#selector-figura .celda-config'));
-        if(celdas.length !== 25) return new Array(25).fill(false);
-        return celdas.map(c => c.classList.contains('seleccionada'));
-    }
-
-    function nombreFiguraActualV14(db){
-        const input = document.getElementById('input-nombre');
-        const manual = input && input.value ? input.value.trim() : '';
-        return (manual || (db.config && db.config.nombre && db.config.nombre !== '---' ? db.config.nombre : 'FIGURA')).toUpperCase();
-    }
-
-    function serialesLimpiosV14(seriales){
-        if(!Array.isArray(seriales)) return [];
-        return seriales.filter(s => s && Array.isArray(s.lista)).map(s => ({
-            nombre: String(s.nombre || 'SERIAL').toUpperCase(),
-            lista: s.lista.filter(c => c && Array.isArray(c.numeros)).map(c => ({
-                carton: parseInt(c.carton, 10),
-                numeros: c.numeros.slice(0,25).map(n => parseInt(n,10))
-            })).filter(c => Number.isInteger(c.carton))
-        })).filter(s => s.lista.length);
-    }
-
-    function empaquetarSerialActivoV14(db){
-        const serial = db && Array.isArray(db.serialesExtra) ? db.serialesExtra[db.serialActivoIndex] : null;
-        if(!serial || !Array.isArray(serial.lista)) return { texto: '', nombre: '' };
-        const compactos = {};
-        serial.lista.forEach(c => {
-            if(c && c.carton != null && Array.isArray(c.numeros)) compactos[String(c.carton)] = c.numeros.slice(0,25);
-        });
-        return { texto: JSON.stringify(compactos), nombre: serial.nombre || 'SERIAL ACTIVO' };
-    }
-
-    function salaV14(){
-        return String(window.MI_CODIGO_SALA || '').trim();
-    }
-
-    async function subirEstadoForzadoV14(motivo){
-        if(aplicandoRemotoV14) return;
-        const sala = salaV14();
-        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.doc || !window.firebaseTools.setDoc) return;
-        let db = recalcularPrincipalV14(getDBV14());
-        saveDBV14(db);
-        const paquete = empaquetarSerialActivoV14(db);
-        const payload = {
-            balotasLlamadas: normalizarBalotasV14(db.juego || []),
-            figuraActual: normalizarFiguraV14(db.config.figura),
-            nombreFigura: db.config.nombre || '---',
-            figurasMultiples: normalizarFigurasV14(db.config.figurasMultiples),
-            serialActivoIndex: Number.isInteger(db.serialActivoIndex) ? db.serialActivoIndex : -1,
-            serialesExtraCompartidos: serialesLimpiosV14(db.serialesExtra || []),
-            nombreSerial: paquete.nombre || ((db.serialesExtra && db.serialesExtra[db.serialActivoIndex] && db.serialesExtra[db.serialActivoIndex].nombre) || ''),
-            pinSala: sala,
-            estado: 'activo',
-            estadoCompartidoV14: {
-                usuario: String(localStorage.getItem('bingo_user') || 'admin').trim().toLowerCase(),
-                motivo: motivo || 'guardar_aplicar_figura',
-                updatedAt: Date.now()
-            }
-        };
-        if(paquete.texto) payload.cartonesEmpaquetados = paquete.texto;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
-            // Segundo envío corto: evita que una escritura anterior en cola vuelva a dejar la figura vieja.
-            setTimeout(async () => {
-                try {
-                    await window.firebaseTools.setDoc(salaRef, {
-                        figuraActual: payload.figuraActual,
-                        nombreFigura: payload.nombreFigura,
-                        figurasMultiples: payload.figurasMultiples,
-                        estadoCompartidoV14: Object.assign({}, payload.estadoCompartidoV14, { updatedAt: Date.now(), refuerzo: true })
-                    }, { merge: true });
-                } catch(e) {}
-            }, 450);
-        } catch(e) {
-            console.warn('No se pudo actualizar la figura online V14:', e);
-        }
-    }
-
-    function firmaRemotaV14(data){
-        return JSON.stringify({
-            fm: Array.isArray(data && data.figurasMultiples) ? normalizarFigurasV14(data.figurasMultiples) : null,
-            f: Array.isArray(data && data.figuraActual) ? normalizarFiguraV14(data.figuraActual) : null,
-            n: Object.prototype.hasOwnProperty.call(data || {}, 'nombreFigura') ? String(data.nombreFigura || '') : null,
-            v: data && data.estadoCompartidoV14 && data.estadoCompartidoV14.updatedAt ? data.estadoCompartidoV14.updatedAt : ''
-        });
-    }
-
-    function aplicarFigurasRemotasV14(data){
-        if(!data) return;
-        const firma = firmaRemotaV14(data);
-        if(firma === ultimaFirmaRemotaV14) return;
-        ultimaFirmaRemotaV14 = firma;
-
-        const tieneFigurasMultiples = Array.isArray(data.figurasMultiples);
-        const tieneFiguraActual = Array.isArray(data.figuraActual);
-        const tieneNombre = Object.prototype.hasOwnProperty.call(data, 'nombreFigura');
-        if(!tieneFigurasMultiples && !tieneFiguraActual && !tieneNombre) return;
-
-        const db = asegurarDBV14(getDBV14());
-        let cambio = false;
-
-        // IMPORTANTE: también acepta arreglo vacío para borrar la figura vieja en otros equipos.
-        if(tieneFigurasMultiples){
-            const remotas = normalizarFigurasV14(data.figurasMultiples);
-            if(JSON.stringify(db.config.figurasMultiples || []) !== JSON.stringify(remotas)) {
-                db.config.figurasMultiples = remotas;
-                cambio = true;
-            }
-        }
-        if(tieneFiguraActual){
-            const figura = normalizarFiguraV14(data.figuraActual);
-            if(JSON.stringify(db.config.figura || []) !== JSON.stringify(figura)) {
-                db.config.figura = figura;
-                cambio = true;
-            }
-        }
-        if(tieneNombre){
-            const nombre = String(data.nombreFigura || '---').toUpperCase();
-            if(db.config.nombre !== nombre) {
-                db.config.nombre = nombre;
-                cambio = true;
-            }
-        }
-        if(cambio){
-            aplicandoRemotoV14 = true;
-            saveDBV14(db);
-            setTimeout(() => { aplicandoRemotoV14 = false; }, 250);
-        }
-    }
-
-    function instalarListenerV14(){
-        const sala = salaV14();
-        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.doc || !window.firebaseTools.onSnapshot) return;
-        if(unsubV14 && salaEscuchadaV14 === sala) return;
-        if(unsubV14) { try { unsubV14(); } catch(e) {} unsubV14 = null; }
-        salaEscuchadaV14 = sala;
-        try {
-            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
-            unsubV14 = window.firebaseTools.onSnapshot(salaRef, snap => {
-                if(!snap || !snap.exists || !snap.exists()) return;
-                aplicarFigurasRemotasV14(snap.data());
-            });
-        } catch(e) { console.warn('No se pudo instalar listener de figuras V14:', e); }
-    }
-
-    function cerrarModalV14(){
-        const modal = document.getElementById('modal-config');
-        if(modal) modal.style.display = 'none';
-        document.body.classList.remove('modal-figura-abierto');
-    }
-
-    function instalarGuardarAplicarV14(){
-        if(window.__guardarAplicarFigurasV14Instalado__) return;
-        window.__guardarAplicarFigurasV14Instalado__ = true;
-
-        const limpiarBase = typeof window.limpiarFigurasLista === 'function' ? window.limpiarFigurasLista : null;
-        const eliminarBase = typeof window.eliminarFiguraLista === 'function' ? window.eliminarFiguraLista : null;
-        const toggleBase = typeof window.toggleFiguraActiva === 'function' ? window.toggleFiguraActiva : null;
-
-        window.guardarConfigLocal = async function(){
-            let db = asegurarDBV14(getDBV14());
-            const patron = leerPatronGridV14();
-
-            // Si hay una figura dibujada en la cuadrícula, se toma como NUEVA figura de juego y reemplaza la anterior.
-            // Esto evita que al cambiar de juego quede pegada la figura vieja.
-            if(patron.some(Boolean)){
-                db.config.figurasMultiples = [{
-                    nombre: nombreFiguraActualV14(db),
-                    patron: patron,
-                    activa: true
-                }];
-            } else {
-                // Si no hay figura dibujada, aplica exactamente la lista actual. Si la lista está vacía, borra online.
-                db.config.figurasMultiples = normalizarFigurasV14(db.config.figurasMultiples || []);
-            }
-
-            db = recalcularPrincipalV14(db);
-            saveDBV14(db);
-            await subirEstadoForzadoV14('guardar_aplicar_reemplaza_figura_v14');
-            cerrarModalV14();
-        };
-
-        window.limpiarFigurasLista = function(){
-            const ok = confirm('¿Borrar TODAS las figuras de la lista y actualizar en línea?');
-            if(!ok) return;
-            let db = asegurarDBV14(getDBV14());
-            db.config.figurasMultiples = [];
-            db = recalcularPrincipalV14(db);
-            saveDBV14(db);
-            try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-            subirEstadoForzadoV14('figuras_limpiadas_forzado_v14');
-        };
-
-        window.eliminarFiguraLista = function(idx){
-            const ok = confirm('¿Eliminar esta figura de la lista y actualizar en línea?');
-            if(!ok) return;
-            let db = asegurarDBV14(getDBV14());
-            if(db.config.figurasMultiples[idx]) db.config.figurasMultiples.splice(idx, 1);
-            db = recalcularPrincipalV14(db);
-            saveDBV14(db);
-            try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-            subirEstadoForzadoV14('figura_eliminada_forzado_v14');
-        };
-
-        window.toggleFiguraActiva = function(idx, estado){
-            let db = asegurarDBV14(getDBV14());
-            if(db.config.figurasMultiples[idx]) db.config.figurasMultiples[idx].activa = estado;
-            db = recalcularPrincipalV14(db);
-            saveDBV14(db);
-            try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
-            subirEstadoForzadoV14('figura_activada_forzado_v14');
-        };
-        window.toggleFiguraActivaGlobal = window.toggleFiguraActiva;
-    }
-
-    function instalarTodoV14(){
-        instalarGuardarAplicarV14();
-        instalarListenerV14();
-        document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
-            el.textContent = '';
-            el.style.display = 'none';
-            el.style.visibility = 'hidden';
-        });
-    }
-
-    const oldInicio = window.iniciarAppBingo;
-    if(typeof oldInicio === 'function' && !oldInicio.__v14FigurasOnline){
-        const wrap = function(){
-            const r = oldInicio.apply(this, arguments);
-            setTimeout(instalarTodoV14, 150);
-            setTimeout(instalarTodoV14, 700);
-            setTimeout(instalarTodoV14, 1500);
-            return r;
-        };
-        wrap.__v14FigurasOnline = true;
-        window.iniciarAppBingo = wrap;
-    }
-
-    document.addEventListener('DOMContentLoaded', () => { setTimeout(instalarTodoV14, 900); });
-    window.addEventListener('load', () => { setTimeout(instalarTodoV14, 1200); });
-    setTimeout(instalarTodoV14, 1500);
-    const timer = setInterval(instalarTodoV14, 1000);
-    setTimeout(() => clearInterval(timer), 45000);
-})();
-</script>
-
 </body>
                 </html>
             `;
@@ -5202,6 +4878,250 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
     setTimeout(() => clearInterval(t), 45000);
 })();
 </script>
+
+<!-- PATCH V15: Guardar y aplicar reemplaza la figura online sin romper login -->
+<script id="patch-v15-guardar-aplicar-reemplaza-online">
+(function(){
+    if(window.__BINGO75_V15_GUARDAR_APLICAR_ONLINE__) return;
+    window.__BINGO75_V15_GUARDAR_APLICAR_ONLINE__ = true;
+
+    const LOCAL_KEY_V15 = 'bingoSala2_V15_MASTER';
+    let tempFiguraV15 = new Array(25).fill(false);
+
+    function getDBV15(){
+        try { return JSON.parse(localStorage.getItem(LOCAL_KEY_V15) || 'null'); } catch(e) { return null; }
+    }
+
+    function dbBaseV15(){
+        return {
+            juego: [],
+            serialesExtra: [],
+            serialActivoIndex: -1,
+            config: {
+                figura: new Array(25).fill(false),
+                nombre: '---',
+                figurasMultiples: [],
+                autoWin: false,
+                secuencia: [],
+                usoSecuencia: false
+            },
+            colores: {}
+        };
+    }
+
+    function asegurarDBV15(db){
+        db = db || dbBaseV15();
+        if(!db.config) db.config = {};
+        if(!Array.isArray(db.config.figura)) db.config.figura = new Array(25).fill(false);
+        if(!Array.isArray(db.config.figurasMultiples)) db.config.figurasMultiples = [];
+        if(!Array.isArray(db.juego)) db.juego = [];
+        if(!Array.isArray(db.serialesExtra)) db.serialesExtra = [];
+        if(!Number.isInteger(db.serialActivoIndex)) db.serialActivoIndex = -1;
+        db.config.figura = db.config.figura.slice(0,25).map(Boolean);
+        while(db.config.figura.length < 25) db.config.figura.push(false);
+        db.config.figurasMultiples = db.config.figurasMultiples
+            .filter(f => f && Array.isArray(f.patron))
+            .map(f => ({
+                nombre: String(f.nombre || 'FIGURA').toUpperCase(),
+                patron: f.patron.slice(0,25).map(Boolean),
+                activa: f.activa !== false
+            }));
+        return db;
+    }
+
+    function normalizarPatronV15(patron){
+        const p = Array.isArray(patron) ? patron.slice(0,25).map(Boolean) : [];
+        while(p.length < 25) p.push(false);
+        return p;
+    }
+
+    function leerPatronVisualV15(){
+        const celdas = Array.from(document.querySelectorAll('#selector-figura .celda-config'));
+        if(celdas.length !== 25) return new Array(25).fill(false);
+        return celdas.map(c => c.classList.contains('seleccionada'));
+    }
+
+    function nombreFiguraV15(){
+        const input = document.getElementById('input-nombre');
+        const nombre = input && input.value ? input.value.trim() : '';
+        return (nombre || 'FIGURA').toUpperCase();
+    }
+
+    function seleccionarFiguraPrincipalV15(db){
+        const activas = (db.config.figurasMultiples || []).filter(f => f && f.activa !== false && Array.isArray(f.patron) && f.patron.some(Boolean));
+        if(activas.length){
+            db.config.figura = normalizarPatronV15(activas[0].patron);
+            db.config.nombre = activas.map(f => f.nombre || 'FIGURA').join(' + ').toUpperCase();
+        } else {
+            db.config.figura = new Array(25).fill(false);
+            db.config.nombre = '---';
+        }
+        return activas;
+    }
+
+    function guardarLocalV15(db){
+        db = asegurarDBV15(db);
+        seleccionarFiguraPrincipalV15(db);
+        const json = JSON.stringify(db);
+        try { localStorage.setItem(LOCAL_KEY_V15, json); } catch(e) { console.warn('No se pudo guardar localmente:', e); }
+        try {
+            window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_KEY_V15, oldValue: null, newValue: json, storageArea: localStorage }));
+        } catch(e) {
+            try {
+                const ev = document.createEvent('StorageEvent');
+                ev.initStorageEvent('storage', false, false, LOCAL_KEY_V15, null, json, location.href, localStorage);
+                window.dispatchEvent(ev);
+            } catch(_) {}
+        }
+        try { if(typeof window.renderizar === 'function') window.renderizar(); } catch(e) {}
+        try { if(typeof window.renderListaFiguras === 'function') window.renderListaFiguras(); } catch(e) {}
+        try { if(typeof window.actualizarAvisoFiltroBalotas === 'function') window.actualizarAvisoFiltroBalotas(); } catch(e) {}
+        return db;
+    }
+
+    function salaActualV15(){
+        if(window.MI_CODIGO_SALA) return String(window.MI_CODIGO_SALA).trim();
+        const u = (localStorage.getItem('bingo_user') || 'ADMIN').trim().toUpperCase();
+        let hash = 0;
+        for(let i = 0; i < u.length; i++) {
+            hash = ((hash << 5) - hash) + u.charCodeAt(i);
+            hash |= 0;
+        }
+        return String((Math.abs(hash) % 900000) + 100000);
+    }
+
+    async function subirFiguraOnlineV15(db, motivo){
+        db = asegurarDBV15(db);
+        const activas = seleccionarFiguraPrincipalV15(db);
+        const sala = salaActualV15();
+        if(!sala || !window.db || !window.firebaseTools || !window.firebaseTools.doc || !window.firebaseTools.setDoc) return;
+        const payload = {
+            figuraActual: db.config.figura,
+            nombreFigura: db.config.nombre,
+            figurasMultiples: activas.map(f => ({
+                nombre: String(f.nombre || 'FIGURA').toUpperCase(),
+                patron: normalizarPatronV15(f.patron),
+                activa: f.activa !== false
+            })),
+            figuraVersion: Date.now(),
+            estadoCompartidoV15: {
+                motivo: motivo || 'guardar_aplicar_figura',
+                updatedAt: Date.now()
+            }
+        };
+        try {
+            const salaRef = window.firebaseTools.doc(window.db, 'salas', sala);
+            await window.firebaseTools.setDoc(salaRef, payload, { merge: true });
+        } catch(e) {
+            console.warn('No se pudo actualizar la figura en línea:', e);
+        }
+        try {
+            if(typeof window.sincronizarEstadoCompartidoV12 === 'function') {
+                setTimeout(() => window.sincronizarEstadoCompartidoV12(motivo || 'guardar_aplicar_figura_v15'), 120);
+            }
+        } catch(e) {}
+    }
+
+    function pintarGridV15(patron){
+        const sel = document.getElementById('selector-figura');
+        if(!sel) return;
+        tempFiguraV15 = normalizarPatronV15(patron);
+        sel.innerHTML = '';
+        for(let i=0; i<25; i++){
+            const celda = document.createElement('div');
+            celda.className = 'celda-config' + (tempFiguraV15[i] ? ' seleccionada' : '');
+            celda.addEventListener('click', function(){
+                tempFiguraV15[i] = !tempFiguraV15[i];
+                this.classList.toggle('seleccionada', tempFiguraV15[i]);
+                const ps = document.getElementById('preset-selector');
+                if(ps) ps.value = 'PERSONALIZADA';
+            });
+            sel.appendChild(celda);
+        }
+    }
+
+    function instalarGuardarAplicarV15(){
+        window.guardarConfigLocal = async function(){
+            let db = asegurarDBV15(getDBV15());
+            const visual = leerPatronVisualV15();
+            const patron = tempFiguraV15 && tempFiguraV15.some(Boolean) ? normalizarPatronV15(tempFiguraV15) : normalizarPatronV15(visual);
+
+            if(patron.some(Boolean)) {
+                db.config.figurasMultiples = [{
+                    nombre: nombreFiguraV15(),
+                    patron: patron,
+                    activa: true
+                }];
+            } else {
+                // Sin figura dibujada: se respeta la lista existente. Si la lista está vacía, se borra la figura online.
+                db.config.figurasMultiples = (db.config.figurasMultiples || []).filter(f => f && Array.isArray(f.patron) && f.patron.some(Boolean));
+            }
+
+            guardarLocalV15(db);
+            await subirFiguraOnlineV15(db, 'guardar_y_aplicar_reemplaza');
+
+            const modal = document.getElementById('modal-config');
+            if(modal) modal.style.display = 'none';
+            document.body.classList.remove('modal-figura-abierto');
+        };
+
+        const limpiarOriginal = window.limpiarFigurasLista;
+        window.limpiarFigurasLista = async function(){
+            const confirmar = confirm('¿Borrar TODAS las figuras de la lista y también la figura en línea?');
+            if(!confirmar) return;
+            const db = asegurarDBV15(getDBV15());
+            db.config.figurasMultiples = [];
+            db.config.figura = new Array(25).fill(false);
+            db.config.nombre = '---';
+            tempFiguraV15 = new Array(25).fill(false);
+            guardarLocalV15(db);
+            pintarGridV15(tempFiguraV15);
+            await subirFiguraOnlineV15(db, 'limpiar_figuras_y_online');
+        };
+        window.limpiarFigurasLista.__v15 = true;
+
+        const eliminarOriginal = window.eliminarFiguraLista;
+        window.eliminarFiguraLista = async function(idx){
+            if(!confirm('¿Eliminar esta figura de la lista y actualizar en línea?')) return;
+            const db = asegurarDBV15(getDBV15());
+            if(db.config.figurasMultiples[idx]) db.config.figurasMultiples.splice(idx, 1);
+            guardarLocalV15(db);
+            await subirFiguraOnlineV15(db, 'eliminar_figura_y_online');
+        };
+        window.eliminarFiguraLista.__v15 = true;
+    }
+
+    function instalarV15(){
+        instalarGuardarAplicarV15();
+        document.querySelectorAll('#figura-sync-status-v5, .figura-sync-status-v5').forEach(el => {
+            el.textContent = '';
+            el.style.display = 'none';
+            el.style.visibility = 'hidden';
+            el.style.opacity = '0';
+        });
+    }
+
+    const inicioOriginalV15 = window.iniciarAppBingo;
+    if(typeof inicioOriginalV15 === 'function' && !inicioOriginalV15.__v15GuardarAplicar){
+        const envuelto = function(){
+            const r = inicioOriginalV15.apply(this, arguments);
+            setTimeout(instalarV15, 120);
+            setTimeout(instalarV15, 700);
+            setTimeout(instalarV15, 1400);
+            return r;
+        };
+        envuelto.__v15GuardarAplicar = true;
+        window.iniciarAppBingo = envuelto;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(instalarV15, 800); });
+    window.addEventListener('load', () => { setTimeout(instalarV15, 1000); });
+    setTimeout(instalarV15, 1200);
+    const timerV15 = setInterval(instalarV15, 1000);
+    setTimeout(() => clearInterval(timerV15), 35000);
+})();
+</script>
+
 
 </body>
 </html>
