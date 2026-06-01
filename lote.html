@@ -264,7 +264,7 @@
 <body>
   <header>
     <h1>Aplicativo simple para relotear y calcular áreas</h1>
-    <p>Dibuja el lote grande una sola vez, divídelo automáticamente y ajusta los puntos como en Paint.</p>
+    <p>Dibuja el lote grande, divídelo automáticamente y mira área, perímetro y medida de cada línea en tiempo real.</p>
   </header>
 
   <div class="app">
@@ -292,8 +292,8 @@
         <button class="warning" id="cancelBtn">Cancelar dibujo actual</button>
 
         <p class="hint">
-          Primero dibuja el lote grande como <b>Lote matriz</b>. Luego usa la sección <b>Relotear automático</b>.
-          Si haces clic cerca de un punto existente, se reutiliza.
+          Primero dibuja el lote grande como <b>Lote matriz</b>. Cada línea mostrará su medida en metros.
+          Luego usa la sección <b>Relotear automático</b>.
         </p>
       </div>
 
@@ -359,6 +359,7 @@
         <h2>5. Opciones visuales</h2>
         <label><input type="checkbox" id="showGrid" checked /> Mostrar cuadrícula</label>
         <label><input type="checkbox" id="showLabels" checked /> Mostrar nombres de lotes</label>
+        <label><input type="checkbox" id="showMeasurements" checked /> Mostrar medidas de cada línea</label>
         <label><input type="checkbox" id="showPointLabels" /> Mostrar número de puntos</label>
       </div>
 
@@ -397,6 +398,7 @@
               <th>Área m²</th>
               <th>Área ha</th>
               <th>Perímetro m</th>
+              <th>Lados</th>
               <th>Puntos</th>
               <th>Acciones</th>
             </tr>
@@ -427,6 +429,7 @@
     const clearBgBtn = document.getElementById('clearBgBtn');
     const showGridEl = document.getElementById('showGrid');
     const showLabelsEl = document.getElementById('showLabels');
+    const showMeasurementsEl = document.getElementById('showMeasurements');
     const showPointLabelsEl = document.getElementById('showPointLabels');
     const lotTable = document.getElementById('lotTable');
     const totalsEl = document.getElementById('totals');
@@ -551,6 +554,108 @@
       return sum;
     }
 
+    function segmentLengthsM(pts) {
+      if (pts.length < 2) return [];
+      const values = [];
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        values.push(distance(a, b) * mPerPx);
+      }
+      return values;
+    }
+
+    function shortSegmentSummary(pts) {
+      const lengths = segmentLengthsM(pts);
+      if (!lengths.length) return '';
+      return lengths.map((v, i) => `L${i + 1}: ${formatNumber(v, 2)} m`).join('<br>');
+    }
+
+    function drawTextBox(text, x, y, options = {}) {
+      ctx.save();
+      ctx.font = options.font || 'bold 12px Arial';
+      const paddingX = 5;
+      const paddingY = 3;
+      const metrics = ctx.measureText(text);
+      const w = metrics.width + paddingX * 2;
+      const h = 18;
+      const left = x - w / 2;
+      const top = y - h / 2;
+
+      ctx.fillStyle = options.bg || 'rgba(255,255,255,0.88)';
+      ctx.strokeStyle = options.border || 'rgba(17,24,39,0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(left, top, w, h, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = options.color || '#111827';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y + 0.5);
+      ctx.restore();
+    }
+
+    function drawSegmentMeasurements(pts, color = '#111827') {
+      if (!showMeasurementsEl.checked || pts.length < 2) return;
+
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const lenPx = Math.hypot(dx, dy);
+        if (lenPx < 8) continue;
+
+        const lenM = lenPx * mPerPx;
+        const label = `${formatNumber(lenM, 2)} m`;
+
+        // Desplaza un poco la etiqueta para que no quede exactamente sobre la línea.
+        const nx = -dy / lenPx;
+        const ny = dx / lenPx;
+        const offset = 13;
+
+        drawTextBox(label, midX + nx * offset, midY + ny * offset, {
+          bg: 'rgba(255,255,255,0.92)',
+          border: color,
+          color: '#111827'
+        });
+      }
+    }
+
+    function drawOpenSegmentMeasurements(pts) {
+      if (!showMeasurementsEl.checked || pts.length < 2) return;
+
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i];
+        const b = pts[i + 1];
+
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const lenPx = Math.hypot(dx, dy);
+        if (lenPx < 8) continue;
+
+        const lenM = lenPx * mPerPx;
+        const label = `${formatNumber(lenM, 2)} m`;
+
+        const nx = -dy / lenPx;
+        const ny = dx / lenPx;
+        const offset = 13;
+
+        drawTextBox(label, midX + nx * offset, midY + ny * offset, {
+          bg: 'rgba(255,255,255,0.92)',
+          border: '#111827',
+          color: '#111827'
+        });
+      }
+    }
+
     function centroid(pts) {
       if (!pts.length) return { x: 0, y: 0 };
       return {
@@ -632,6 +737,8 @@
         ctx.strokeText(label, c.x - 45, c.y);
         ctx.fillText(label, c.x - 45, c.y);
       }
+
+      drawSegmentMeasurements(pts, lot.color);
       ctx.restore();
     }
 
@@ -677,6 +784,9 @@
         ctx.fill();
       }
       ctx.restore();
+
+      const previewPts = [...pts, mouse];
+      drawOpenSegmentMeasurements(previewPts);
     }
 
     function render() {
@@ -766,6 +876,7 @@
           <td>${formatNumber(areaM2, 2)}</td>
           <td>${formatNumber(areaHa, 4)}</td>
           <td>${formatNumber(perimeterM, 2)}</td>
+          <td>${shortSegmentSummary(pts)}</td>
           <td>${pts.length}</td>
           <td>
             <button class="mini-btn" data-action="toggleType" data-index="${index}">Tipo</button>
@@ -1123,7 +1234,7 @@
       render();
     });
 
-    [showGridEl, showLabelsEl, showPointLabelsEl, modeEl].forEach(el => {
+    [showGridEl, showLabelsEl, showMeasurementsEl, showPointLabelsEl, modeEl].forEach(el => {
       el.addEventListener('change', render);
     });
 
