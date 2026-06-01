@@ -206,7 +206,7 @@
 
     .controls {
       display: grid;
-      grid-template-columns: 1.35fr 0.8fr 0.8fr auto;
+      grid-template-columns: 1.35fr 0.85fr 0.85fr 0.8fr auto;
       gap: 14px;
       margin: 20px 0;
     }
@@ -263,6 +263,33 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
       gap: 18px;
+    }
+
+    .brand-divider {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 13px 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #050b3d, var(--primary));
+      color: white;
+      box-shadow: 0 8px 24px rgba(7, 21, 122, 0.16);
+      border-left: 6px solid var(--gold);
+    }
+
+    .brand-divider h3 {
+      font-size: 19px;
+      line-height: 1.2;
+    }
+
+    .brand-divider span {
+      color: #dbeafe;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
     }
 
     .product-card {
@@ -348,15 +375,32 @@
       padding: 16px;
     }
 
-    .category-tag {
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .category-tag,
+    .brand-tag {
       display: inline-block;
       font-size: 12px;
-      color: var(--primary);
-      background: #eef3ff;
       border-radius: 999px;
       padding: 5px 9px;
       font-weight: 900;
-      margin-bottom: 10px;
+    }
+
+    .category-tag {
+      color: var(--primary);
+      background: #eef3ff;
+    }
+
+    .brand-tag {
+      color: #5f4300;
+      background: #fff8dc;
+      border: 1px solid #f4d46f;
     }
 
     .product-info h3 {
@@ -940,6 +984,9 @@
   <main>
     <div class="controls">
       <input class="control" id="searchInput" type="search" placeholder="Buscar producto, marca, material, rango o descripción..." oninput="renderProducts()" />
+      <select class="control" id="brandFilter" onchange="renderProducts()">
+        <option value="Todas">Todas las marcas</option>
+      </select>
       <select class="control" id="categoryFilter" onchange="renderProducts()">
         <option value="Todos">Todas las categorías</option>
       </select>
@@ -1066,8 +1113,12 @@
                 <input id="productName" type="text" required placeholder="Ej: Biofinity Toric" />
               </div>
               <div class="form-group">
-                <label>Categoría</label>
-                <input id="productCategory" type="text" required placeholder="Ej: Lentes CooperVision" />
+                <label>Marca / empresa</label>
+                <input id="productBrand" type="text" required placeholder="Ej: CooperVision" />
+              </div>
+              <div class="form-group">
+                <label>Categoría / familia</label>
+                <input id="productCategory" type="text" required placeholder="Ej: Lentes de contacto mensuales" />
               </div>
               <div class="form-group">
                 <label>Precio</label>
@@ -1190,6 +1241,53 @@
     let cart = JSON.parse(localStorage.getItem("cart_tyndallvision")) || [];
     let currentDetailImages = [];
     let currentDetailProduct = null;
+
+    const BRAND_FILTER_ALL = "Todas";
+
+    function deriveBrand(product = {}) {
+      const explicitBrand = String(product.brand || product.marca || product.company || product.empresa || "").trim();
+      if (explicitBrand) return explicitBrand;
+
+      const text = `${product.name || ""} ${product.category || ""}`.toLowerCase();
+      const rules = [
+        { brand: "CooperVision", keywords: ["coopervision", "biofinity", "avaira", "clariti"] },
+        { brand: "Alcon", keywords: ["alcon", "air optix", "precision 1"] },
+        { brand: "Johnson & Johnson", keywords: ["johnson", "acuvue"] },
+        { brand: "Spectrum", keywords: ["spectrum", "xtensa", "claria"] },
+        { brand: "Menicon", keywords: ["menicon", "rose k", "menicare", "progent"] },
+        { brand: "Valley Contax", keywords: ["valley contax"] },
+        { brand: "Hydrosol", keywords: ["hydrosol"] },
+        { brand: "Humecsol", keywords: ["humecsol"] },
+        { brand: "Limpisol", keywords: ["limpisol"] },
+        { brand: "Kerasolution", keywords: ["kerasolution"] },
+        { brand: "Prolub", keywords: ["prolub"] },
+        { brand: "Seesoft", keywords: ["seesoft"] },
+        { brand: "Hydrosoft", keywords: ["hydrosoft"] }
+      ];
+
+      const match = rules.find(rule => rule.keywords.some(keyword => text.includes(keyword)));
+      if (match) return match.brand;
+
+      return String(product.category || "Sin marca asignada").trim() || "Sin marca asignada";
+    }
+
+    function normalizeBrandText(value) {
+      return String(value || "Sin marca asignada").trim() || "Sin marca asignada";
+    }
+
+    function getGroupedProductsByBrand(list) {
+      const grouped = new Map();
+
+      list.forEach(product => {
+        const brand = normalizeBrandText(product.brand || deriveBrand(product));
+        if (!grouped.has(brand)) grouped.set(brand, []);
+        grouped.get(brand).push(product);
+      });
+
+      return Array.from(grouped.entries())
+        .sort(([brandA], [brandB]) => brandA.localeCompare(brandB, "es"))
+        .map(([brand, items]) => ({ brand, items }));
+    }
 
     const defaultProducts = [
       { name: "Biofinity", category: "CooperVision", price: 188000, stock: 10, description: "Comfilcon A. CB 8.6, diámetro 14.00, reemplazo mensual, esfera +8.00 a -12.00, caja x6, 48% H2O, DK/T 160.", emoji: "👁️", image: "", images: [], offer: true },
@@ -1327,7 +1425,7 @@
 
       onSnapshot(productsRef, async (snapshot) => {
         if (snapshot.empty) {
-          products = defaultProducts.map((p, index) => ({ ...p, id: `demo_${index}` }));
+          products = defaultProducts.map((p, index) => normalizeProduct({ ...p, id: `demo_${index}` }));
           renderProducts();
           renderAdminList();
 
@@ -1350,7 +1448,7 @@
         renderAdminList();
       }, (error) => {
         console.error("Error conectando con Firebase:", error);
-        products = defaultProducts.map((p, index) => ({ ...p, id: `demo_${index}` }));
+        products = defaultProducts.map((p, index) => normalizeProduct({ ...p, id: `demo_${index}` }));
         renderProducts();
         alert("No se pudo conectar con Firebase. Revisa reglas de Firestore y conexión.");
       });
@@ -1358,8 +1456,10 @@
 
     function normalizeProduct(product) {
       const images = getProductImages(product);
+      const brand = normalizeBrandText(deriveBrand(product));
       return {
         ...product,
+        brand,
         images,
         image: images[0] || product.image || "",
         offer: Boolean(product.offer),
@@ -1383,6 +1483,7 @@
           const productRef = doc(collection(db, PRODUCTS_COLLECTION));
           batch.set(productRef, {
             ...product,
+            brand: deriveBrand(product),
             images: product.images || [],
             image: product.image || "",
             createdAt: serverTimestamp(),
@@ -1419,13 +1520,16 @@
 
     function getProductsForCurrentView() {
       const search = document.getElementById("searchInput").value.toLowerCase().trim();
+      const brand = document.getElementById("brandFilter")?.value || BRAND_FILTER_ALL;
       const category = document.getElementById("categoryFilter").value;
       const sort = document.getElementById("sortFilter").value;
 
       let filtered = products.filter(product => {
-        const matchSearch = `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(search);
+        const productBrand = normalizeBrandText(product.brand || deriveBrand(product));
+        const matchSearch = `${product.name} ${productBrand} ${product.category} ${product.description}`.toLowerCase().includes(search);
+        const matchBrand = brand === BRAND_FILTER_ALL || productBrand === brand;
         const matchCategory = category === "Todos" || product.category === category;
-        return matchSearch && matchCategory;
+        return matchSearch && matchBrand && matchCategory;
       });
 
       if (sort === "priceAsc") filtered.sort((a, b) => a.price - b.price);
@@ -1434,6 +1538,25 @@
       if (sort === "featured") filtered.sort((a, b) => Number(b.offer) - Number(a.offer));
 
       return filtered;
+    }
+
+    function renderBrands() {
+      const select = document.getElementById("brandFilter");
+      if (!select) return;
+
+      const current = select.value || BRAND_FILTER_ALL;
+      const brands = [
+        BRAND_FILTER_ALL,
+        ...new Set(products.map(product => normalizeBrandText(product.brand || deriveBrand(product))).filter(Boolean))
+      ];
+
+      const sortedBrands = [BRAND_FILTER_ALL, ...brands.slice(1).sort((a, b) => a.localeCompare(b, "es"))];
+
+      select.innerHTML = sortedBrands
+        .map(brand => `<option value="${escapeHtml(brand)}">${brand === BRAND_FILTER_ALL ? "Todas las marcas" : escapeHtml(brand)}</option>`)
+        .join("");
+
+      if (sortedBrands.includes(current)) select.value = current;
     }
 
     function renderCategories() {
@@ -1445,57 +1568,71 @@
       if (categories.includes(current)) select.value = current;
     }
 
+    function renderProductCard(product) {
+      const selectedQty = getCartQty(product.id);
+      const images = getProductImages(product);
+      const mainImage = images[0] || "";
+      const brand = normalizeBrandText(product.brand || deriveBrand(product));
+
+      return `
+        <article class="product-card ${selectedQty > 0 ? "selected" : ""}">
+          ${product.offer ? `<div class="offer-ribbon">DESTACADO</div>` : ""}
+          ${selectedQty > 0 ? `<div class="selected-ribbon">PEDIDO: ${selectedQty}</div>` : ""}
+
+          <div class="product-image">
+            ${
+              mainImage
+                ? `<img src="${mainImage}" alt="${escapeHtml(product.name)}">`
+                : `<div class="emoji-image">${escapeHtml(product.emoji || "👁️")}</div>`
+            }
+            ${images.length > 1 ? `<div class="image-count">📷 ${images.length}</div>` : ""}
+          </div>
+
+          <div class="product-info">
+            <div class="tag-row">
+              <span class="brand-tag">${escapeHtml(brand)}</span>
+              <span class="category-tag">${escapeHtml(product.category)}</span>
+            </div>
+            <h3>${escapeHtml(product.name)}</h3>
+            <p>${escapeHtml(product.description)}</p>
+            <div class="product-bottom">
+              <div>
+                <div class="price">${formatMoney(product.price)}</div>
+                <div class="stock">Disponible: ${product.stock}</div>
+              </div>
+              <div class="product-actions">
+                <button class="details-btn" onclick="openDetails('${product.id}')">Detalles</button>
+                <button class="add-btn" onclick="addToCart('${product.id}')">${selectedQty > 0 ? `+ Agregar (${selectedQty})` : "Agregar"}</button>
+              </div>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
     function renderProducts() {
+      renderBrands();
       renderCategories();
 
       const grid = document.getElementById("productsGrid");
       const count = document.getElementById("productCount");
       const filtered = getProductsForCurrentView();
+      const grouped = getGroupedProductsByBrand(filtered);
 
-      count.textContent = `${filtered.length} producto${filtered.length !== 1 ? "s" : ""}`;
+      count.textContent = `${filtered.length} producto${filtered.length !== 1 ? "s" : ""} · ${grouped.length} marca${grouped.length !== 1 ? "s" : ""}`;
 
       if (!filtered.length) {
         grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">No encontramos productos con esa búsqueda.</div>`;
         return;
       }
 
-      grid.innerHTML = filtered.map(product => {
-        const selectedQty = getCartQty(product.id);
-        const images = getProductImages(product);
-        const mainImage = images[0] || "";
-
-        return `
-          <article class="product-card ${selectedQty > 0 ? "selected" : ""}">
-            ${product.offer ? `<div class="offer-ribbon">DESTACADO</div>` : ""}
-            ${selectedQty > 0 ? `<div class="selected-ribbon">PEDIDO: ${selectedQty}</div>` : ""}
-
-            <div class="product-image">
-              ${
-                mainImage
-                  ? `<img src="${mainImage}" alt="${escapeHtml(product.name)}">`
-                  : `<div class="emoji-image">${escapeHtml(product.emoji || "👁️")}</div>`
-              }
-              ${images.length > 1 ? `<div class="image-count">📷 ${images.length}</div>` : ""}
-            </div>
-
-            <div class="product-info">
-              <span class="category-tag">${escapeHtml(product.category)}</span>
-              <h3>${escapeHtml(product.name)}</h3>
-              <p>${escapeHtml(product.description)}</p>
-              <div class="product-bottom">
-                <div>
-                  <div class="price">${formatMoney(product.price)}</div>
-                  <div class="stock">Disponible: ${product.stock}</div>
-                </div>
-                <div class="product-actions">
-                  <button class="details-btn" onclick="openDetails('${product.id}')">Detalles</button>
-                  <button class="add-btn" onclick="addToCart('${product.id}')">${selectedQty > 0 ? `+ Agregar (${selectedQty})` : "Agregar"}</button>
-                </div>
-              </div>
-            </div>
-          </article>
-        `;
-      }).join("");
+      grid.innerHTML = grouped.map(group => `
+        <div class="brand-divider">
+          <h3>🏷️ ${escapeHtml(group.brand)}</h3>
+          <span>${group.items.length} producto${group.items.length !== 1 ? "s" : ""}</span>
+        </div>
+        ${group.items.map(renderProductCard).join("")}
+      `).join("");
     }
 
     function openDetails(productId) {
@@ -1531,7 +1668,10 @@
           </div>
 
           <div class="detail-info">
-            <span class="category-tag">${escapeHtml(product.category)}</span>
+            <div class="tag-row">
+              <span class="brand-tag">${escapeHtml(normalizeBrandText(product.brand || deriveBrand(product)))}</span>
+              <span class="category-tag">${escapeHtml(product.category)}</span>
+            </div>
             <h2>${escapeHtml(product.name)}</h2>
             <div class="detail-price">${formatMoney(product.price)}</div>
             <p><strong>Disponible:</strong> ${product.stock}</p>
@@ -1757,6 +1897,7 @@
 
         const product = {
           name: document.getElementById("productName").value.trim(),
+          brand: document.getElementById("productBrand").value.trim(),
           category: document.getElementById("productCategory").value.trim(),
           price: Number(document.getElementById("productPrice").value),
           stock: Number(document.getElementById("productStock").value),
@@ -1873,7 +2014,7 @@
             </div>
             <div>
               <strong>${escapeHtml(product.name)}</strong><br>
-              <small>${escapeHtml(product.category)} · ${formatMoney(product.price)} · Stock: ${product.stock} · Imágenes: ${images.length}</small>
+              <small>${escapeHtml(normalizeBrandText(product.brand || deriveBrand(product)))} · ${escapeHtml(product.category)} · ${formatMoney(product.price)} · Stock: ${product.stock} · Imágenes: ${images.length}</small>
             </div>
             <div class="admin-actions">
               <button class="edit-btn" onclick="editProduct('${product.id}')">Editar</button>
@@ -1895,6 +2036,7 @@
       document.getElementById("formTitle").textContent = "Editar producto";
       document.getElementById("productId").value = product.id;
       document.getElementById("productName").value = product.name;
+      document.getElementById("productBrand").value = normalizeBrandText(product.brand || deriveBrand(product));
       document.getElementById("productCategory").value = product.category;
       document.getElementById("productPrice").value = product.price;
       document.getElementById("productStock").value = product.stock;
@@ -1953,6 +2095,7 @@
           const productRef = doc(collection(db, PRODUCTS_COLLECTION));
           batch.set(productRef, {
             ...product,
+            brand: deriveBrand(product),
             images: product.images || [],
             image: product.image || "",
             createdAt: serverTimestamp(),
@@ -1977,6 +2120,7 @@
       return {
         ID: product.id && !String(product.id).startsWith("demo_") ? product.id : "",
         Nombre: product.name || "",
+        Marca: normalizeBrandText(product.brand || deriveBrand(product)),
         Categoria: product.category || "",
         Precio: Number(product.price || 0),
         Existencias: Number(product.stock || 0),
@@ -2005,7 +2149,7 @@
 
       const worksheet = XLSX.utils.json_to_sheet(rows);
       worksheet["!cols"] = [
-        { wch: 26 }, { wch: 35 }, { wch: 28 }, { wch: 12 }, { wch: 12 },
+        { wch: 26 }, { wch: 35 }, { wch: 26 }, { wch: 28 }, { wch: 12 }, { wch: 12 },
         { wch: 70 }, { wch: 10 }, { wch: 12 }, { wch: 45 }, { wch: 45 },
         { wch: 45 }, { wch: 45 }, { wch: 45 }
       ];
@@ -2058,9 +2202,10 @@
         getRowValue(row, ["Imagen5", "Imagen 5", "image5"])
       ].map(value => String(value || "").trim()).filter(Boolean).slice(0, 5);
 
-      return {
+      const product = {
         id: String(getRowValue(row, ["ID", "Id", "id"]) || "").trim(),
         name: String(getRowValue(row, ["Nombre", "name", "Producto", "producto"]) || "").trim(),
+        brand: String(getRowValue(row, ["Marca", "Empresa", "brand", "company"]) || "").trim(),
         category: String(getRowValue(row, ["Categoria", "Categoría", "category"]) || "General").trim(),
         price: parseExcelNumber(getRowValue(row, ["Precio", "price", "Valor"])),
         stock: parseExcelNumber(getRowValue(row, ["Existencias", "Stock", "stock"])),
@@ -2070,6 +2215,9 @@
         images,
         image: images[0] || ""
       };
+
+      product.brand = normalizeBrandText(product.brand || deriveBrand(product));
+      return product;
     }
 
     async function importProductsFromExcel(event) {
@@ -2091,7 +2239,7 @@
           .filter(product => product.name && product.category);
 
         if (!importedProducts.length) {
-          alert("No encontré productos válidos en el archivo. Revisa que tenga columnas como Nombre, Categoria, Precio, Existencias y Descripcion.");
+          alert("No encontré productos válidos en el archivo. Revisa que tenga columnas como Nombre, Marca, Categoria, Precio, Existencias y Descripcion.");
           return;
         }
 
@@ -2155,6 +2303,7 @@
           const productRef = doc(collection(db, PRODUCTS_COLLECTION));
           batch.set(productRef, {
             ...product,
+            brand: deriveBrand(product),
             images: product.images || [],
             image: product.image || "",
             createdAt: serverTimestamp(),
@@ -2182,7 +2331,7 @@
     }
 
     async function exportCatalogPdf() {
-      const list = getProductsForCurrentView();
+      const list = getGroupedProductsByBrand(getProductsForCurrentView()).flatMap(group => group.items);
 
       if (!list.length) {
         alert("No hay productos para exportar en PDF.");
@@ -2317,14 +2466,22 @@
         drawPdfImagePlaceholder(pdf, x + 5, y + 6, 28, 24);
       }
 
+      const brandLabel = normalizeBrandText(product.brand || deriveBrand(product));
+
       pdf.setTextColor(7, 21, 122);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(9);
-      pdf.text(pdf.splitTextToSize(product.category || "Producto", w - 42).slice(0, 1), x + 37, y + 12);
+      pdf.text(pdf.splitTextToSize(brandLabel, w - 42).slice(0, 1), x + 37, y + 11);
+
+      pdf.setTextColor(100, 116, 139);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7.5);
+      pdf.text(pdf.splitTextToSize(product.category || "Producto", w - 42).slice(0, 1), x + 37, y + 16);
 
       pdf.setTextColor(11, 16, 32);
+      pdf.setFont("helvetica", "bold");
       pdf.setFontSize(10.5);
-      pdf.text(pdf.splitTextToSize(product.name || "Producto", w - 42).slice(0, 2), x + 37, y + 20);
+      pdf.text(pdf.splitTextToSize(product.name || "Producto", w - 42).slice(0, 2), x + 37, y + 24);
 
       if (product.offer) {
         pdf.setFillColor(246, 196, 49);
