@@ -585,6 +585,7 @@
             <button id="copyLotBtn">Copiar aquí cerca</button>
             <button id="copyLotOutsideBtn">Copiar y sacar afuera</button>
             <button id="moveLotBtn">Mover este sublote</button>
+            <button id="deleteLotFromMenuBtn" class="small-danger">Eliminar este sublote</button>
             <button id="closeLotMenuBtn" class="small-danger">Cerrar</button>
           </div>
         </div>
@@ -613,7 +614,7 @@
       </div>
 
       <p class="status">
-        Doble clic sobre una medida para editarla y escoger Desde A, Desde B o Ambos. Doble clic sobre un sublote para copiarlo o moverlo.
+        Doble clic sobre una medida para editarla y escoger Desde A, Desde B o Ambos. Doble clic sobre un sublote para copiarlo, moverlo o eliminarlo.
       </p>
     </main>
   </div>
@@ -633,6 +634,7 @@
     const copyLotBtn = document.getElementById('copyLotBtn');
     const copyLotOutsideBtn = document.getElementById('copyLotOutsideBtn');
     const moveLotBtn = document.getElementById('moveLotBtn');
+    const deleteLotFromMenuBtn = document.getElementById('deleteLotFromMenuBtn');
     const closeLotMenuBtn = document.getElementById('closeLotMenuBtn');
 
     const modeEl = document.getElementById('mode');
@@ -1163,6 +1165,26 @@
       render();
 
       alert('Listo. Ahora arrastra ese sublote desde cualquier parte. Si queda cerca de una línea existente, se alineará automáticamente.');
+    }
+
+    function deleteLotByIndex(lotIndex) {
+      const lot = lots[lotIndex];
+      if (!lot) return;
+
+      if (!confirm(`¿Seguro que deseas eliminar "${lot.name}"?`)) return;
+
+      lots.splice(lotIndex, 1);
+      cleanUnusedPoints();
+
+      if (selectedLotIndex === lotIndex) selectedLotIndex = null;
+      if (lotMenuLotIndex === lotIndex) lotMenuLotIndex = null;
+
+      movingWholeLot = false;
+      wholeLotDrag = null;
+      snapGuide = null;
+
+      hideLotMenu();
+      render();
     }
 
     function lighten(hex, alpha = 0.26) {
@@ -2462,6 +2484,10 @@
 
     moveLotBtn.addEventListener('click', () => {
       if (lotMenuLotIndex !== null) startMoveWholeLot(lotMenuLotIndex);
+    });
+
+    deleteLotFromMenuBtn.addEventListener('click', () => {
+      if (lotMenuLotIndex !== null) deleteLotByIndex(lotMenuLotIndex);
     });
 
     closeLotMenuBtn.addEventListener('click', hideLotMenu);
