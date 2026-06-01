@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reloteo por medidas con zoom</title>
+  <title>Reloteo por medidas con zoom - reporte y selección múltiple</title>
   <style>
     :root {
       --bg: #111827;
@@ -394,19 +394,27 @@
 
       <div class="box">
         <h2>2. Crear lote matriz por medidas</h2>
+
+        <label>Área total del lote matriz (m²)</label>
+        <input id="matrixAreaM2" type="number" min="0" step="0.01" value="10000" />
+
         <div class="row">
           <div>
-            <label>Ancho total del lote matriz (m)</label>
-            <input id="matrixWidthM" type="number" min="0" step="0.01" value="80" />
+            <label>Ancho total / frente (m)</label>
+            <input id="matrixWidthM" type="number" min="0" step="0.01" value="100" />
           </div>
           <div>
             <label>Fondo / alto total (m)</label>
-            <input id="matrixHeightM" type="number" min="0" step="0.01" value="50" />
+            <input id="matrixHeightM" type="number" min="0" step="0.01" value="100" />
           </div>
         </div>
-        <button class="blue" id="createMatrixBySizeBtn">Crear lote matriz rectangular</button>
+
+        <button class="blue" id="createMatrixByAreaBtn">Crear matriz usando área</button>
+        <button class="blue" id="createMatrixBySizeBtn">Crear matriz usando ancho × fondo</button>
+
         <p class="hint">
-          Útil si ya conoces la medida general del predio. El sistema ajusta la escala para que el plano se vea bien en el lienzo.
+          Para lotes grandes, no se dibuja a tamaño real en píxeles: se usa escala. Ejemplo: 10.000 m² puede verse completo en pantalla, pero conserva sus medidas reales.
+          Si escribes área + ancho, calcula el fondo. Si escribes área + fondo, calcula el ancho. Si solo escribes área, crea un cuadrado equivalente.
         </p>
       </div>
 
@@ -552,6 +560,19 @@
       </div>
 
       <div class="box">
+        <h2>10. Relación final de lotes</h2>
+        <button class="blue" id="generateReportBtn">Actualizar relación final</button>
+        <button id="copyReportBtn">Copiar relación al portapapeles</button>
+        <button id="downloadCsvBtn">Descargar relación CSV</button>
+        <div class="mini-result" id="finalReportBox">
+          Aquí saldrá el resumen final: cantidad de lotes generados y listado con área de cada uno.
+        </div>
+        <p class="hint">
+          El reporte incluye únicamente los sublotes, no el lote matriz, para no duplicar el área general.
+        </p>
+      </div>
+
+      <div class="box">
         <h2>Totales</h2>
         <div class="totals" id="totals"></div>
       </div>
@@ -585,6 +606,7 @@
             <button id="copyLotBtn">Copiar aquí cerca</button>
             <button id="copyLotOutsideBtn">Copiar y sacar afuera</button>
             <button id="moveLotBtn">Mover este sublote</button>
+            <button id="moveSelectedLotsBtn">Mover selección</button>
             <button id="deleteLotFromMenuBtn" class="small-danger">Eliminar este sublote</button>
             <button id="closeLotMenuBtn" class="small-danger">Cerrar</button>
           </div>
@@ -614,7 +636,7 @@
       </div>
 
       <p class="status">
-        Doble clic sobre una medida para editarla y escoger Desde A, Desde B o Ambos. Doble clic sobre un sublote para copiarlo, moverlo o eliminarlo.
+        Para lotes grandes usa “Crear matriz usando área”. Mantén Shift (Mayús) y arrastra con clic izquierdo para encerrar varios sublotes; también sirve Shift + clic sobre uno solo.
       </p>
     </main>
   </div>
@@ -634,6 +656,7 @@
     const copyLotBtn = document.getElementById('copyLotBtn');
     const copyLotOutsideBtn = document.getElementById('copyLotOutsideBtn');
     const moveLotBtn = document.getElementById('moveLotBtn');
+    const moveSelectedLotsBtn = document.getElementById('moveSelectedLotsBtn');
     const deleteLotFromMenuBtn = document.getElementById('deleteLotFromMenuBtn');
     const closeLotMenuBtn = document.getElementById('closeLotMenuBtn');
 
@@ -644,8 +667,10 @@
     const undoBtn = document.getElementById('undoBtn');
     const cancelBtn = document.getElementById('cancelBtn');
 
+    const matrixAreaM2El = document.getElementById('matrixAreaM2');
     const matrixWidthMEl = document.getElementById('matrixWidthM');
     const matrixHeightMEl = document.getElementById('matrixHeightM');
+    const createMatrixByAreaBtn = document.getElementById('createMatrixByAreaBtn');
     const createMatrixBySizeBtn = document.getElementById('createMatrixBySizeBtn');
 
     const edgeLotSelect = document.getElementById('edgeLotSelect');
@@ -686,6 +711,10 @@
 
     const lotTable = document.getElementById('lotTable');
     const totalsEl = document.getElementById('totals');
+    const finalReportBox = document.getElementById('finalReportBox');
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    const copyReportBtn = document.getElementById('copyReportBtn');
+    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
     const statusEl = document.getElementById('status');
 
     const clearAllBtn = document.getElementById('clearAllBtn');
@@ -721,10 +750,17 @@
     let didPanDuringMouseDown = false;
 
     let selectedLotIndex = null;
+    let selectedLotIndices = new Set();
+    let movingGroupLotIndices = [];
     let lotMenuLotIndex = null;
     let movingWholeLot = false;
     let wholeLotDrag = null;
     let snapGuide = null;
+
+    let isMarqueeSelecting = false;
+    let marqueeStartScreen = null;
+    let marqueeCurrentScreen = null;
+    let suppressClickAfterMarquee = false;
 
     const colors = [
       '#60a5fa', '#34d399', '#fbbf24', '#f472b6',
@@ -757,6 +793,22 @@
 
     function getCanvasWorldPos(evt) {
       return screenToWorld(screenFromEvent(evt));
+    }
+
+    function normalizeRect(a, b) {
+      return {
+        x1: Math.min(a.x, b.x),
+        y1: Math.min(a.y, b.y),
+        x2: Math.max(a.x, b.x),
+        y2: Math.max(a.y, b.y)
+      };
+    }
+
+    function rectSize(rect) {
+      return {
+        w: rect.x2 - rect.x1,
+        h: rect.y2 - rect.y1
+      };
     }
 
     function applyWorldTransform() {
@@ -868,6 +920,40 @@
         minY: Math.min(...pts.map(p => p.y)),
         maxY: Math.max(...pts.map(p => p.y))
       };
+    }
+
+    function worldRectFromScreenRect(screenRect) {
+      const p1 = screenToWorld({ x: screenRect.x1, y: screenRect.y1 });
+      const p2 = screenToWorld({ x: screenRect.x2, y: screenRect.y2 });
+      return {
+        minX: Math.min(p1.x, p2.x),
+        maxX: Math.max(p1.x, p2.x),
+        minY: Math.min(p1.y, p2.y),
+        maxY: Math.max(p1.y, p2.y)
+      };
+    }
+
+    function worldRectsIntersect(a, b) {
+      return !(a.maxX < b.minX || a.minX > b.maxX || a.maxY < b.minY || a.minY > b.maxY);
+    }
+
+    function selectLotsByScreenRect(screenRect) {
+      const worldRect = worldRectFromScreenRect(screenRect);
+      let count = 0;
+
+      lots.forEach((lot, index) => {
+        if (lot.type === 'matriz') return;
+        const pts = polygonPoints(lot);
+        if (pts.length < 3) return;
+        const lotBox = bbox(pts);
+        if (worldRectsIntersect(lotBox, worldRect)) {
+          selectedLotIndices.add(index);
+          selectedLotIndex = index;
+          count++;
+        }
+      });
+
+      return count;
     }
 
     function allLotsBounds() {
@@ -1138,7 +1224,7 @@
       lotMenuInfo.innerHTML = `
         Área: ${formatNumber(areaM2, 2)} m²<br>
         Perímetro: ${formatNumber(perimeterM, 2)} m<br>
-        Doble clic sobre otro sublote para cambiar selección.
+        Seleccionados: ${selectedLotIndices.size || 1}. Usa Shift + clic para agregar más.
       `;
 
       lotActionMenu.style.left = `${Math.min(canvas.width - 215, Math.max(6, screen.x + 10))}px`;
@@ -1152,11 +1238,269 @@
       lotMenuLotIndex = null;
     }
 
+    function toggleLotSelection(lotIndex) {
+      const lot = lots[lotIndex];
+      if (!lot || lot.type === 'matriz') return;
+
+      if (selectedLotIndices.has(lotIndex)) {
+        selectedLotIndices.delete(lotIndex);
+      } else {
+        selectedLotIndices.add(lotIndex);
+      }
+
+      selectedLotIndex = lotIndex;
+      hideLotMenu();
+      render();
+    }
+
+    function clearMultiSelection() {
+      selectedLotIndices.clear();
+      selectedLotIndex = null;
+      movingGroupLotIndices = [];
+      movingWholeLot = false;
+      wholeLotDrag = null;
+      isMarqueeSelecting = false;
+      marqueeStartScreen = null;
+      marqueeCurrentScreen = null;
+      render();
+    }
+
+    function getSelectedMovableLots() {
+      const arr = Array.from(selectedLotIndices)
+        .filter(i => lots[i] && lots[i].type !== 'matriz');
+
+      if (!arr.length && selectedLotIndex !== null && lots[selectedLotIndex] && lots[selectedLotIndex].type !== 'matriz') {
+        arr.push(selectedLotIndex);
+      }
+
+      return arr;
+    }
+
+    function detachLotsForMove(lotIndices) {
+      lotIndices.forEach(index => detachLotPoints(index));
+    }
+
+    function translateLots(lotIndices, dx, dy) {
+      lotIndices.forEach(index => translateLot(index, dx, dy));
+    }
+
+    function startMoveSelectedLots() {
+      let lotIndices = getSelectedMovableLots();
+
+      if (!lotIndices.length) {
+        alert('Selecciona uno o varios sublotes primero. Usa Shift + clic sobre cada sublote.');
+        return;
+      }
+
+      selectedLotIndices = new Set(lotIndices);
+      movingGroupLotIndices = lotIndices;
+      detachLotsForMove(lotIndices);
+
+      selectedLotIndex = lotIndices[0];
+      movingWholeLot = true;
+      hideLotMenu();
+      modeEl.value = 'move';
+      updateCanvasCursor();
+      render();
+
+      alert(`Listo. Ahora arrastra cualquiera de los ${lotIndices.length} sublote(s) seleccionado(s) para moverlos juntos.`);
+    }
+
+    function isLotInMovingGroup(lotIndex) {
+      return movingGroupLotIndices.includes(lotIndex);
+    }
+
+    function getSubLotsReportData() {
+      return lots
+        .map((lot, index) => {
+          const pts = polygonPoints(lot);
+          const areaM2 = polygonAreaPx(pts) * mPerPx * mPerPx;
+          const areaHa = areaM2 / 10000;
+          const perimeterM = polygonPerimeterPx(pts) * mPerPx;
+          const sides = segmentLengthsM(pts);
+
+          return {
+            index,
+            name: lot.name,
+            type: lot.type,
+            areaM2,
+            areaHa,
+            perimeterM,
+            sides,
+            pointsCount: pts.length,
+            autoGenerated: !!lot.autoGenerated
+          };
+        })
+        .filter(item => item.type === 'lote');
+    }
+
+    function buildFinalReportText() {
+      const rows = getSubLotsReportData();
+      const totalLots = rows.length;
+      const totalAreaM2 = rows.reduce((sum, r) => sum + r.areaM2, 0);
+      const totalAreaHa = totalAreaM2 / 10000;
+      const avgAreaM2 = totalLots ? totalAreaM2 / totalLots : 0;
+
+      const matrixTotalM2 = lots
+        .filter(lot => lot.type === 'matriz')
+        .reduce((sum, lot) => sum + polygonAreaPx(polygonPoints(lot)) * mPerPx * mPerPx, 0);
+
+      const diffM2 = matrixTotalM2 ? matrixTotalM2 - totalAreaM2 : null;
+
+      let text = '';
+      text += 'RELACIÓN FINAL DE LOTES\n';
+      text += '----------------------------------------\n';
+      text += `Cantidad de sublotes: ${totalLots}\n`;
+      text += `Área total sublotes: ${formatNumber(totalAreaM2, 2)} m² (${formatNumber(totalAreaHa, 4)} ha)\n`;
+      text += `Área promedio por sublote: ${formatNumber(avgAreaM2, 2)} m²\n`;
+
+      if (matrixTotalM2) {
+        text += `Área lote matriz: ${formatNumber(matrixTotalM2, 2)} m² (${formatNumber(matrixTotalM2 / 10000, 4)} ha)\n`;
+        text += `Área libre / diferencia: ${formatNumber(diffM2, 2)} m²\n`;
+      }
+
+      text += '\nLISTADO DE SUBLOTES\n';
+      text += '----------------------------------------\n';
+
+      rows.forEach((r, i) => {
+        text += `${i + 1}. ${r.name}\n`;
+        text += `   Área: ${formatNumber(r.areaM2, 2)} m² / ${formatNumber(r.areaHa, 4)} ha\n`;
+        text += `   Perímetro: ${formatNumber(r.perimeterM, 2)} m\n`;
+        text += `   Lados: ${r.sides.map((v, idx) => `L${idx + 1}: ${formatNumber(v, 2)} m`).join(' | ')}\n`;
+      });
+
+      return text;
+    }
+
+    function generateFinalReport() {
+      const rows = getSubLotsReportData();
+
+      if (!rows.length) {
+        finalReportBox.innerHTML = 'No hay sublotes para reportar. Genera o dibuja sublotes primero.';
+        return;
+      }
+
+      const totalLots = rows.length;
+      const totalAreaM2 = rows.reduce((sum, r) => sum + r.areaM2, 0);
+      const totalAreaHa = totalAreaM2 / 10000;
+      const avgAreaM2 = totalLots ? totalAreaM2 / totalLots : 0;
+
+      const matrixTotalM2 = lots
+        .filter(lot => lot.type === 'matriz')
+        .reduce((sum, lot) => sum + polygonAreaPx(polygonPoints(lot)) * mPerPx * mPerPx, 0);
+
+      const diffM2 = matrixTotalM2 ? matrixTotalM2 - totalAreaM2 : null;
+
+      let htmlReport = `
+        <b>Resumen final</b><br>
+        Sublotes generados/dibujados: <b>${totalLots}</b><br>
+        Área total sublotes: <b>${formatNumber(totalAreaM2, 2)} m²</b> / ${formatNumber(totalAreaHa, 4)} ha<br>
+        Área promedio por sublote: <b>${formatNumber(avgAreaM2, 2)} m²</b><br>
+      `;
+
+      if (matrixTotalM2) {
+        htmlReport += `
+          Área lote matriz: <b>${formatNumber(matrixTotalM2, 2)} m²</b> / ${formatNumber(matrixTotalM2 / 10000, 4)} ha<br>
+          Área libre / diferencia: <b>${formatNumber(diffM2, 2)} m²</b><br>
+        `;
+      }
+
+      htmlReport += `
+        <br>
+        <b>Listado de lotes</b>
+        <div style="max-height:260px; overflow:auto; margin-top:8px;">
+          <table style="font-size:11px;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Lote</th>
+                <th>Área m²</th>
+                <th>Área ha</th>
+                <th>Perímetro</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      rows.forEach((r, i) => {
+        htmlReport += `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${r.name}</td>
+            <td>${formatNumber(r.areaM2, 2)}</td>
+            <td>${formatNumber(r.areaHa, 4)}</td>
+            <td>${formatNumber(r.perimeterM, 2)} m</td>
+          </tr>
+        `;
+      });
+
+      htmlReport += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      finalReportBox.innerHTML = htmlReport;
+    }
+
+    function downloadFinalReportCsv() {
+      const rows = getSubLotsReportData();
+
+      if (!rows.length) {
+        alert('No hay sublotes para exportar.');
+        return;
+      }
+
+      const header = ['Numero', 'Nombre', 'Area_m2', 'Area_ha', 'Perimetro_m', 'Puntos', 'Lados_m'];
+      const csvRows = [header.join(';')];
+
+      rows.forEach((r, i) => {
+        const sidesText = r.sides.map((v, idx) => `L${idx + 1}: ${v.toFixed(2)} m`).join(' | ');
+        csvRows.push([
+          i + 1,
+          `"${String(r.name).replace(/"/g, '""')}"`,
+          r.areaM2.toFixed(2).replace('.', ','),
+          r.areaHa.toFixed(4).replace('.', ','),
+          r.perimeterM.toFixed(2).replace('.', ','),
+          r.pointsCount,
+          `"${sidesText}"`
+        ].join(';'));
+      });
+
+      const csv = csvRows.join('\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'relacion_final_lotes.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function copyFinalReport() {
+      const text = buildFinalReportText();
+
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('Relación final copiada al portapapeles.');
+      } catch (err) {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        alert('Relación final copiada al portapapeles.');
+      }
+    }
+
     function startMoveWholeLot(lotIndex) {
       const lot = lots[lotIndex];
       if (!lot) return;
 
       detachLotPoints(lotIndex);
+      selectedLotIndices = new Set([lotIndex]);
+      movingGroupLotIndices = [lotIndex];
       selectedLotIndex = lotIndex;
       movingWholeLot = true;
       hideLotMenu();
@@ -1181,6 +1525,7 @@
 
       movingWholeLot = false;
       wholeLotDrag = null;
+      movingGroupLotIndices = movingWholeLot ? movingGroupLotIndices : [];
       snapGuide = null;
 
       hideLotMenu();
@@ -1421,7 +1766,7 @@
       ctx.fill();
       ctx.stroke();
 
-      if (lotIndex === selectedLotIndex) {
+      if (lotIndex === selectedLotIndex || selectedLotIndices.has(lotIndex)) {
         ctx.save();
         ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 4 / viewScale;
@@ -1507,6 +1852,22 @@
       }
     }
 
+    function drawMarqueeSelection() {
+      if (!isMarqueeSelecting || !marqueeStartScreen || !marqueeCurrentScreen) return;
+
+      const r = normalizeRect(marqueeStartScreen, marqueeCurrentScreen);
+
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = 'rgba(59,130,246,0.12)';
+      ctx.strokeStyle = 'rgba(37,99,235,0.95)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([8, 6]);
+      ctx.fillRect(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1);
+      ctx.strokeRect(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1);
+      ctx.restore();
+    }
+
     function drawCurrent() {
       if (!current.length) return;
       const pts = current.map(getPoint).filter(Boolean);
@@ -1562,8 +1923,10 @@
       drawPoints();
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
+      drawMarqueeSelection();
 
       updateTableAndTotals();
+      if (finalReportBox && finalReportBox.dataset.auto === '1') generateFinalReport();
       updateMatrixSelect();
       updateEdgeSelectors(false);
       updateStatus();
@@ -1785,8 +2148,14 @@
     }
 
     function setScaleToFitMeters(widthM, heightM) {
-      const pxPerM = Math.min((canvas.width - 220) / widthM, (canvas.height - 180) / heightM);
-      mPerPx = 1 / Math.max(pxPerM, 0.0001);
+      const safeW = Math.max(1, widthM);
+      const safeH = Math.max(1, heightM);
+
+      // El lote puede ser grande en metros, pero se dibuja con escala para que quepa en el lienzo.
+      const pxPerM = Math.min((canvas.width - 220) / safeW, (canvas.height - 180) / safeH);
+
+      // mPerPx indica cuántos metros representa cada píxel.
+      mPerPx = 1 / Math.max(pxPerM, 0.000001);
       scaleEl.value = mPerPx.toFixed(4);
     }
 
@@ -1810,6 +2179,57 @@
       lots.push(lot);
       lotCounter++;
       return lot;
+    }
+
+    function createMatrixByArea() {
+      const areaM2 = parseFloat(matrixAreaM2El.value);
+      let wM = parseFloat(matrixWidthMEl.value);
+      let hM = parseFloat(matrixHeightMEl.value);
+
+      if (!areaM2 || areaM2 <= 0) {
+        alert('Escribe el área total del lote matriz en m².');
+        return;
+      }
+
+      const hasW = Number.isFinite(wM) && wM > 0;
+      const hasH = Number.isFinite(hM) && hM > 0;
+
+      if (hasW && !hasH) {
+        hM = areaM2 / wM;
+        matrixHeightMEl.value = hM.toFixed(2);
+      } else if (!hasW && hasH) {
+        wM = areaM2 / hM;
+        matrixWidthMEl.value = wM.toFixed(2);
+      } else if (!hasW && !hasH) {
+        wM = Math.sqrt(areaM2);
+        hM = Math.sqrt(areaM2);
+        matrixWidthMEl.value = wM.toFixed(2);
+        matrixHeightMEl.value = hM.toFixed(2);
+      } else {
+        // Si escribió las tres cosas, se respeta ancho y se recalcula fondo para que el área sea exacta.
+        hM = areaM2 / wM;
+        matrixHeightMEl.value = hM.toFixed(2);
+      }
+
+      setScaleToFitMeters(wM, hM);
+
+      const wPx = wM / mPerPx;
+      const hPx = hM / mPerPx;
+      const matrixLot = createRectangleLot(110, 90, wPx, hPx, `Lote matriz ${formatNumber(areaM2, 0)} m²`, 'matriz', '#111827');
+
+      fitResult.innerHTML = `
+        <b>Lote matriz creado por área:</b><br>
+        Área: ${formatNumber(areaM2, 2)} m²<br>
+        Frente: ${formatNumber(wM, 2)} m<br>
+        Fondo: ${formatNumber(hM, 2)} m<br>
+        Escala aplicada: 1 px = ${formatNumber(mPerPx, 4)} m
+      `;
+
+      selectedLotIndex = lots.indexOf(matrixLot);
+      resetView();
+      fitViewToLots();
+      modeEl.value = 'move';
+      render();
     }
 
     function createMatrixBySize() {
@@ -2137,6 +2557,16 @@
       mouse = pos;
       didPanDuringMouseDown = false;
 
+      if (evt.shiftKey && evt.button === 0) {
+        isMarqueeSelecting = true;
+        marqueeStartScreen = screen;
+        marqueeCurrentScreen = screen;
+        suppressClickAfterMarquee = false;
+        hideLotMenu();
+        render();
+        return;
+      }
+
       if (evt.ctrlKey || modeEl.value === 'pan') {
         isPanning = true;
         panStart = { x: screen.x, y: screen.y, ox: viewOffsetX, oy: viewOffsetY };
@@ -2144,11 +2574,11 @@
         return;
       }
 
-      if (movingWholeLot && selectedLotIndex !== null) {
+      if (movingWholeLot && movingGroupLotIndices.length) {
         const hitIndex = findLotAtPoint(pos);
-        if (hitIndex === selectedLotIndex) {
+        if (hitIndex !== null && isLotInMovingGroup(hitIndex)) {
           wholeLotDrag = {
-            lotIndex: selectedLotIndex,
+            lotIndices: [...movingGroupLotIndices],
             last: pos
           };
           updateCanvasCursor();
@@ -2170,6 +2600,12 @@
       const pos = screenToWorld(screen);
       mouse = pos;
 
+      if (isMarqueeSelecting) {
+        marqueeCurrentScreen = screen;
+        render();
+        return;
+      }
+
       if (isPanning) {
         const dx = screen.x - panStart.x;
         const dy = screen.y - panStart.y;
@@ -2183,8 +2619,14 @@
       if (wholeLotDrag && movingWholeLot) {
         const dx = pos.x - wholeLotDrag.last.x;
         const dy = pos.y - wholeLotDrag.last.y;
-        translateLot(wholeLotDrag.lotIndex, dx, dy);
-        applyMagneticSnap(wholeLotDrag.lotIndex);
+        const group = wholeLotDrag.lotIndices || [wholeLotDrag.lotIndex].filter(v => v !== undefined);
+        translateLots(group, dx, dy);
+
+        // Para no deformar el grupo, el ajuste magnético se aplica al primer lote y luego se conserva el conjunto.
+        if (group.length === 1) {
+          applyMagneticSnap(group[0]);
+        }
+
         wholeLotDrag.last = pos;
         render();
         return;
@@ -2201,6 +2643,27 @@
     });
 
     canvas.addEventListener('mouseup', () => {
+      if (isMarqueeSelecting && marqueeStartScreen && marqueeCurrentScreen) {
+        const r = normalizeRect(marqueeStartScreen, marqueeCurrentScreen);
+        const size = rectSize(r);
+
+        if (size.w >= 4 || size.h >= 4) {
+          selectLotsByScreenRect(r);
+          suppressClickAfterMarquee = true;
+        } else {
+          const pos = screenToWorld(marqueeCurrentScreen);
+          const lotIndex = findLotAtPoint(pos);
+          if (lotIndex !== null && lots[lotIndex] && lots[lotIndex].type !== 'matriz') {
+            toggleLotSelection(lotIndex);
+            suppressClickAfterMarquee = true;
+          }
+        }
+
+        isMarqueeSelecting = false;
+        marqueeStartScreen = null;
+        marqueeCurrentScreen = null;
+      }
+
       selectedPointId = null;
       wholeLotDrag = null;
       snapGuide = null;
@@ -2210,6 +2673,9 @@
     });
 
     canvas.addEventListener('mouseleave', () => {
+      isMarqueeSelecting = false;
+      marqueeStartScreen = null;
+      marqueeCurrentScreen = null;
       selectedPointId = null;
       wholeLotDrag = null;
       snapGuide = null;
@@ -2219,7 +2685,12 @@
     });
 
     canvas.addEventListener('click', (evt) => {
-      if (isPanning || didPanDuringMouseDown || evt.ctrlKey) return;
+      if (suppressClickAfterMarquee) {
+        suppressClickAfterMarquee = false;
+        return;
+      }
+
+      if (isPanning || didPanDuringMouseDown || evt.ctrlKey || isMarqueeSelecting) return;
 
       const screen = screenFromEvent(evt);
       const hit = findMeasurementHit(screen);
@@ -2231,6 +2702,8 @@
 
       const pos = getCanvasWorldPos(evt);
       mouse = pos;
+
+
 
       if (modeEl.value === 'draw') {
         const existing = findPointAt(pos, 12);
@@ -2280,6 +2753,10 @@
       if (lotIndex !== null && lots[lotIndex] && lots[lotIndex].type !== 'matriz') {
         evt.preventDefault();
         hideMeasureEditor();
+        if (!selectedLotIndices.has(lotIndex)) {
+          selectedLotIndices.clear();
+          selectedLotIndices.add(lotIndex);
+        }
         showLotMenu(lotIndex, screen);
       }
     });
@@ -2310,7 +2787,16 @@
       render();
     });
 
+    createMatrixByAreaBtn.addEventListener('click', createMatrixByArea);
     createMatrixBySizeBtn.addEventListener('click', createMatrixBySize);
+
+    generateReportBtn.addEventListener('click', () => {
+      finalReportBox.dataset.auto = '1';
+      generateFinalReport();
+    });
+
+    copyReportBtn.addEventListener('click', copyFinalReport);
+    downloadCsvBtn.addEventListener('click', downloadFinalReportCsv);
     applyEdgeLengthBtn.addEventListener('click', applyEdgeLength);
     applyFromABtn.addEventListener('click', () => applyEdgeLengthWithAnchor('start'));
     applyFromBBtn.addEventListener('click', () => applyEdgeLengthWithAnchor('end'));
@@ -2408,10 +2894,17 @@
       lots = [];
       current = [];
       selectedPointId = null;
+      selectedLotIndex = null;
+      selectedLotIndices = new Set();
+      movingGroupLotIndices = [];
       pointCounter = 1;
       lotCounter = 1;
       calibratePoints = [];
       fitResult.innerHTML = 'Ejemplo: 800 m², 20 m de frente y 40 m de fondo.';
+      if (finalReportBox) {
+        finalReportBox.innerHTML = 'Aquí saldrá el resumen final: cantidad de lotes generados y listado con área de cada uno.';
+        finalReportBox.dataset.auto = '0';
+      }
       render();
     });
 
@@ -2425,6 +2918,7 @@
         viewOffsetX,
         viewOffsetY,
         selectedLotIndex,
+        selectedLotIndices: Array.from(selectedLotIndices),
         points,
         lots
       };
@@ -2454,6 +2948,8 @@
           viewOffsetX = Number(data.viewOffsetX) || 0;
           viewOffsetY = Number(data.viewOffsetY) || 0;
           selectedLotIndex = Number.isInteger(data.selectedLotIndex) ? data.selectedLotIndex : null;
+          selectedLotIndices = new Set(Array.isArray(data.selectedLotIndices) ? data.selectedLotIndices : []);
+          movingGroupLotIndices = [];
           movingWholeLot = false;
           wholeLotDrag = null;
           current = [];
@@ -2485,6 +2981,8 @@
     moveLotBtn.addEventListener('click', () => {
       if (lotMenuLotIndex !== null) startMoveWholeLot(lotMenuLotIndex);
     });
+
+    moveSelectedLotsBtn.addEventListener('click', startMoveSelectedLots);
 
     deleteLotFromMenuBtn.addEventListener('click', () => {
       if (lotMenuLotIndex !== null) deleteLotByIndex(lotMenuLotIndex);
@@ -2538,6 +3036,7 @@
         hideLotMenu();
         hideMeasureEditor();
         movingWholeLot = false;
+        movingGroupLotIndices = [];
         wholeLotDrag = null;
         snapGuide = null;
         current = [];
