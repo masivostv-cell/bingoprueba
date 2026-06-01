@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reloteo automático - cálculo de áreas</title>
+  <title>Reloteo por medidas con zoom</title>
   <style>
     :root {
       --bg: #111827;
@@ -12,16 +12,13 @@
       --line: #374151;
       --text: #f9fafb;
       --muted: #9ca3af;
-      --accent: #22c55e;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --blue: #38bdf8;
-      --white: #ffffff;
+      --green: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --blue: #0284c7;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -49,7 +46,7 @@
 
     .app {
       display: grid;
-      grid-template-columns: 350px 1fr;
+      grid-template-columns: 390px 1fr;
       min-height: calc(100vh - 67px);
     }
 
@@ -67,7 +64,7 @@
     }
 
     .box {
-      background: rgba(15, 23, 42, 0.65);
+      background: rgba(15, 23, 42, 0.68);
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 12px;
@@ -109,49 +106,25 @@
       margin-top: 7px;
     }
 
-    button:hover {
-      background: #334155;
-    }
-
-    button.primary {
-      background: #15803d;
-      border-color: #16a34a;
-    }
-
-    button.primary:hover {
-      background: #16a34a;
-    }
-
-    button.danger {
-      background: #991b1b;
-      border-color: #dc2626;
-    }
-
-    button.danger:hover {
-      background: #b91c1c;
-    }
-
-    button.warning {
-      background: #92400e;
-      border-color: #f59e0b;
-    }
-
-    button.warning:hover {
-      background: #b45309;
-    }
-
-    button.blue {
-      background: #075985;
-      border-color: #0284c7;
-    }
-
-    button.blue:hover {
-      background: #0369a1;
-    }
+    button:hover { background: #334155; }
+    button.primary { background: #15803d; border-color: var(--green); }
+    button.primary:hover { background: #16a34a; }
+    button.danger { background: #991b1b; border-color: var(--danger); }
+    button.danger:hover { background: #b91c1c; }
+    button.warning { background: #92400e; border-color: var(--warning); }
+    button.warning:hover { background: #b45309; }
+    button.blue { background: #075985; border-color: var(--blue); }
+    button.blue:hover { background: #0369a1; }
 
     .row {
       display: grid;
       grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .row3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
     }
 
@@ -162,18 +135,167 @@
       margin-top: 8px;
     }
 
+    .mini-result {
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #dbeafe;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .canvas-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .canvas-toolbar button {
+      width: auto;
+      min-width: 92px;
+      margin-top: 0;
+      padding: 8px 12px;
+    }
+
+    .zoom-label {
+      color: #cbd5e1;
+      font-size: 13px;
+      padding: 6px 10px;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      background: #0f172a;
+    }
+
     canvas {
       background: #f8fafc;
       border: 2px solid #334155;
       border-radius: 14px;
       cursor: crosshair;
       display: block;
-      max-width: 100%;
+      width: 1250px;
+      height: 760px;
+      max-width: none;
     }
 
     .canvas-wrap {
       position: relative;
-      min-width: 900px;
+      width: 1250px;
+      height: 760px;
+      overflow: hidden;
+      border-radius: 14px;
+    }
+
+    .measure-editor {
+      position: absolute;
+      z-index: 20;
+      display: none;
+      width: 92px;
+      padding: 5px 7px;
+      font-size: 12px;
+      border: 2px solid #111827;
+      border-radius: 7px;
+      background: #ffffff;
+      color: #111827;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    .lot-menu {
+      position: absolute;
+      z-index: 25;
+      display: none;
+      width: 205px;
+      padding: 9px;
+      border-radius: 10px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+      color: #e5e7eb;
+      font-size: 12px;
+    }
+
+    .lot-menu strong {
+      display: block;
+      color: #ffffff;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .lot-menu .muted {
+      color: #94a3b8;
+      font-size: 11px;
+      line-height: 1.35;
+      margin-bottom: 7px;
+    }
+
+    .lot-menu button {
+      width: 100%;
+      margin-top: 5px;
+      padding: 7px;
+      font-size: 12px;
+      border-radius: 7px;
+    }
+
+    .lot-menu button.small-danger {
+      background: #7f1d1d;
+      border-color: #991b1b;
+    }
+
+    .measure-anchor-menu {
+      position: absolute;
+      z-index: 21;
+      display: none;
+      width: 205px;
+      padding: 7px;
+      border-radius: 9px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.30);
+      color: #e5e7eb;
+      font-size: 11px;
+    }
+
+    .measure-anchor-menu .title {
+      color: #cbd5e1;
+      margin-bottom: 5px;
+      text-align: center;
+      font-size: 11px;
+    }
+
+    .measure-anchor-menu .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 5px;
+    }
+
+    .measure-anchor-menu button {
+      margin: 0;
+      padding: 6px 4px;
+      font-size: 11px;
+      border-radius: 7px;
+      background: #1e293b;
+    }
+
+    .anchor-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin-top: 7px;
+    }
+
+    .anchor-buttons button {
+      margin-top: 0;
+      padding: 7px 5px;
+      font-size: 12px;
+    }
+
+    .stage-scroll {
+      overflow: auto;
+      max-width: 100%;
     }
 
     .status {
@@ -192,7 +314,7 @@
       padding: 7px 5px;
       border-bottom: 1px solid #374151;
       text-align: left;
-      vertical-align: middle;
+      vertical-align: top;
     }
 
     th {
@@ -223,63 +345,37 @@
       line-height: 1.5;
     }
 
-    .kbd {
-      display: inline-block;
-      background: #111827;
-      border: 1px solid #4b5563;
-      padding: 1px 5px;
-      border-radius: 4px;
-      color: #e5e7eb;
-      font-size: 11px;
-    }
-
-    .pill {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #0f172a;
-      border: 1px solid #475569;
-      color: #cbd5e1;
-      font-size: 11px;
-      margin-top: 5px;
-    }
-
-    @media (max-width: 900px) {
-      .app {
-        grid-template-columns: 1fr;
-      }
-
+    @media (max-width: 950px) {
+      .app { grid-template-columns: 1fr; }
       aside {
         max-height: none;
         border-right: none;
         border-bottom: 1px solid var(--line);
       }
-
-      .canvas-wrap {
-        min-width: 760px;
-      }
     }
   </style>
 </head>
+
 <body>
   <header>
-    <h1>Aplicativo simple para relotear y calcular áreas</h1>
-    <p>Dibuja el lote grande, divídelo automáticamente y mira área, perímetro y medida de cada línea en tiempo real.</p>
+    <h1>Reloteo por medidas, áreas, lados y zoom interno</h1>
+    <p>Crea el lote matriz, edita las medidas directamente sobre el plano y divide por área o por ancho/fondo de sublotes.</p>
   </header>
 
   <div class="app">
     <aside>
       <div class="box">
-        <h2>1. Herramientas</h2>
+        <h2>1. Herramientas de dibujo</h2>
         <label>Modo de trabajo</label>
         <select id="mode">
           <option value="draw">Dibujar lote</option>
           <option value="move">Mover puntos</option>
+          <option value="pan">Mover vista / plano</option>
           <option value="calibrate">Calibrar escala con 2 puntos</option>
         </select>
 
         <label>Nombre del próximo polígono</label>
-        <input id="lotName" placeholder="Ej: Lote 1, Lote A, Lote matriz" />
+        <input id="lotName" placeholder="Ej: Lote matriz, Lote 1" />
 
         <label>Tipo</label>
         <select id="lotType">
@@ -292,79 +388,162 @@
         <button class="warning" id="cancelBtn">Cancelar dibujo actual</button>
 
         <p class="hint">
-          Primero dibuja el lote grande como <b>Lote matriz</b>. Cada línea mostrará su medida en metros.
-          Luego usa la sección <b>Relotear automático</b>.
+          Primero crea el <b>lote matriz</b>. Luego puedes dividirlo automáticamente o ajustar sus lados escribiendo medidas exactas.
         </p>
       </div>
 
       <div class="box">
-        <h2>2. Relotear automático</h2>
+        <h2>2. Crear lote matriz por medidas</h2>
+        <div class="row">
+          <div>
+            <label>Ancho total del lote matriz (m)</label>
+            <input id="matrixWidthM" type="number" min="0" step="0.01" value="80" />
+          </div>
+          <div>
+            <label>Fondo / alto total (m)</label>
+            <input id="matrixHeightM" type="number" min="0" step="0.01" value="50" />
+          </div>
+        </div>
+        <button class="blue" id="createMatrixBySizeBtn">Crear lote matriz rectangular</button>
+        <p class="hint">
+          Útil si ya conoces la medida general del predio. El sistema ajusta la escala para que el plano se vea bien en el lienzo.
+        </p>
+      </div>
 
-        <label>Lote grande a dividir</label>
-        <select id="matrixSelect"></select>
+      <div class="box">
+        <h2>3. Editar distancia entre puntos</h2>
+        <label>Lote a editar</label>
+        <select id="edgeLotSelect"></select>
+
+        <label>Lado / línea</label>
+        <select id="edgeSelect"></select>
 
         <div class="row">
           <div>
-            <label>Cantidad de lotes</label>
-            <input id="splitCount" type="number" min="2" step="1" value="4" />
+            <label>Nueva medida del lado (m)</label>
+            <input id="edgeLengthInput" type="number" min="0.01" step="0.01" />
           </div>
           <div>
-            <label>Dirección del corte</label>
-            <select id="splitDirection">
-              <option value="x">Vertical</option>
-              <option value="y">Horizontal</option>
+            <label>Dirección de ajuste</label>
+            <select id="edgeAnchorSelect">
+              <option value="start">Desde A / fija A</option>
+              <option value="end">Desde B / fija B</option>
+              <option value="both">Ambos / centro fijo</option>
             </select>
           </div>
         </div>
 
-        <label>Prefijo de nombres</label>
-        <input id="splitPrefix" value="Lote" />
-
-        <button class="blue" id="divideMatrixBtn">Dividir automáticamente en partes iguales</button>
-        <button class="danger" id="removeAutoLotsBtn">Eliminar sublotes automáticos</button>
+        <div class="anchor-buttons">
+          <button id="applyFromABtn" class="primary">Desde A</button>
+          <button id="applyFromBBtn" class="primary">Desde B</button>
+          <button id="applyBothBtn" class="blue">Ambos</button>
+        </div>
+        <button class="primary" id="applyEdgeLengthBtn">Aplicar según selección</button>
+        <div class="mini-result" id="edgeInfo">
+          Selecciona un lote y un lado para editar su distancia exacta.
+        </div>
 
         <p class="hint">
-          Esta opción divide el lote matriz en la cantidad indicada, buscando que cada sublote tenga casi la misma área.
-          Funciona mejor cuando el lote tiene forma rectangular, trapezoidal o poligonal sencilla.
+          Si el punto que se mueve también pertenece a otro lote, ese otro lote se ajusta porque comparte el mismo vértice.
         </p>
-        <span class="pill">Tip: después de dividir, cambia a “Mover puntos” y ajusta vértices.</span>
       </div>
 
       <div class="box">
-        <h2>3. Escala y unidades</h2>
+        <h2>4. Relotear por medidas</h2>
+
+        <label>Lote matriz a dividir</label>
+        <select id="matrixSelect"></select>
+
+        <div class="row3">
+          <div>
+            <label>Área deseada por sublote (m²)</label>
+            <input id="targetAreaM2" type="number" min="0" step="0.01" value="800" />
+          </div>
+          <div>
+            <label>Ancho / frente sublote (m)</label>
+            <input id="subWidthM" type="number" min="0" step="0.01" value="20" />
+          </div>
+          <div>
+            <label>Fondo / alto sublote (m)</label>
+            <input id="subHeightM" type="number" min="0" step="0.01" value="40" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Prefijo</label>
+            <input id="splitPrefix" value="Lote" />
+          </div>
+          <div>
+            <label>Separación entre lotes (m)</label>
+            <input id="gapM" type="number" min="0" step="0.01" value="0" />
+          </div>
+        </div>
+
+        <button class="blue" id="fitLotsBySizeBtn">Calcular cuántos caben y acomodar</button>
+        <button class="danger" id="removeAutoLotsBtn">Eliminar sublotes automáticos</button>
+
+        <div class="mini-result" id="fitResult">
+          Ejemplo: 800 m², 20 m de frente y 40 m de fondo.
+        </div>
+
+        <p class="hint">
+          Si escribes área y solo una dimensión, calcula la otra. Si escribes ancho y fondo, usa esas medidas para acomodar los sublotes.
+        </p>
+      </div>
+
+      <div class="box">
+        <h2>5. Crear matriz desde sublotes</h2>
+        <div class="row">
+          <div>
+            <label>Columnas</label>
+            <input id="gridCols" type="number" min="1" step="1" value="4" />
+          </div>
+          <div>
+            <label>Filas</label>
+            <input id="gridRows" type="number" min="1" step="1" value="2" />
+          </div>
+        </div>
+
+        <button class="blue" id="createMatrixFromGridBtn">Crear matriz y sublotes con esas medidas</button>
+        <p class="hint">
+          Ejemplo: sublote 20 m × 40 m, 4 columnas × 2 filas = matriz de 80 m × 80 m.
+        </p>
+      </div>
+
+      <div class="box">
+        <h2>6. Escala y unidades</h2>
         <label>Escala manual: 1 px equivale a:</label>
         <div class="row">
           <input id="scale" type="number" step="0.0001" value="1" min="0.0001" />
-          <select id="unit">
-            <option value="m">metros</option>
-          </select>
+          <select id="unit"><option value="m">metros</option></select>
         </div>
         <button id="applyScaleBtn">Aplicar escala</button>
         <p class="hint">
-          Para un plano real, usa <b>Calibrar escala</b>: marca dos puntos de una distancia conocida y escribe cuántos metros mide.
+          Para planos reales, usa <b>Calibrar escala</b>: marcas dos puntos y escribes la distancia real en metros.
         </p>
       </div>
 
       <div class="box">
-        <h2>4. Plano de fondo</h2>
+        <h2>7. Plano de fondo</h2>
         <label>Subir imagen del plano, croquis o captura</label>
         <input id="bgInput" type="file" accept="image/*" />
         <button id="clearBgBtn">Quitar imagen de fondo</button>
-        <p class="hint">
-          La imagen solo sirve como guía visual. Las áreas dependen de que la escala esté bien calibrada.
-        </p>
       </div>
 
       <div class="box">
-        <h2>5. Opciones visuales</h2>
+        <h2>8. Opciones visuales</h2>
         <label><input type="checkbox" id="showGrid" checked /> Mostrar cuadrícula</label>
-        <label><input type="checkbox" id="showLabels" checked /> Mostrar nombres de lotes</label>
+        <label><input type="checkbox" id="showLabels" checked /> Mostrar nombres y áreas</label>
         <label><input type="checkbox" id="showMeasurements" checked /> Mostrar medidas de cada línea</label>
         <label><input type="checkbox" id="showPointLabels" /> Mostrar número de puntos</label>
+        <label><input type="checkbox" id="snapToLines" checked /> Ajuste magnético a líneas</label>
+        <label>Tolerancia de ajuste magnético (m)</label>
+        <input id="snapToleranceM" type="number" min="0.01" step="0.01" value="1" />
       </div>
 
       <div class="box">
-        <h2>6. Guardar / cargar</h2>
+        <h2>9. Guardar / cargar</h2>
         <button id="downloadJsonBtn">Descargar proyecto JSON</button>
         <label>Cargar proyecto JSON</label>
         <input id="loadJsonInput" type="file" accept="application/json" />
@@ -375,16 +554,42 @@
       <div class="box">
         <h2>Totales</h2>
         <div class="totals" id="totals"></div>
-        <p class="hint">
-          El total suma solo los polígonos marcados como <b>Lote / sublote</b>. El lote matriz se muestra aparte para no duplicar áreas.
-        </p>
       </div>
     </aside>
 
     <main>
-      <div class="canvas-wrap">
-        <canvas id="canvas" width="1200" height="720"></canvas>
+      <div class="canvas-toolbar">
+        <button id="zoomInBtn">Acercar +</button>
+        <button id="zoomOutBtn">Alejar -</button>
+        <button id="zoomResetBtn">Restablecer</button>
+        <button id="fitViewBtn">Ajustar plano</button>
+        <span class="zoom-label" id="zoomLabel">Zoom: 100%</span>
       </div>
+
+      <div class="stage-scroll">
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="canvas" width="1250" height="760"></canvas>
+          <input id="floatingMeasureInput" class="measure-editor" type="number" step="0.01" min="0.01" />
+          <div id="floatingAnchorMenu" class="measure-anchor-menu">
+            <div class="title">Aplicar nueva medida</div>
+            <div class="buttons">
+              <button id="floatingFromABtn">Desde A</button>
+              <button id="floatingFromBBtn">Desde B</button>
+              <button id="floatingBothBtn">Ambos</button>
+            </div>
+          </div>
+
+          <div id="lotActionMenu" class="lot-menu">
+            <strong id="lotMenuTitle">Sublote</strong>
+            <div id="lotMenuInfo" class="muted"></div>
+            <button id="copyLotBtn">Copiar aquí cerca</button>
+            <button id="copyLotOutsideBtn">Copiar y sacar afuera</button>
+            <button id="moveLotBtn">Mover este sublote</button>
+            <button id="closeLotMenuBtn" class="small-danger">Cerrar</button>
+          </div>
+        </div>
+      </div>
+
       <div class="status" id="status"></div>
 
       <div class="box" style="margin-top:12px;">
@@ -408,7 +613,7 @@
       </div>
 
       <p class="status">
-        Flujo recomendado: 1) dibuja el lote grande como matriz, 2) calibra escala, 3) divide automáticamente, 4) mueve puntos si necesitas ajustar.
+        Doble clic sobre una medida para editarla y escoger Desde A, Desde B o Ambos. Doble clic sobre un sublote para copiarlo o moverlo.
       </p>
     </main>
   </div>
@@ -416,6 +621,19 @@
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const canvasWrap = document.getElementById('canvasWrap');
+    const floatingMeasureInput = document.getElementById('floatingMeasureInput');
+    const floatingAnchorMenu = document.getElementById('floatingAnchorMenu');
+    const floatingFromABtn = document.getElementById('floatingFromABtn');
+    const floatingFromBBtn = document.getElementById('floatingFromBBtn');
+    const floatingBothBtn = document.getElementById('floatingBothBtn');
+    const lotActionMenu = document.getElementById('lotActionMenu');
+    const lotMenuTitle = document.getElementById('lotMenuTitle');
+    const lotMenuInfo = document.getElementById('lotMenuInfo');
+    const copyLotBtn = document.getElementById('copyLotBtn');
+    const copyLotOutsideBtn = document.getElementById('copyLotOutsideBtn');
+    const moveLotBtn = document.getElementById('moveLotBtn');
+    const closeLotMenuBtn = document.getElementById('closeLotMenuBtn');
 
     const modeEl = document.getElementById('mode');
     const lotNameEl = document.getElementById('lotName');
@@ -423,28 +641,61 @@
     const finishBtn = document.getElementById('finishBtn');
     const undoBtn = document.getElementById('undoBtn');
     const cancelBtn = document.getElementById('cancelBtn');
+
+    const matrixWidthMEl = document.getElementById('matrixWidthM');
+    const matrixHeightMEl = document.getElementById('matrixHeightM');
+    const createMatrixBySizeBtn = document.getElementById('createMatrixBySizeBtn');
+
+    const edgeLotSelect = document.getElementById('edgeLotSelect');
+    const edgeSelect = document.getElementById('edgeSelect');
+    const edgeLengthInput = document.getElementById('edgeLengthInput');
+    const edgeAnchorSelect = document.getElementById('edgeAnchorSelect');
+    const applyEdgeLengthBtn = document.getElementById('applyEdgeLengthBtn');
+    const applyFromABtn = document.getElementById('applyFromABtn');
+    const applyFromBBtn = document.getElementById('applyFromBBtn');
+    const applyBothBtn = document.getElementById('applyBothBtn');
+    const edgeInfo = document.getElementById('edgeInfo');
+
+    const matrixSelect = document.getElementById('matrixSelect');
+    const targetAreaM2El = document.getElementById('targetAreaM2');
+    const subWidthMEl = document.getElementById('subWidthM');
+    const subHeightMEl = document.getElementById('subHeightM');
+    const splitPrefixEl = document.getElementById('splitPrefix');
+    const gapMEl = document.getElementById('gapM');
+    const fitLotsBySizeBtn = document.getElementById('fitLotsBySizeBtn');
+    const removeAutoLotsBtn = document.getElementById('removeAutoLotsBtn');
+    const fitResult = document.getElementById('fitResult');
+
+    const gridColsEl = document.getElementById('gridCols');
+    const gridRowsEl = document.getElementById('gridRows');
+    const createMatrixFromGridBtn = document.getElementById('createMatrixFromGridBtn');
+
     const scaleEl = document.getElementById('scale');
     const applyScaleBtn = document.getElementById('applyScaleBtn');
     const bgInput = document.getElementById('bgInput');
     const clearBgBtn = document.getElementById('clearBgBtn');
+
     const showGridEl = document.getElementById('showGrid');
     const showLabelsEl = document.getElementById('showLabels');
     const showMeasurementsEl = document.getElementById('showMeasurements');
     const showPointLabelsEl = document.getElementById('showPointLabels');
+    const snapToLinesEl = document.getElementById('snapToLines');
+    const snapToleranceMEl = document.getElementById('snapToleranceM');
+
     const lotTable = document.getElementById('lotTable');
     const totalsEl = document.getElementById('totals');
     const statusEl = document.getElementById('status');
+
     const clearAllBtn = document.getElementById('clearAllBtn');
     const downloadJsonBtn = document.getElementById('downloadJsonBtn');
     const loadJsonInput = document.getElementById('loadJsonInput');
     const exportPngBtn = document.getElementById('exportPngBtn');
 
-    const matrixSelect = document.getElementById('matrixSelect');
-    const splitCountEl = document.getElementById('splitCount');
-    const splitDirectionEl = document.getElementById('splitDirection');
-    const splitPrefixEl = document.getElementById('splitPrefix');
-    const divideMatrixBtn = document.getElementById('divideMatrixBtn');
-    const removeAutoLotsBtn = document.getElementById('removeAutoLotsBtn');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+    const fitViewBtn = document.getElementById('fitViewBtn');
+    const zoomLabel = document.getElementById('zoomLabel');
 
     let points = [];
     let lots = [];
@@ -457,18 +708,57 @@
     let calibratePoints = [];
     let bgImage = null;
 
+    let viewScale = 1;
+    let viewOffsetX = 0;
+    let viewOffsetY = 0;
+    let isPanning = false;
+    let panStart = { x: 0, y: 0, ox: 0, oy: 0 };
+    let measurementHitboxes = [];
+    let activeMeasureEdit = null;
+    let ctrlKeyDown = false;
+    let didPanDuringMouseDown = false;
+
+    let selectedLotIndex = null;
+    let lotMenuLotIndex = null;
+    let movingWholeLot = false;
+    let wholeLotDrag = null;
+    let snapGuide = null;
+
     const colors = [
       '#60a5fa', '#34d399', '#fbbf24', '#f472b6',
       '#a78bfa', '#fb7185', '#22d3ee', '#c084fc',
-      '#bef264', '#fdba74', '#93c5fd', '#f9a8d4'
+      '#bef264', '#fdba74', '#93c5fd', '#f9a8d4',
+      '#67e8f9', '#fca5a5', '#86efac', '#fde68a'
     ];
 
-    function getCanvasPos(evt) {
+    function screenFromEvent(evt) {
       const rect = canvas.getBoundingClientRect();
       return {
         x: (evt.clientX - rect.left) * (canvas.width / rect.width),
         y: (evt.clientY - rect.top) * (canvas.height / rect.height)
       };
+    }
+
+    function screenToWorld(screen) {
+      return {
+        x: (screen.x - viewOffsetX) / viewScale,
+        y: (screen.y - viewOffsetY) / viewScale
+      };
+    }
+
+    function worldToScreen(world) {
+      return {
+        x: world.x * viewScale + viewOffsetX,
+        y: world.y * viewScale + viewOffsetY
+      };
+    }
+
+    function getCanvasWorldPos(evt) {
+      return screenToWorld(screenFromEvent(evt));
+    }
+
+    function applyWorldTransform() {
+      ctx.setTransform(viewScale, 0, 0, viewScale, viewOffsetX, viewOffsetY);
     }
 
     function distance(a, b) {
@@ -480,11 +770,12 @@
     }
 
     function findPointAt(pos, radius = 12) {
+      const worldRadius = radius / viewScale;
       let nearest = null;
       let best = Infinity;
       for (const p of points) {
         const d = distance(pos, p);
-        if (d < radius && d < best) {
+        if (d < worldRadius && d < best) {
           best = d;
           nearest = p;
         }
@@ -532,17 +823,6 @@
       return Math.abs(sum) / 2;
     }
 
-    function signedArea(pts) {
-      if (pts.length < 3) return 0;
-      let sum = 0;
-      for (let i = 0; i < pts.length; i++) {
-        const a = pts[i];
-        const b = pts[(i + 1) % pts.length];
-        sum += a.x * b.y - b.x * a.y;
-      }
-      return sum / 2;
-    }
-
     function polygonPerimeterPx(pts) {
       if (pts.length < 2) return 0;
       let sum = 0;
@@ -571,97 +851,318 @@
       return lengths.map((v, i) => `L${i + 1}: ${formatNumber(v, 2)} m`).join('<br>');
     }
 
-    function drawTextBox(text, x, y, options = {}) {
-      ctx.save();
-      ctx.font = options.font || 'bold 12px Arial';
-      const paddingX = 5;
-      const paddingY = 3;
-      const metrics = ctx.measureText(text);
-      const w = metrics.width + paddingX * 2;
-      const h = 18;
-      const left = x - w / 2;
-      const top = y - h / 2;
-
-      ctx.fillStyle = options.bg || 'rgba(255,255,255,0.88)';
-      ctx.strokeStyle = options.border || 'rgba(17,24,39,0.35)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(left, top, w, h, 5);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = options.color || '#111827';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, x, y + 0.5);
-      ctx.restore();
-    }
-
-    function drawSegmentMeasurements(pts, color = '#111827') {
-      if (!showMeasurementsEl.checked || pts.length < 2) return;
-
-      for (let i = 0; i < pts.length; i++) {
-        const a = pts[i];
-        const b = pts[(i + 1) % pts.length];
-
-        const midX = (a.x + b.x) / 2;
-        const midY = (a.y + b.y) / 2;
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const lenPx = Math.hypot(dx, dy);
-        if (lenPx < 8) continue;
-
-        const lenM = lenPx * mPerPx;
-        const label = `${formatNumber(lenM, 2)} m`;
-
-        // Desplaza un poco la etiqueta para que no quede exactamente sobre la línea.
-        const nx = -dy / lenPx;
-        const ny = dx / lenPx;
-        const offset = 13;
-
-        drawTextBox(label, midX + nx * offset, midY + ny * offset, {
-          bg: 'rgba(255,255,255,0.92)',
-          border: color,
-          color: '#111827'
-        });
-      }
-    }
-
-    function drawOpenSegmentMeasurements(pts) {
-      if (!showMeasurementsEl.checked || pts.length < 2) return;
-
-      for (let i = 0; i < pts.length - 1; i++) {
-        const a = pts[i];
-        const b = pts[i + 1];
-
-        const midX = (a.x + b.x) / 2;
-        const midY = (a.y + b.y) / 2;
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const lenPx = Math.hypot(dx, dy);
-        if (lenPx < 8) continue;
-
-        const lenM = lenPx * mPerPx;
-        const label = `${formatNumber(lenM, 2)} m`;
-
-        const nx = -dy / lenPx;
-        const ny = dx / lenPx;
-        const offset = 13;
-
-        drawTextBox(label, midX + nx * offset, midY + ny * offset, {
-          bg: 'rgba(255,255,255,0.92)',
-          border: '#111827',
-          color: '#111827'
-        });
-      }
-    }
-
     function centroid(pts) {
       if (!pts.length) return { x: 0, y: 0 };
       return {
         x: pts.reduce((s, p) => s + p.x, 0) / pts.length,
         y: pts.reduce((s, p) => s + p.y, 0) / pts.length
       };
+    }
+
+    function bbox(pts) {
+      return {
+        minX: Math.min(...pts.map(p => p.x)),
+        maxX: Math.max(...pts.map(p => p.x)),
+        minY: Math.min(...pts.map(p => p.y)),
+        maxY: Math.max(...pts.map(p => p.y))
+      };
+    }
+
+    function allLotsBounds() {
+      if (!points.length) return null;
+      return bbox(points);
+    }
+
+    function pointInPolygon(point, polygon) {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x, yi = polygon[i].y;
+        const xj = polygon[j].x, yj = polygon[j].y;
+        const intersect = ((yi > point.y) !== (yj > point.y)) &&
+          (point.x < (xj - xi) * (point.y - yi) / ((yj - yi) || 1e-12) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    function rectInsidePolygon(x, y, w, h, polygon) {
+      const sample = [
+        { x: x + 0.001, y: y + 0.001 },
+        { x: x + w - 0.001, y: y + 0.001 },
+        { x: x + w - 0.001, y: y + h - 0.001 },
+        { x: x + 0.001, y: y + h - 0.001 },
+        { x: x + w / 2, y: y + h / 2 }
+      ];
+      return sample.every(p => pointInPolygon(p, polygon));
+    }
+
+    function findLotAtPoint(worldPoint) {
+      // Busca de arriba hacia abajo. Prioriza sublotes sobre matriz.
+      for (let i = lots.length - 1; i >= 0; i--) {
+        const lot = lots[i];
+        const pts = polygonPoints(lot);
+        if (pts.length >= 3 && pointInPolygon(worldPoint, pts)) {
+          return i;
+        }
+      }
+      return null;
+    }
+
+    function getMatrixBounds() {
+      const matrixLots = lots.filter(l => l.type === 'matriz').flatMap(l => polygonPoints(l));
+      if (!matrixLots.length) return null;
+      return bbox(matrixLots);
+    }
+
+    function detachLotPoints(lotIndex) {
+      const lot = lots[lotIndex];
+      if (!lot) return;
+
+      // Crea puntos independientes para que al moverlo no deforme otros lotes compartidos.
+      lot.pointIds = lot.pointIds.map(id => {
+        const p = getPoint(id);
+        if (!p) return id;
+        return createPoint(p.x, p.y).id;
+      });
+    }
+
+    function translateLot(lotIndex, dx, dy) {
+      const lot = lots[lotIndex];
+      if (!lot) return;
+
+      const moved = new Set();
+      for (const id of lot.pointIds) {
+        if (moved.has(id)) continue;
+        const p = getPoint(id);
+        if (p) {
+          p.x += dx;
+          p.y += dy;
+          moved.add(id);
+        }
+      }
+    }
+
+    function getLotSegments(lotIndex) {
+      const lot = lots[lotIndex];
+      if (!lot) return [];
+      const pts = polygonPoints(lot);
+      if (pts.length < 2) return [];
+
+      const segments = [];
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        const len = distance(a, b);
+        if (len < 0.001) continue;
+
+        segments.push({
+          lotIndex,
+          edgeIndex: i,
+          a,
+          b,
+          len,
+          tx: (b.x - a.x) / len,
+          ty: (b.y - a.y) / len,
+          nx: -(b.y - a.y) / len,
+          ny: (b.x - a.x) / len
+        });
+      }
+
+      return segments;
+    }
+
+    function dot(ax, ay, bx, by) {
+      return ax * bx + ay * by;
+    }
+
+    function projectionRangeOnAxis(seg, tx, ty) {
+      const p1 = dot(seg.a.x, seg.a.y, tx, ty);
+      const p2 = dot(seg.b.x, seg.b.y, tx, ty);
+      return {
+        min: Math.min(p1, p2),
+        max: Math.max(p1, p2)
+      };
+    }
+
+    function rangesOverlap(a, b, margin = 0) {
+      return Math.max(a.min, b.min) <= Math.min(a.max, b.max) + margin;
+    }
+
+    function findBestLineSnap(lotIndex) {
+      if (!snapToLinesEl.checked) return null;
+
+      const toleranceM = parseFloat(snapToleranceMEl.value) || 1;
+      const tolerancePx = Math.max(0.5, toleranceM / mPerPx);
+
+      const movingSegments = getLotSegments(lotIndex);
+      if (!movingSegments.length) return null;
+
+      const staticSegments = [];
+      for (let i = 0; i < lots.length; i++) {
+        if (i === lotIndex) continue;
+        staticSegments.push(...getLotSegments(i));
+      }
+
+      let best = null;
+
+      for (const moving of movingSegments) {
+        const movingMid = {
+          x: (moving.a.x + moving.b.x) / 2,
+          y: (moving.a.y + moving.b.y) / 2
+        };
+
+        for (const target of staticSegments) {
+          // Deben ser líneas casi paralelas.
+          const parallel = Math.abs(dot(moving.tx, moving.ty, target.tx, target.ty));
+          if (parallel < 0.985) continue;
+
+          // Verifica que los tramos estén más o menos enfrentados, no en cualquier parte.
+          const movingRange = projectionRangeOnAxis(moving, target.tx, target.ty);
+          const targetRange = projectionRangeOnAxis(target, target.tx, target.ty);
+          if (!rangesOverlap(movingRange, targetRange, tolerancePx * 4)) continue;
+
+          const signedDist = dot(
+            movingMid.x - target.a.x,
+            movingMid.y - target.a.y,
+            target.nx,
+            target.ny
+          );
+
+          const absDist = Math.abs(signedDist);
+          if (absDist > tolerancePx) continue;
+
+          const dx = -signedDist * target.nx;
+          const dy = -signedDist * target.ny;
+
+          if (!best || absDist < best.distancePx) {
+            best = {
+              distancePx: absDist,
+              dx,
+              dy,
+              target,
+              moving,
+              guideA: target.a,
+              guideB: target.b,
+              text: `Alineado con ${lots[target.lotIndex]?.name || 'línea'} · L${target.edgeIndex + 1}`
+            };
+          }
+        }
+      }
+
+      return best;
+    }
+
+    function applyMagneticSnap(lotIndex) {
+      snapGuide = null;
+      const snap = findBestLineSnap(lotIndex);
+      if (!snap) return;
+
+      translateLot(lotIndex, snap.dx, snap.dy);
+      snapGuide = snap;
+    }
+
+    function cloneLot(lotIndex, dx, dy, newName = null) {
+      const lot = lots[lotIndex];
+      if (!lot) return null;
+
+      const newPointIds = lot.pointIds.map(id => {
+        const p = getPoint(id);
+        return createPoint(p.x + dx, p.y + dy).id;
+      });
+
+      const cloned = {
+        id: Date.now() + Math.random(),
+        name: newName || `Copia de ${lot.name}`,
+        type: 'lote',
+        color: colors[(lotCounter - 1) % colors.length],
+        pointIds: newPointIds,
+        copiedFrom: lot.id,
+        extractedCopy: true
+      };
+
+      lots.push(cloned);
+      lotCounter++;
+      return lots.length - 1;
+    }
+
+    function copyLotNear(lotIndex) {
+      const lot = lots[lotIndex];
+      if (!lot) return;
+
+      const pts = polygonPoints(lot);
+      const b = bbox(pts);
+      const dx = Math.max(30 / viewScale, (b.maxX - b.minX) + 35 / viewScale);
+      const newIndex = cloneLot(lotIndex, dx, 0);
+
+      selectedLotIndex = newIndex;
+      hideLotMenu();
+      render();
+    }
+
+    function copyLotOutside(lotIndex) {
+      const lot = lots[lotIndex];
+      if (!lot) return;
+
+      const pts = polygonPoints(lot);
+      const lotBounds = bbox(pts);
+      const matrixBounds = getMatrixBounds();
+      let dx = (lotBounds.maxX - lotBounds.minX) + 50 / viewScale;
+      let dy = 0;
+
+      if (matrixBounds) {
+        const targetX = matrixBounds.maxX + 60 / viewScale;
+        dx = targetX - lotBounds.minX;
+        dy = matrixBounds.minY - lotBounds.minY;
+      }
+
+      const newIndex = cloneLot(lotIndex, dx, dy, `Copia fuera de ${lot.name}`);
+      selectedLotIndex = newIndex;
+      hideLotMenu();
+      fitViewToLots();
+    }
+
+    function showLotMenu(lotIndex, screen) {
+      const lot = lots[lotIndex];
+      if (!lot) return;
+
+      selectedLotIndex = lotIndex;
+      lotMenuLotIndex = lotIndex;
+
+      const pts = polygonPoints(lot);
+      const areaM2 = polygonAreaPx(pts) * mPerPx * mPerPx;
+      const perimeterM = polygonPerimeterPx(pts) * mPerPx;
+
+      lotMenuTitle.textContent = lot.name;
+      lotMenuInfo.innerHTML = `
+        Área: ${formatNumber(areaM2, 2)} m²<br>
+        Perímetro: ${formatNumber(perimeterM, 2)} m<br>
+        Doble clic sobre otro sublote para cambiar selección.
+      `;
+
+      lotActionMenu.style.left = `${Math.min(canvas.width - 215, Math.max(6, screen.x + 10))}px`;
+      lotActionMenu.style.top = `${Math.min(canvas.height - 170, Math.max(6, screen.y + 10))}px`;
+      lotActionMenu.style.display = 'block';
+      render();
+    }
+
+    function hideLotMenu() {
+      lotActionMenu.style.display = 'none';
+      lotMenuLotIndex = null;
+    }
+
+    function startMoveWholeLot(lotIndex) {
+      const lot = lots[lotIndex];
+      if (!lot) return;
+
+      detachLotPoints(lotIndex);
+      selectedLotIndex = lotIndex;
+      movingWholeLot = true;
+      hideLotMenu();
+      modeEl.value = 'move';
+      updateCanvasCursor();
+      render();
+
+      alert('Listo. Ahora arrastra ese sublote desde cualquier parte. Si queda cerca de una línea existente, se alineará automáticamente.');
     }
 
     function lighten(hex, alpha = 0.26) {
@@ -672,29 +1173,200 @@
     }
 
     function formatNumber(n, decimals = 2) {
+      if (!Number.isFinite(n)) return '0';
       return n.toLocaleString('es-CO', {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals
       });
     }
 
+    function updateCanvasCursor() {
+      if (isPanning) {
+        canvas.style.cursor = 'grabbing';
+      } else if (ctrlKeyDown || modeEl.value === 'pan') {
+        canvas.style.cursor = 'grab';
+      } else if (movingWholeLot) {
+        canvas.style.cursor = 'move';
+      } else {
+        canvas.style.cursor = 'crosshair';
+      }
+    }
+
+    function getTextBoxScreenBounds(text, x, y) {
+      ctx.save();
+      ctx.font = `${12 / viewScale}px Arial`;
+      const paddingX = 5 / viewScale;
+      const metrics = ctx.measureText(text);
+      const wWorld = metrics.width + paddingX * 2;
+      const hWorld = 18 / viewScale;
+      ctx.restore();
+
+      const center = worldToScreen({ x, y });
+      const w = wWorld * viewScale;
+      const h = hWorld * viewScale;
+
+      return {
+        x: center.x - w / 2,
+        y: center.y - h / 2,
+        w,
+        h
+      };
+    }
+
+    function findMeasurementHit(screen) {
+      for (let i = measurementHitboxes.length - 1; i >= 0; i--) {
+        const b = measurementHitboxes[i];
+        if (
+          screen.x >= b.x &&
+          screen.x <= b.x + b.w &&
+          screen.y >= b.y &&
+          screen.y <= b.y + b.h
+        ) {
+          return b;
+        }
+      }
+      return null;
+    }
+
+    function showMeasureEditor(hitbox) {
+      const lot = lots[hitbox.lotIndex];
+      if (!lot) return;
+
+      const pts = polygonPoints(lot);
+      const a = pts[hitbox.edgeIndex];
+      const b = pts[(hitbox.edgeIndex + 1) % pts.length];
+      if (!a || !b) return;
+
+      const currentM = distance(a, b) * mPerPx;
+      activeMeasureEdit = {
+        lotIndex: hitbox.lotIndex,
+        edgeIndex: hitbox.edgeIndex
+      };
+
+      const inputLeft = Math.max(4, hitbox.x + hitbox.w / 2 - 46);
+      const inputTop = Math.max(4, hitbox.y + hitbox.h / 2 - 15);
+
+      floatingMeasureInput.value = currentM.toFixed(2);
+      floatingMeasureInput.style.left = `${inputLeft}px`;
+      floatingMeasureInput.style.top = `${inputTop}px`;
+      floatingMeasureInput.style.display = 'block';
+
+      floatingAnchorMenu.style.left = `${Math.max(4, inputLeft - 56)}px`;
+      floatingAnchorMenu.style.top = `${Math.min(canvas.height - 82, inputTop + 34)}px`;
+      floatingAnchorMenu.style.display = 'block';
+
+      floatingMeasureInput.focus();
+      floatingMeasureInput.select();
+    }
+
+    function hideMeasureEditor() {
+      activeMeasureEdit = null;
+      floatingMeasureInput.style.display = 'none';
+      floatingAnchorMenu.style.display = 'none';
+    }
+
+    function commitMeasureEditor(anchor = 'start') {
+      if (!activeMeasureEdit) return;
+
+      const desiredM = parseFloat(floatingMeasureInput.value);
+      if (!desiredM || desiredM <= 0) {
+        hideMeasureEditor();
+        return;
+      }
+
+      applyEdgeLengthDirect(activeMeasureEdit.lotIndex, activeMeasureEdit.edgeIndex, desiredM, anchor);
+      hideMeasureEditor();
+      render();
+    }
+
+    function drawTextBox(text, x, y, options = {}) {
+      ctx.save();
+      ctx.font = options.font || `${12 / viewScale}px Arial`;
+      const paddingX = 5 / viewScale;
+      const metrics = ctx.measureText(text);
+      const w = metrics.width + paddingX * 2;
+      const h = 18 / viewScale;
+      const left = x - w / 2;
+      const top = y - h / 2;
+
+      ctx.fillStyle = options.bg || 'rgba(255,255,255,0.9)';
+      ctx.strokeStyle = options.border || 'rgba(17,24,39,0.35)';
+      ctx.lineWidth = 1 / viewScale;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(left, top, w, h, 5 / viewScale);
+      else ctx.rect(left, top, w, h);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = options.color || '#111827';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y + 0.5 / viewScale);
+      ctx.restore();
+    }
+
+    function drawSegmentMeasurements(pts, color = '#111827', closed = true, meta = null) {
+      if (!showMeasurementsEl.checked || pts.length < 2) return;
+
+      const limit = closed ? pts.length : pts.length - 1;
+      for (let i = 0; i < limit; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const lenPx = Math.hypot(dx, dy);
+        if (lenPx < 8 / viewScale) continue;
+
+        const lenM = lenPx * mPerPx;
+        const label = `${formatNumber(lenM, 2)} m`;
+        const nx = -dy / lenPx;
+        const ny = dx / lenPx;
+        const offset = 13 / viewScale;
+
+        const labelX = midX + nx * offset;
+        const labelY = midY + ny * offset;
+
+        drawTextBox(label, labelX, labelY, {
+          bg: 'rgba(255,255,255,0.92)',
+          border: color,
+          color: '#111827'
+        });
+
+        if (meta && closed) {
+          const box = getTextBoxScreenBounds(label, labelX, labelY);
+          measurementHitboxes.push({
+            ...box,
+            lotIndex: meta.lotIndex,
+            edgeIndex: i,
+            valueM: lenM
+          });
+        }
+      }
+    }
+
     function drawGrid() {
       if (!showGridEl.checked) return;
       ctx.save();
       ctx.strokeStyle = '#e5e7eb';
-      ctx.lineWidth = 1;
-      for (let x = 0; x <= canvas.width; x += 40) {
+      ctx.lineWidth = 1 / viewScale;
+
+      for (let x = -2000; x <= 3000; x += 40) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
+        ctx.moveTo(x, -2000);
+        ctx.lineTo(x, 3000);
         ctx.stroke();
       }
-      for (let y = 0; y <= canvas.height; y += 40) {
+
+      for (let y = -2000; y <= 3000; y += 40) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
+        ctx.moveTo(-2000, y);
+        ctx.lineTo(3000, y);
         ctx.stroke();
       }
+
       ctx.restore();
     }
 
@@ -711,7 +1383,7 @@
       ctx.restore();
     }
 
-    function drawLot(lot) {
+    function drawLot(lot, lotIndex) {
       const pts = polygonPoints(lot);
       if (pts.length < 2) return;
 
@@ -720,25 +1392,76 @@
       ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.closePath();
-      ctx.fillStyle = lighten(lot.color, lot.type === 'matriz' ? 0.10 : 0.28);
+
+      ctx.fillStyle = lighten(lot.color, lot.type === 'matriz' ? 0.09 : 0.28);
       ctx.strokeStyle = lot.color;
-      ctx.lineWidth = lot.type === 'matriz' ? 3 : 2;
+      ctx.lineWidth = (lot.type === 'matriz' ? 3 : 2) / viewScale;
       ctx.fill();
       ctx.stroke();
+
+      if (lotIndex === selectedLotIndex) {
+        ctx.save();
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 4 / viewScale;
+        ctx.setLineDash([10 / viewScale, 6 / viewScale]);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       if (showLabelsEl.checked) {
         const c = centroid(pts);
         const areaM2 = polygonAreaPx(pts) * mPerPx * mPerPx;
-        ctx.font = 'bold 14px Arial';
+        ctx.font = `bold ${14 / viewScale}px Arial`;
         ctx.fillStyle = '#111827';
         ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 4 / viewScale;
         const label = `${lot.name} · ${formatNumber(areaM2, 1)} m²`;
-        ctx.strokeText(label, c.x - 45, c.y);
-        ctx.fillText(label, c.x - 45, c.y);
+        ctx.strokeText(label, c.x - 45 / viewScale, c.y);
+        ctx.fillText(label, c.x - 45 / viewScale, c.y);
       }
 
-      drawSegmentMeasurements(pts, lot.color);
+      ctx.restore();
+      drawSegmentMeasurements(pts, lot.color, true, { lotIndex });
+    }
+
+    function drawSnapGuide() {
+      if (!snapGuide) return;
+
+      const a = snapGuide.guideA;
+      const b = snapGuide.guideB;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 0.001) return;
+
+      const ux = dx / len;
+      const uy = dy / len;
+      const extend = 900 / viewScale;
+
+      const p1 = { x: a.x - ux * extend, y: a.y - uy * extend };
+      const p2 = { x: b.x + ux * extend, y: b.y + uy * extend };
+
+      ctx.save();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.5 / viewScale;
+      ctx.setLineDash([12 / viewScale, 8 / viewScale]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+
+      const mid = {
+        x: (snapGuide.moving.a.x + snapGuide.moving.b.x) / 2,
+        y: (snapGuide.moving.a.y + snapGuide.moving.b.y) / 2
+      };
+
+      drawTextBox(snapGuide.text, mid.x, mid.y - 28 / viewScale, {
+        bg: 'rgba(239,68,68,0.92)',
+        border: '#7f1d1d',
+        color: '#ffffff',
+        font: `bold ${12 / viewScale}px Arial`
+      });
+
       ctx.restore();
     }
 
@@ -746,17 +1469,17 @@
       for (const p of points) {
         ctx.save();
         ctx.beginPath();
-        ctx.arc(p.x, p.y, selectedPointId === p.id ? 7 : 5, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, (selectedPointId === p.id ? 7 : 5) / viewScale, 0, Math.PI * 2);
         ctx.fillStyle = selectedPointId === p.id ? '#ef4444' : '#111827';
         ctx.fill();
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 / viewScale;
         ctx.stroke();
 
         if (showPointLabelsEl.checked) {
-          ctx.font = '11px Arial';
+          ctx.font = `${11 / viewScale}px Arial`;
           ctx.fillStyle = '#111827';
-          ctx.fillText(String(p.id), p.x + 8, p.y - 8);
+          ctx.fillText(String(p.id), p.x + 8 / viewScale, p.y - 8 / viewScale);
         }
         ctx.restore();
       }
@@ -765,10 +1488,11 @@
     function drawCurrent() {
       if (!current.length) return;
       const pts = current.map(getPoint).filter(Boolean);
+
       ctx.save();
       ctx.strokeStyle = '#111827';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 5]);
+      ctx.lineWidth = 2 / viewScale;
+      ctx.setLineDash([8 / viewScale, 5 / viewScale]);
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
@@ -785,26 +1509,43 @@
       }
       ctx.restore();
 
-      const previewPts = [...pts, mouse];
-      drawOpenSegmentMeasurements(previewPts);
+      drawSegmentMeasurements([...pts, mouse], '#111827', false);
     }
 
     function render() {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#f8fafc';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      measurementHitboxes = [];
+
+      applyWorldTransform();
+
       drawGrid();
       drawBackgroundImage();
 
-      // Primero dibuja los matrices, luego los sublotes encima.
-      lots.filter(l => l.type === 'matriz').forEach(drawLot);
-      lots.filter(l => l.type !== 'matriz').forEach(drawLot);
+      lots
+        .map((lot, index) => ({ lot, index }))
+        .filter(item => item.lot.type === 'matriz')
+        .forEach(item => drawLot(item.lot, item.index));
+
+      lots
+        .map((lot, index) => ({ lot, index }))
+        .filter(item => item.lot.type !== 'matriz')
+        .forEach(item => drawLot(item.lot, item.index));
 
       drawCurrent();
+      drawSnapGuide();
       drawPoints();
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+
       updateTableAndTotals();
       updateMatrixSelect();
+      updateEdgeSelectors(false);
       updateStatus();
+      zoomLabel.textContent = `Zoom: ${Math.round(viewScale * 100)}%`;
     }
 
     function updateStatus() {
@@ -817,7 +1558,9 @@
           msg += ` Área preliminar: ${formatNumber(area, 2)} m².`;
         }
       } else if (mode === 'move') {
-        msg = 'Modo mover puntos. Arrastra cualquier punto; las áreas se recalculan al instante.';
+        msg = 'Modo mover puntos. Arrastra cualquier punto; las áreas y lados se recalculan al instante.';
+      } else if (mode === 'pan') {
+        msg = 'Modo mover vista. Arrastra el plano para desplazarte dentro del lienzo.';
       } else if (mode === 'calibrate') {
         msg = `Modo calibración. Selecciona 2 puntos de una distancia conocida. Marcados: ${calibratePoints.length}/2.`;
       }
@@ -825,7 +1568,7 @@
     }
 
     function updateMatrixSelect() {
-      const selected = matrixSelect.value;
+      const selectedMatrix = matrixSelect.value;
       matrixSelect.innerHTML = '';
 
       const matrices = lots
@@ -837,19 +1580,106 @@
         opt.value = '';
         opt.textContent = 'No hay lote matriz';
         matrixSelect.appendChild(opt);
+      } else {
+        matrices.forEach(({ lot, index }) => {
+          const opt = document.createElement('option');
+          opt.value = String(index);
+          opt.textContent = lot.name;
+          matrixSelect.appendChild(opt);
+        });
+
+        if ([...matrixSelect.options].some(o => o.value === selectedMatrix)) {
+          matrixSelect.value = selectedMatrix;
+        }
+      }
+    }
+
+    function updateEdgeSelectors(updateInput = true) {
+      const selectedLot = edgeLotSelect.value;
+      const selectedEdge = edgeSelect.value;
+
+      edgeLotSelect.innerHTML = '';
+
+      if (!lots.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No hay lotes';
+        edgeLotSelect.appendChild(opt);
+        edgeSelect.innerHTML = '<option value="">No hay lados</option>';
         return;
       }
 
-      matrices.forEach(({ lot, index }) => {
+      lots.forEach((lot, index) => {
         const opt = document.createElement('option');
         opt.value = String(index);
         opt.textContent = lot.name;
-        matrixSelect.appendChild(opt);
+        edgeLotSelect.appendChild(opt);
       });
 
-      if ([...matrixSelect.options].some(o => o.value === selected)) {
-        matrixSelect.value = selected;
+      if ([...edgeLotSelect.options].some(o => o.value === selectedLot)) {
+        edgeLotSelect.value = selectedLot;
       }
+
+      rebuildEdgeOptions(selectedEdge, updateInput);
+    }
+
+    function rebuildEdgeOptions(previousValue = '', updateInput = true) {
+      const lot = lots[Number(edgeLotSelect.value)];
+      edgeSelect.innerHTML = '';
+
+      if (!lot) {
+        edgeSelect.innerHTML = '<option value="">No hay lados</option>';
+        return;
+      }
+
+      const pts = polygonPoints(lot);
+      if (pts.length < 2) {
+        edgeSelect.innerHTML = '<option value="">No hay lados</option>';
+        return;
+      }
+
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        const lenM = distance(a, b) * mPerPx;
+
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `L${i + 1}: P${a.id} → P${b.id} = ${formatNumber(lenM, 2)} m`;
+        edgeSelect.appendChild(opt);
+      }
+
+      if ([...edgeSelect.options].some(o => o.value === previousValue)) {
+        edgeSelect.value = previousValue;
+      }
+
+      if (updateInput) syncEdgeInput();
+    }
+
+    function syncEdgeInput() {
+      const lot = lots[Number(edgeLotSelect.value)];
+      const edgeIndex = Number(edgeSelect.value);
+
+      if (!lot || Number.isNaN(edgeIndex)) {
+        edgeInfo.innerHTML = 'Selecciona un lote y un lado para editar.';
+        return;
+      }
+
+      const ids = lot.pointIds;
+      const a = getPoint(ids[edgeIndex]);
+      const b = getPoint(ids[(edgeIndex + 1) % ids.length]);
+
+      if (!a || !b) return;
+
+      const lenM = distance(a, b) * mPerPx;
+      edgeLengthInput.value = lenM.toFixed(2);
+
+      edgeInfo.innerHTML = `
+        <b>${lot.name}</b><br>
+        Lado L${edgeIndex + 1}: <b>A</b> = P${a.id} → <b>B</b> = P${b.id}<br>
+        Medida actual: <b>${formatNumber(lenM, 2)} m</b><br>
+        Desde A: fija A y mueve B. Desde B: fija B y mueve A. Ambos: conserva el centro.
+      `;
     }
 
     function updateTableAndTotals() {
@@ -932,188 +1762,377 @@
       points = points.filter(p => used.has(p.id));
     }
 
-    function bbox(pts) {
-      return {
-        minX: Math.min(...pts.map(p => p.x)),
-        maxX: Math.max(...pts.map(p => p.x)),
-        minY: Math.min(...pts.map(p => p.y)),
-        maxY: Math.max(...pts.map(p => p.y))
-      };
+    function setScaleToFitMeters(widthM, heightM) {
+      const pxPerM = Math.min((canvas.width - 220) / widthM, (canvas.height - 180) / heightM);
+      mPerPx = 1 / Math.max(pxPerM, 0.0001);
+      scaleEl.value = mPerPx.toFixed(4);
     }
 
-    function axisValue(p, axis) {
-      return axis === 'x' ? p.x : p.y;
-    }
+    function createRectangleLot(x, y, wPx, hPx, name, type = 'lote', color = null, extra = {}) {
+      const localMap = extra.localMap || new Map();
+      const p1 = createOrReusePoint(x, y, localMap);
+      const p2 = createOrReusePoint(x + wPx, y, localMap);
+      const p3 = createOrReusePoint(x + wPx, y + hPx, localMap);
+      const p4 = createOrReusePoint(x, y + hPx, localMap);
 
-    function clipPolygonByAxis(poly, axis, operator, value) {
-      if (!poly.length) return [];
-
-      const inside = (p) => {
-        const v = axisValue(p, axis);
-        if (operator === '<=') return v <= value + 1e-9;
-        return v >= value - 1e-9;
-      };
-
-      const intersect = (a, b) => {
-        const av = axisValue(a, axis);
-        const bv = axisValue(b, axis);
-        const denom = bv - av;
-        if (Math.abs(denom) < 1e-12) return { x: a.x, y: a.y };
-        const t = (value - av) / denom;
-        return {
-          x: a.x + t * (b.x - a.x),
-          y: a.y + t * (b.y - a.y)
-        };
+      const lot = {
+        id: Date.now() + Math.random(),
+        name,
+        type,
+        color: color || (type === 'matriz' ? '#111827' : colors[(lotCounter - 1) % colors.length]),
+        pointIds: [p1, p2, p3, p4],
+        ...extra
       };
 
-      const output = [];
-      for (let i = 0; i < poly.length; i++) {
-        const currentPoint = poly[i];
-        const previousPoint = poly[(i + poly.length - 1) % poly.length];
-        const currentInside = inside(currentPoint);
-        const previousInside = inside(previousPoint);
+      delete lot.localMap;
+      lots.push(lot);
+      lotCounter++;
+      return lot;
+    }
 
-        if (currentInside) {
-          if (!previousInside) output.push(intersect(previousPoint, currentPoint));
-          output.push(currentPoint);
-        } else if (previousInside) {
-          output.push(intersect(previousPoint, currentPoint));
-        }
+    function createMatrixBySize() {
+      const wM = parseFloat(matrixWidthMEl.value);
+      const hM = parseFloat(matrixHeightMEl.value);
+
+      if (!wM || !hM || wM <= 0 || hM <= 0) {
+        alert('Escribe ancho y fondo del lote matriz en metros.');
+        return;
       }
 
-      return removeDuplicateConsecutive(output);
+      setScaleToFitMeters(wM, hM);
+
+      const wPx = wM / mPerPx;
+      const hPx = hM / mPerPx;
+      createRectangleLot(110, 90, wPx, hPx, 'Lote matriz', 'matriz', '#111827');
+
+      resetView();
+      modeEl.value = 'move';
+      render();
     }
 
-    function removeDuplicateConsecutive(poly) {
-      if (!poly.length) return [];
-      const cleaned = [];
-      for (const p of poly) {
-        const last = cleaned[cleaned.length - 1];
-        if (!last || distance(last, p) > 0.001) cleaned.push(p);
+    function applyEdgeLengthDirect(lotIndex, edgeIndex, desiredM, anchor = 'start') {
+      const lot = lots[Number(lotIndex)];
+      if (!lot || Number.isNaN(edgeIndex)) return false;
+
+      const ids = lot.pointIds;
+      const a = getPoint(ids[edgeIndex]);
+      const b = getPoint(ids[(edgeIndex + 1) % ids.length]);
+
+      if (!a || !b) return false;
+
+      const currentPx = distance(a, b);
+      if (currentPx <= 0.0001) return false;
+
+      const desiredPx = desiredM / mPerPx;
+      const ux = (b.x - a.x) / currentPx;
+      const uy = (b.y - a.y) / currentPx;
+
+      if (anchor === 'start') {
+        // Desde A: A queda fijo y se mueve B.
+        b.x = a.x + ux * desiredPx;
+        b.y = a.y + uy * desiredPx;
+      } else if (anchor === 'end') {
+        // Desde B: B queda fijo y se mueve A.
+        a.x = b.x - ux * desiredPx;
+        a.y = b.y - uy * desiredPx;
+      } else if (anchor === 'both') {
+        // Ambos: se conserva el centro del lado y se mueven A y B.
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+        const half = desiredPx / 2;
+
+        a.x = midX - ux * half;
+        a.y = midY - uy * half;
+        b.x = midX + ux * half;
+        b.y = midY + uy * half;
       }
-      if (cleaned.length > 1 && distance(cleaned[0], cleaned[cleaned.length - 1]) <= 0.001) {
-        cleaned.pop();
+
+      return true;
+    }
+
+    function applyEdgeLengthWithAnchor(anchor) {
+      edgeAnchorSelect.value = anchor;
+      applyEdgeLength();
+    }
+
+    function applyEdgeLength() {
+      const lot = lots[Number(edgeLotSelect.value)];
+      const edgeIndex = Number(edgeSelect.value);
+      const desiredM = parseFloat(edgeLengthInput.value);
+
+      if (!lot || Number.isNaN(edgeIndex)) {
+        alert('Selecciona un lote y un lado.');
+        return;
       }
-      return cleaned;
+
+      if (!desiredM || desiredM <= 0) {
+        alert('La medida debe ser mayor que cero.');
+        return;
+      }
+
+      const ok = applyEdgeLengthDirect(Number(edgeLotSelect.value), edgeIndex, desiredM, edgeAnchorSelect.value);
+
+      if (!ok) {
+        alert('No se pudo ajustar ese lado. Revisa que el lado tenga longitud válida.');
+        return;
+      }
+
+      modeEl.value = 'move';
+      render();
+      syncEdgeInput();
     }
 
-    function clipBetween(poly, axis, minValue, maxValue) {
-      let result = clipPolygonByAxis(poly, axis, '>=', minValue);
-      result = clipPolygonByAxis(result, axis, '<=', maxValue);
-      return removeDuplicateConsecutive(result);
+    function resolveSubLotSize() {
+      let targetArea = parseFloat(targetAreaM2El.value);
+      let w = parseFloat(subWidthMEl.value);
+      let h = parseFloat(subHeightMEl.value);
+
+      const hasArea = Number.isFinite(targetArea) && targetArea > 0;
+      const hasW = Number.isFinite(w) && w > 0;
+      const hasH = Number.isFinite(h) && h > 0;
+
+      if (!hasArea && !hasW && !hasH) {
+        alert('Escribe el área o las medidas del sublote.');
+        return null;
+      }
+
+      if (hasArea && hasW && !hasH) h = targetArea / w;
+      if (hasArea && !hasW && hasH) w = targetArea / h;
+      if (hasArea && !hasW && !hasH) {
+        w = Math.sqrt(targetArea);
+        h = Math.sqrt(targetArea);
+      }
+
+      if (!hasArea && hasW && hasH) targetArea = w * h;
+
+      if (!w || !h || w <= 0 || h <= 0) {
+        alert('No se pudo calcular ancho y fondo del sublote. Revisa los datos.');
+        return null;
+      }
+
+      return { widthM: w, heightM: h, areaM2: w * h, requestedAreaM2: targetArea || w * h };
     }
 
-    function areaUpTo(poly, axis, value) {
-      return polygonAreaPx(clipPolygonByAxis(poly, axis, '<=', value));
+    function removeAutoLotsForMatrix(matrixId = null) {
+      const before = lots.length;
+      if (matrixId === null) lots = lots.filter(l => !l.autoGenerated);
+      else lots = lots.filter(l => !(l.autoGenerated && l.parentMatrixId === matrixId));
+      cleanUnusedPoints();
+      return before - lots.length;
     }
 
-    function divideSelectedMatrix() {
+    function fitLotsBySize() {
       const matrixIndex = Number(matrixSelect.value);
       const matrixLot = lots[matrixIndex];
 
       if (!matrixLot || matrixLot.type !== 'matriz') {
-        alert('Primero debes tener un lote matriz para dividir.');
+        alert('Primero debes crear o seleccionar un lote matriz.');
         return;
       }
 
-      const n = parseInt(splitCountEl.value, 10);
-      if (isNaN(n) || n < 2) {
-        alert('La cantidad de lotes debe ser mínimo 2.');
-        return;
-      }
+      const size = resolveSubLotSize();
+      if (!size) return;
 
-      const axis = splitDirectionEl.value;
-      const basePts = polygonPoints(matrixLot).map(p => ({ x: p.x, y: p.y }));
-      if (basePts.length < 3) {
-        alert('El lote matriz debe tener mínimo 3 puntos.');
-        return;
-      }
+      const gapM = parseFloat(gapMEl.value) || 0;
+      const gapPx = gapM / mPerPx;
+      const subWpx = size.widthM / mPerPx;
+      const subHpx = size.heightM / mPerPx;
 
-      const totalArea = polygonAreaPx(basePts);
-      if (totalArea <= 0) {
-        alert('El área del lote matriz no es válida.');
-        return;
-      }
+      const matrixPts = polygonPoints(matrixLot);
+      const b = bbox(matrixPts);
+      const matrixAreaM2 = polygonAreaPx(matrixPts) * mPerPx * mPerPx;
 
-      const bounds = bbox(basePts);
-      const minCoord = axis === 'x' ? bounds.minX : bounds.minY;
-      const maxCoord = axis === 'x' ? bounds.maxX : bounds.maxY;
-
-      // Borra sublotes automáticos anteriores del mismo lote matriz.
-      lots = lots.filter(l => !(l.autoGenerated && l.parentMatrixId === matrixLot.id));
-      cleanUnusedPoints();
-
-      const cuts = [minCoord];
-
-      for (let i = 1; i < n; i++) {
-        const target = totalArea * i / n;
-        let left = minCoord;
-        let right = maxCoord;
-
-        for (let iter = 0; iter < 60; iter++) {
-          const mid = (left + right) / 2;
-          const area = areaUpTo(basePts, axis, mid);
-          if (area < target) left = mid;
-          else right = mid;
-        }
-
-        cuts.push((left + right) / 2);
-      }
-
-      cuts.push(maxCoord);
+      removeAutoLotsForMatrix(matrixLot.id);
 
       const localMap = new Map();
-      let created = 0;
+      const prefix = splitPrefixEl.value.trim() || 'Lote';
+      let count = 0;
 
-      for (let i = 0; i < n; i++) {
-        const subPoly = clipBetween(basePts, axis, cuts[i], cuts[i + 1]);
-        const subArea = polygonAreaPx(subPoly);
+      for (let y = b.minY; y + subHpx <= b.maxY + 0.001; y += subHpx + gapPx) {
+        for (let x = b.minX; x + subWpx <= b.maxX + 0.001; x += subWpx + gapPx) {
+          if (!rectInsidePolygon(x, y, subWpx, subHpx, matrixPts)) continue;
 
-        if (subPoly.length >= 3 && subArea > 1) {
-          // Mantener el mismo sentido del polígono matriz para evitar cruces visuales.
-          const baseSign = Math.sign(signedArea(basePts)) || 1;
-          const subSign = Math.sign(signedArea(subPoly)) || 1;
-          const ordered = baseSign === subSign ? subPoly : [...subPoly].reverse();
-
-          const pointIds = ordered.map(p => createOrReusePoint(p.x, p.y, localMap));
-          const prefix = splitPrefixEl.value.trim() || 'Lote';
-
-          lots.push({
-            id: Date.now() + Math.random() + i,
-            name: `${prefix} ${i + 1}`,
-            type: 'lote',
-            color: colors[(lotCounter + i) % colors.length],
-            pointIds,
-            autoGenerated: true,
-            parentMatrixId: matrixLot.id
-          });
-
-          created++;
+          count++;
+          createRectangleLot(
+            x,
+            y,
+            subWpx,
+            subHpx,
+            `${prefix} ${count}`,
+            'lote',
+            colors[(lotCounter + count) % colors.length],
+            {
+              autoGenerated: true,
+              parentMatrixId: matrixLot.id,
+              localMap
+            }
+          );
         }
       }
 
-      lotCounter += created;
+      const usedArea = count * size.areaM2;
+      const leftover = matrixAreaM2 - usedArea;
+      const colsPossible = Math.floor((b.maxX - b.minX + gapPx) / (subWpx + gapPx));
+      const rowsPossible = Math.floor((b.maxY - b.minY + gapPx) / (subHpx + gapPx));
+
+      fitResult.innerHTML = `
+        <b>Resultado:</b><br>
+        Sublote usado: ${formatNumber(size.widthM, 2)} m × ${formatNumber(size.heightM, 2)} m = ${formatNumber(size.areaM2, 2)} m²<br>
+        Caben: <b>${count}</b> sublotes dentro del lote matriz seleccionado.<br>
+        Distribución aproximada por caja: ${colsPossible} columnas × ${rowsPossible} filas.<br>
+        Área matriz: ${formatNumber(matrixAreaM2, 2)} m²<br>
+        Área ocupada por sublotes: ${formatNumber(usedArea, 2)} m²<br>
+        Área libre / sobrante aproximada: ${formatNumber(leftover, 2)} m²
+      `;
+
       modeEl.value = 'move';
       render();
+    }
 
-      if (created > 0) {
-        alert(`Listo. Se generaron ${created} sublotes con áreas prácticamente iguales.`);
-      } else {
-        alert('No se pudieron generar sublotes. Revisa la forma del lote matriz.');
+    function createMatrixFromGrid() {
+      const size = resolveSubLotSize();
+      if (!size) return;
+
+      const cols = parseInt(gridColsEl.value, 10);
+      const rows = parseInt(gridRowsEl.value, 10);
+      const gapM = parseFloat(gapMEl.value) || 0;
+
+      if (!cols || !rows || cols <= 0 || rows <= 0) {
+        alert('Escribe columnas y filas válidas.');
+        return;
       }
+
+      if (lots.length && !confirm('Esto borrará el plano actual y creará una nueva matriz con sublotes. ¿Continuar?')) {
+        return;
+      }
+
+      lots = [];
+      points = [];
+      current = [];
+      pointCounter = 1;
+      lotCounter = 1;
+
+      const totalWm = cols * size.widthM + Math.max(0, cols - 1) * gapM;
+      const totalHm = rows * size.heightM + Math.max(0, rows - 1) * gapM;
+
+      setScaleToFitMeters(totalWm, totalHm);
+
+      const subWpx = size.widthM / mPerPx;
+      const subHpx = size.heightM / mPerPx;
+      const gapPx = gapM / mPerPx;
+      const totalWpx = totalWm / mPerPx;
+      const totalHpx = totalHm / mPerPx;
+
+      const startX = 110;
+      const startY = 90;
+
+      const matrixLot = createRectangleLot(startX, startY, totalWpx, totalHpx, 'Lote matriz', 'matriz', '#111827');
+      const localMap = new Map();
+      const prefix = splitPrefixEl.value.trim() || 'Lote';
+
+      let count = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          count++;
+          createRectangleLot(
+            startX + c * (subWpx + gapPx),
+            startY + r * (subHpx + gapPx),
+            subWpx,
+            subHpx,
+            `${prefix} ${count}`,
+            'lote',
+            colors[(count - 1) % colors.length],
+            {
+              autoGenerated: true,
+              parentMatrixId: matrixLot.id,
+              localMap
+            }
+          );
+        }
+      }
+
+      fitResult.innerHTML = `
+        <b>Matriz creada desde sublotes:</b><br>
+        ${cols} columnas × ${rows} filas = <b>${count}</b> sublotes.<br>
+        Cada sublote: ${formatNumber(size.widthM, 2)} m × ${formatNumber(size.heightM, 2)} m = ${formatNumber(size.areaM2, 2)} m²<br>
+        Lote matriz: ${formatNumber(totalWm, 2)} m × ${formatNumber(totalHm, 2)} m = ${formatNumber(totalWm * totalHm, 2)} m²
+      `;
+
+      resetView();
+      modeEl.value = 'move';
+      render();
     }
 
     function removeAutoLots() {
-      const before = lots.length;
-      lots = lots.filter(l => !l.autoGenerated);
-      cleanUnusedPoints();
+      const removed = removeAutoLotsForMatrix(null);
       render();
-      alert(`Se eliminaron ${before - lots.length} sublotes automáticos.`);
+      alert(`Se eliminaron ${removed} sublotes automáticos.`);
+    }
+
+    function zoomAtScreenPoint(factor, sx = canvas.width / 2, sy = canvas.height / 2) {
+      hideLotMenu();
+      if (activeMeasureEdit) commitMeasureEditor();
+      const before = screenToWorld({ x: sx, y: sy });
+      viewScale = Math.max(0.2, Math.min(8, viewScale * factor));
+      viewOffsetX = sx - before.x * viewScale;
+      viewOffsetY = sy - before.y * viewScale;
+      render();
+    }
+
+    function resetView() {
+      hideLotMenu();
+      if (activeMeasureEdit) commitMeasureEditor();
+      viewScale = 1;
+      viewOffsetX = 0;
+      viewOffsetY = 0;
+      render();
+    }
+
+    function fitViewToLots() {
+      hideLotMenu();
+      if (activeMeasureEdit) commitMeasureEditor();
+      const b = allLotsBounds();
+      if (!b) {
+        resetView();
+        return;
+      }
+
+      const pad = 80;
+      const w = Math.max(1, b.maxX - b.minX);
+      const h = Math.max(1, b.maxY - b.minY);
+      viewScale = Math.min((canvas.width - pad * 2) / w, (canvas.height - pad * 2) / h);
+      viewScale = Math.max(0.2, Math.min(8, viewScale));
+      viewOffsetX = canvas.width / 2 - ((b.minX + b.maxX) / 2) * viewScale;
+      viewOffsetY = canvas.height / 2 - ((b.minY + b.maxY) / 2) * viewScale;
+      render();
     }
 
     canvas.addEventListener('mousedown', (evt) => {
-      const pos = getCanvasPos(evt);
+      if (activeMeasureEdit) commitMeasureEditor();
+
+      const screen = screenFromEvent(evt);
+      const pos = screenToWorld(screen);
       mouse = pos;
+      didPanDuringMouseDown = false;
+
+      if (evt.ctrlKey || modeEl.value === 'pan') {
+        isPanning = true;
+        panStart = { x: screen.x, y: screen.y, ox: viewOffsetX, oy: viewOffsetY };
+        updateCanvasCursor();
+        return;
+      }
+
+      if (movingWholeLot && selectedLotIndex !== null) {
+        const hitIndex = findLotAtPoint(pos);
+        if (hitIndex === selectedLotIndex) {
+          wholeLotDrag = {
+            lotIndex: selectedLotIndex,
+            last: pos
+          };
+          updateCanvasCursor();
+          return;
+        }
+      }
 
       if (modeEl.value === 'move') {
         const p = findPointAt(pos);
@@ -1125,8 +2144,29 @@
     });
 
     canvas.addEventListener('mousemove', (evt) => {
-      const pos = getCanvasPos(evt);
+      const screen = screenFromEvent(evt);
+      const pos = screenToWorld(screen);
       mouse = pos;
+
+      if (isPanning) {
+        const dx = screen.x - panStart.x;
+        const dy = screen.y - panStart.y;
+        if (Math.hypot(dx, dy) > 2) didPanDuringMouseDown = true;
+        viewOffsetX = panStart.ox + dx;
+        viewOffsetY = panStart.oy + dy;
+        render();
+        return;
+      }
+
+      if (wholeLotDrag && movingWholeLot) {
+        const dx = pos.x - wholeLotDrag.last.x;
+        const dy = pos.y - wholeLotDrag.last.y;
+        translateLot(wholeLotDrag.lotIndex, dx, dy);
+        applyMagneticSnap(wholeLotDrag.lotIndex);
+        wholeLotDrag.last = pos;
+        render();
+        return;
+      }
 
       if (selectedPointId !== null && modeEl.value === 'move') {
         const p = getPoint(selectedPointId);
@@ -1140,16 +2180,34 @@
 
     canvas.addEventListener('mouseup', () => {
       selectedPointId = null;
+      wholeLotDrag = null;
+      snapGuide = null;
+      isPanning = false;
+      updateCanvasCursor();
       render();
     });
 
     canvas.addEventListener('mouseleave', () => {
       selectedPointId = null;
+      wholeLotDrag = null;
+      snapGuide = null;
+      isPanning = false;
+      updateCanvasCursor();
       render();
     });
 
     canvas.addEventListener('click', (evt) => {
-      const pos = getCanvasPos(evt);
+      if (isPanning || didPanDuringMouseDown || evt.ctrlKey) return;
+
+      const screen = screenFromEvent(evt);
+      const hit = findMeasurementHit(screen);
+      if (hit) {
+        hideLotMenu();
+        showMeasureEditor(hit);
+        return;
+      }
+
+      const pos = getCanvasWorldPos(evt);
       mouse = pos;
 
       if (modeEl.value === 'draw') {
@@ -1184,6 +2242,33 @@
       }
     });
 
+    canvas.addEventListener('dblclick', (evt) => {
+      const screen = screenFromEvent(evt);
+      const hit = findMeasurementHit(screen);
+      if (hit) {
+        evt.preventDefault();
+        hideLotMenu();
+        showMeasureEditor(hit);
+        return;
+      }
+
+      const pos = getCanvasWorldPos(evt);
+      const lotIndex = findLotAtPoint(pos);
+
+      if (lotIndex !== null && lots[lotIndex] && lots[lotIndex].type !== 'matriz') {
+        evt.preventDefault();
+        hideMeasureEditor();
+        showLotMenu(lotIndex, screen);
+      }
+    });
+
+    canvas.addEventListener('wheel', (evt) => {
+      evt.preventDefault();
+      const screen = screenFromEvent(evt);
+      const factor = evt.deltaY < 0 ? 1.12 : 0.88;
+      zoomAtScreenPoint(factor, screen.x, screen.y);
+    }, { passive: false });
+
     finishBtn.addEventListener('click', finishPolygon);
 
     undoBtn.addEventListener('click', () => {
@@ -1203,6 +2288,18 @@
       render();
     });
 
+    createMatrixBySizeBtn.addEventListener('click', createMatrixBySize);
+    applyEdgeLengthBtn.addEventListener('click', applyEdgeLength);
+    applyFromABtn.addEventListener('click', () => applyEdgeLengthWithAnchor('start'));
+    applyFromBBtn.addEventListener('click', () => applyEdgeLengthWithAnchor('end'));
+    applyBothBtn.addEventListener('click', () => applyEdgeLengthWithAnchor('both'));
+    fitLotsBySizeBtn.addEventListener('click', fitLotsBySize);
+    removeAutoLotsBtn.addEventListener('click', removeAutoLots);
+    createMatrixFromGridBtn.addEventListener('click', createMatrixFromGrid);
+
+    edgeLotSelect.addEventListener('change', () => updateEdgeSelectors(true));
+    edgeSelect.addEventListener('change', syncEdgeInput);
+
     applyScaleBtn.addEventListener('click', () => {
       const val = parseFloat(scaleEl.value);
       if (isNaN(val) || val <= 0) {
@@ -1212,9 +2309,6 @@
       mPerPx = val;
       render();
     });
-
-    divideMatrixBtn.addEventListener('click', divideSelectedMatrix);
-    removeAutoLotsBtn.addEventListener('click', removeAutoLots);
 
     bgInput.addEventListener('change', (evt) => {
       const file = evt.target.files[0];
@@ -1234,13 +2328,17 @@
       render();
     });
 
-    [showGridEl, showLabelsEl, showMeasurementsEl, showPointLabelsEl, modeEl].forEach(el => {
-      el.addEventListener('change', render);
+    [showGridEl, showLabelsEl, showMeasurementsEl, showPointLabelsEl, snapToLinesEl, snapToleranceMEl, modeEl].forEach(el => {
+      el.addEventListener('change', () => {
+        updateCanvasCursor();
+        render();
+      });
     });
 
     lotTable.addEventListener('click', (evt) => {
       const btn = evt.target.closest('[data-action]');
       if (!btn) return;
+
       const index = Number(btn.dataset.index);
       const action = btn.dataset.action;
       const lot = lots[index];
@@ -1283,6 +2381,7 @@
 
     clearAllBtn.addEventListener('click', () => {
       if (!confirm('¿Seguro que deseas borrar todo el proyecto?')) return;
+      hideLotMenu();
       points = [];
       lots = [];
       current = [];
@@ -1290,15 +2389,20 @@
       pointCounter = 1;
       lotCounter = 1;
       calibratePoints = [];
+      fitResult.innerHTML = 'Ejemplo: 800 m², 20 m de frente y 40 m de fondo.';
       render();
     });
 
     downloadJsonBtn.addEventListener('click', () => {
       const data = {
-        version: 2,
+        version: 4,
         mPerPx,
         pointCounter,
         lotCounter,
+        viewScale,
+        viewOffsetX,
+        viewOffsetY,
+        selectedLotIndex,
         points,
         lots
       };
@@ -1306,7 +2410,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'proyecto-reloteo.json';
+      a.download = 'proyecto-reloteo-medidas.json';
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -1314,6 +2418,7 @@
     loadJsonInput.addEventListener('change', (evt) => {
       const file = evt.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = e => {
         try {
@@ -1323,6 +2428,12 @@
           mPerPx = Number(data.mPerPx) || 1;
           pointCounter = Number(data.pointCounter) || (Math.max(0, ...points.map(p => p.id)) + 1);
           lotCounter = Number(data.lotCounter) || (lots.length + 1);
+          viewScale = Number(data.viewScale) || 1;
+          viewOffsetX = Number(data.viewOffsetX) || 0;
+          viewOffsetY = Number(data.viewOffsetY) || 0;
+          selectedLotIndex = Number.isInteger(data.selectedLotIndex) ? data.selectedLotIndex : null;
+          movingWholeLot = false;
+          wholeLotDrag = null;
           current = [];
           scaleEl.value = mPerPx.toFixed(4);
           render();
@@ -1341,8 +2452,68 @@
       a.click();
     });
 
-    window.addEventListener('keydown', (evt) => {
+    copyLotBtn.addEventListener('click', () => {
+      if (lotMenuLotIndex !== null) copyLotNear(lotMenuLotIndex);
+    });
+
+    copyLotOutsideBtn.addEventListener('click', () => {
+      if (lotMenuLotIndex !== null) copyLotOutside(lotMenuLotIndex);
+    });
+
+    moveLotBtn.addEventListener('click', () => {
+      if (lotMenuLotIndex !== null) startMoveWholeLot(lotMenuLotIndex);
+    });
+
+    closeLotMenuBtn.addEventListener('click', hideLotMenu);
+
+    zoomInBtn.addEventListener('click', () => zoomAtScreenPoint(1.25));
+    zoomOutBtn.addEventListener('click', () => zoomAtScreenPoint(0.8));
+    zoomResetBtn.addEventListener('click', resetView);
+    fitViewBtn.addEventListener('click', fitViewToLots);
+
+    floatingAnchorMenu.addEventListener('mousedown', (evt) => {
+      // Evita que el input pierda foco antes de escoger Desde A, Desde B o Ambos.
+      evt.preventDefault();
+    });
+
+    floatingFromABtn.addEventListener('click', () => commitMeasureEditor('start'));
+    floatingFromBBtn.addEventListener('click', () => commitMeasureEditor('end'));
+    floatingBothBtn.addEventListener('click', () => commitMeasureEditor('both'));
+
+    floatingMeasureInput.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Enter') {
+        evt.preventDefault();
+        commitMeasureEditor(edgeAnchorSelect.value || 'start');
+      }
+
       if (evt.key === 'Escape') {
+        evt.preventDefault();
+        hideMeasureEditor();
+      }
+    });
+
+    floatingMeasureInput.addEventListener('blur', () => {
+      // Se usa un pequeño retardo para permitir clic en los botones del editor flotante.
+      setTimeout(() => {
+        if (activeMeasureEdit && document.activeElement !== floatingMeasureInput) {
+          // Si sale del cuadro sin oprimir botón, aplica según la selección del panel lateral.
+          commitMeasureEditor(edgeAnchorSelect.value || 'start');
+        }
+      }, 120);
+    });
+
+    window.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Control') {
+        ctrlKeyDown = true;
+        updateCanvasCursor();
+      }
+
+      if (evt.key === 'Escape') {
+        hideLotMenu();
+        hideMeasureEditor();
+        movingWholeLot = false;
+        wholeLotDrag = null;
+        snapGuide = null;
         current = [];
         cleanUnusedPoints();
         render();
@@ -1356,35 +2527,55 @@
           render();
         }
       }
+
+      if (evt.key === '+' || evt.key === '=') zoomAtScreenPoint(1.15);
+      if (evt.key === '-') zoomAtScreenPoint(0.87);
     });
 
-    // Ejemplo inicial: lote matriz + sublotes automáticos.
+    window.addEventListener('keyup', (evt) => {
+      if (evt.key === 'Control') {
+        ctrlKeyDown = false;
+        updateCanvasCursor();
+      }
+    });
+
+    // Ejemplo inicial
     function loadExample() {
-      const p1 = createPoint(160, 120);
-      const p2 = createPoint(820, 95);
-      const p3 = createPoint(910, 500);
-      const p4 = createPoint(190, 570);
+      setScaleToFitMeters(80, 50);
 
-      const matrixId = Date.now() + Math.random();
+      const matrix = createRectangleLot(110, 90, 80 / mPerPx, 50 / mPerPx, 'Lote matriz', 'matriz', '#111827');
+      const localMap = new Map();
+      let count = 0;
 
-      lots.push({
-        id: matrixId,
-        name: 'Lote matriz',
-        type: 'matriz',
-        color: '#111827',
-        pointIds: [p1.id, p2.id, p3.id, p4.id]
-      });
+      for (let r = 0; r < 1; r++) {
+        for (let c = 0; c < 4; c++) {
+          count++;
+          createRectangleLot(
+            110 + c * (20 / mPerPx),
+            90 + r * (40 / mPerPx),
+            20 / mPerPx,
+            40 / mPerPx,
+            `Lote ${count}`,
+            'lote',
+            colors[count - 1],
+            {
+              autoGenerated: true,
+              parentMatrixId: matrix.id,
+              localMap
+            }
+          );
+        }
+      }
 
-      lotCounter = 1;
+      fitResult.innerHTML = `
+        <b>Ejemplo cargado:</b><br>
+        Lote matriz de 80 m × 50 m.<br>
+        Sublotes de 20 m × 40 m = 800 m².
+      `;
       render();
-
-      matrixSelect.value = '0';
-      splitCountEl.value = 4;
-      splitDirectionEl.value = 'x';
-      splitPrefixEl.value = 'Lote';
-      divideSelectedMatrix();
     }
 
+    updateCanvasCursor();
     loadExample();
   </script>
 </body>
