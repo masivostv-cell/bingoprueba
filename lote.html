@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reloteo automático - cálculo de áreas</title>
+  <style>
+    :root {
+      --bg: #111827;
+      --panel: #1f2937;
+      --panel2: #0f172a;
+      --line: #374151;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --blue: #38bdf8;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel2);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      min-height: calc(100vh - 67px);
+    }
+
+    aside {
+      background: var(--panel);
+      padding: 14px;
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+      max-height: calc(100vh - 67px);
+    }
+
+    main {
+      padding: 14px;
+      overflow: auto;
+    }
+
+    .box {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .box h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin: 8px 0 4px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 9px;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    input[type="checkbox"] {
+      width: auto;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    button {
+      cursor: pointer;
+      background: #263244;
+      transition: 0.15s ease;
+      margin-top: 7px;
+    }
+
+    button:hover {
+      background: #334155;
+    }
+
+    button.primary {
+      background: #15803d;
+      border-color: #16a34a;
+    }
+
+    button.primary:hover {
+      background: #16a34a;
+    }
+
+    button.danger {
+      background: #991b1b;
+      border-color: #dc2626;
+    }
+
+    button.danger:hover {
+      background: #b91c1c;
+    }
+
+    button.warning {
+      background: #92400e;
+      border-color: #f59e0b;
+    }
+
+    button.warning:hover {
+      background: #b45309;
+    }
+
+    button.blue {
+      background: #075985;
+      border-color: #0284c7;
+    }
+
+    button.blue:hover {
+      background: #0369a1;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 8px;
+    }
+
+    canvas {
+      background: #f8fafc;
+      border: 2px solid #334155;
+      border-radius: 14px;
+      cursor: crosshair;
+      display: block;
+      max-width: 100%;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      min-width: 900px;
+    }
+
+    .status {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 7px 5px;
+      border-bottom: 1px solid #374151;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      color: #cbd5e1;
+      font-weight: bold;
+    }
+
+    td .mini-btn {
+      width: auto;
+      padding: 5px 7px;
+      margin: 2px;
+      font-size: 11px;
+      display: inline-block;
+    }
+
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      color: #08111f;
+      font-weight: bold;
+    }
+
+    .totals {
+      font-size: 13px;
+      color: #d1fae5;
+      line-height: 1.5;
+    }
+
+    .kbd {
+      display: inline-block;
+      background: #111827;
+      border: 1px solid #4b5563;
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #e5e7eb;
+      font-size: 11px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      font-size: 11px;
+      margin-top: 5px;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .canvas-wrap {
+        min-width: 760px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Aplicativo simple para relotear y calcular áreas</h1>
+    <p>Dibuja el lote grande una sola vez, divídelo automáticamente y ajusta los puntos como en Paint.</p>
+  </header>
+
+  <div class="app">
+    <aside>
+      <div class="box">
+        <h2>1. Herramientas</h2>
+        <label>Modo de trabajo</label>
+        <select id="mode">
+          <option value="draw">Dibujar lote</option>
+          <option value="move">Mover puntos</option>
+          <option value="calibrate">Calibrar escala con 2 puntos</option>
+        </select>
+
+        <label>Nombre del próximo polígono</label>
+        <input id="lotName" placeholder="Ej: Lote 1, Lote A, Lote matriz" />
+
+        <label>Tipo</label>
+        <select id="lotType">
+          <option value="lote">Lote / sublote</option>
+          <option value="matriz">Lote matriz / contorno</option>
+        </select>
+
+        <button class="primary" id="finishBtn">Cerrar / guardar polígono</button>
+        <button id="undoBtn">Deshacer último punto</button>
+        <button class="warning" id="cancelBtn">Cancelar dibujo actual</button>
+
+        <p class="hint">
+          Primero dibuja el lote grande como <b>Lote matriz</b>. Luego usa la sección <b>Relotear automático</b>.
+          Si haces clic cerca de un punto existente, se reutiliza.
+        </p>
+      </div>
+
+      <div class="box">
+        <h2>2. Relotear automático</h2>
+
+        <label>Lote grande a dividir</label>
+        <select id="matrixSelect"></select>
+
+        <div class="row">
+          <div>
+            <label>Cantidad de lotes</label>
+            <input id="splitCount" type="number" min="2" step="1" value="4" />
+          </div>
+          <div>
+            <label>Dirección del corte</label>
+            <select id="splitDirection">
+              <option value="x">Vertical</option>
+              <option value="y">Horizontal</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Prefijo de nombres</label>
+        <input id="splitPrefix" value="Lote" />
+
+        <button class="blue" id="divideMatrixBtn">Dividir automáticamente en partes iguales</button>
+        <button class="danger" id="removeAutoLotsBtn">Eliminar sublotes automáticos</button>
+
+        <p class="hint">
+          Esta opción divide el lote matriz en la cantidad indicada, buscando que cada sublote tenga casi la misma área.
+          Funciona mejor cuando el lote tiene forma rectangular, trapezoidal o poligonal sencilla.
+        </p>
+        <span class="pill">Tip: después de dividir, cambia a “Mover puntos” y ajusta vértices.</span>
+      </div>
+
+      <div class="box">
+        <h2>3. Escala y unidades</h2>
+        <label>Escala manual: 1 px equivale a:</label>
+        <div class="row">
+          <input id="scale" type="number" step="0.0001" value="1" min="0.0001" />
+          <select id="unit">
+            <option value="m">metros</option>
+          </select>
+        </div>
+        <button id="applyScaleBtn">Aplicar escala</button>
+        <p class="hint">
+          Para un plano real, usa <b>Calibrar escala</b>: marca dos puntos de una distancia conocida y escribe cuántos metros mide.
+        </p>
+      </div>
+
+      <div class="box">
+        <h2>4. Plano de fondo</h2>
+        <label>Subir imagen del plano, croquis o captura</label>
+        <input id="bgInput" type="file" accept="image/*" />
+        <button id="clearBgBtn">Quitar imagen de fondo</button>
+        <p class="hint">
+          La imagen solo sirve como guía visual. Las áreas dependen de que la escala esté bien calibrada.
+        </p>
+      </div>
+
+      <div class="box">
+        <h2>5. Opciones visuales</h2>
+        <label><input type="checkbox" id="showGrid" checked /> Mostrar cuadrícula</label>
+        <label><input type="checkbox" id="showLabels" checked /> Mostrar nombres de lotes</label>
+        <label><input type="checkbox" id="showPointLabels" /> Mostrar número de puntos</label>
+      </div>
+
+      <div class="box">
+        <h2>6. Guardar / cargar</h2>
+        <button id="downloadJsonBtn">Descargar proyecto JSON</button>
+        <label>Cargar proyecto JSON</label>
+        <input id="loadJsonInput" type="file" accept="application/json" />
+        <button id="exportPngBtn">Exportar imagen PNG</button>
+        <button class="danger" id="clearAllBtn">Borrar todo</button>
+      </div>
+
+      <div class="box">
+        <h2>Totales</h2>
+        <div class="totals" id="totals"></div>
+        <p class="hint">
+          El total suma solo los polígonos marcados como <b>Lote / sublote</b>. El lote matriz se muestra aparte para no duplicar áreas.
+        </p>
+      </div>
+    </aside>
+
+    <main>
+      <div class="canvas-wrap">
+        <canvas id="canvas" width="1200" height="720"></canvas>
+      </div>
+      <div class="status" id="status"></div>
+
+      <div class="box" style="margin-top:12px;">
+        <h2>Tabla de lotes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Color</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Área m²</th>
+              <th>Área ha</th>
+              <th>Perímetro m</th>
+              <th>Puntos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="lotTable"></tbody>
+        </table>
+      </div>
+
+      <p class="status">
+        Flujo recomendado: 1) dibuja el lote grande como matriz, 2) calibra escala, 3) divide automáticamente, 4) mueve puntos si necesitas ajustar.
+      </p>
+    </main>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const modeEl = document.getElementById('mode');
+    const lotNameEl = document.getElementById('lotName');
+    const lotTypeEl = document.getElementById('lotType');
+    const finishBtn = document.getElementById('finishBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const scaleEl = document.getElementById('scale');
+    const applyScaleBtn = document.getElementById('applyScaleBtn');
+    const bgInput = document.getElementById('bgInput');
+    const clearBgBtn = document.getElementById('clearBgBtn');
+    const showGridEl = document.getElementById('showGrid');
+    const showLabelsEl = document.getElementById('showLabels');
+    const showPointLabelsEl = document.getElementById('showPointLabels');
+    const lotTable = document.getElementById('lotTable');
+    const totalsEl = document.getElementById('totals');
+    const statusEl = document.getElementById('status');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+    const loadJsonInput = document.getElementById('loadJsonInput');
+    const exportPngBtn = document.getElementById('exportPngBtn');
+
+    const matrixSelect = document.getElementById('matrixSelect');
+    const splitCountEl = document.getElementById('splitCount');
+    const splitDirectionEl = document.getElementById('splitDirection');
+    const splitPrefixEl = document.getElementById('splitPrefix');
+    const divideMatrixBtn = document.getElementById('divideMatrixBtn');
+    const removeAutoLotsBtn = document.getElementById('removeAutoLotsBtn');
+
+    let points = [];
+    let lots = [];
+    let current = [];
+    let selectedPointId = null;
+    let mouse = { x: 0, y: 0 };
+    let pointCounter = 1;
+    let lotCounter = 1;
+    let mPerPx = 1;
+    let calibratePoints = [];
+    let bgImage = null;
+
+    const colors = [
+      '#60a5fa', '#34d399', '#fbbf24', '#f472b6',
+      '#a78bfa', '#fb7185', '#22d3ee', '#c084fc',
+      '#bef264', '#fdba74', '#93c5fd', '#f9a8d4'
+    ];
+
+    function getCanvasPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (evt.clientX - rect.left) * (canvas.width / rect.width),
+        y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function getPoint(id) {
+      return points.find(p => p.id === id);
+    }
+
+    function findPointAt(pos, radius = 12) {
+      let nearest = null;
+      let best = Infinity;
+      for (const p of points) {
+        const d = distance(pos, p);
+        if (d < radius && d < best) {
+          best = d;
+          nearest = p;
+        }
+      }
+      return nearest;
+    }
+
+    function createPoint(x, y) {
+      const p = { id: pointCounter++, x, y };
+      points.push(p);
+      return p;
+    }
+
+    function findPointByCoordinates(x, y, tolerance = 0.35) {
+      return points.find(p => Math.abs(p.x - x) <= tolerance && Math.abs(p.y - y) <= tolerance);
+    }
+
+    function createOrReusePoint(x, y, localMap = null) {
+      const key = `${x.toFixed(3)},${y.toFixed(3)}`;
+      if (localMap && localMap.has(key)) return localMap.get(key);
+
+      const existing = findPointByCoordinates(x, y);
+      if (existing) {
+        if (localMap) localMap.set(key, existing.id);
+        return existing.id;
+      }
+
+      const p = createPoint(x, y);
+      if (localMap) localMap.set(key, p.id);
+      return p.id;
+    }
+
+    function polygonPoints(lot) {
+      return lot.pointIds.map(getPoint).filter(Boolean);
+    }
+
+    function polygonAreaPx(pts) {
+      if (pts.length < 3) return 0;
+      let sum = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        sum += a.x * b.y - b.x * a.y;
+      }
+      return Math.abs(sum) / 2;
+    }
+
+    function signedArea(pts) {
+      if (pts.length < 3) return 0;
+      let sum = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        sum += a.x * b.y - b.x * a.y;
+      }
+      return sum / 2;
+    }
+
+    function polygonPerimeterPx(pts) {
+      if (pts.length < 2) return 0;
+      let sum = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        sum += distance(a, b);
+      }
+      return sum;
+    }
+
+    function centroid(pts) {
+      if (!pts.length) return { x: 0, y: 0 };
+      return {
+        x: pts.reduce((s, p) => s + p.x, 0) / pts.length,
+        y: pts.reduce((s, p) => s + p.y, 0) / pts.length
+      };
+    }
+
+    function lighten(hex, alpha = 0.26) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function formatNumber(n, decimals = 2) {
+      return n.toLocaleString('es-CO', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+    }
+
+    function drawGrid() {
+      if (!showGridEl.checked) return;
+      ctx.save();
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawBackgroundImage() {
+      if (!bgImage) return;
+      const scale = Math.min(canvas.width / bgImage.width, canvas.height / bgImage.height);
+      const w = bgImage.width * scale;
+      const h = bgImage.height * scale;
+      const x = (canvas.width - w) / 2;
+      const y = (canvas.height - h) / 2;
+      ctx.save();
+      ctx.globalAlpha = 0.75;
+      ctx.drawImage(bgImage, x, y, w, h);
+      ctx.restore();
+    }
+
+    function drawLot(lot) {
+      const pts = polygonPoints(lot);
+      if (pts.length < 2) return;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = lighten(lot.color, lot.type === 'matriz' ? 0.10 : 0.28);
+      ctx.strokeStyle = lot.color;
+      ctx.lineWidth = lot.type === 'matriz' ? 3 : 2;
+      ctx.fill();
+      ctx.stroke();
+
+      if (showLabelsEl.checked) {
+        const c = centroid(pts);
+        const areaM2 = polygonAreaPx(pts) * mPerPx * mPerPx;
+        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = '#111827';
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 4;
+        const label = `${lot.name} · ${formatNumber(areaM2, 1)} m²`;
+        ctx.strokeText(label, c.x - 45, c.y);
+        ctx.fillText(label, c.x - 45, c.y);
+      }
+      ctx.restore();
+    }
+
+    function drawPoints() {
+      for (const p of points) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, selectedPointId === p.id ? 7 : 5, 0, Math.PI * 2);
+        ctx.fillStyle = selectedPointId === p.id ? '#ef4444' : '#111827';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        if (showPointLabelsEl.checked) {
+          ctx.font = '11px Arial';
+          ctx.fillStyle = '#111827';
+          ctx.fillText(String(p.id), p.x + 8, p.y - 8);
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawCurrent() {
+      if (!current.length) return;
+      const pts = current.map(getPoint).filter(Boolean);
+      ctx.save();
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 5]);
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.lineTo(mouse.x, mouse.y);
+      ctx.stroke();
+
+      if (pts.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(17,24,39,0.08)';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+      drawBackgroundImage();
+
+      // Primero dibuja los matrices, luego los sublotes encima.
+      lots.filter(l => l.type === 'matriz').forEach(drawLot);
+      lots.filter(l => l.type !== 'matriz').forEach(drawLot);
+
+      drawCurrent();
+      drawPoints();
+      updateTableAndTotals();
+      updateMatrixSelect();
+      updateStatus();
+    }
+
+    function updateStatus() {
+      const mode = modeEl.value;
+      let msg = '';
+      if (mode === 'draw') {
+        msg = `Modo dibujo. Puntos del polígono actual: ${current.length}.`;
+        if (current.length >= 3) {
+          const area = polygonAreaPx(current.map(getPoint)) * mPerPx * mPerPx;
+          msg += ` Área preliminar: ${formatNumber(area, 2)} m².`;
+        }
+      } else if (mode === 'move') {
+        msg = 'Modo mover puntos. Arrastra cualquier punto; las áreas se recalculan al instante.';
+      } else if (mode === 'calibrate') {
+        msg = `Modo calibración. Selecciona 2 puntos de una distancia conocida. Marcados: ${calibratePoints.length}/2.`;
+      }
+      statusEl.textContent = msg;
+    }
+
+    function updateMatrixSelect() {
+      const selected = matrixSelect.value;
+      matrixSelect.innerHTML = '';
+
+      const matrices = lots
+        .map((lot, index) => ({ lot, index }))
+        .filter(item => item.lot.type === 'matriz');
+
+      if (!matrices.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No hay lote matriz';
+        matrixSelect.appendChild(opt);
+        return;
+      }
+
+      matrices.forEach(({ lot, index }) => {
+        const opt = document.createElement('option');
+        opt.value = String(index);
+        opt.textContent = lot.name;
+        matrixSelect.appendChild(opt);
+      });
+
+      if ([...matrixSelect.options].some(o => o.value === selected)) {
+        matrixSelect.value = selected;
+      }
+    }
+
+    function updateTableAndTotals() {
+      lotTable.innerHTML = '';
+
+      let totalAreaM2 = 0;
+      let matrizAreaM2 = 0;
+
+      lots.forEach((lot, index) => {
+        const pts = polygonPoints(lot);
+        const areaM2 = polygonAreaPx(pts) * mPerPx * mPerPx;
+        const areaHa = areaM2 / 10000;
+        const perimeterM = polygonPerimeterPx(pts) * mPerPx;
+
+        if (lot.type === 'lote') totalAreaM2 += areaM2;
+        if (lot.type === 'matriz') matrizAreaM2 += areaM2;
+
+        const autoText = lot.autoGenerated ? ' · auto' : '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="badge" style="background:${lot.color};">&nbsp;&nbsp;&nbsp;</span></td>
+          <td title="Doble clic para renombrar" data-action="rename" data-index="${index}" style="cursor:pointer;">${lot.name}${autoText}</td>
+          <td>${lot.type === 'matriz' ? 'Matriz' : 'Lote'}</td>
+          <td>${formatNumber(areaM2, 2)}</td>
+          <td>${formatNumber(areaHa, 4)}</td>
+          <td>${formatNumber(perimeterM, 2)}</td>
+          <td>${pts.length}</td>
+          <td>
+            <button class="mini-btn" data-action="toggleType" data-index="${index}">Tipo</button>
+            <button class="mini-btn" data-action="rename" data-index="${index}">Nombre</button>
+            <button class="mini-btn danger" data-action="deleteLot" data-index="${index}">Eliminar</button>
+          </td>
+        `;
+        lotTable.appendChild(tr);
+      });
+
+      const diff = matrizAreaM2 > 0 ? matrizAreaM2 - totalAreaM2 : null;
+      totalsEl.innerHTML = `
+        <b>Total sublotes:</b> ${formatNumber(totalAreaM2, 2)} m² / ${formatNumber(totalAreaM2 / 10000, 4)} ha<br>
+        <b>Área matriz:</b> ${matrizAreaM2 ? `${formatNumber(matrizAreaM2, 2)} m² / ${formatNumber(matrizAreaM2 / 10000, 4)} ha` : 'No definida'}<br>
+        <b>Diferencia matriz - sublotes:</b> ${diff === null ? 'No aplica' : `${formatNumber(diff, 2)} m²`}
+      `;
+    }
+
+    function finishPolygon() {
+      if (current.length < 3) {
+        alert('Debes marcar mínimo 3 puntos para cerrar un lote.');
+        return;
+      }
+
+      const uniqueIds = [...new Set(current)];
+      if (uniqueIds.length < 3) {
+        alert('El polígono necesita mínimo 3 puntos diferentes.');
+        return;
+      }
+
+      const name = lotNameEl.value.trim() || (lotTypeEl.value === 'matriz' ? 'Lote matriz' : `Lote ${lotCounter}`);
+      const color = lotTypeEl.value === 'matriz' ? '#111827' : colors[(lotCounter - 1) % colors.length];
+
+      lots.push({
+        id: Date.now() + Math.random(),
+        name,
+        type: lotTypeEl.value,
+        color,
+        pointIds: [...current]
+      });
+
+      lotCounter++;
+      lotNameEl.value = '';
+      current = [];
+      modeEl.value = 'move';
+      render();
+    }
+
+    function cleanUnusedPoints() {
+      const used = new Set();
+      lots.forEach(lot => lot.pointIds.forEach(id => used.add(id)));
+      current.forEach(id => used.add(id));
+      points = points.filter(p => used.has(p.id));
+    }
+
+    function bbox(pts) {
+      return {
+        minX: Math.min(...pts.map(p => p.x)),
+        maxX: Math.max(...pts.map(p => p.x)),
+        minY: Math.min(...pts.map(p => p.y)),
+        maxY: Math.max(...pts.map(p => p.y))
+      };
+    }
+
+    function axisValue(p, axis) {
+      return axis === 'x' ? p.x : p.y;
+    }
+
+    function clipPolygonByAxis(poly, axis, operator, value) {
+      if (!poly.length) return [];
+
+      const inside = (p) => {
+        const v = axisValue(p, axis);
+        if (operator === '<=') return v <= value + 1e-9;
+        return v >= value - 1e-9;
+      };
+
+      const intersect = (a, b) => {
+        const av = axisValue(a, axis);
+        const bv = axisValue(b, axis);
+        const denom = bv - av;
+        if (Math.abs(denom) < 1e-12) return { x: a.x, y: a.y };
+        const t = (value - av) / denom;
+        return {
+          x: a.x + t * (b.x - a.x),
+          y: a.y + t * (b.y - a.y)
+        };
+      };
+
+      const output = [];
+      for (let i = 0; i < poly.length; i++) {
+        const currentPoint = poly[i];
+        const previousPoint = poly[(i + poly.length - 1) % poly.length];
+        const currentInside = inside(currentPoint);
+        const previousInside = inside(previousPoint);
+
+        if (currentInside) {
+          if (!previousInside) output.push(intersect(previousPoint, currentPoint));
+          output.push(currentPoint);
+        } else if (previousInside) {
+          output.push(intersect(previousPoint, currentPoint));
+        }
+      }
+
+      return removeDuplicateConsecutive(output);
+    }
+
+    function removeDuplicateConsecutive(poly) {
+      if (!poly.length) return [];
+      const cleaned = [];
+      for (const p of poly) {
+        const last = cleaned[cleaned.length - 1];
+        if (!last || distance(last, p) > 0.001) cleaned.push(p);
+      }
+      if (cleaned.length > 1 && distance(cleaned[0], cleaned[cleaned.length - 1]) <= 0.001) {
+        cleaned.pop();
+      }
+      return cleaned;
+    }
+
+    function clipBetween(poly, axis, minValue, maxValue) {
+      let result = clipPolygonByAxis(poly, axis, '>=', minValue);
+      result = clipPolygonByAxis(result, axis, '<=', maxValue);
+      return removeDuplicateConsecutive(result);
+    }
+
+    function areaUpTo(poly, axis, value) {
+      return polygonAreaPx(clipPolygonByAxis(poly, axis, '<=', value));
+    }
+
+    function divideSelectedMatrix() {
+      const matrixIndex = Number(matrixSelect.value);
+      const matrixLot = lots[matrixIndex];
+
+      if (!matrixLot || matrixLot.type !== 'matriz') {
+        alert('Primero debes tener un lote matriz para dividir.');
+        return;
+      }
+
+      const n = parseInt(splitCountEl.value, 10);
+      if (isNaN(n) || n < 2) {
+        alert('La cantidad de lotes debe ser mínimo 2.');
+        return;
+      }
+
+      const axis = splitDirectionEl.value;
+      const basePts = polygonPoints(matrixLot).map(p => ({ x: p.x, y: p.y }));
+      if (basePts.length < 3) {
+        alert('El lote matriz debe tener mínimo 3 puntos.');
+        return;
+      }
+
+      const totalArea = polygonAreaPx(basePts);
+      if (totalArea <= 0) {
+        alert('El área del lote matriz no es válida.');
+        return;
+      }
+
+      const bounds = bbox(basePts);
+      const minCoord = axis === 'x' ? bounds.minX : bounds.minY;
+      const maxCoord = axis === 'x' ? bounds.maxX : bounds.maxY;
+
+      // Borra sublotes automáticos anteriores del mismo lote matriz.
+      lots = lots.filter(l => !(l.autoGenerated && l.parentMatrixId === matrixLot.id));
+      cleanUnusedPoints();
+
+      const cuts = [minCoord];
+
+      for (let i = 1; i < n; i++) {
+        const target = totalArea * i / n;
+        let left = minCoord;
+        let right = maxCoord;
+
+        for (let iter = 0; iter < 60; iter++) {
+          const mid = (left + right) / 2;
+          const area = areaUpTo(basePts, axis, mid);
+          if (area < target) left = mid;
+          else right = mid;
+        }
+
+        cuts.push((left + right) / 2);
+      }
+
+      cuts.push(maxCoord);
+
+      const localMap = new Map();
+      let created = 0;
+
+      for (let i = 0; i < n; i++) {
+        const subPoly = clipBetween(basePts, axis, cuts[i], cuts[i + 1]);
+        const subArea = polygonAreaPx(subPoly);
+
+        if (subPoly.length >= 3 && subArea > 1) {
+          // Mantener el mismo sentido del polígono matriz para evitar cruces visuales.
+          const baseSign = Math.sign(signedArea(basePts)) || 1;
+          const subSign = Math.sign(signedArea(subPoly)) || 1;
+          const ordered = baseSign === subSign ? subPoly : [...subPoly].reverse();
+
+          const pointIds = ordered.map(p => createOrReusePoint(p.x, p.y, localMap));
+          const prefix = splitPrefixEl.value.trim() || 'Lote';
+
+          lots.push({
+            id: Date.now() + Math.random() + i,
+            name: `${prefix} ${i + 1}`,
+            type: 'lote',
+            color: colors[(lotCounter + i) % colors.length],
+            pointIds,
+            autoGenerated: true,
+            parentMatrixId: matrixLot.id
+          });
+
+          created++;
+        }
+      }
+
+      lotCounter += created;
+      modeEl.value = 'move';
+      render();
+
+      if (created > 0) {
+        alert(`Listo. Se generaron ${created} sublotes con áreas prácticamente iguales.`);
+      } else {
+        alert('No se pudieron generar sublotes. Revisa la forma del lote matriz.');
+      }
+    }
+
+    function removeAutoLots() {
+      const before = lots.length;
+      lots = lots.filter(l => !l.autoGenerated);
+      cleanUnusedPoints();
+      render();
+      alert(`Se eliminaron ${before - lots.length} sublotes automáticos.`);
+    }
+
+    canvas.addEventListener('mousedown', (evt) => {
+      const pos = getCanvasPos(evt);
+      mouse = pos;
+
+      if (modeEl.value === 'move') {
+        const p = findPointAt(pos);
+        if (p) {
+          selectedPointId = p.id;
+          render();
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', (evt) => {
+      const pos = getCanvasPos(evt);
+      mouse = pos;
+
+      if (selectedPointId !== null && modeEl.value === 'move') {
+        const p = getPoint(selectedPointId);
+        if (p) {
+          p.x = pos.x;
+          p.y = pos.y;
+        }
+      }
+      render();
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      selectedPointId = null;
+      render();
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      selectedPointId = null;
+      render();
+    });
+
+    canvas.addEventListener('click', (evt) => {
+      const pos = getCanvasPos(evt);
+      mouse = pos;
+
+      if (modeEl.value === 'draw') {
+        const existing = findPointAt(pos, 12);
+        let p = existing || createPoint(pos.x, pos.y);
+
+        if (current.length >= 3 && p.id === current[0]) {
+          finishPolygon();
+          return;
+        }
+
+        if (current[current.length - 1] !== p.id) {
+          current.push(p.id);
+        }
+        render();
+      }
+
+      if (modeEl.value === 'calibrate') {
+        calibratePoints.push(pos);
+        if (calibratePoints.length === 2) {
+          const px = distance(calibratePoints[0], calibratePoints[1]);
+          const meters = parseFloat(prompt('¿Cuántos metros mide esa distancia real?', '10'));
+          if (!isNaN(meters) && meters > 0 && px > 0) {
+            mPerPx = meters / px;
+            scaleEl.value = mPerPx.toFixed(4);
+            alert(`Escala aplicada: 1 px = ${mPerPx.toFixed(4)} m`);
+          }
+          calibratePoints = [];
+          modeEl.value = 'move';
+        }
+        render();
+      }
+    });
+
+    finishBtn.addEventListener('click', finishPolygon);
+
+    undoBtn.addEventListener('click', () => {
+      if (current.length) {
+        current.pop();
+        cleanUnusedPoints();
+      } else if (lots.length) {
+        lots.pop();
+        cleanUnusedPoints();
+      }
+      render();
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      current = [];
+      cleanUnusedPoints();
+      render();
+    });
+
+    applyScaleBtn.addEventListener('click', () => {
+      const val = parseFloat(scaleEl.value);
+      if (isNaN(val) || val <= 0) {
+        alert('La escala debe ser un número mayor que cero.');
+        return;
+      }
+      mPerPx = val;
+      render();
+    });
+
+    divideMatrixBtn.addEventListener('click', divideSelectedMatrix);
+    removeAutoLotsBtn.addEventListener('click', removeAutoLots);
+
+    bgInput.addEventListener('change', (evt) => {
+      const file = evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        bgImage = new Image();
+        bgImage.onload = render;
+        bgImage.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    clearBgBtn.addEventListener('click', () => {
+      bgImage = null;
+      bgInput.value = '';
+      render();
+    });
+
+    [showGridEl, showLabelsEl, showPointLabelsEl, modeEl].forEach(el => {
+      el.addEventListener('change', render);
+    });
+
+    lotTable.addEventListener('click', (evt) => {
+      const btn = evt.target.closest('[data-action]');
+      if (!btn) return;
+      const index = Number(btn.dataset.index);
+      const action = btn.dataset.action;
+      const lot = lots[index];
+      if (!lot) return;
+
+      if (action === 'deleteLot') {
+        if (confirm(`¿Eliminar ${lot.name}?`)) {
+          lots.splice(index, 1);
+          cleanUnusedPoints();
+          render();
+        }
+      }
+
+      if (action === 'rename') {
+        const newName = prompt('Nuevo nombre del lote:', lot.name);
+        if (newName && newName.trim()) {
+          lot.name = newName.trim();
+          render();
+        }
+      }
+
+      if (action === 'toggleType') {
+        lot.type = lot.type === 'lote' ? 'matriz' : 'lote';
+        render();
+      }
+    });
+
+    lotTable.addEventListener('dblclick', (evt) => {
+      const cell = evt.target.closest('[data-action="rename"]');
+      if (!cell) return;
+      const index = Number(cell.dataset.index);
+      const lot = lots[index];
+      if (!lot) return;
+      const newName = prompt('Nuevo nombre del lote:', lot.name);
+      if (newName && newName.trim()) {
+        lot.name = newName.trim();
+        render();
+      }
+    });
+
+    clearAllBtn.addEventListener('click', () => {
+      if (!confirm('¿Seguro que deseas borrar todo el proyecto?')) return;
+      points = [];
+      lots = [];
+      current = [];
+      selectedPointId = null;
+      pointCounter = 1;
+      lotCounter = 1;
+      calibratePoints = [];
+      render();
+    });
+
+    downloadJsonBtn.addEventListener('click', () => {
+      const data = {
+        version: 2,
+        mPerPx,
+        pointCounter,
+        lotCounter,
+        points,
+        lots
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'proyecto-reloteo.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    loadJsonInput.addEventListener('change', (evt) => {
+      const file = evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          points = Array.isArray(data.points) ? data.points : [];
+          lots = Array.isArray(data.lots) ? data.lots : [];
+          mPerPx = Number(data.mPerPx) || 1;
+          pointCounter = Number(data.pointCounter) || (Math.max(0, ...points.map(p => p.id)) + 1);
+          lotCounter = Number(data.lotCounter) || (lots.length + 1);
+          current = [];
+          scaleEl.value = mPerPx.toFixed(4);
+          render();
+        } catch (err) {
+          alert('No se pudo cargar el JSON. Revisa que sea un archivo válido.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    exportPngBtn.addEventListener('click', () => {
+      render();
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'reloteo.png';
+      a.click();
+    });
+
+    window.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Escape') {
+        current = [];
+        cleanUnusedPoints();
+        render();
+      }
+
+      if (evt.ctrlKey && evt.key.toLowerCase() === 'z') {
+        evt.preventDefault();
+        if (current.length) {
+          current.pop();
+          cleanUnusedPoints();
+          render();
+        }
+      }
+    });
+
+    // Ejemplo inicial: lote matriz + sublotes automáticos.
+    function loadExample() {
+      const p1 = createPoint(160, 120);
+      const p2 = createPoint(820, 95);
+      const p3 = createPoint(910, 500);
+      const p4 = createPoint(190, 570);
+
+      const matrixId = Date.now() + Math.random();
+
+      lots.push({
+        id: matrixId,
+        name: 'Lote matriz',
+        type: 'matriz',
+        color: '#111827',
+        pointIds: [p1.id, p2.id, p3.id, p4.id]
+      });
+
+      lotCounter = 1;
+      render();
+
+      matrixSelect.value = '0';
+      splitCountEl.value = 4;
+      splitDirectionEl.value = 'x';
+      splitPrefixEl.value = 'Lote';
+      divideSelectedMatrix();
+    }
+
+    loadExample();
+  </script>
+</body>
+</html>
