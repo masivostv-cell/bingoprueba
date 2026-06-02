@@ -1,7 +1,7 @@
 const CACHE_NAME = "dian-clientes-pwa-v3-vencimientos-completos";
 const CORE_ASSETS = [
   "./",
-  "./index.html",
+  "./calendario.html",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
