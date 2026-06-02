@@ -2,7 +2,7 @@
   "name": "Calendario Tributario DIAN Clientes",
   "short_name": "DIAN Clientes",
   "description": "Control de vencimientos tributarios DIAN 2026 por cliente.",
-  "start_url": "./index.html",
+  "start_url": "./calendario.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
