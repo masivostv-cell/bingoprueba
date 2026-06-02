@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="DIAN Clientes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <title>Calendario Tributario DIAN 2026</title>
+  <style>
+    :root{
+      --bg:#eef6f5;
+      --card:#ffffff;
+      --card2:#f8fffe;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:#dbe7e5;
+      --primary:#0f766e;
+      --primary2:#14b8a6;
+      --danger:#dc2626;
+      --warning:#d97706;
+      --success:#16a34a;
+      --shadow:0 18px 45px rgba(15,23,42,.12);
+      --radius:24px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(160deg,#dff7f4 0%,#eef6f5 45%,#e8f0ff 100%);color:var(--text)}
+    body{padding:18px 10px 92px}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer;border:0}
+    .phone{width:min(100%,520px);margin:0 auto;background:rgba(255,255,255,.44);min-height:calc(100vh - 36px);border:1px solid rgba(255,255,255,.72);border-radius:34px;box-shadow:var(--shadow);overflow:hidden;position:relative;backdrop-filter:blur(12px)}
+    .topbar{background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;padding:24px 22px 18px;border-bottom-left-radius:28px;border-bottom-right-radius:28px;position:sticky;top:0;z-index:4}
+    .topbar h1{font-size:22px;margin:0 0 4px;letter-spacing:-.03em}
+    .topbar p{margin:0;opacity:.9;font-size:13px}
+    .top-actions{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:14px}
+    .user-pill{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.22);padding:8px 10px;border-radius:999px;font-size:12px;max-width:310px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .logout{background:#ffffff;color:#0f766e;border-radius:999px;padding:9px 12px;font-weight:700;font-size:12px}
+    .view{display:none;padding:16px}
+    .view.active{display:block}
+    .auth-wrap{padding:28px 20px 22px;min-height:calc(100vh - 36px);display:flex;flex-direction:column;justify-content:center}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+    .brand-icon{width:52px;height:52px;border-radius:18px;background:linear-gradient(135deg,#0f766e,#14b8a6);display:grid;place-items:center;color:#fff;font-size:26px;box-shadow:0 12px 28px rgba(15,118,110,.28)}
+    .brand h1{font-size:26px;margin:0;line-height:1;letter-spacing:-.04em}.brand p{margin:5px 0 0;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border:1px solid rgba(15,23,42,.06);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+    .card.compact{padding:12px;border-radius:18px}
+    .card-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+    .card-title h2,.card-title h3{margin:0;font-size:17px;letter-spacing:-.02em}.card-title span{font-size:12px;color:var(--muted)}
+    .field{margin-bottom:12px}.field label{display:block;font-size:12px;font-weight:800;color:#334155;margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}
+    input,select,textarea{width:100%;background:#f8fafc;border:1px solid #dbe7e5;border-radius:15px;padding:12px 13px;color:var(--text);outline:none}
+    input:focus,select:focus,textarea:focus{border-color:#14b8a6;box-shadow:0 0 0 4px rgba(20,184,166,.13);background:#fff}textarea{resize:vertical;min-height:72px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--primary);color:#fff;padding:12px 14px;border-radius:16px;font-weight:800;text-decoration:none;width:auto;min-height:44px;transition:.18s transform,.18s filter}
+    .btn:hover{filter:brightness(.98);transform:translateY(-1px)}.btn.full{width:100%}.btn.secondary{background:#e6fffb;color:#0f766e;border:1px solid #b7f1ea}.btn.light{background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0}.btn.danger{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}.btn.warning{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}.btn.small{padding:8px 10px;min-height:34px;font-size:12px;border-radius:12px}.install-top{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:999px;padding:9px 12px;font-weight:800;font-size:12px;white-space:nowrap}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}.hint{color:var(--muted);font-size:12.5px;line-height:1.45}.hint strong{color:#334155}.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:10px;border-radius:14px;font-size:13px;margin:10px 0;display:none}.ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:10px;border-radius:14px;font-size:13px;margin:10px 0;display:none}
+    .tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;width:min(100% - 20px,500px);background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:24px;padding:8px;display:none;grid-template-columns:repeat(4,1fr);gap:6px;box-shadow:0 16px 42px rgba(15,23,42,.16);z-index:20}.tabs.show{display:grid}.tab{background:transparent;color:#64748b;border-radius:16px;padding:9px 4px;font-size:11px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:3px}.tab.active{background:#e6fffb;color:#0f766e}.tab b{font-size:18px;line-height:1}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.stat{background:#fff;border-radius:20px;padding:14px;border:1px solid rgba(15,23,42,.06);box-shadow:0 10px 24px rgba(15,23,42,.05)}.stat .n{font-size:22px;font-weight:900;letter-spacing:-.04em}.stat .l{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+    .checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}.check{display:flex;align-items:flex-start;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:10px}.check input{width:auto;margin-top:2px}.check span{font-size:13px;font-weight:700;line-height:1.2}.check small{display:block;color:var(--muted);font-weight:500;margin-top:2px;font-size:11px}
+    .client-card{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin-bottom:10px}.client-card h4{margin:0 0 5px;font-size:15px}.client-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.35}.badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.badge{font-size:10px;padding:4px 7px;border-radius:999px;background:#ecfeff;color:#0e7490;border:1px solid #cffafe;font-weight:800}.badge.gray{background:#f1f5f9;color:#475569;border-color:#e2e8f0}.badge.green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.badge.orange{background:#ffedd5;color:#9a3412;border-color:#fed7aa}
+    .month-block{margin-bottom:16px}.month-head{display:flex;justify-content:space-between;align-items:center;margin:16px 2px 9px}.month-head h3{margin:0;font-size:18px;letter-spacing:-.03em}.month-head span{color:#64748b;font-size:12px;font-weight:800}.event{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin-bottom:9px;display:grid;grid-template-columns:auto 1fr;gap:11px}.datebox{width:54px;border-radius:15px;background:#e6fffb;border:1px solid #b7f1ea;text-align:center;padding:7px 4px;height:58px}.datebox .d{font-weight:900;font-size:20px;line-height:1;color:#0f766e}.datebox .m{font-size:10px;color:#0f766e;font-weight:900;text-transform:uppercase}.event h4{font-size:14px;margin:0 0 4px;line-height:1.2}.event p{font-size:12px;color:#64748b;margin:0 0 8px;line-height:1.35}.event.done{opacity:.72;background:#f8fafc}.event.done h4{text-decoration:line-through}.event-actions{display:flex;gap:6px;flex-wrap:wrap}.empty{text-align:center;color:#64748b;padding:22px 12px;background:#fff;border:1px dashed #cbd5e1;border-radius:18px}.searchbar{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:12px}.hidden{display:none!important}.setup-code{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:18px;padding:14px;overflow:auto;font-size:12px;line-height:1.45}.divider{height:1px;background:#e2e8f0;margin:14px 0}.mini-note{font-size:11px;color:#64748b;line-height:1.35}.loader{display:none;align-items:center;gap:8px;color:#0f766e;font-size:13px;font-weight:800}.loader.show{display:flex}.spinner{width:16px;height:16px;border-radius:999px;border:3px solid #ccfbf1;border-top-color:#0f766e;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+
+    .extra-panel{background:#f8fffe;border:1px solid #dbe7e5;border-radius:20px;padding:12px;margin-top:10px}
+    .extra-list{display:grid;gap:8px;margin-top:10px}
+    .extra-item{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .extra-item h4{margin:0 0 4px;font-size:13px}.extra-item p{margin:0;color:#64748b;font-size:11.5px;line-height:1.35}
+    .preset-grid{display:grid;grid-template-columns:1fr;gap:8px}.pill-soft{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;font-weight:900;margin-top:6px}
+    @media (max-width:420px){body{padding:0 0 90px}.phone{border-radius:0;min-height:100vh;border:0}.topbar{border-top-left-radius:0;border-top-right-radius:0}.checks{grid-template-columns:1fr}.row,.row-3{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr 1fr}.tabs{bottom:8px;width:calc(100% - 16px)}}
+  </style>
+</head>
+<body>
+  <main class="phone">
+    <section id="authView" class="auth-wrap">
+      <div class="brand">
+        <div class="brand-icon">📅</div>
+        <div>
+          <h1>DIAN Clientes</h1>
+          <p>Calendario tributario 2026</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><h2 id="authTitle">Inicio de sesión</h2><span>Acceso seguro</span></div>
+        <div id="authError" class="error"></div>
+        <div id="authOk" class="ok"></div>
+        <div class="field"><label>Correo electrónico</label><input id="email" type="email" autocomplete="email" placeholder="usuario@correo.com"></div>
+        <div class="field"><label>Contraseña</label><input id="password" type="password" autocomplete="current-password" placeholder="Mínimo 6 caracteres"></div>
+        <div class="actions">
+          <button id="loginBtn" class="btn full">Entrar</button>
+          <button id="registerBtn" class="btn secondary full">Crear cuenta</button>
+          <button id="resetBtn" class="btn light full">Recuperar contraseña</button>
+        </div>
+        <button id="installBtnAuth" class="btn warning full install-btn" type="button" style="margin-top:10px">📲 Instalar en el teléfono</button>
+      </div>
+    </section>
+
+    <section id="appView" class="hidden">
+      <header class="topbar">
+        <h1>Calendario DIAN 2026</h1>
+        <p>Empresas, vencimientos y seguimiento mensual</p>
+        <div class="top-actions">
+          <div id="userEmail" class="user-pill">usuario</div>
+          <button id="installBtnTop" class="install-top install-btn" type="button">Instalar</button>
+          <button id="logoutBtn" class="logout">Salir</button>
+        </div>
+      </header>
+
+      <section id="view-home" class="view active">
+        <div class="stats">
+          <div class="stat"><div id="statClients" class="n">0</div><div class="l">Clientes</div></div>
+          <div class="stat"><div id="statEvents" class="n">0</div><div class="l">Vencimientos</div></div>
+          <div class="stat"><div id="statPending" class="n">0</div><div class="l">Pendientes</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><h2>Próximos vencimientos</h2><span>ordenados por fecha</span></div>
+          <div class="actions" style="margin-bottom:12px">
+            <button id="downloadAllIcsBtn" class="btn secondary small">📥 Exportar mes actual</button>
+            <button id="notifyBtnHome" class="btn warning small notify-btn" type="button">🔔 Activar avisos</button>
+            <button id="installBtnHome" class="btn warning small install-btn" type="button">📲 Instalar app</button>
+            <button id="refreshBtn" class="btn light small">🔄 Actualizar</button>
+          </div>
+          <p class="mini-note" style="margin-top:-4px;margin-bottom:12px">La exportación .ICS descarga únicamente los vencimientos del mes actual. Así el seguimiento se mantiene mes a mes dentro de la app.</p>
+          <div id="nextEvents"></div>
+        </div>
+      </section>
+
+      <section id="view-clients" class="view">
+        <div class="card">
+          <div class="card-title"><h2 id="formTitle">Nuevo cliente</h2><span id="formMode">crear</span></div>
+          <div id="formOk" class="ok"></div>
+          <div id="formError" class="error"></div>
+          <div class="field"><label>Nombre o razón social</label><input id="clientName" placeholder="Ej. Comercial ABC SAS"></div>
+          <div class="field"><label>NIT o cédula</label><input id="clientNit" placeholder="Ej. 900123456-7 o 1020304050"></div>
+          <div class="row">
+            <div class="field"><label>Último dígito NIT</label><input id="clientDigit" inputmode="numeric" maxlength="1" placeholder="0-9"></div>
+            <div class="field"><label>Dos últimos dígitos</label><input id="clientTwoDigits" inputmode="numeric" maxlength="2" placeholder="00-99"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Teléfono</label><input id="clientPhone" placeholder="Opcional"></div>
+            <div class="field"><label>Correo</label><input id="clientMail" type="email" placeholder="Opcional"></div>
+          </div>
+          <div class="field"><label>Notas</label><textarea id="clientNotes" placeholder="Responsable, claves internas, observaciones del RUT, etc."></textarea></div>
+          <button id="autoDigitBtn" class="btn light full" type="button">Calcular dígitos desde NIT</button>
+          <div class="divider"></div>
+          <div class="card-title"><h3>Obligaciones</h3><span>marca las que apliquen</span></div>
+          <div class="checks" id="obligationsBox"></div>
+          <div class="divider"></div>
+          <div class="card-title"><h3>Vencimientos adicionales</h3><span>personalizables</span></div>
+          <p class="mini-note">Agrega aquí obligaciones municipales, laborales o propias del cliente. Las fechas son editables porque ICA, predial, vehículos, estampillas, PILA y otros vencimientos pueden cambiar según municipio, entidad o tipo de empresa.</p>
+          <div class="extra-panel">
+            <div class="field"><label>Plantilla rápida</label><select id="extraPreset"></select></div>
+            <div class="field"><label>Nombre del vencimiento</label><input id="extraName" placeholder="Ej. ICA municipal, Seguridad social PILA, Información exógena"></div>
+            <div class="row">
+              <div class="field"><label>Categoría</label><select id="extraCategory">
+                <option value="Municipal">Municipal</option>
+                <option value="Laboral / nómina">Laboral / nómina</option>
+                <option value="Informativa">Informativa</option>
+                <option value="Empresarial">Empresarial</option>
+                <option value="Ambiental / especial">Ambiental / especial</option>
+                <option value="Otro">Otro</option>
+              </select></div>
+              <div class="field"><label>Periodicidad</label><select id="extraFrequency">
+                <option value="mensual_siguiente">Mensual: periodo anterior, vence mes siguiente</option>
+                <option value="mensual_mismo">Mensual: vence en el mismo mes</option>
+                <option value="bimestral">Bimestral: mar, may, jul, sep, nov, ene</option>
+                <option value="trimestral">Trimestral: abr, jul, oct, ene</option>
+                <option value="cuatrimestral">Cuatrimestral: may, sep, ene</option>
+                <option value="semestral">Semestral: jul y ene</option>
+                <option value="anual">Anual / fecha única</option>
+              </select></div>
+            </div>
+            <div class="row-3">
+              <div class="field"><label>Día de vencimiento</label><input id="extraDay" inputmode="numeric" maxlength="2" placeholder="1-31"></div>
+              <div class="field"><label>Mes si es anual</label><select id="extraMonth"></select></div>
+              <div class="field"><label>Año</label><select id="extraYear"><option value="2026">2026</option><option value="2027">2027</option></select></div>
+            </div>
+            <div class="field"><label>Notas</label><input id="extraNotes" placeholder="Ej. validar calendario de la alcaldía / operador PILA / entidad"></div>
+            <button id="addExtraBtn" class="btn secondary full" type="button">➕ Agregar vencimiento adicional</button>
+            <div id="extraList" class="extra-list"></div>
+          </div>
+          <div class="divider"></div>
+          <div class="actions">
+            <button id="saveClientBtn" class="btn full">Guardar cliente</button>
+            <button id="cancelEditBtn" class="btn light full hidden">Cancelar edición</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><h2>Mis clientes</h2><span id="clientCountLabel">0 registrados</span></div>
+          <div class="searchbar"><input id="clientSearch" placeholder="Buscar cliente o NIT"><button id="clearSearchBtn" class="btn light small">Limpiar</button></div>
+          <div id="clientList"></div>
+        </div>
+      </section>
+
+      <section id="view-calendar" class="view">
+        <div class="card">
+          <div class="card-title"><h2>Calendario mensual</h2><span>todos tus clientes</span></div>
+          <div class="row">
+            <div class="field"><label>Mes</label><select id="monthFilter"></select></div>
+            <div class="field"><label>Cliente</label><select id="clientFilter"></select></div>
+          </div>
+          <div class="actions">
+            <button id="downloadFilteredIcsBtn" class="btn secondary small">📥 Exportar mes seleccionado</button>
+          </div>
+          <p class="mini-note" style="margin-top:10px">Este botón exporta solo el mes seleccionado. Si está en “Todos los meses”, exporta el mes actual.</p>
+        </div>
+        <div id="calendarList"></div>
+      </section>
+
+      <section id="view-config" class="view">
+        <div class="card">
+          <div class="card-title"><h2>Notificaciones</h2><span>2 días antes</span></div>
+          <p class="hint">Activa los avisos para recibir una alerta cuando falten 2 días para un vencimiento pendiente.</p>
+          <button id="enableNotificationsBtn" class="btn warning full notify-btn" type="button">🔔 Activar notificaciones</button>
+          <p id="notificationsStatus" class="mini-note" style="margin-top:10px">Las notificaciones están pendientes de activación.</p>
+        </div>
+        <div class="card">
+          <div class="card-title"><h2>Instalar en teléfono</h2><span>app web</span></div>
+          <p class="hint">Puedes guardar esta herramienta como aplicación en el celular para abrirla desde el ícono de inicio.</p>
+          <button id="installBtnSettings" class="btn warning full install-btn" type="button">📲 Instalar app</button>
+          <p id="installHelp" class="mini-note" style="margin-top:10px">En Android se instalará desde el navegador. En iPhone, usa Compartir y luego “Agregar a pantalla de inicio”.</p>
+        </div>
+        <div class="card">
+          <div class="card-title"><h2>Respaldo</h2><span>JSON</span></div>
+          <div class="actions">
+            <button id="exportJsonBtn" class="btn secondary full">Exportar clientes JSON</button>
+            <label class="btn light full" for="importJsonInput">Importar clientes JSON</label>
+            <input id="importJsonInput" type="file" accept="application/json" class="hidden">
+          </div>
+          <p class="hint">El respaldo no incluye contraseñas. Solo copia tus clientes y obligaciones.</p>
+        </div>
+        <div class="card">
+          <div class="card-title"><h2>Calendario de Google</h2><span>eventos</span></div>
+          <p class="hint">El botón de Google Calendar abre un evento individual para revisarlo y guardarlo. El archivo .ICS solo exporta el mes seleccionado o el mes actual, para que el seguimiento mensual se haga desde la app.</p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <nav id="tabs" class="tabs">
+    <button class="tab active" data-target="home"><b>🏠</b>Inicio</button>
+    <button class="tab" data-target="clients"><b>👥</b>Clientes</button>
+    <button class="tab" data-target="calendar"><b>📆</b>Meses</button>
+    <button class="tab" data-target="config"><b>⚙️</b>Ajustes</button>
+  </nav>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBJVHvToEW6ns7v8pQrBwI9wSjW7y0XLFA",
+    authDomain: "calendario-tributario-a3e16.firebaseapp.com",
+    projectId: "calendario-tributario-a3e16",
+    storageBucket: "calendario-tributario-a3e16.firebasestorage.app",
+    messagingSenderId: "1029886336492",
+    appId: "1:1029886336492:web:26cc3e492a53062bf834c9"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const $ = (id) => document.getElementById(id);
+
+  const NOTIFY_DAYS_BEFORE = 2;
+  const NOTIFY_ENABLED_KEY = "dianNotifyEnabled";
+  const NOTIFY_SENT_KEY = "dianNotifySent";
+
+  let deferredInstallPrompt = null;
+  function isInstalledMode(){
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  }
+  function installButtons(){
+    return ["installBtnAuth","installBtnTop","installBtnHome","installBtnSettings"].map(id => $(id)).filter(Boolean);
+  }
+  function setInstallButtonState(){
+    installButtons().forEach(btn => {
+      btn.textContent = isInstalledMode() ? "✅ App instalada" : (btn.id === "installBtnTop" ? "Instalar" : "📲 Instalar app");
+      btn.disabled = isInstalledMode();
+      btn.style.opacity = isInstalledMode() ? ".75" : "1";
+    });
+  }
+  async function installApp(){
+    if(isInstalledMode()){ alert("La app ya está instalada en este dispositivo."); return; }
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      setInstallButtonState();
+      return;
+    }
+    alert("Para instalarla en el teléfono, abre esta página desde Chrome o Edge en Android y toca este botón cuando aparezca la opción. En iPhone: botón Compartir → Agregar a pantalla de inicio.");
+  }
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    setInstallButtonState();
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    setInstallButtonState();
+  });
+  window.addEventListener("load", () => {
+    setInstallButtonState();
+    installButtons().forEach(btn => btn.addEventListener("click", installApp));
+    if("serviceWorker" in navigator){
+      navigator.serviceWorker.register("./sw.js").catch(console.warn);
+    }
+  });
+
+  let currentUser = null;
+  let clients = [];
+  let statusById = {};
+  let extraDrafts = [];
+  let unsubscribeClients = null;
+  let unsubscribeStatuses = null;
+  let editingId = null;
+
+  const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const SHORT_MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+
+  const obligationDefs = [
+    ["rentaGC", "Renta - Grandes contribuyentes", "3 cuotas: febrero, abril y junio"],
+    ["rentaPJ", "Renta - Personas jurídicas", "mayo y julio"],
+    ["rentaPN", "Renta - Personas naturales", "agosto, septiembre u octubre por dos últimos dígitos"],
+    ["ivaBim", "IVA bimestral", "6 periodos"],
+    ["ivaCuat", "IVA cuatrimestral", "3 periodos"],
+    ["retefuente", "Retención en la fuente", "mensual"],
+    ["rst", "Régimen Simple - RST", "anual + anticipos bimestrales"],
+    ["consumo", "Impuesto nacional al consumo", "mismas fechas del IVA bimestral"],
+    ["gasolina", "Gasolina y ACPM", "mensual, fecha fija"],
+    ["carbono", "Impuesto al carbono", "bimestral, fecha fija"],
+    ["ivaExterior", "IVA servicios desde el exterior", "bimestral, fecha fija"],
+    ["patrimonio", "Impuesto al patrimonio", "mayo y septiembre"],
+    ["plasticos", "Plásticos de un solo uso", "febrero, fecha fija"],
+    ["ultraprocesados", "Bebidas/comestibles ultraprocesados", "bimestral, fecha fija"],
+    ["pes", "Presencia Económica Significativa - PES", "pagos bimestrales + anual"],
+    ["activosExterior", "Activos en el exterior", "misma fecha de renta"],
+    ["rub", "RUB - Beneficiarios finales", "actualizaciones febrero, mayo, agosto y noviembre"],
+    ["preciosTransferencia", "Precios de transferencia", "septiembre y diciembre"]
+  ];
+
+  const extraPresets = [
+    {id:"", label:"Selecciona una plantilla o crea una manual", nombre:"", category:"Municipal", frequency:"mensual_siguiente", day:"15", month:"3", year:"2026", notes:""},
+    {id:"ica_mensual", label:"ICA municipal mensual", nombre:"ICA municipal", category:"Municipal", frequency:"mensual_siguiente", day:"15", month:"3", year:"2026", notes:"Ajustar según calendario de la alcaldía."},
+    {id:"ica_bimestral", label:"ICA municipal bimestral", nombre:"ICA municipal", category:"Municipal", frequency:"bimestral", day:"15", month:"3", year:"2026", notes:"Ajustar según calendario de la alcaldía."},
+    {id:"reteica", label:"ReteICA mensual", nombre:"ReteICA", category:"Municipal", frequency:"mensual_siguiente", day:"15", month:"3", year:"2026", notes:"Ajustar según municipio."},
+    {id:"predial", label:"Impuesto predial anual", nombre:"Impuesto predial", category:"Municipal", frequency:"anual", day:"30", month:"6", year:"2026", notes:"Ajustar según municipio y descuentos aplicables."},
+    {id:"vehiculos", label:"Impuesto de vehículos anual", nombre:"Impuesto de vehículos", category:"Municipal", frequency:"anual", day:"31", month:"5", year:"2026", notes:"Ajustar según departamento o ciudad."},
+    {id:"estampillas", label:"Timbre / estampillas", nombre:"Timbre o estampillas", category:"Municipal", frequency:"mensual_siguiente", day:"15", month:"3", year:"2026", notes:"Ajustar según contrato, entidad o municipio."},
+    {id:"pila", label:"Seguridad social PILA", nombre:"Seguridad social PILA", category:"Laboral / nómina", frequency:"mensual_mismo", day:"15", month:"1", year:"2026", notes:"Ajustar según dos últimos dígitos del aportante y operador PILA."},
+    {id:"parafiscales", label:"Aportes parafiscales", nombre:"Aportes parafiscales", category:"Laboral / nómina", frequency:"mensual_mismo", day:"15", month:"1", year:"2026", notes:"SENA, ICBF y caja de compensación, si aplica."},
+    {id:"nomina_electronica", label:"Nómina electrónica", nombre:"Documento soporte de nómina electrónica", category:"Laboral / nómina", frequency:"mensual_siguiente", day:"10", month:"2", year:"2026", notes:"Validar fecha interna de transmisión."},
+    {id:"exogena", label:"Información exógena", nombre:"Información exógena", category:"Informativa", frequency:"anual", day:"1", month:"6", year:"2026", notes:"Fecha de referencia editable. Validar calendario oficial aplicable."},
+    {id:"rut", label:"Actualización de RUT", nombre:"Actualización de RUT", category:"Informativa", frequency:"anual", day:"31", month:"12", year:"2026", notes:"Recordatorio preventivo para revisar responsabilidades y datos."},
+    {id:"matricula", label:"Renovación matrícula mercantil", nombre:"Renovación matrícula mercantil", category:"Empresarial", frequency:"anual", day:"31", month:"3", year:"2026", notes:"Cámara de Comercio."},
+    {id:"certificados", label:"Certificados / cámara / calidad", nombre:"Renovación de certificados", category:"Empresarial", frequency:"anual", day:"31", month:"3", year:"2026", notes:"Certificados comerciales, calidad, ISO u otros."},
+    {id:"seguros", label:"Vencimiento de seguros", nombre:"Vencimiento de seguros empresariales", category:"Empresarial", frequency:"anual", day:"31", month:"12", year:"2026", notes:"Pólizas, cumplimiento, responsabilidad civil, todo riesgo, etc."},
+    {id:"auditoria", label:"Auditoría interna / externa", nombre:"Auditoría interna o externa", category:"Empresarial", frequency:"anual", day:"15", month:"12", year:"2026", notes:"Recordatorio interno de cierre y revisión."},
+    {id:"juegos", label:"Juegos de suerte y azar", nombre:"Impuesto a juegos de suerte y azar", category:"Ambiental / especial", frequency:"mensual_siguiente", day:"15", month:"2", year:"2026", notes:"Usar solo si aplica y ajustar fecha oficial."},
+    {id:"otro", label:"Otro vencimiento manual", nombre:"", category:"Otro", frequency:"anual", day:"1", month:"1", year:"2026", notes:""}
+  ];
+
+  const dueByDigit = {
+    "2026-02": {1:10,2:11,3:12,4:13,5:16,6:17,7:18,8:19,9:20,0:23},
+    "2026-03": {1:10,2:11,3:12,4:13,5:16,6:17,7:18,8:19,9:20,0:24},
+    "2026-04": {1:13,2:14,3:15,4:16,5:20,6:21,7:22,8:23,9:24,0:27},
+    "2026-05": {1:12,2:13,3:14,4:15,5:19,6:20,7:21,8:22,9:25,0:26},
+    "2026-06": {1:10,2:11,3:12,4:16,5:17,6:18,7:19,8:22,9:23,0:24},
+    "2026-07": {1:9,2:10,3:13,4:14,5:15,6:16,7:17,8:21,9:22,0:23},
+    "2026-08": {1:12,2:13,3:14,4:18,5:19,6:20,7:21,8:24,9:25,0:26},
+    "2026-09": {1:9,2:10,3:11,4:14,5:15,6:16,7:17,8:18,9:21,0:22},
+    "2026-10": {1:9,2:13,3:14,4:15,5:16,6:19,7:20,8:21,9:22,0:23},
+    "2026-11": {1:11,2:12,3:13,4:17,5:18,6:19,7:20,8:23,9:24,0:25},
+    "2026-12": {1:10,2:11,3:14,4:15,5:16,6:17,7:18,8:21,9:22,0:23},
+    "2027-01": {1:13,2:14,3:15,4:18,5:19,6:20,7:21,8:22,9:25,0:26}
+  };
+
+  const naturalDue = [
+    [1,2,"2026-08-12"],[3,4,"2026-08-13"],[5,6,"2026-08-14"],[7,8,"2026-08-18"],[9,10,"2026-08-19"],[11,12,"2026-08-20"],[13,14,"2026-08-21"],[15,16,"2026-08-24"],[17,18,"2026-08-25"],[19,20,"2026-08-26"],[21,22,"2026-08-27"],[23,24,"2026-08-28"],[25,26,"2026-08-31"],
+    [27,28,"2026-09-01"],[29,30,"2026-09-02"],[31,32,"2026-09-03"],[33,34,"2026-09-04"],[35,36,"2026-09-07"],[37,38,"2026-09-08"],[39,40,"2026-09-09"],[41,42,"2026-09-10"],[43,44,"2026-09-11"],[45,46,"2026-09-14"],[47,48,"2026-09-15"],[49,50,"2026-09-16"],[51,52,"2026-09-17"],[53,54,"2026-09-18"],[55,56,"2026-09-21"],[57,58,"2026-09-22"],[59,60,"2026-09-23"],[61,62,"2026-09-24"],[63,64,"2026-09-25"],[65,66,"2026-09-28"],
+    [67,68,"2026-10-01"],[69,70,"2026-10-02"],[71,72,"2026-10-05"],[73,74,"2026-10-06"],[75,76,"2026-10-07"],[77,78,"2026-10-08"],[79,80,"2026-10-09"],[81,82,"2026-10-13"],[83,84,"2026-10-14"],[85,86,"2026-10-15"],[87,88,"2026-10-16"],[89,90,"2026-10-19"],[91,92,"2026-10-20"],[93,94,"2026-10-21"],[95,96,"2026-10-22"],[97,98,"2026-10-23"],[99,100,"2026-10-26"]
+  ];
+
+  const fixedMonthly = [
+    ["enero", "2026-02-13"], ["febrero", "2026-03-13"], ["marzo", "2026-04-16"], ["abril", "2026-05-15"], ["mayo", "2026-06-16"], ["junio", "2026-07-14"], ["julio", "2026-08-18"], ["agosto", "2026-09-14"], ["septiembre", "2026-10-15"], ["octubre", "2026-11-17"], ["noviembre", "2026-12-15"], ["diciembre", "2027-01-18"]
+  ];
+  const fixedBimonthly = [
+    ["enero - febrero", "2026-03-13"], ["marzo - abril", "2026-05-15"], ["mayo - junio", "2026-07-14"], ["julio - agosto", "2026-09-14"], ["septiembre - octubre", "2026-11-17"], ["noviembre - diciembre", "2027-01-18"]
+  ];
+
+  function initObligationBoxes(){
+    $("obligationsBox").innerHTML = obligationDefs.map(([key,label,small]) => `
+      <label class="check"><input type="checkbox" id="ob_${key}"><span>${label}<small>${small}</small></span></label>`).join("");
+  }
+
+  function initExtraControls(){
+    $("extraPreset").innerHTML = extraPresets.map(p => `<option value="${p.id}">${escapeHtml(p.label)}</option>`).join("");
+    $("extraMonth").innerHTML = MONTHS.map((m,i) => `<option value="${i+1}">${m}</option>`).join("");
+    $("extraPreset").addEventListener("change", applyExtraPreset);
+    $("addExtraBtn").addEventListener("click", addExtraFromForm);
+    resetExtraForm();
+  }
+
+  function applyExtraPreset(){
+    const preset = extraPresets.find(p => p.id === $("extraPreset").value) || extraPresets[0];
+    $("extraName").value = preset.nombre || "";
+    $("extraCategory").value = preset.category || "Otro";
+    $("extraFrequency").value = preset.frequency || "anual";
+    $("extraDay").value = preset.day || "1";
+    $("extraMonth").value = preset.month || "1";
+    $("extraYear").value = preset.year || "2026";
+    $("extraNotes").value = preset.notes || "";
+  }
+
+  function getExtraFormData(){
+    const nombre = $("extraName").value.trim();
+    const category = $("extraCategory").value;
+    const frequency = $("extraFrequency").value;
+    const day = Number($("extraDay").value);
+    const month = Number($("extraMonth").value);
+    const year = Number($("extraYear").value);
+    const notes = $("extraNotes").value.trim();
+    if(!nombre) throw new Error("Escribe el nombre del vencimiento adicional.");
+    if(!Number.isInteger(day) || day < 1 || day > 31) throw new Error("El día del vencimiento adicional debe estar entre 1 y 31.");
+    if(!Number.isInteger(month) || month < 1 || month > 12) throw new Error("Selecciona un mes válido.");
+    return { id: `extra_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, nombre, category, frequency, day, month, year, notes };
+  }
+
+  function addExtraFromForm(){
+    try{
+      extraDrafts.push(getExtraFormData());
+      renderExtraList();
+      resetExtraForm();
+      showMessage("formOk", "Vencimiento adicional agregado al cliente. No olvides guardar el cliente.");
+    }catch(e){ showError("formError", e.message); }
+  }
+
+  function resetExtraForm(){
+    $("extraPreset").value = "";
+    applyExtraPreset();
+  }
+
+  function removeExtraDraft(id){
+    extraDrafts = extraDrafts.filter(x => x.id !== id);
+    renderExtraList();
+  }
+  window.removeExtraDraft = removeExtraDraft;
+
+  function renderExtraList(){
+    const box = $("extraList");
+    if(!box) return;
+    if(!extraDrafts.length){ box.innerHTML = `<div class="empty" style="padding:14px">Sin vencimientos adicionales para este cliente.</div>`; return; }
+    box.innerHTML = extraDrafts.map(x => `<div class="extra-item">
+      <div><h4>${escapeHtml(x.nombre)}</h4><p>${escapeHtml(x.category)} · ${extraFrequencyLabel(x.frequency)} · día ${x.day}${x.frequency === "anual" ? ` de ${MONTHS[Number(x.month)-1]} ${x.year}` : ""}</p>${x.notes ? `<span class="pill-soft">Nota: ${escapeHtml(x.notes)}</span>` : ""}</div>
+      <button class="btn danger small" type="button" onclick="removeExtraDraft('${x.id}')">Quitar</button>
+    </div>`).join("");
+  }
+
+  function extraFrequencyLabel(freq){
+    const labels = {
+      mensual_siguiente:"Mensual, vence mes siguiente",
+      mensual_mismo:"Mensual, mismo mes",
+      bimestral:"Bimestral",
+      trimestral:"Trimestral",
+      cuatrimestral:"Cuatrimestral",
+      semestral:"Semestral",
+      anual:"Anual / fecha única"
+    };
+    return labels[freq] || freq;
+  }
+
+  function showMessage(id, msg){ const el=$(id); el.textContent=msg; el.style.display="block"; setTimeout(()=>el.style.display="none", 4500); }
+  function showError(id, msg){ const el=$(id); el.textContent=cleanFirebaseError(msg); el.style.display="block"; setTimeout(()=>el.style.display="none", 6500); }
+  function cleanFirebaseError(msg){
+    const map = {"auth/invalid-email":"Correo inválido.","auth/missing-password":"Ingresa la contraseña.","auth/weak-password":"La contraseña debe tener al menos 6 caracteres.","auth/email-already-in-use":"Ese correo ya está registrado.","auth/invalid-credential":"Correo o contraseña incorrectos.","auth/user-not-found":"No existe una cuenta con ese correo."};
+    const found = Object.keys(map).find(k => String(msg).includes(k));
+    return found ? map[found] : String(msg);
+  }
+
+  function ymDate(ym, digit){
+    const day = dueByDigit[ym]?.[Number(digit)];
+    if(!day && day !== 0) return null;
+    return `${ym}-${String(day).padStart(2,"0")}`;
+  }
+  function naturalDate(twoDigits){
+    const n = Number(twoDigits) === 0 ? 100 : Number(twoDigits);
+    const hit = naturalDue.find(([a,b]) => n>=a && n<=b);
+    return hit ? hit[2] : null;
+  }
+  function pairRSTAnnualDate(digit){
+    const d = Number(digit);
+    if([1,2].includes(d)) return "2026-04-20";
+    if([3,4].includes(d)) return "2026-04-21";
+    if([5,6].includes(d)) return "2026-04-22";
+    if([7,8].includes(d)) return "2026-04-23";
+    return "2026-04-24";
+  }
+  function pairRSTIvaDate(digit){
+    const d = Number(digit);
+    if([1,2].includes(d)) return "2026-02-16";
+    if([3,4].includes(d)) return "2026-02-17";
+    if([5,6].includes(d)) return "2026-02-18";
+    if([7,8].includes(d)) return "2026-02-19";
+    return "2026-02-20";
+  }
+  function addDaysISO(dateStr, days){
+    const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate()+days);
+    return d.toISOString().slice(0,10);
+  }
+  function todayISO(){
+    const d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+  }
+  function fmtDate(dateStr){
+    const [y,m,d] = dateStr.split("-").map(Number);
+    return `${d} de ${MONTHS[m-1]} de ${y}`;
+  }
+  function monthLabel(ym){ const [y,m] = ym.split("-").map(Number); return `${MONTHS[m-1]} ${y}`; }
+  function shortDateBox(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return `<div class="datebox"><div class="d">${d}</div><div class="m">${SHORT_MONTHS[m-1]}</div></div>`; }
+
+  function daysInMonth(year, month){ return new Date(year, month, 0).getDate(); }
+  function makeISODateByMonth(year, month, day){
+    let y = Number(year) || 2026;
+    let m = Number(month);
+    if(m > 12){ y += Math.floor((m-1)/12); m = ((m-1) % 12) + 1; }
+    const d = Math.min(Number(day), daysInMonth(y,m));
+    return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  }
+  function extraSchedule(extra){
+    const day = Number(extra.day) || 1;
+    const year = Number(extra.year) || 2026;
+    const schedules = {
+      mensual_siguiente: [[2,"enero"],[3,"febrero"],[4,"marzo"],[5,"abril"],[6,"mayo"],[7,"junio"],[8,"julio"],[9,"agosto"],[10,"septiembre"],[11,"octubre"],[12,"noviembre"],[13,"diciembre"]],
+      mensual_mismo: [[1,"enero"],[2,"febrero"],[3,"marzo"],[4,"abril"],[5,"mayo"],[6,"junio"],[7,"julio"],[8,"agosto"],[9,"septiembre"],[10,"octubre"],[11,"noviembre"],[12,"diciembre"]],
+      bimestral: [[3,"enero - febrero"],[5,"marzo - abril"],[7,"mayo - junio"],[9,"julio - agosto"],[11,"septiembre - octubre"],[13,"noviembre - diciembre"]],
+      trimestral: [[4,"enero - marzo"],[7,"abril - junio"],[10,"julio - septiembre"],[13,"octubre - diciembre"]],
+      cuatrimestral: [[5,"enero - abril"],[9,"mayo - agosto"],[13,"septiembre - diciembre"]],
+      semestral: [[7,"enero - junio"],[13,"julio - diciembre"]]
+    };
+    if(extra.frequency === "anual") return [{periodo:"Anual / fecha única", date: makeISODateByMonth(year, Number(extra.month)||1, day)}];
+    const plan = schedules[extra.frequency] || schedules.mensual_siguiente;
+    return plan.map(([month, periodo]) => ({periodo, date: makeISODateByMonth(year, month, day)}));
+  }
+
+  function buildEventsForClient(c){
+    const obs = c.obligaciones || {};
+    const d = Number(c.digito);
+    const two = String(c.dosDigitos || "").padStart(2,"0");
+    const evs = [];
+    const push = (code, obligacion, periodo, date, base="DIAN 2026") => {
+      if(!date) return;
+      evs.push({
+        id: `${c.id}_${code}_${date.replaceAll("-","")}`,
+        clientId: c.id,
+        cliente: c.nombre,
+        nit: c.nit || "",
+        code, obligacion, periodo, date, base,
+        done: !!statusById[`${c.id}_${code}_${date.replaceAll("-","")}`]?.done
+      });
+    };
+
+    if(obs.rentaGC){
+      push("rentaGC_c1", "Renta grandes contribuyentes - pago 1.ª cuota", "Año gravable 2025", ymDate("2026-02",d));
+      push("rentaGC_c2", "Renta grandes contribuyentes - declaración y 2.ª cuota", "Año gravable 2025", ymDate("2026-04",d));
+      push("rentaGC_c3", "Renta grandes contribuyentes - pago 3.ª cuota", "Año gravable 2025", ymDate("2026-06",d));
+    }
+    if(obs.rentaPJ){
+      push("rentaPJ_c1", "Renta personas jurídicas - declaración y 1.ª cuota", "Año gravable 2025", ymDate("2026-05",d));
+      push("rentaPJ_c2", "Renta personas jurídicas - pago 2.ª cuota", "Año gravable 2025", ymDate("2026-07",d));
+    }
+    if(obs.rentaPN){
+      push("rentaPN", "Renta personas naturales - declaración y pago", `Dos últimos dígitos: ${two}`, naturalDate(two));
+    }
+
+    const ivaBim = [["ene-feb","enero - febrero","2026-03"],["mar-abr","marzo - abril","2026-05"],["may-jun","mayo - junio","2026-07"],["jul-ago","julio - agosto","2026-09"],["sep-oct","septiembre - octubre","2026-11"],["nov-dic","noviembre - diciembre","2027-01"]];
+    if(obs.ivaBim){ ivaBim.forEach(([code,period,ym]) => push(`ivaBim_${code}`, "IVA bimestral - declaración y pago", period, ymDate(ym,d))); }
+    if(obs.consumo){ ivaBim.forEach(([code,period,ym]) => push(`consumo_${code}`, "Impuesto nacional al consumo - declaración y pago", period, ymDate(ym,d), "Mismas fechas IVA bimestral")); }
+
+    const ivaCuat = [["ene-abr","enero - abril","2026-05"],["may-ago","mayo - agosto","2026-09"],["sep-dic","septiembre - diciembre","2027-01"]];
+    if(obs.ivaCuat){ ivaCuat.forEach(([code,period,ym]) => push(`ivaCuat_${code}`, "IVA cuatrimestral - declaración y pago", period, ymDate(ym,d))); }
+
+    const rete = [["ene","enero","2026-02"],["feb","febrero","2026-03"],["mar","marzo","2026-04"],["abr","abril","2026-05"],["may","mayo","2026-06"],["jun","junio","2026-07"],["jul","julio","2026-08"],["ago","agosto","2026-09"],["sep","septiembre","2026-10"],["oct","octubre","2026-11"],["nov","noviembre","2026-12"],["dic","diciembre","2027-01"]];
+    if(obs.retefuente){ rete.forEach(([code,period,ym]) => push(`rete_${code}`, "Retención en la fuente - declaración y pago mensual", period, ymDate(ym,d))); }
+
+    if(obs.rst){
+      push("rst_anual", "RST - declaración anual consolidada", "Año gravable 2025", pairRSTAnnualDate(d));
+      push("rst_iva_anual", "RST - declaración consolidada de IVA", "Año gravable 2025", pairRSTIvaDate(d));
+      [["ene-feb","enero - febrero","2026-05"],["mar-abr","marzo - abril","2026-06"],["may-jun","mayo - junio","2026-07"],["jul-ago","julio - agosto","2026-09"],["sep-oct","septiembre - octubre","2026-11"],["nov-dic","noviembre - diciembre","2027-01"]]
+        .forEach(([code,period,ym]) => push(`rst_ant_${code}`, "RST - anticipo bimestral", period, ymDate(ym,d)));
+    }
+
+    if(obs.gasolina){ fixedMonthly.forEach(([period,date]) => push(`gasolina_${period}`, "Gasolina y ACPM - declaración mensual y pago", period, date)); }
+    if(obs.carbono){ fixedBimonthly.forEach(([period,date]) => push(`carbono_${period}`, "Impuesto al carbono - declaración y pago", period, date)); }
+    if(obs.ivaExterior){ fixedBimonthly.forEach(([period,date]) => push(`ivaExterior_${period}`, "IVA prestadores de servicios desde el exterior", period, date)); }
+    if(obs.ultraprocesados){ fixedBimonthly.forEach(([period,date]) => push(`ultra_${period}`, "Bebidas/comestibles ultraprocesados - presentación y pago", period, date)); }
+    if(obs.pes){
+      fixedBimonthly.forEach(([period,date]) => push(`pes_ant_${period}`, "PES - pago anticipado bimestral", period, date));
+      push("pes_anual", "PES - declaración anual", "Independiente del NIT", "2026-04-23");
+    }
+    if(obs.patrimonio){
+      push("patrimonio_c1", "Impuesto al patrimonio - declaración y pago 1.ª cuota", "Año 2026", ymDate("2026-05",d));
+      push("patrimonio_c2", "Impuesto al patrimonio - pago 2.ª cuota", "Independiente del NIT", "2026-09-14");
+    }
+    if(obs.plasticos){ push("plasticos", "Productos plásticos de un solo uso - presentación y pago", "Independiente del NIT", "2026-02-13"); }
+    if(obs.rub){
+      push("rub_feb", "RUB - actualización", "Independiente del NIT", "2026-02-02");
+      push("rub_may", "RUB - actualización", "Independiente del NIT", "2026-05-04");
+      push("rub_aug", "RUB - actualización", "Independiente del NIT", "2026-08-03");
+      push("rub_nov", "RUB - actualización", "Independiente del NIT", "2026-11-03");
+    }
+    if(obs.preciosTransferencia){
+      push("pt_decl", "Precios de transferencia - declaración informativa", "Año gravable 2025", ymDate("2026-09",d));
+      push("pt_doc", "Precios de transferencia - documentación comprobatoria", "Informe local e informe maestro", ymDate("2026-09",d));
+      push("pt_pais", "Precios de transferencia - informe país por país", "Independiente del NIT", "2026-12-15");
+    }
+    if(obs.activosExterior){
+      if(obs.rentaGC){ push("act_ext_gc", "Activos en el exterior", "Misma fecha de renta grandes contribuyentes", ymDate("2026-04",d)); }
+      if(obs.rentaPJ){ push("act_ext_pj", "Activos en el exterior", "Misma fecha de renta personas jurídicas", ymDate("2026-05",d)); }
+      if(obs.rentaPN){ push("act_ext_pn", "Activos en el exterior", "Misma fecha de renta personas naturales", naturalDate(two)); }
+      if(obs.rst){ push("act_ext_rst", "Activos en el exterior", "Misma fecha de RST", pairRSTAnnualDate(d)); }
+    }
+
+    if(Array.isArray(c.extras)){
+      c.extras.forEach((extra, idx) => {
+        extraSchedule(extra).forEach((item, j) => {
+          const clean = String(extra.id || extra.nombre || idx).replace(/[^a-zA-Z0-9_-]/g,"_");
+          push(`extra_${clean}_${j}`, `${extra.category || "Adicional"} - ${extra.nombre}`, item.periodo, item.date, `Vencimiento adicional configurable. ${extra.notes || "Validar fecha oficial o interna aplicable."}`);
+        });
+      });
+    }
+    return evs;
+  }
+
+  function allEvents(){ return clients.flatMap(buildEventsForClient).sort((a,b)=>a.date.localeCompare(b.date) || a.cliente.localeCompare(b.cliente)); }
+  function clientsRef(){ return collection(db, "users", currentUser.uid, "clientes"); }
+  function statusesRef(){ return collection(db, "users", currentUser.uid, "vencimientos"); }
+
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if(user){
+      $("authView").classList.add("hidden");
+      $("appView").classList.remove("hidden");
+      $("tabs").classList.add("show");
+      $("userEmail").textContent = user.email || user.uid;
+      listenData();
+    } else {
+      $("authView").classList.remove("hidden");
+      $("appView").classList.add("hidden");
+      $("tabs").classList.remove("show");
+      if(unsubscribeClients) unsubscribeClients();
+      if(unsubscribeStatuses) unsubscribeStatuses();
+      clients=[]; statusById={};
+    }
+  });
+
+  function listenData(){
+    if(unsubscribeClients) unsubscribeClients();
+    if(unsubscribeStatuses) unsubscribeStatuses();
+    unsubscribeClients = onSnapshot(query(clientsRef(), orderBy("nombre")), snap => {
+      clients = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      renderAll();
+    }, err => showError("formError", err.message));
+    unsubscribeStatuses = onSnapshot(statusesRef(), snap => {
+      statusById = {};
+      snap.docs.forEach(d => statusById[d.id] = d.data());
+      renderAll();
+    }, err => console.error(err));
+  }
+
+  $("loginBtn").addEventListener("click", async () => {
+    try{ await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); }
+    catch(e){ showError("authError", e.message); }
+  });
+  $("registerBtn").addEventListener("click", async () => {
+    try{ await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); showMessage("authOk", "Cuenta creada correctamente."); }
+    catch(e){ showError("authError", e.message); }
+  });
+  $("resetBtn").addEventListener("click", async () => {
+    try{ await sendPasswordResetEmail(auth, $("email").value.trim()); showMessage("authOk", "Te envié un correo de recuperación."); }
+    catch(e){ showError("authError", e.message); }
+  });
+  $("logoutBtn").addEventListener("click", () => signOut(auth));
+
+  function parseNitDigits(nit){
+    const raw = String(nit || "").trim();
+    const beforeDash = raw.includes("-") ? raw.split("-")[0] : raw;
+    const digits = beforeDash.replace(/\D/g, "");
+    return {digit: digits.slice(-1), two: digits.slice(-2).padStart(2,"0")};
+  }
+  $("autoDigitBtn").addEventListener("click", () => {
+    const {digit,two} = parseNitDigits($("clientNit").value);
+    if(!digit){ showError("formError", "No encontré números en el NIT."); return; }
+    $("clientDigit").value = digit; $("clientTwoDigits").value = two;
+    showMessage("formOk", "Dígitos calculados. Revisa que el NIT esté sin errores.");
+  });
+  $("clientNit").addEventListener("blur", () => {
+    if(!$("clientDigit").value || !$("clientTwoDigits").value){
+      const {digit,two} = parseNitDigits($("clientNit").value);
+      if(digit){ $("clientDigit").value = digit; $("clientTwoDigits").value = two; }
+    }
+  });
+
+  function getFormClient(){
+    const obligaciones = {};
+    obligationDefs.forEach(([key]) => obligaciones[key] = $(`ob_${key}`).checked);
+    const nombre = $("clientName").value.trim();
+    const nit = $("clientNit").value.trim();
+    const digito = $("clientDigit").value.trim();
+    const dosDigitos = $("clientTwoDigits").value.trim().padStart(2,"0");
+    if(!nombre) throw new Error("El nombre o razón social es obligatorio.");
+    if(!nit) throw new Error("El NIT o cédula es obligatorio.");
+    if(!/^[0-9]$/.test(digito)) throw new Error("El último dígito debe estar entre 0 y 9.");
+    if(!/^[0-9]{2}$/.test(dosDigitos)) throw new Error("Los dos últimos dígitos deben tener dos números, por ejemplo 05 o 90.");
+    return {
+      nombre, nit, digito, dosDigitos,
+      telefono: $("clientPhone").value.trim(),
+      correo: $("clientMail").value.trim(),
+      notas: $("clientNotes").value.trim(),
+      obligaciones,
+      extras: extraDrafts.map(x => ({...x})),
+      updatedAt: serverTimestamp()
+    };
+  }
+  $("saveClientBtn").addEventListener("click", async () => {
+    try{
+      const data = getFormClient();
+      if(editingId){ await updateDoc(doc(db,"users",currentUser.uid,"clientes",editingId), data); showMessage("formOk", "Cliente actualizado."); }
+      else { data.createdAt = serverTimestamp(); await addDoc(clientsRef(), data); showMessage("formOk", "Cliente guardado."); }
+      resetForm();
+    }catch(e){ showError("formError", e.message); }
+  });
+  $("cancelEditBtn").addEventListener("click", resetForm);
+
+  function resetForm(){
+    editingId = null;
+    ["clientName","clientNit","clientDigit","clientTwoDigits","clientPhone","clientMail","clientNotes"].forEach(id => $(id).value="");
+    obligationDefs.forEach(([key]) => $(`ob_${key}`).checked=false);
+    extraDrafts = [];
+    renderExtraList();
+    $("formTitle").textContent = "Nuevo cliente"; $("formMode").textContent = "crear"; $("cancelEditBtn").classList.add("hidden"); $("saveClientBtn").textContent = "Guardar cliente";
+  }
+  function editClient(id){
+    const c = clients.find(x=>x.id===id); if(!c) return;
+    editingId = id;
+    $("clientName").value = c.nombre || ""; $("clientNit").value = c.nit || ""; $("clientDigit").value = c.digito || ""; $("clientTwoDigits").value = c.dosDigitos || ""; $("clientPhone").value = c.telefono || ""; $("clientMail").value = c.correo || ""; $("clientNotes").value = c.notas || "";
+    obligationDefs.forEach(([key]) => $(`ob_${key}`).checked = !!c.obligaciones?.[key]);
+    extraDrafts = Array.isArray(c.extras) ? c.extras.map(x => ({...x, id: x.id || `extra_${Date.now()}_${Math.random().toString(36).slice(2,7)}`})) : [];
+    renderExtraList();
+    $("formTitle").textContent = "Editar cliente"; $("formMode").textContent = "editando"; $("cancelEditBtn").classList.remove("hidden"); $("saveClientBtn").textContent = "Actualizar cliente";
+    activateTab("clients"); window.scrollTo({top:0,behavior:"smooth"});
+  }
+  async function removeClient(id){
+    const c = clients.find(x=>x.id===id); if(!c) return;
+    if(confirm(`¿Eliminar a ${c.nombre}? Esta acción no borra los eventos ya importados en Google Calendar.`)) await deleteDoc(doc(db,"users",currentUser.uid,"clientes",id));
+  }
+  window.editClient = editClient; window.removeClient = removeClient;
+
+  async function toggleDone(eventId){
+    const old = !!statusById[eventId]?.done;
+    await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {done: !old, updatedAt: serverTimestamp()}, {merge:true});
+  }
+  window.toggleDone = toggleDone;
+
+  function renderAll(){
+    renderStats(); renderNextEvents(); renderClients(); renderFilters(); renderCalendar();
+    checkDueNotifications(false);
+  }
+  function renderStats(){
+    const evs = allEvents();
+    $("statClients").textContent = clients.length;
+    $("statEvents").textContent = evs.length;
+    $("statPending").textContent = evs.filter(e=>!e.done).length;
+  }
+  function renderNextEvents(){
+    const today = todayISO();
+    const evs = allEvents().filter(e => e.date >= today && !e.done).slice(0,10);
+    $("nextEvents").innerHTML = evs.length ? evs.map(renderEvent).join("") : `<div class="empty">No hay vencimientos próximos pendientes.</div>`;
+  }
+  function renderClients(){
+    const q = $("clientSearch").value.toLowerCase().trim();
+    const filtered = clients.filter(c => `${c.nombre} ${c.nit}`.toLowerCase().includes(q));
+    $("clientCountLabel").textContent = `${clients.length} registrados`;
+    $("clientList").innerHTML = filtered.length ? filtered.map(c => {
+      const active = obligationDefs.filter(([k]) => c.obligaciones?.[k]).map(([,label]) => label.split(" - ")[0]).slice(0,5);
+      const extraCount = Array.isArray(c.extras) ? c.extras.length : 0;
+      const evCount = buildEventsForClient(c).length;
+      return `<div class="client-card">
+        <div><h4>${escapeHtml(c.nombre)}</h4><p>NIT: ${escapeHtml(c.nit)} · Último dígito: ${c.digito} · Dos últimos: ${c.dosDigitos}</p>
+        <div class="badges"><span class="badge green">${evCount} vencimientos</span>${extraCount ? `<span class="badge orange">${extraCount} adicionales</span>` : ""}${active.map(a=>`<span class="badge gray">${escapeHtml(a)}</span>`).join("")}</div></div>
+        <div class="actions"><button class="btn light small" onclick="editClient('${c.id}')">Editar</button><button class="btn danger small" onclick="removeClient('${c.id}')">Borrar</button></div>
+      </div>`;
+    }).join("") : `<div class="empty">No hay clientes registrados.</div>`;
+  }
+  function renderFilters(){
+    const evs = allEvents();
+    const months = [...new Set(evs.map(e=>e.date.slice(0,7)))];
+    const oldMonth = $("monthFilter").value;
+    $("monthFilter").innerHTML = `<option value="all">Todos los meses</option>` + months.map(ym=>`<option value="${ym}">${monthLabel(ym)}</option>`).join("");
+    if([...$("monthFilter").options].some(o=>o.value===oldMonth)) {
+      $("monthFilter").value=oldMonth;
+    } else if([...$("monthFilter").options].some(o=>o.value===currentMonthKey())) {
+      $("monthFilter").value=currentMonthKey();
+    }
+    const oldClient = $("clientFilter").value;
+    $("clientFilter").innerHTML = `<option value="all">Todos los clientes</option>` + clients.map(c=>`<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join("");
+    if([...$("clientFilter").options].some(o=>o.value===oldClient)) $("clientFilter").value=oldClient;
+  }
+  function filteredEvents(){
+    const month = $("monthFilter").value || "all"; const client = $("clientFilter").value || "all";
+    return allEvents().filter(e => (month==="all" || e.date.startsWith(month)) && (client==="all" || e.clientId===client));
+  }
+  function renderCalendar(){
+    const evs = filteredEvents();
+    if(!evs.length){ $("calendarList").innerHTML = `<div class="empty">No hay vencimientos para este filtro.</div>`; return; }
+    const grouped = groupBy(evs, e=>e.date.slice(0,7));
+    $("calendarList").innerHTML = Object.keys(grouped).sort().map(ym => `<div class="month-block"><div class="month-head"><h3>${monthLabel(ym)}</h3><span>${grouped[ym].length} vencimientos</span></div>${grouped[ym].map(renderEvent).join("")}</div>`).join("");
+  }
+  function renderEvent(e){
+    const cal = googleCalendarUrl(e);
+    return `<article class="event ${e.done ? "done" : ""}">
+      ${shortDateBox(e.date)}
+      <div><h4>${escapeHtml(e.obligacion)}</h4><p><strong>${escapeHtml(e.cliente)}</strong> · NIT ${escapeHtml(e.nit)}<br>Periodo: ${escapeHtml(e.periodo)} · Vence: ${fmtDate(e.date)}<br><span class="mini-note">Aviso automático: 2 días antes, si las notificaciones están activas.</span></p>
+      <div class="event-actions"><button class="btn ${e.done ? "secondary" : "light"} small" onclick="toggleDone('${e.id}')">${e.done ? "✅ Cumplido" : "☐ Marcar"}</button><a class="btn small" target="_blank" rel="noopener" href="${cal}">Google Calendar</a></div></div>
+    </article>`;
+  }
+
+  function googleCalendarUrl(e){
+    const start = e.date.replaceAll("-",""); const end = addDaysISO(e.date,1).replaceAll("-","");
+    const text = encodeURIComponent(`${e.obligacion} - ${e.cliente}`);
+    const details = encodeURIComponent(`Cliente: ${e.cliente}\nNIT: ${e.nit}\nPeriodo: ${e.periodo}\nVencimiento DIAN 2026.\nBase: ${e.base}`);
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}`;
+  }
+  function notificationButtons(){
+    return ["enableNotificationsBtn","notifyBtnHome"].map(id => $(id)).filter(Boolean);
+  }
+  function notificationsEnabled(){
+    return localStorage.getItem(NOTIFY_ENABLED_KEY) === "true" && "Notification" in window && Notification.permission === "granted";
+  }
+  function updateNotificationUI(){
+    const supported = "Notification" in window && "serviceWorker" in navigator;
+    const permission = "Notification" in window ? Notification.permission : "unsupported";
+    const enabled = notificationsEnabled();
+    notificationButtons().forEach(btn => {
+      btn.textContent = enabled ? "✅ Avisos activos" : "🔔 Activar avisos";
+      btn.disabled = !supported || enabled;
+      btn.style.opacity = (!supported || enabled) ? ".75" : "1";
+    });
+    const status = $("notificationsStatus");
+    if(status){
+      if(!supported) status.textContent = "Este navegador no permite notificaciones web.";
+      else if(enabled) status.textContent = "Avisos activos: la app revisará tus vencimientos y notificará los que estén a 2 días.";
+      else if(permission === "denied") status.textContent = "Las notificaciones están bloqueadas. Actívalas desde los permisos del navegador.";
+      else status.textContent = "Toca el botón para permitir notificaciones de vencimientos.";
+    }
+  }
+  async function enableNotifications(){
+    if(!("Notification" in window) || !("serviceWorker" in navigator)){
+      alert("Este navegador no permite notificaciones web.");
+      updateNotificationUI();
+      return;
+    }
+    let permission = Notification.permission;
+    if(permission === "default") permission = await Notification.requestPermission();
+    if(permission !== "granted"){
+      alert("No se activaron las notificaciones. Revisa los permisos del navegador.");
+      updateNotificationUI();
+      return;
+    }
+    localStorage.setItem(NOTIFY_ENABLED_KEY, "true");
+    await navigator.serviceWorker.ready;
+    updateNotificationUI();
+    await checkDueNotifications(true);
+  }
+  function sentReminderMap(){
+    try{ return JSON.parse(localStorage.getItem(NOTIFY_SENT_KEY) || "{}"); }catch{ return {}; }
+  }
+  function saveSentReminderMap(map){
+    localStorage.setItem(NOTIFY_SENT_KEY, JSON.stringify(map));
+  }
+  function reminderKey(e){
+    return `${currentUser?.uid || "local"}:${e.id}:${addDaysISO(e.date, -NOTIFY_DAYS_BEFORE)}`;
+  }
+  async function showDueNotification(e){
+    const registration = await navigator.serviceWorker.ready;
+    await registration.showNotification(`Vence en ${NOTIFY_DAYS_BEFORE} días: ${e.obligacion}`, {
+      body: `${e.cliente} · ${e.periodo} · ${fmtDate(e.date)}`,
+      icon: "./icons/icon-192.png",
+      badge: "./icons/icon-192.png",
+      tag: `dian-${e.id}`,
+      renotify: false,
+      data: { url: googleCalendarUrl(e) }
+    });
+  }
+  async function checkDueNotifications(manual=false){
+    updateNotificationUI();
+    if(!notificationsEnabled()) return;
+    const targetDate = addDaysISO(todayISO(), NOTIFY_DAYS_BEFORE);
+    const due = allEvents().filter(e => e.date === targetDate && !e.done);
+    const sent = sentReminderMap();
+    let sentNow = 0;
+    for(const e of due){
+      const key = reminderKey(e);
+      if(sent[key]) continue;
+      await showDueNotification(e);
+      sent[key] = new Date().toISOString();
+      sentNow++;
+    }
+    saveSentReminderMap(sent);
+    if(manual){
+      if(due.length === 0) alert(`Notificaciones activas. No hay vencimientos pendientes exactamente dentro de ${NOTIFY_DAYS_BEFORE} días.`);
+      else if(sentNow === 0) alert(`Notificaciones activas. Los avisos de los vencimientos dentro de ${NOTIFY_DAYS_BEFORE} días ya habían sido enviados.`);
+      else alert(`Notificaciones activas. Se enviaron ${sentNow} aviso(s) de prueba con vencimientos reales dentro de ${NOTIFY_DAYS_BEFORE} días.`);
+    }
+  }
+
+  function currentMonthKey(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  }
+  function eventsForMonth(ym){
+    return allEvents().filter(e => e.date.startsWith(ym));
+  }
+  function exportCurrentMonthICS(){
+    const ym = currentMonthKey();
+    const events = eventsForMonth(ym);
+    downloadICS(events, `vencimientos-dian-${ym}.ics`, `No hay vencimientos en ${monthLabel(ym)} para exportar.`);
+  }
+  function exportSelectedMonthICS(){
+    let ym = $("monthFilter").value || currentMonthKey();
+    if(ym === "all"){
+      ym = currentMonthKey();
+      alert(`Se exportará únicamente el mes actual: ${monthLabel(ym)}. Para otro mes, selecciónalo en el filtro.`);
+    }
+    const client = $("clientFilter").value || "all";
+    const events = allEvents().filter(e => e.date.startsWith(ym) && (client === "all" || e.clientId === client));
+    const clientSuffix = client === "all" ? "todos-clientes" : "cliente-seleccionado";
+    downloadICS(events, `vencimientos-dian-${ym}-${clientSuffix}.ics`, `No hay vencimientos en ${monthLabel(ym)} para exportar.`);
+  }
+  function downloadICS(events, filename="vencimientos-dian-2026.ics", emptyMessage="No hay eventos para exportar."){
+    if(!events.length){ alert(emptyMessage); return; }
+    const dtstamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
+    const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Calendario DIAN Clientes 2026//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+    events.forEach(e => {
+      const start = e.date.replaceAll("-",""); const end = addDaysISO(e.date,1).replaceAll("-","");
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:${e.id}@calendario-dian-2026`,
+        `DTSTAMP:${dtstamp}`,
+        `DTSTART;VALUE=DATE:${start}`,
+        `DTEND;VALUE=DATE:${end}`,
+        `SUMMARY:${icsEscape(`${e.obligacion} - ${e.cliente}`)}`,
+        `DESCRIPTION:${icsEscape(`Cliente: ${e.cliente}\nNIT: ${e.nit}\nPeriodo: ${e.periodo}\nVencimiento DIAN 2026. Base: ${e.base}\nRecordatorio sugerido: 2 días antes.`)}`,
+        "BEGIN:VALARM",
+        "ACTION:DISPLAY",
+        "TRIGGER:-P2D",
+        `DESCRIPTION:${icsEscape(`Recordatorio DIAN: ${e.obligacion} - ${e.cliente}`)}`,
+        "END:VALARM",
+        "END:VEVENT"
+      );
+    });
+    lines.push("END:VCALENDAR");
+    const blob = new Blob([lines.join("\r\n")], {type:"text/calendar;charset=utf-8"});
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+  }
+  $("downloadAllIcsBtn").addEventListener("click", exportCurrentMonthICS);
+  $("downloadFilteredIcsBtn").addEventListener("click", exportSelectedMonthICS);
+  $("refreshBtn").addEventListener("click", renderAll);
+  notificationButtons().forEach(btn => btn.addEventListener("click", enableNotifications));
+  updateNotificationUI();
+  setInterval(() => checkDueNotifications(false), 60 * 60 * 1000);
+  $("clientSearch").addEventListener("input", renderClients);
+  $("clearSearchBtn").addEventListener("click", () => { $("clientSearch").value=""; renderClients(); });
+  $("monthFilter").addEventListener("change", renderCalendar);
+  $("clientFilter").addEventListener("change", renderCalendar);
+
+  $("exportJsonBtn").addEventListener("click", () => {
+    const payload = JSON.stringify({exportado:new Date().toISOString(), clientes:clients.map(({id,...rest})=>rest)}, null, 2);
+    const blob = new Blob([payload], {type:"application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href=url; a.download="clientes-dian-2026.json"; a.click(); URL.revokeObjectURL(url);
+  });
+  $("importJsonInput").addEventListener("change", async (ev) => {
+    const file = ev.target.files[0]; if(!file) return;
+    try{
+      const data = JSON.parse(await file.text()); const list = Array.isArray(data) ? data : data.clientes;
+      if(!Array.isArray(list)) throw new Error("El JSON no contiene una lista de clientes válida.");
+      for(const c of list){ await addDoc(clientsRef(), {...c, createdAt:serverTimestamp(), updatedAt:serverTimestamp()}); }
+      alert("Clientes importados correctamente.");
+    }catch(e){ alert(e.message); }
+    ev.target.value = "";
+  });
+
+  function activateTab(name){
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    $(`view-${name}`).classList.add("active");
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.target===name));
+  }
+  document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => activateTab(t.dataset.target)));
+
+  function groupBy(arr, fn){ return arr.reduce((acc,x)=>{ const k=fn(x); (acc[k] ||= []).push(x); return acc; },{}); }
+  function escapeHtml(str){ return String(str||"").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
+  function icsEscape(str){ return String(str||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
+
+  initObligationBoxes();
+  initExtraControls();
+  renderExtraList();
+  renderFilters();
+</script>
+</body>
+</html>
