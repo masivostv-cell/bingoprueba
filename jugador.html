@@ -224,7 +224,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc, collection, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDGlCcqIxjX3c_GustIB7_vjtyFwZ_q010",
@@ -485,13 +485,92 @@
             }
         };
 
-        window.entrarSala = async () => {
-            const sala = document.getElementById('codigo-sala').value.toUpperCase();
-            const numCarton = document.getElementById('numero-carton').value;
-            const nombreManual = document.getElementById('nombre-jugador').value.trim();
-            const nombre = nombreManual || ("Jugador-" + numCarton);
+        function normalizarIdCarton(numCarton) {
+            const n = parseInt(numCarton, 10);
+            return Number.isInteger(n) && n > 0 ? String(n) : String(numCarton || '').trim();
+        }
 
-            if (!sala || !numCarton) { alert("Escribe el PIN de la sala y el número de cartón."); return; }
+        function obtenerSesionJugadorLocal() {
+            const key = 'bingo75_jugador_session_id_final';
+            let sesion = localStorage.getItem(key);
+            if (!sesion) {
+                sesion = 'ses_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+                localStorage.setItem(key, sesion);
+            }
+            return sesion;
+        }
+
+        async function liberarReservaAnteriorMismaSesion(sala, nuevoCartonId) {
+            const sesion = obtenerSesionJugadorLocal();
+            const key = 'bingo75_reserva_carton_' + sala;
+            const anterior = localStorage.getItem(key);
+            if (!anterior || anterior === nuevoCartonId) return;
+
+            const anteriorRef = doc(db, 'salas', sala, 'jugadores', 'carton_' + anterior);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const snap = await transaction.get(anteriorRef);
+                    if (!snap.exists()) return;
+                    const data = snap.data() || {};
+                    if (data.sessionId === sesion) transaction.delete(anteriorRef);
+                });
+            } catch(e) {
+                console.warn('No se pudo liberar la reserva anterior del mismo dispositivo:', e);
+            }
+        }
+
+        async function reservarCartonUnico(sala, numCarton, nombre) {
+            const cartonId = normalizarIdCarton(numCarton);
+            const sesion = obtenerSesionJugadorLocal();
+            await liberarReservaAnteriorMismaSesion(sala, cartonId);
+
+            const jugadorDocId = 'carton_' + cartonId;
+            const reservaRef = doc(db, 'salas', sala, 'jugadores', jugadorDocId);
+
+            await runTransaction(db, async (transaction) => {
+                const reservaSnap = await transaction.get(reservaRef);
+                if (reservaSnap.exists()) {
+                    const reserva = reservaSnap.data() || {};
+                    // Permite reabrir el mismo cartón desde el mismo navegador/dispositivo.
+                    if (reserva.sessionId === sesion) {
+                        transaction.set(reservaRef, {
+                            nombre,
+                            numeroCarton: cartonId,
+                            jugadorDocId,
+                            sessionId: sesion,
+                            activo: true,
+                            actualizadoEn: Date.now()
+                        }, { merge: true });
+                        return;
+                    }
+
+                    const nombreOcupante = reserva.nombre ? ` por ${reserva.nombre}` : '';
+                    throw new Error(`El cartón #${cartonId} ya está ocupado${nombreOcupante}. Debes escoger otro cartón.`);
+                }
+
+                transaction.set(reservaRef, {
+                    nombre,
+                    numeroCarton: cartonId,
+                    jugadorDocId,
+                    sessionId: sesion,
+                    activo: true,
+                    ocupadoEn: Date.now(),
+                    actualizadoEn: Date.now()
+                });
+            });
+
+            localStorage.setItem('bingo75_reserva_carton_' + sala, cartonId);
+            return { cartonId, jugadorDocId, sessionId: sesion };
+        }
+
+        window.entrarSala = async () => {
+            const sala = document.getElementById('codigo-sala').value.trim().toUpperCase();
+            const numCarton = document.getElementById('numero-carton').value;
+            const numCartonId = normalizarIdCarton(numCarton);
+            const nombreManual = document.getElementById('nombre-jugador').value.trim();
+            const nombre = nombreManual || ("Jugador-" + numCartonId);
+
+            if (!sala || !numCartonId) { alert("Escribe el PIN de la sala y el número de cartón."); return; }
 
             const btnLogin = document.querySelector('#login-section button');
             btnLogin.innerText = "Buscando cartón...";
@@ -503,6 +582,13 @@
 
                 if (salaDoc.exists()) {
                     const datosSala = salaDoc.data();
+
+                    if (datosSala.estadoSala === 'cerrada') {
+                        alert('La sala está cerrada. Espera a que el administrador la abra.');
+                        btnLogin.innerText = "Ingresar al Juego";
+                        btnLogin.disabled = false;
+                        return;
+                    }
                     
                     // --- NUEVA LÓGICA DE DESEMPAQUETADO ---
                     let todosLosCartones = null;
@@ -529,11 +615,22 @@
                     }
 
                     // 4. Buscamos el cartón específico del jugador
-                    const cartonBuscado = todosLosCartones[numCarton];
+                    const cartonBuscado = todosLosCartones[numCartonId];
                     
                     if (cartonBuscado) {
+                        let reservaCarton;
+                        try {
+                            btnLogin.innerText = "Reservando cartón...";
+                            reservaCarton = await reservarCartonUnico(sala, numCartonId, nombre);
+                        } catch (reservaError) {
+                            alert(reservaError.message || 'Este cartón ya está ocupado. Elige otro cartón.');
+                            btnLogin.innerText = "Ingresar al Juego";
+                            btnLogin.disabled = false;
+                            return;
+                        }
+
                         miCartonNumeros = cartonBuscado;
-                        numCartonOficial = numCarton;
+                        numCartonOficial = reservaCarton.cartonId;
 
                         // Cambios de UI
                         document.getElementById('login-section').style.display = 'none';
@@ -543,11 +640,11 @@
                         
                         document.getElementById('display-sala').innerText = sala;
                         document.getElementById('display-nombre').innerText = nombre;
-                        document.getElementById('display-num-carton').innerText = numCarton;
+                        document.getElementById('display-num-carton').innerText = numCartonOficial;
 
                         miSalaActual = sala;
                         miNombreActual = nombre;
-                        miJugadorDocId = nombre;
+                        miJugadorDocId = reservaCarton.jugadorDocId;
                         meetRoomActual = datosSala.meetRoom || ("BingoRadio_" + sala);
                         radioSessionActual = datosSala.radioSession || datosSala.meetCreadaEn || Date.now();
                         if (datosSala.comunicacionActiva) {
@@ -559,8 +656,15 @@
                         inicializarTablero75();
 
                         // Registro Firebase
-                        const jugadorRef = doc(db, "salas", sala, "jugadores", nombre);
-                        await setDoc(jugadorRef, { nombre: nombre, numeroCarton: numCarton, conectadoEn: new Date() }, { merge: true });
+                        const jugadorRef = doc(db, "salas", sala, "jugadores", miJugadorDocId);
+                        await setDoc(jugadorRef, {
+                            nombre: nombre,
+                            numeroCarton: numCartonOficial,
+                            jugadorDocId: miJugadorDocId,
+                            sessionId: reservaCarton.sessionId,
+                            conectadoEn: new Date(),
+                            activo: true
+                        }, { merge: true });
 
                         window.ultimoGanadorVisto = 0; 
                         window.ultimoReinicioVisto = 0;
@@ -569,6 +673,15 @@
                         onSnapshot(salaRef, (docSnapshot) => {
                             if (docSnapshot.exists()) {
                                 const datos = docSnapshot.data();
+
+                                if (datos.estadoSala === 'cerrada') {
+                                    if (!window.salaCerradaAvisada) {
+                                        window.salaCerradaAvisada = true;
+                                        alert('La sala fue cerrada por el administrador. Debes ingresar nuevamente cuando la abran.');
+                                        location.reload();
+                                    }
+                                    return;
+                                }
                                 
                                 // 1. Gatillo de Reinicio
                                 if (datos.senalReinicio && window.ultimoReinicioVisto !== datos.senalReinicio) {
@@ -580,16 +693,12 @@
 
                                 // Reemplaza los pasos 2 y 3 del onSnapshot por esto:
 
-// 2. Balotas: si el canal rápido está activo, NO dependemos del documento pesado de la sala.
-//    Esto evita que cada balota tenga que viajar junto con el paquete grande de cartones.
-if (!canalRapidoBalotasActivo) {
-    if (datos.balotasLlamadas && datos.balotasLlamadas.length > 0) {
-        balotasGlobales = datos.balotasLlamadas;
-        actualizarDatosBalotas(datos.balotasLlamadas);
-    } else if (!datos.balotasLlamadas || datos.balotasLlamadas.length === 0) {
-        balotasGlobales = [];
-        limpiarPantallaJugador();
-    }
+// 2. Balotas: el canal rápido es la fuente principal.
+//    IMPORTANTE: no se limpia la pantalla por snapshots vacíos del documento pesado,
+//    porque esos snapshots pueden llegar atrasados y borrar balotas ya cantadas.
+if (!canalRapidoBalotasActivo && datos.balotasLlamadas && datos.balotasLlamadas.length > 0) {
+    balotasGlobales = datos.balotasLlamadas;
+    actualizarDatosBalotas(datos.balotasLlamadas);
 }
 
 // 3. Actualizar figuras solo cuando cambian, no en cada snapshot.
@@ -654,7 +763,7 @@ if (firmaFigurasSala !== ultimaFirmaFigurasSala) {
                             }
                         });
                     } else {
-                        alert(`El Cartón #${numCarton} no existe en esta partida.`);
+                        alert(`El Cartón #${numCartonId} no existe en esta partida.`);
                         btnLogin.innerText = "Ingresar al Juego";
                         btnLogin.disabled = false;
                     }
