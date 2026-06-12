@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <title>Admin calendario DIAN</title>
+  <style>
+    :root{--bg:#eef6f5;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#dbe7e5;--primary:#0f766e;--primary2:#14b8a6;--danger:#dc2626;--warning:#d97706;--shadow:0 18px 45px rgba(15,23,42,.12);--radius:24px}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(160deg,#dff7f4 0%,#eef6f5 48%,#e8f0ff 100%);color:var(--text)}body{padding:18px 10px 70px}button,input,textarea{font:inherit}button{cursor:pointer;border:0}.wrap{width:min(100%,760px);margin:0 auto}.topbar{background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;padding:22px;border-radius:28px;margin-bottom:14px;box-shadow:var(--shadow)}.topbar h1{margin:0 0 5px;font-size:24px;letter-spacing:-.03em}.topbar p{margin:0;opacity:.9;font-size:13px}.card{background:var(--card);border:1px solid rgba(15,23,42,.06);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 10px 28px rgba(15,23,42,.06)}.card-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.card-title h2,.card-title h3{margin:0;font-size:18px}.card-title span{font-size:12px;color:var(--muted);font-weight:800}.field{margin-bottom:12px}.field label{display:block;font-size:12px;font-weight:900;color:#334155;margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}input,textarea{width:100%;background:#f8fafc;border:1px solid #dbe7e5;border-radius:15px;padding:12px 13px;color:var(--text);outline:none}input:focus,textarea:focus{border-color:#14b8a6;box-shadow:0 0 0 4px rgba(20,184,166,.13);background:#fff}textarea{resize:vertical;min-height:110px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--primary);color:#fff;padding:12px 14px;border-radius:16px;font-weight:900;text-decoration:none;min-height:44px}.btn.full{width:100%}.btn.secondary{background:#e6fffb;color:#0f766e;border:1px solid #b7f1ea}.btn.light{background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0}.btn.danger{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}.btn.warning{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}.btn.small{padding:8px 10px;min-height:34px;font-size:12px;border-radius:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.hint{color:var(--muted);font-size:12.5px;line-height:1.45}.ok{display:none;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:10px;border-radius:14px;font-size:13px;margin:10px 0}.error{display:none;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:10px;border-radius:14px;font-size:13px;margin:10px 0}.hidden{display:none!important}.admin-item{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin-bottom:10px}.admin-item h4{margin:0 0 6px}.admin-item p{margin:0 0 8px;color:#64748b;font-size:12px;line-height:1.4;white-space:pre-wrap}.badge{display:inline-flex;align-items:center;border-radius:999px;background:#ecfeff;color:#0e7490;border:1px solid #cffafe;font-size:10px;font-weight:900;padding:4px 8px}.badge.gray{background:#f1f5f9;color:#475569;border-color:#e2e8f0}.badge.green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.badge.orange{background:#ffedd5;color:#9a3412;border-color:#fed7aa}.progress{font-size:12px;font-weight:900;color:#0f766e;margin-top:8px}.net-status{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:60;width:min(92%,460px);background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:999px;padding:10px 14px;font-size:12px;font-weight:900;text-align:center;box-shadow:0 12px 28px rgba(15,23,42,.18)}.net-status.online{background:#dcfce7;color:#166534;border-color:#bbf7d0}@media(max-width:560px){body{padding:0 0 60px}.wrap{width:100%}.topbar{border-radius:0 0 28px 28px}.row{grid-template-columns:1fr}.card{border-radius:20px;margin:10px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <h1>Admin calendario DIAN</h1>
+      <p>Publica ventanas emergentes para todos los usuarios y convierte imágenes a texto.</p>
+    </header>
+
+    <section id="loginCard" class="card">
+      <div class="card-title"><h2>Acceso administrador</h2><span>Firebase</span></div>
+      <div id="authError" class="error"></div>
+      <div class="field"><label>Correo</label><input id="email" type="email" autocomplete="email" placeholder="admin@correo.com"></div>
+      <div class="field"><label>Contraseña</label><input id="password" type="password" autocomplete="current-password" placeholder="Contraseña"></div>
+      <button id="loginBtn" class="btn full">Entrar</button>
+      <p class="hint">El control real de quién puede publicar debe quedar protegido en las reglas de Firestore.</p>
+    </section>
+
+    <section id="adminPanel" class="hidden">
+      <div class="card">
+        <div class="card-title"><h2>Nuevo aviso emergente</h2><span id="userEmail">usuario</span></div>
+        <div id="formOk" class="ok"></div>
+        <div id="formError" class="error"></div>
+
+        <div class="field"><label>Título de la ventana</label><input id="popupTitleInput" placeholder="Ej. Nuevo comunicado DIAN"></div>
+        <div class="field"><label>Imagen para convertir a texto</label><input id="imageInput" type="file" accept="image/*"></div>
+        <div class="actions" style="margin-bottom:12px">
+          <button id="ocrBtn" class="btn secondary" type="button">📷 Convertir imagen a texto</button>
+          <button id="clearOcrBtn" class="btn light" type="button">Limpiar texto</button>
+        </div>
+        <div id="ocrProgress" class="progress"></div>
+        <div class="field"><label>Texto detectado desde la imagen</label><textarea id="imageText" placeholder="Aquí aparecerá el texto leído de la imagen. Puedes corregirlo manualmente antes de publicar."></textarea></div>
+        <div class="field"><label>Mensaje escrito para mostrar en la ventana emergente</label><textarea id="popupMessageInput" placeholder="Escribe aquí el mensaje que quieres que vean todos al abrir la página."></textarea></div>
+        <div class="row">
+          <label class="field"><span class="hint"><input id="repeatPopup" type="checkbox" style="width:auto;margin-right:6px"> Mostrar cada vez que abran la página</span></label>
+          <div class="field"><label>Vigente hasta</label><input id="expiresAt" type="date"></div>
+        </div>
+        <div class="actions">
+          <button id="publishBtn" class="btn full" type="button">📢 Publicar ventana emergente</button>
+          <button id="logoutBtn" class="btn light full" type="button">Salir</button>
+        </div>
+        <p class="hint">Si no marcas “mostrar cada vez”, a cada usuario le aparecerá una sola vez por aviso. Si marcas la opción, se mostrará en cada apertura mientras esté activo.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Avisos publicados</h2><span id="popupCount">0</span></div>
+        <div id="popupList"></div>
+      </div>
+    </section>
+  </div>
+  <div id="networkStatus" class="net-status hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJVHvToEW6ns7v8pQrBwI9wSjW7y0XLFA",
+      authDomain: "calendario-tributario-a3e16.firebaseapp.com",
+      projectId: "calendario-tributario-a3e16",
+      storageBucket: "calendario-tributario-a3e16.firebasestorage.app",
+      messagingSenderId: "1029886336492",
+      appId: "1:1029886336492:web:26cc3e492a53062bf834c9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    let db;
+    try{
+      db = initializeFirestore(app, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})});
+    }catch(e){ db = getFirestore(app); }
+
+    const $ = (id) => document.getElementById(id);
+    let currentUser = null;
+    let unsubscribePopups = null;
+
+    function showError(id,msg){ const el=$(id); el.textContent=String(msg); el.style.display="block"; setTimeout(()=>el.style.display="none",7000); }
+    function showOk(id,msg){ const el=$(id); el.textContent=String(msg); el.style.display="block"; setTimeout(()=>el.style.display="none",5000); }
+    function popupsRef(){ return collection(db,"admin_popups"); }
+    function escapeHtml(str){ return String(str||"").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
+
+    $("loginBtn").addEventListener("click", async () => {
+      try{ await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); }
+      catch(e){ showError("authError", e.message); }
+    });
+    $("logoutBtn").addEventListener("click", () => signOut(auth));
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      if(user){
+        $("loginCard").classList.add("hidden");
+        $("adminPanel").classList.remove("hidden");
+        $("userEmail").textContent = user.email || user.uid;
+        listenPopups();
+      }else{
+        $("loginCard").classList.remove("hidden");
+        $("adminPanel").classList.add("hidden");
+        if(unsubscribePopups) unsubscribePopups();
+      }
+    });
+
+    async function convertImageToText(){
+      const file = $("imageInput").files[0];
+      if(!file){ showError("formError", "Selecciona una imagen primero."); return; }
+      if(!window.Tesseract){ showError("formError", "No cargó el lector de texto. Revisa la conexión e inténtalo otra vez."); return; }
+      $("ocrProgress").textContent = "Leyendo imagen...";
+      $("ocrBtn").disabled = true;
+      try{
+        const result = await Tesseract.recognize(file, "spa+eng", {
+          logger: m => {
+            if(m.status){
+              const pct = m.progress ? ` ${Math.round(m.progress * 100)}%` : "";
+              $("ocrProgress").textContent = `${m.status}${pct}`;
+            }
+          }
+        });
+        $("imageText").value = (result?.data?.text || "").trim();
+        $("ocrProgress").textContent = "Texto listo. Revísalo y corrige lo necesario antes de publicar.";
+      }catch(e){
+        showError("formError", e.message || "No se pudo convertir la imagen a texto.");
+        $("ocrProgress").textContent = "";
+      }finally{
+        $("ocrBtn").disabled = false;
+      }
+    }
+
+    async function publishPopup(){
+      try{
+        const titulo = $("popupTitleInput").value.trim();
+        const mensaje = $("popupMessageInput").value.trim();
+        const textoImagen = $("imageText").value.trim();
+        if(!titulo && !mensaje && !textoImagen) throw new Error("Escribe un título, un mensaje o convierte una imagen a texto.");
+        await addDoc(popupsRef(), {
+          titulo,
+          mensaje,
+          textoImagen,
+          active:true,
+          repeat: $("repeatPopup").checked,
+          expiresAt: $("expiresAt").value || "",
+          createdBy: currentUser?.email || currentUser?.uid || "admin",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        $("popupTitleInput").value = "";
+        $("popupMessageInput").value = "";
+        $("imageText").value = "";
+        $("imageInput").value = "";
+        $("repeatPopup").checked = false;
+        $("expiresAt").value = "";
+        $("ocrProgress").textContent = "";
+        showOk("formOk", "Ventana emergente publicada correctamente.");
+      }catch(e){ showError("formError", e.message); }
+    }
+
+    function listenPopups(){
+      if(unsubscribePopups) unsubscribePopups();
+      unsubscribePopups = onSnapshot(query(popupsRef(), orderBy("createdAt","desc")), snap => {
+        const rows = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        renderPopups(rows);
+      }, err => showError("formError", err.message));
+    }
+
+    function createdLabel(p){
+      try{
+        const d = p.createdAt?.toDate ? p.createdAt.toDate() : null;
+        return d ? d.toLocaleString("es-CO") : "Pendiente de sincronizar";
+      }catch{ return "Pendiente de sincronizar"; }
+    }
+
+    function renderPopups(rows){
+      $("popupCount").textContent = `${rows.length} publicados`;
+      if(!rows.length){ $("popupList").innerHTML = `<div class="hint">Aún no hay avisos publicados.</div>`; return; }
+      $("popupList").innerHTML = rows.map(p => `
+        <article class="admin-item">
+          <h4>${escapeHtml(p.titulo || "Aviso sin título")}</h4>
+          <p>${escapeHtml(p.mensaje || "")}</p>
+          ${p.textoImagen ? `<p><strong>Texto de imagen:</strong><br>${escapeHtml(p.textoImagen).slice(0,600)}${p.textoImagen.length > 600 ? "..." : ""}</p>` : ""}
+          <div class="actions" style="margin:8px 0">
+            <span class="badge ${p.active === false ? "gray" : "green"}">${p.active === false ? "Inactivo" : "Activo"}</span>
+            <span class="badge ${p.repeat ? "orange" : "gray"}">${p.repeat ? "Se repite al abrir" : "Una vez por usuario"}</span>
+            ${p.expiresAt ? `<span class="badge gray">Hasta ${escapeHtml(p.expiresAt)}</span>` : ""}
+            <span class="badge gray">${escapeHtml(createdLabel(p))}</span>
+          </div>
+          <div class="actions">
+            <button class="btn light small" onclick="togglePopup('${p.id}', ${p.active === false ? "true" : "false"})">${p.active === false ? "Activar" : "Desactivar"}</button>
+            <button class="btn danger small" onclick="deletePopup('${p.id}')">Borrar</button>
+          </div>
+        </article>`).join("");
+    }
+
+    async function togglePopup(id, active){ await updateDoc(doc(db,"admin_popups",id), {active, updatedAt:serverTimestamp()}); }
+    async function deletePopup(id){ if(confirm("¿Borrar este aviso emergente?")) await deleteDoc(doc(db,"admin_popups",id)); }
+    window.togglePopup = togglePopup;
+    window.deletePopup = deletePopup;
+
+    $("ocrBtn").addEventListener("click", convertImageToText);
+    $("clearOcrBtn").addEventListener("click", () => { $("imageText").value=""; $("ocrProgress").textContent=""; });
+    $("publishBtn").addEventListener("click", publishPopup);
+
+    function updateNetworkStatus(){
+      const el = $("networkStatus");
+      if(navigator.onLine){
+        el.textContent = "En línea: sincronizando cambios";
+        el.classList.add("online");
+        el.classList.remove("hidden");
+        setTimeout(() => el.classList.add("hidden"), 1800);
+      }else{
+        el.textContent = "Sin datos: los cambios se sincronizarán cuando vuelva internet";
+        el.classList.remove("online", "hidden");
+      }
+    }
+    window.addEventListener("online", updateNetworkStatus);
+    window.addEventListener("offline", updateNetworkStatus);
+    updateNetworkStatus();
+
+    if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(console.warn); }
+  </script>
+</body>
+</html>

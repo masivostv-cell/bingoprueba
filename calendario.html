@@ -61,12 +61,22 @@
     .client-card{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin-bottom:10px}.client-card h4{margin:0 0 5px;font-size:15px}.client-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.35}.badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.badge{font-size:10px;padding:4px 7px;border-radius:999px;background:#ecfeff;color:#0e7490;border:1px solid #cffafe;font-weight:800}.badge.gray{background:#f1f5f9;color:#475569;border-color:#e2e8f0}.badge.green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.badge.orange{background:#ffedd5;color:#9a3412;border-color:#fed7aa}
     .month-block{margin-bottom:16px}.month-head{display:flex;justify-content:space-between;align-items:center;margin:16px 2px 9px}.month-head h3{margin:0;font-size:18px;letter-spacing:-.03em}.month-head span{color:#64748b;font-size:12px;font-weight:800}.event{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin-bottom:9px;display:grid;grid-template-columns:auto 1fr;gap:11px}.datebox{width:54px;border-radius:15px;background:#e6fffb;border:1px solid #b7f1ea;text-align:center;padding:7px 4px;height:58px}.datebox .d{font-weight:900;font-size:20px;line-height:1;color:#0f766e}.datebox .m{font-size:10px;color:#0f766e;font-weight:900;text-transform:uppercase}.event h4{font-size:14px;margin:0 0 4px;line-height:1.2}.event p{font-size:12px;color:#64748b;margin:0 0 8px;line-height:1.35}.event.done{opacity:.72;background:#f8fafc}.event.done h4{text-decoration:line-through}.event-actions{display:flex;gap:6px;flex-wrap:wrap}.empty{text-align:center;color:#64748b;padding:22px 12px;background:#fff;border:1px dashed #cbd5e1;border-radius:18px}.searchbar{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:12px}.hidden{display:none!important}.setup-code{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:18px;padding:14px;overflow:auto;font-size:12px;line-height:1.45}.divider{height:1px;background:#e2e8f0;margin:14px 0}.mini-note{font-size:11px;color:#64748b;line-height:1.35}.loader{display:none;align-items:center;gap:8px;color:#0f766e;font-size:13px;font-weight:800}.loader.show{display:flex}.spinner{width:16px;height:16px;border-radius:999px;border:3px solid #ccfbf1;border-top-color:#0f766e;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 
+
+    .client-form-card{scroll-margin-top:120px}
+    .month-nav{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+    .net-status{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:60;width:min(92%,460px);background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:999px;padding:10px 14px;font-size:12px;font-weight:900;text-align:center;box-shadow:0 12px 28px rgba(15,23,42,.18)}
+    .net-status.online{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+    .popup-overlay{position:fixed;inset:0;background:rgba(15,23,42,.56);z-index:80;display:grid;place-items:center;padding:16px;backdrop-filter:blur(5px)}
+    .popup-box{width:min(100%,480px);background:#ffffff;border-radius:26px;border:1px solid rgba(255,255,255,.75);box-shadow:0 28px 70px rgba(15,23,42,.32);overflow:hidden}
+    .popup-head{background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;padding:18px 18px 14px}.popup-head h2{margin:0;font-size:20px;letter-spacing:-.03em}.popup-head p{margin:5px 0 0;font-size:12px;opacity:.9}
+    .popup-body{padding:16px}.popup-message{font-size:15px;line-height:1.45;margin:0 0 12px;white-space:pre-wrap}.popup-ocr{background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:12px;font-size:12.5px;color:#334155;line-height:1.45;white-space:pre-wrap;max-height:220px;overflow:auto}.popup-actions{display:flex;gap:8px;padding:0 16px 16px;justify-content:flex-end}
+
     .extra-panel{background:#f8fffe;border:1px solid #dbe7e5;border-radius:20px;padding:12px;margin-top:10px}
     .extra-list{display:grid;gap:8px;margin-top:10px}
     .extra-item{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .extra-item h4{margin:0 0 4px;font-size:13px}.extra-item p{margin:0;color:#64748b;font-size:11.5px;line-height:1.35}
     .preset-grid{display:grid;grid-template-columns:1fr;gap:8px}.pill-soft{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;font-weight:900;margin-top:6px}
-    @media (max-width:420px){body{padding:0 0 90px}.phone{border-radius:0;min-height:100vh;border:0}.topbar{border-top-left-radius:0;border-top-right-radius:0}.checks{grid-template-columns:1fr}.row,.row-3{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr 1fr}.tabs{bottom:8px;width:calc(100% - 16px)}}
+    @media (max-width:420px){body{padding:0 0 90px}.phone{border-radius:0;min-height:100vh;border:0}.topbar{border-top-left-radius:0;border-top-right-radius:0}.checks{grid-template-columns:1fr}.row,.row-3,.month-nav{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr 1fr}.tabs{bottom:8px;width:calc(100% - 16px)}}
   </style>
 </head>
 <body>
@@ -126,6 +136,11 @@
 
       <section id="view-clients" class="view">
         <div class="card">
+          <div class="card-title"><h2>Clientes</h2><span>crear o administrar</span></div>
+          <p class="hint">El formulario queda oculto para que primero veas tu lista de clientes. Toca “Crear cliente” cuando necesites registrar uno nuevo.</p>
+          <button id="showCreateClientBtn" class="btn full" type="button">➕ Crear cliente</button>
+        </div>
+        <div id="clientFormCard" class="card client-form-card hidden">
           <div class="card-title"><h2 id="formTitle">Nuevo cliente</h2><span id="formMode">crear</span></div>
           <div id="formOk" class="ok"></div>
           <div id="formError" class="error"></div>
@@ -198,6 +213,11 @@
             <div class="field"><label>Mes</label><select id="monthFilter"></select></div>
             <div class="field"><label>Cliente</label><select id="clientFilter"></select></div>
           </div>
+          <div class="month-nav">
+            <button id="prevMonthBtn" class="btn light small" type="button">⬆️ Mes anterior</button>
+            <button id="todayMonthBtn" class="btn secondary small" type="button">📍 Mes actual</button>
+            <button id="nextMonthBtn" class="btn light small" type="button">⬇️ Mes siguiente</button>
+          </div>
           <div class="actions">
             <button id="downloadFilteredIcsBtn" class="btn secondary small">📥 Exportar mes seleccionado</button>
           </div>
@@ -243,10 +263,29 @@
     <button class="tab" data-target="config"><b>⚙️</b>Ajustes</button>
   </nav>
 
+  <div id="networkStatus" class="net-status hidden"></div>
+
+  <div id="popupOverlay" class="popup-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+    <div class="popup-box">
+      <div class="popup-head">
+        <h2 id="popupTitle">Aviso</h2>
+        <p id="popupDate">Comunicado general</p>
+      </div>
+      <div class="popup-body">
+        <p id="popupMessage" class="popup-message"></p>
+        <div id="popupOcr" class="popup-ocr hidden"></div>
+      </div>
+      <div class="popup-actions">
+        <button id="popupCloseBtn" class="btn light" type="button">Cerrar</button>
+        <button id="popupNextBtn" class="btn" type="button">Siguiente</button>
+      </div>
+    </div>
+  </div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBJVHvToEW6ns7v8pQrBwI9wSjW7y0XLFA",
@@ -259,7 +298,14 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  let db;
+  try{
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+    });
+  }catch(e){
+    db = getFirestore(app);
+  }
 
   const $ = (id) => document.getElementById(id);
 
@@ -315,7 +361,12 @@
   let extraDrafts = [];
   let unsubscribeClients = null;
   let unsubscribeStatuses = null;
+  let unsubscribePopups = null;
   let editingId = null;
+  let popups = [];
+  let popupQueue = [];
+  let currentPopup = null;
+  const POPUP_SEEN_KEY = "dianPopupsSeen";
 
   const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   const SHORT_MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
@@ -636,6 +687,55 @@
   function allEvents(){ return clients.flatMap(buildEventsForClient).sort((a,b)=>a.date.localeCompare(b.date) || a.cliente.localeCompare(b.cliente)); }
   function clientsRef(){ return collection(db, "users", currentUser.uid, "clientes"); }
   function statusesRef(){ return collection(db, "users", currentUser.uid, "vencimientos"); }
+  function popupsRef(){ return collection(db, "admin_popups"); }
+
+  function seenPopupMap(){
+    try{ return JSON.parse(localStorage.getItem(POPUP_SEEN_KEY) || "{}"); }catch{ return {}; }
+  }
+  function saveSeenPopupMap(map){ localStorage.setItem(POPUP_SEEN_KEY, JSON.stringify(map)); }
+  function isPopupActive(p){
+    if(p.active === false) return false;
+    if(p.expiresAt && String(p.expiresAt) < todayISO()) return false;
+    return !!(p.titulo || p.mensaje || p.textoImagen);
+  }
+  function popupCreatedLabel(p){
+    if(!p.createdAt) return "Comunicado general";
+    try{
+      const d = p.createdAt.toDate ? p.createdAt.toDate() : new Date(p.createdAt);
+      return `Publicado: ${d.toLocaleDateString("es-CO")}`;
+    }catch{ return "Comunicado general"; }
+  }
+  function showPendingPopups(){
+    if(!currentUser || currentPopup || !popups.length) return;
+    const seen = seenPopupMap();
+    popupQueue = popups.filter(isPopupActive).filter(p => p.repeat === true || !seen[p.id]);
+    if(popupQueue.length) openPopup(popupQueue.shift());
+  }
+  function openPopup(p){
+    currentPopup = p;
+    $("popupTitle").textContent = p.titulo || "Aviso importante";
+    $("popupDate").textContent = popupCreatedLabel(p);
+    $("popupMessage").textContent = p.mensaje || "";
+    if(p.textoImagen){
+      $("popupOcr").textContent = p.textoImagen;
+      $("popupOcr").classList.remove("hidden");
+    } else {
+      $("popupOcr").textContent = "";
+      $("popupOcr").classList.add("hidden");
+    }
+    $("popupNextBtn").textContent = popupQueue.length ? "Siguiente" : "Entendido";
+    $("popupOverlay").classList.remove("hidden");
+  }
+  function closeCurrentPopup(){
+    if(currentPopup && currentPopup.repeat !== true){
+      const seen = seenPopupMap();
+      seen[currentPopup.id] = new Date().toISOString();
+      saveSeenPopupMap(seen);
+    }
+    currentPopup = null;
+    if(popupQueue.length) openPopup(popupQueue.shift());
+    else $("popupOverlay").classList.add("hidden");
+  }
 
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
@@ -651,7 +751,8 @@
       $("tabs").classList.remove("show");
       if(unsubscribeClients) unsubscribeClients();
       if(unsubscribeStatuses) unsubscribeStatuses();
-      clients=[]; statusById={};
+      if(unsubscribePopups) unsubscribePopups();
+      clients=[]; statusById={}; popups=[];
     }
   });
 
@@ -666,6 +767,10 @@
       statusById = {};
       snap.docs.forEach(d => statusById[d.id] = d.data());
       renderAll();
+    }, err => console.error(err));
+    unsubscribePopups = onSnapshot(query(popupsRef(), orderBy("createdAt", "desc")), snap => {
+      popups = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      showPendingPopups();
     }, err => console.error(err));
   }
 
@@ -702,6 +807,16 @@
     }
   });
 
+  function showClientForm(){
+    $("clientFormCard").classList.remove("hidden");
+    setTimeout(() => $("clientFormCard").scrollIntoView({behavior:"smooth", block:"start"}), 50);
+  }
+  function openCreateClientForm(){
+    resetForm(false);
+    showClientForm();
+  }
+  $("showCreateClientBtn").addEventListener("click", openCreateClientForm);
+
   function getFormClient(){
     const obligaciones = {};
     obligationDefs.forEach(([key]) => obligaciones[key] = $(`ob_${key}`).checked);
@@ -733,13 +848,14 @@
   });
   $("cancelEditBtn").addEventListener("click", resetForm);
 
-  function resetForm(){
+  function resetForm(hideForm=true){
     editingId = null;
     ["clientName","clientNit","clientDigit","clientTwoDigits","clientPhone","clientMail","clientNotes"].forEach(id => $(id).value="");
     obligationDefs.forEach(([key]) => $(`ob_${key}`).checked=false);
     extraDrafts = [];
     renderExtraList();
     $("formTitle").textContent = "Nuevo cliente"; $("formMode").textContent = "crear"; $("cancelEditBtn").classList.add("hidden"); $("saveClientBtn").textContent = "Guardar cliente";
+    if(hideForm) $("clientFormCard").classList.add("hidden");
   }
   function editClient(id){
     const c = clients.find(x=>x.id===id); if(!c) return;
@@ -749,7 +865,7 @@
     extraDrafts = Array.isArray(c.extras) ? c.extras.map(x => ({...x, id: x.id || `extra_${Date.now()}_${Math.random().toString(36).slice(2,7)}`})) : [];
     renderExtraList();
     $("formTitle").textContent = "Editar cliente"; $("formMode").textContent = "editando"; $("cancelEditBtn").classList.remove("hidden"); $("saveClientBtn").textContent = "Actualizar cliente";
-    activateTab("clients"); window.scrollTo({top:0,behavior:"smooth"});
+    activateTab("clients"); showClientForm();
   }
   async function removeClient(id){
     const c = clients.find(x=>x.id===id); if(!c) return;
@@ -778,6 +894,37 @@
     const evs = allEvents().filter(e => e.date >= today && !e.done).slice(0,10);
     $("nextEvents").innerHTML = evs.length ? evs.map(renderEvent).join("") : `<div class="empty">No hay vencimientos próximos pendientes.</div>`;
   }
+  function monthRangeKeys(startYear=2026, startMonth=1, endYear=2027, endMonth=12){
+    const out = [];
+    let y = startYear, m = startMonth;
+    while(y < endYear || (y === endYear && m <= endMonth)){
+      out.push(`${y}-${String(m).padStart(2,"0")}`);
+      m++;
+      if(m > 12){ m = 1; y++; }
+    }
+    return out;
+  }
+  function availableCalendarMonths(){
+    const base = monthRangeKeys(2026,1,2027,12);
+    const eventMonths = allEvents().map(e => e.date.slice(0,7));
+    return [...new Set([...base, ...eventMonths, currentMonthKey()])].sort();
+  }
+  function shiftMonthFilter(delta){
+    const months = availableCalendarMonths();
+    let value = $("monthFilter").value;
+    if(value === "all" || !months.includes(value)) value = currentMonthKey();
+    let idx = months.indexOf(value);
+    if(idx < 0) idx = months.findIndex(m => m >= currentMonthKey());
+    const nextIdx = Math.max(0, Math.min(months.length - 1, idx + delta));
+    $("monthFilter").value = months[nextIdx];
+    renderCalendar();
+  }
+  function goCurrentMonth(){
+    const month = currentMonthKey();
+    if([...$("monthFilter").options].some(o => o.value === month)) $("monthFilter").value = month;
+    renderCalendar();
+  }
+
   function renderClients(){
     const q = $("clientSearch").value.toLowerCase().trim();
     const filtered = clients.filter(c => `${c.nombre} ${c.nit}`.toLowerCase().includes(q));
@@ -794,8 +941,7 @@
     }).join("") : `<div class="empty">No hay clientes registrados.</div>`;
   }
   function renderFilters(){
-    const evs = allEvents();
-    const months = [...new Set(evs.map(e=>e.date.slice(0,7)))];
+    const months = availableCalendarMonths();
     const oldMonth = $("monthFilter").value;
     $("monthFilter").innerHTML = `<option value="all">Todos los meses</option>` + months.map(ym=>`<option value="${ym}">${monthLabel(ym)}</option>`).join("");
     if([...$("monthFilter").options].some(o=>o.value===oldMonth)) {
@@ -976,6 +1122,11 @@
   $("clearSearchBtn").addEventListener("click", () => { $("clientSearch").value=""; renderClients(); });
   $("monthFilter").addEventListener("change", renderCalendar);
   $("clientFilter").addEventListener("change", renderCalendar);
+  $("prevMonthBtn").addEventListener("click", () => shiftMonthFilter(-1));
+  $("todayMonthBtn").addEventListener("click", goCurrentMonth);
+  $("nextMonthBtn").addEventListener("click", () => shiftMonthFilter(1));
+  $("popupCloseBtn").addEventListener("click", closeCurrentPopup);
+  $("popupNextBtn").addEventListener("click", closeCurrentPopup);
 
   $("exportJsonBtn").addEventListener("click", () => {
     const payload = JSON.stringify({exportado:new Date().toISOString(), clientes:clients.map(({id,...rest})=>rest)}, null, 2);
@@ -996,12 +1147,31 @@
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     $(`view-${name}`).classList.add("active");
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.target===name));
+    if(name === "calendar" && (!$("monthFilter").value || $("monthFilter").value === "all")) goCurrentMonth();
   }
   document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => activateTab(t.dataset.target)));
 
   function groupBy(arr, fn){ return arr.reduce((acc,x)=>{ const k=fn(x); (acc[k] ||= []).push(x); return acc; },{}); }
   function escapeHtml(str){ return String(str||"").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
   function icsEscape(str){ return String(str||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
+
+
+  function updateNetworkStatus(){
+    const el = $("networkStatus");
+    if(!el) return;
+    if(navigator.onLine){
+      el.textContent = "En línea: sincronizando cambios";
+      el.classList.add("online");
+      el.classList.remove("hidden");
+      setTimeout(() => el.classList.add("hidden"), 1800);
+    }else{
+      el.textContent = "Sin datos: usando información guardada en este equipo";
+      el.classList.remove("online", "hidden");
+    }
+  }
+  window.addEventListener("online", () => { updateNetworkStatus(); showPendingPopups(); });
+  window.addEventListener("offline", updateNetworkStatus);
+  updateNetworkStatus();
 
   initObligationBoxes();
   initExtraControls();
