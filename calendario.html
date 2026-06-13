@@ -62,6 +62,16 @@
     .month-block{margin-bottom:16px}.month-head{display:flex;justify-content:space-between;align-items:center;margin:16px 2px 9px}.month-head h3{margin:0;font-size:18px;letter-spacing:-.03em}.month-head span{color:#64748b;font-size:12px;font-weight:800}.event{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin-bottom:9px;display:grid;grid-template-columns:auto 1fr;gap:11px}.datebox{width:54px;border-radius:15px;background:#e6fffb;border:1px solid #b7f1ea;text-align:center;padding:7px 4px;height:58px}.datebox .d{font-weight:900;font-size:20px;line-height:1;color:#0f766e}.datebox .m{font-size:10px;color:#0f766e;font-weight:900;text-transform:uppercase}.event h4{font-size:14px;margin:0 0 4px;line-height:1.2}.event p{font-size:12px;color:#64748b;margin:0 0 8px;line-height:1.35}.event.done{opacity:.72;background:#f8fafc}.event.done h4{text-decoration:line-through}.event-actions{display:flex;gap:6px;flex-wrap:wrap}.empty{text-align:center;color:#64748b;padding:22px 12px;background:#fff;border:1px dashed #cbd5e1;border-radius:18px}.searchbar{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:12px}.hidden{display:none!important}.setup-code{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:18px;padding:14px;overflow:auto;font-size:12px;line-height:1.45}.divider{height:1px;background:#e2e8f0;margin:14px 0}.mini-note{font-size:11px;color:#64748b;line-height:1.35}.loader{display:none;align-items:center;gap:8px;color:#0f766e;font-size:13px;font-weight:800}.loader.show{display:flex}.spinner{width:16px;height:16px;border-radius:999px;border:3px solid #ccfbf1;border-top-color:#0f766e;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 
 
+    /* Ajuste v5: letra un poco más grande y estados de presentación/pago más visibles */
+    .topbar h1{font-size:24px}.topbar p,.brand p{font-size:14px}.user-pill,.logout,.install-top{font-size:13px}
+    .card-title h2,.card-title h3{font-size:18px}.card-title span,.field label{font-size:13px}
+    .hint{font-size:13.5px}.mini-note{font-size:12px}.tab{font-size:12px}.btn.small{font-size:13px}
+    .stat .n{font-size:24px}.stat .l{font-size:12px}.check span{font-size:14px}.check small{font-size:12px}
+    .client-card h4{font-size:16px}.client-card p{font-size:13px}.badge{font-size:11px}
+    .month-head h3{font-size:19px}.month-head span{font-size:13px}.datebox .d{font-size:21px}.datebox .m{font-size:11px}
+    .event h4{font-size:15.5px}.event p{font-size:13px}.event-actions .btn{font-size:13px}.event-status{margin:8px 0 9px}
+
+
     .client-form-card{scroll-margin-top:120px}
     .month-nav{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
     .net-status{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:60;width:min(92%,460px);background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:999px;padding:10px 14px;font-size:12px;font-weight:900;text-align:center;box-shadow:0 12px 28px rgba(15,23,42,.18)}
@@ -127,7 +137,7 @@
             <button id="downloadAllIcsBtn" class="btn secondary small">📥 Exportar mes actual</button>
             <button id="notifyBtnHome" class="btn warning small notify-btn" type="button">🔔 Activar avisos</button>
             <button id="installBtnHome" class="btn warning small install-btn" type="button">📲 Instalar app</button>
-            <button id="refreshBtn" class="btn light small">🔄 Actualizar</button>
+            <button id="refreshBtn" class="btn light small">🔄 Actualizar app</button>
           </div>
           <p class="mini-note" style="margin-top:-4px;margin-bottom:12px">La exportación .ICS descarga únicamente los vencimientos del mes actual. Así el seguimiento se mantiene mes a mes dentro de la app.</p>
           <div id="nextEvents"></div>
@@ -309,6 +319,7 @@
 
   const $ = (id) => document.getElementById(id);
 
+  const APP_VERSION = "2026-06-13-v6";
   const NOTIFY_DAYS_BEFORE = 2;
   const NOTIFY_ENABLED_KEY = "dianNotifyEnabled";
   const NOTIFY_SENT_KEY = "dianNotifySent";
@@ -347,12 +358,66 @@
     deferredInstallPrompt = null;
     setInstallButtonState();
   });
+  async function registerServiceWorkerWithUpdates(){
+    if(!("serviceWorker" in navigator)) return;
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if(refreshing) return;
+      refreshing = true;
+      const key = `dianReloadedFor_${APP_VERSION}`;
+      if(sessionStorage.getItem(key) !== "true"){
+        sessionStorage.setItem(key, "true");
+        window.location.reload();
+      }
+    });
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if(event.data?.type === "APP_UPDATED"){
+        const key = `dianReloadedFor_${event.data.version || APP_VERSION}`;
+        if(sessionStorage.getItem(key) !== "true"){
+          sessionStorage.setItem(key, "true");
+          window.location.reload();
+        }
+      }
+    });
+    try{
+      const reg = await navigator.serviceWorker.register(`./sw.js?v=${encodeURIComponent(APP_VERSION)}`, {updateViaCache:"none"});
+      if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"});
+      reg.addEventListener("updatefound", () => {
+        const worker = reg.installing;
+        if(!worker) return;
+        worker.addEventListener("statechange", () => {
+          if(worker.state === "installed" && navigator.serviceWorker.controller){
+            worker.postMessage({type:"SKIP_WAITING"});
+          }
+        });
+      });
+      if(navigator.onLine) await reg.update();
+      setInterval(() => reg.update().catch(console.warn), 60 * 60 * 1000);
+    }catch(e){ console.warn("No se pudo registrar/actualizar el service worker", e); }
+  }
+
+  async function forceAppUpdate(){
+    if(!navigator.onLine){
+      renderAll();
+      alert("Estás sin conexión. La app usará la versión guardada y actualizará cuando vuelva internet.");
+      return;
+    }
+    try{
+      if("serviceWorker" in navigator){
+        const reg = await navigator.serviceWorker.getRegistration();
+        if(reg){
+          await reg.update();
+          if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"});
+        }
+      }
+    }catch(e){ console.warn(e); }
+    window.location.reload();
+  }
+
   window.addEventListener("load", () => {
     setInstallButtonState();
     installButtons().forEach(btn => btn.addEventListener("click", installApp));
-    if("serviceWorker" in navigator){
-      navigator.serviceWorker.register("./sw.js").catch(console.warn);
-    }
+    registerServiceWorkerWithUpdates();
   });
 
   let currentUser = null;
@@ -595,6 +660,15 @@
     return plan.map(([month, periodo]) => ({periodo, date: makeISODateByMonth(year, month, day)}));
   }
 
+  function normalizedStatus(eventId){
+    const raw = statusById[eventId] || {};
+    const paymentRequired = raw.paymentRequired === true;
+    const presented = !!raw.presented || !!raw.done;
+    const paid = !!raw.paid || (!!raw.done && paymentRequired);
+    const done = !!raw.done || (presented && (!paymentRequired || paid));
+    return {presented, paymentRequired, paid, done};
+  }
+
   function buildEventsForClient(c){
     const obs = c.obligaciones || {};
     const d = Number(c.digito);
@@ -602,13 +676,18 @@
     const evs = [];
     const push = (code, obligacion, periodo, date, base="DIAN 2026") => {
       if(!date) return;
+      const eventId = `${c.id}_${code}_${date.replaceAll("-","")}`;
+      const status = normalizedStatus(eventId);
       evs.push({
-        id: `${c.id}_${code}_${date.replaceAll("-","")}`,
+        id: eventId,
         clientId: c.id,
         cliente: c.nombre,
         nit: c.nit || "",
         code, obligacion, periodo, date, base,
-        done: !!statusById[`${c.id}_${code}_${date.replaceAll("-","")}`]?.done
+        presented: status.presented,
+        paymentRequired: status.paymentRequired,
+        paid: status.paid,
+        done: status.done
       });
     };
 
@@ -873,10 +952,54 @@
   }
   window.editClient = editClient; window.removeClient = removeClient;
 
-  async function toggleDone(eventId){
-    const old = !!statusById[eventId]?.done;
-    await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {done: !old, updatedAt: serverTimestamp()}, {merge:true});
+  async function togglePresented(eventId){
+    const status = normalizedStatus(eventId);
+    if(status.presented || status.done){
+      const quitar = confirm("¿Quieres quitar la marca de presentado y reiniciar este vencimiento?");
+      if(!quitar) return;
+      await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
+        presented:false,
+        paymentRequired:false,
+        paid:false,
+        done:false,
+        updatedAt: serverTimestamp()
+      }, {merge:true});
+      return;
+    }
+    const generaPago = confirm("¿Este vencimiento genera pago?\n\nAceptar = Sí, mostrar check de Pagado.\nCancelar = No, quedará marcado como cumplido.");
+    await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
+      presented:true,
+      paymentRequired:generaPago,
+      paid:false,
+      done: !generaPago,
+      updatedAt: serverTimestamp()
+    }, {merge:true});
   }
+
+  async function togglePaid(eventId){
+    const status = normalizedStatus(eventId);
+    const newPaid = !status.paid;
+    await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
+      presented:true,
+      paymentRequired:true,
+      paid:newPaid,
+      done:newPaid,
+      updatedAt: serverTimestamp()
+    }, {merge:true});
+  }
+
+  async function toggleDone(eventId){
+    const status = normalizedStatus(eventId);
+    await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
+      presented: !status.done,
+      paymentRequired:false,
+      paid:false,
+      done: !status.done,
+      updatedAt: serverTimestamp()
+    }, {merge:true});
+  }
+  window.togglePresented = togglePresented;
+  window.togglePaid = togglePaid;
   window.toggleDone = toggleDone;
 
   function renderAll(){
@@ -892,7 +1015,7 @@
   function renderNextEvents(){
     const today = todayISO();
     const evs = allEvents().filter(e => e.date >= today && !e.done).slice(0,10);
-    $("nextEvents").innerHTML = evs.length ? evs.map(renderEvent).join("") : `<div class="empty">No hay vencimientos próximos pendientes.</div>`;
+    $("nextEvents").innerHTML = evs.length ? evs.map(e => renderEvent(e, {showCalendar:false})).join("") : `<div class="empty">No hay vencimientos próximos pendientes.</div>`;
   }
   function monthRangeKeys(startYear=2026, startMonth=1, endYear=2027, endMonth=12){
     const out = [];
@@ -961,14 +1084,22 @@
     const evs = filteredEvents();
     if(!evs.length){ $("calendarList").innerHTML = `<div class="empty">No hay vencimientos para este filtro.</div>`; return; }
     const grouped = groupBy(evs, e=>e.date.slice(0,7));
-    $("calendarList").innerHTML = Object.keys(grouped).sort().map(ym => `<div class="month-block"><div class="month-head"><h3>${monthLabel(ym)}</h3><span>${grouped[ym].length} vencimientos</span></div>${grouped[ym].map(renderEvent).join("")}</div>`).join("");
+    $("calendarList").innerHTML = Object.keys(grouped).sort().map(ym => `<div class="month-block"><div class="month-head"><h3>${monthLabel(ym)}</h3><span>${grouped[ym].length} vencimientos</span></div>${grouped[ym].map(e => renderEvent(e, {showCalendar:true})).join("")}</div>`).join("");
   }
-  function renderEvent(e){
-    const cal = googleCalendarUrl(e);
+  function renderEvent(e, options = {}){
+    const showCalendar = options.showCalendar !== false;
+    const cal = showCalendar ? googleCalendarUrl(e) : "";
+    const calendarButton = showCalendar ? `<a class="btn small" target="_blank" rel="noopener" href="${cal}">Google Calendar</a>` : "";
+    const statusBadges = `<div class="badges event-status">
+      <span class="badge ${e.presented ? "green" : "gray"}">${e.presented ? "Presentado" : "Sin presentar"}</span>
+      ${e.paymentRequired ? `<span class="badge ${e.paid ? "green" : "orange"}">${e.paid ? "Pagado" : "Pago pendiente"}</span>` : (e.presented ? `<span class="badge gray">No generó pago</span>` : "")}
+    </div>`;
+    const paidButton = e.paymentRequired ? `<button class="btn ${e.paid ? "secondary" : "warning"} small" onclick="togglePaid('${e.id}')">${e.paid ? "✅ Pagado" : "☐ Pagado"}</button>` : "";
     return `<article class="event ${e.done ? "done" : ""}">
       ${shortDateBox(e.date)}
       <div><h4>${escapeHtml(e.obligacion)}</h4><p><strong>${escapeHtml(e.cliente)}</strong> · NIT ${escapeHtml(e.nit)}<br>Periodo: ${escapeHtml(e.periodo)} · Vence: ${fmtDate(e.date)}<br><span class="mini-note">Aviso automático: 2 días antes, si las notificaciones están activas.</span></p>
-      <div class="event-actions"><button class="btn ${e.done ? "secondary" : "light"} small" onclick="toggleDone('${e.id}')">${e.done ? "✅ Cumplido" : "☐ Marcar"}</button><a class="btn small" target="_blank" rel="noopener" href="${cal}">Google Calendar</a></div></div>
+      ${statusBadges}
+      <div class="event-actions"><button class="btn ${e.presented ? "secondary" : "light"} small" onclick="togglePresented('${e.id}')">${e.presented ? "✅ Presentado" : "☐ Presentado"}</button>${paidButton}${calendarButton}</div></div>
     </article>`;
   }
 
@@ -1114,7 +1245,7 @@
   }
   $("downloadAllIcsBtn").addEventListener("click", exportCurrentMonthICS);
   $("downloadFilteredIcsBtn").addEventListener("click", exportSelectedMonthICS);
-  $("refreshBtn").addEventListener("click", renderAll);
+  $("refreshBtn").addEventListener("click", forceAppUpdate);
   notificationButtons().forEach(btn => btn.addEventListener("click", enableNotifications));
   updateNotificationUI();
   setInterval(() => checkDueNotifications(false), 60 * 60 * 1000);

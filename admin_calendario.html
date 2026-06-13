@@ -84,6 +84,8 @@
     }catch(e){ db = getFirestore(app); }
 
     const $ = (id) => document.getElementById(id);
+    const APP_VERSION = "2026-06-13-v6";
+    const ADMIN_EMAIL = "jorgemanuelp92@hotmail.com";
     let currentUser = null;
     let unsubscribePopups = null;
 
@@ -101,6 +103,14 @@
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
       if(user){
+        const email = String(user.email || "").toLowerCase();
+        if(email !== ADMIN_EMAIL){
+          $("loginCard").classList.remove("hidden");
+          $("adminPanel").classList.add("hidden");
+          showError("authError", "Acceso no autorizado. Este panel solo está habilitado para el administrador.");
+          signOut(auth);
+          return;
+        }
         $("loginCard").classList.add("hidden");
         $("adminPanel").classList.remove("hidden");
         $("userEmail").textContent = user.email || user.uid;
@@ -226,7 +236,35 @@
     window.addEventListener("offline", updateNetworkStatus);
     updateNetworkStatus();
 
-    if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(console.warn); }
+    async function registerServiceWorkerWithUpdates(){
+      if(!("serviceWorker" in navigator)) return;
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if(refreshing) return;
+        refreshing = true;
+        const key = `dianReloadedFor_${APP_VERSION}`;
+        if(sessionStorage.getItem(key) !== "true"){
+          sessionStorage.setItem(key, "true");
+          window.location.reload();
+        }
+      });
+      try{
+        const reg = await navigator.serviceWorker.register(`./sw.js?v=${encodeURIComponent(APP_VERSION)}`, {updateViaCache:"none"});
+        if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"});
+        reg.addEventListener("updatefound", () => {
+          const worker = reg.installing;
+          if(!worker) return;
+          worker.addEventListener("statechange", () => {
+            if(worker.state === "installed" && navigator.serviceWorker.controller){
+              worker.postMessage({type:"SKIP_WAITING"});
+            }
+          });
+        });
+        if(navigator.onLine) await reg.update();
+        setInterval(() => reg.update().catch(console.warn), 60 * 60 * 1000);
+      }catch(e){ console.warn("No se pudo registrar/actualizar el service worker", e); }
+    }
+    registerServiceWorkerWithUpdates();
   </script>
 </body>
 </html>
