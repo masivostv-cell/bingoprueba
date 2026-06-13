@@ -232,8 +232,9 @@
           </div>
           <div class="actions">
             <button id="downloadFilteredIcsBtn" class="btn secondary small">📥 Exportar mes seleccionado</button>
+            <button id="exportExcelBtn" class="btn warning small" type="button">📊 Exportar Excel</button>
           </div>
-          <p class="mini-note" style="margin-top:10px">Este botón exporta solo el mes seleccionado. Si está en “Todos los meses”, exporta el mes actual.</p>
+          <p class="mini-note" style="margin-top:10px">Puedes exportar el mes seleccionado a calendario o a Excel. El Excel trae fecha, cliente, NIT, obligación, periodo y estado actual para compartirlo y hacer seguimiento.</p>
         </div>
         <div id="calendarList"></div>
       </section>
@@ -325,7 +326,7 @@
 
   const $ = (id) => document.getElementById(id);
 
-  const APP_VERSION = "2026-06-13-v8";
+  const APP_VERSION = "2026-06-13-v9";
   const NOTIFY_DAYS_BEFORE = 2;
   const NOTIFY_ENABLED_KEY = "dianNotifyEnabled";
   const NOTIFY_SENT_KEY = "dianNotifySent";
@@ -1258,6 +1259,79 @@
     const clientSuffix = client === "all" ? "todos-clientes" : "cliente-seleccionado";
     downloadICS(events, `vencimientos-dian-${ym}-${clientSuffix}.ics`, `No hay vencimientos en ${monthLabel(ym)} para exportar.`);
   }
+
+  function selectedMonthEventsForExport(){
+    let ym = $("monthFilter").value || currentMonthKey();
+    if(ym === "all"){
+      ym = currentMonthKey();
+      alert(`Se exportará únicamente el mes actual: ${monthLabel(ym)}. Para otro mes, selecciónalo en el filtro.`);
+    }
+    const client = $("clientFilter").value || "all";
+    const events = allEvents().filter(e => e.date.startsWith(ym) && (client === "all" || e.clientId === client));
+    const clientSuffix = client === "all" ? "todos-clientes" : "cliente-seleccionado";
+    return {ym, events, clientSuffix};
+  }
+
+  function eventStatusLabel(e){
+    if(e.noMovement) return "No hay movimiento";
+    if(e.paid) return "Presentado y pagado";
+    if(e.paymentRequired && e.presented) return "Presentado - pago pendiente";
+    if(e.presented && !e.paymentRequired) return "Presentado - no generó pago";
+    if(e.done) return "Cumplido";
+    return "Pendiente";
+  }
+
+  function exportSelectedMonthExcel(){
+    const {ym, events, clientSuffix} = selectedMonthEventsForExport();
+    downloadExcelTable(events, `seguimiento-vencimientos-${ym}-${clientSuffix}.xls`, `No hay vencimientos en ${monthLabel(ym)} para exportar.`);
+  }
+
+  function downloadExcelTable(events, filename="seguimiento-vencimientos.xls", emptyMessage="No hay eventos para exportar."){
+    if(!events.length){ alert(emptyMessage); return; }
+    const rows = events.map(e => `
+      <tr>
+        <td>${escapeHtml(fmtDate(e.date))}</td>
+        <td>${escapeHtml(e.cliente)}</td>
+        <td>${escapeHtml(e.nit)}</td>
+        <td>${escapeHtml(e.obligacion)}</td>
+        <td>${escapeHtml(e.periodo)}</td>
+        <td>${escapeHtml(eventStatusLabel(e))}</td>
+      </tr>`).join("");
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    table{border-collapse:collapse;font-family:Arial,sans-serif;font-size:12pt;}
+    th{background:#0f766e;color:#ffffff;font-weight:bold;text-align:left;}
+    th,td{border:1px solid #dbe7e5;padding:8px;vertical-align:top;}
+    .title{font-size:16pt;font-weight:bold;color:#0f172a;}
+  </style>
+</head>
+<body>
+  <table>
+    <tr><td class="title" colspan="6">Seguimiento de vencimientos - ${escapeHtml(monthLabel(events[0].date.slice(0,7)))}</td></tr>
+    <tr>
+      <th>Fecha</th>
+      <th>Cliente</th>
+      <th>NIT</th>
+      <th>Obligación</th>
+      <th>Periodo</th>
+      <th>Estado actual</th>
+    </tr>
+    ${rows}
+  </table>
+</body>
+</html>`;
+    const blob = new Blob(["﻿", html], {type:"application/vnd.ms-excel;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function downloadICS(events, filename="vencimientos-dian-2026.ics", emptyMessage="No hay eventos para exportar."){
     if(!events.length){ alert(emptyMessage); return; }
     const dtstamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
@@ -1286,6 +1360,7 @@
   }
   $("downloadAllIcsBtn").addEventListener("click", exportCurrentMonthICS);
   $("downloadFilteredIcsBtn").addEventListener("click", exportSelectedMonthICS);
+  $("exportExcelBtn").addEventListener("click", exportSelectedMonthExcel);
   $("refreshBtn").addEventListener("click", forceAppUpdate);
   notificationButtons().forEach(btn => btn.addEventListener("click", enableNotifications));
   updateNotificationUI();
