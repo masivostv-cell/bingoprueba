@@ -1,0 +1,22 @@
+CAMBIO IMPORTANTE - VERSION v8
+
+Se agrego un nuevo boton junto a Presentado:
+- No hay movimiento
+
+Funcionamiento:
+1. Si marcas Presentado, la app pregunta si genera pago.
+   - Si respondes Si, aparece el check de Pagado.
+   - Si respondes No, el vencimiento queda cumplido y tachado.
+2. Si marcas No hay movimiento, el vencimiento queda cumplido y tachado automaticamente.
+3. Si vuelves a tocar No hay movimiento, la app pregunta si quieres quitar esa marca y reiniciar el vencimiento.
+4. En Inicio sigue sin aparecer el boton de Google Calendar; ese boton queda en Meses.
+5. Se actualizo APP_VERSION a 2026-06-13-v8 en calendario.html, admin_calendario.html y sw.js para que la app instalada pueda refrescar.
+
+Que debes subir/reemplazar en tu hosting:
+1. calendario.html
+2. admin_calendario.html
+3. sw.js
+4. manifest.webmanifest
+5. carpeta icons
+
+Si la app instalada no se actualiza de inmediato, abre con internet y toca el boton Actualizar app.

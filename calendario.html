@@ -28,7 +28,7 @@
     }
     *{box-sizing:border-box}
     html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(160deg,#dff7f4 0%,#eef6f5 45%,#e8f0ff 100%);color:var(--text)}
-    body{padding:18px 10px 92px}
+    body{padding:18px 10px 150px}
     button,input,select,textarea{font:inherit}
     button{cursor:pointer;border:0}
     .phone{width:min(100%,520px);margin:0 auto;background:rgba(255,255,255,.44);min-height:calc(100vh - 36px);border:1px solid rgba(255,255,255,.72);border-radius:34px;box-shadow:var(--shadow);overflow:hidden;position:relative;backdrop-filter:blur(12px)}
@@ -56,6 +56,8 @@
     .btn:hover{filter:brightness(.98);transform:translateY(-1px)}.btn.full{width:100%}.btn.secondary{background:#e6fffb;color:#0f766e;border:1px solid #b7f1ea}.btn.light{background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0}.btn.danger{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}.btn.warning{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}.btn.small{padding:8px 10px;min-height:34px;font-size:12px;border-radius:12px}.install-top{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:999px;padding:9px 12px;font-weight:800;font-size:12px;white-space:nowrap}
     .actions{display:flex;gap:8px;flex-wrap:wrap}.hint{color:var(--muted);font-size:12.5px;line-height:1.45}.hint strong{color:#334155}.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:10px;border-radius:14px;font-size:13px;margin:10px 0;display:none}.ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:10px;border-radius:14px;font-size:13px;margin:10px 0;display:none}
     .tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;width:min(100% - 20px,500px);background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:24px;padding:8px;display:none;grid-template-columns:repeat(4,1fr);gap:6px;box-shadow:0 16px 42px rgba(15,23,42,.16);z-index:20}.tabs.show{display:grid}.tab{background:transparent;color:#64748b;border-radius:16px;padding:9px 4px;font-size:11px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:3px}.tab.active{background:#e6fffb;color:#0f766e}.tab b{font-size:18px;line-height:1}
+    .contact-tools-btn{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);z-index:21;width:min(100% - 20px,500px);min-height:46px;border-radius:20px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;text-decoration:none;box-shadow:0 16px 42px rgba(15,23,42,.22);display:none;align-items:center;justify-content:center;gap:8px;padding:10px 14px;font-size:13px;font-weight:900;text-align:center}.contact-tools-btn.show{display:flex}.contact-tools-btn span{opacity:.96}.contact-tools-btn strong{font-size:14px}
+
     .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.stat{background:#fff;border-radius:20px;padding:14px;border:1px solid rgba(15,23,42,.06);box-shadow:0 10px 24px rgba(15,23,42,.05)}.stat .n{font-size:22px;font-weight:900;letter-spacing:-.04em}.stat .l{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
     .checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}.check{display:flex;align-items:flex-start;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:10px}.check input{width:auto;margin-top:2px}.check span{font-size:13px;font-weight:700;line-height:1.2}.check small{display:block;color:var(--muted);font-weight:500;margin-top:2px;font-size:11px}
     .client-card{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin-bottom:10px}.client-card h4{margin:0 0 5px;font-size:15px}.client-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.35}.badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.badge{font-size:10px;padding:4px 7px;border-radius:999px;background:#ecfeff;color:#0e7490;border:1px solid #cffafe;font-weight:800}.badge.gray{background:#f1f5f9;color:#475569;border-color:#e2e8f0}.badge.green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.badge.orange{background:#ffedd5;color:#9a3412;border-color:#fed7aa}
@@ -86,7 +88,7 @@
     .extra-item{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .extra-item h4{margin:0 0 4px;font-size:13px}.extra-item p{margin:0;color:#64748b;font-size:11.5px;line-height:1.35}
     .preset-grid{display:grid;grid-template-columns:1fr;gap:8px}.pill-soft{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;font-weight:900;margin-top:6px}
-    @media (max-width:420px){body{padding:0 0 90px}.phone{border-radius:0;min-height:100vh;border:0}.topbar{border-top-left-radius:0;border-top-right-radius:0}.checks{grid-template-columns:1fr}.row,.row-3,.month-nav{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr 1fr}.tabs{bottom:8px;width:calc(100% - 16px)}}
+    @media (max-width:420px){body{padding:0 0 150px}.phone{border-radius:0;min-height:100vh;border:0}.topbar{border-top-left-radius:0;border-top-right-radius:0}.checks{grid-template-columns:1fr}.row,.row-3,.month-nav{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr 1fr}.tabs{bottom:8px;width:calc(100% - 16px)}}
   </style>
 </head>
 <body>
@@ -273,6 +275,10 @@
     <button class="tab" data-target="config"><b>⚙️</b>Ajustes</button>
   </nav>
 
+  <a id="contactToolsBtn" class="contact-tools-btn" href="https://wa.me/573503875753" target="_blank" rel="noopener">
+    💬 <span>Contáctanos para más herramientas</span> <strong>350 387 5753</strong>
+  </a>
+
   <div id="networkStatus" class="net-status hidden"></div>
 
   <div id="popupOverlay" class="popup-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
@@ -319,7 +325,7 @@
 
   const $ = (id) => document.getElementById(id);
 
-  const APP_VERSION = "2026-06-13-v6";
+  const APP_VERSION = "2026-06-13-v8";
   const NOTIFY_DAYS_BEFORE = 2;
   const NOTIFY_ENABLED_KEY = "dianNotifyEnabled";
   const NOTIFY_SENT_KEY = "dianNotifySent";
@@ -662,11 +668,12 @@
 
   function normalizedStatus(eventId){
     const raw = statusById[eventId] || {};
+    const noMovement = raw.noMovement === true;
     const paymentRequired = raw.paymentRequired === true;
-    const presented = !!raw.presented || !!raw.done;
+    const presented = !!raw.presented || (!!raw.done && !noMovement);
     const paid = !!raw.paid || (!!raw.done && paymentRequired);
-    const done = !!raw.done || (presented && (!paymentRequired || paid));
-    return {presented, paymentRequired, paid, done};
+    const done = !!raw.done || noMovement || (presented && (!paymentRequired || paid));
+    return {presented, noMovement, paymentRequired, paid, done};
   }
 
   function buildEventsForClient(c){
@@ -685,6 +692,7 @@
         nit: c.nit || "",
         code, obligacion, periodo, date, base,
         presented: status.presented,
+        noMovement: status.noMovement,
         paymentRequired: status.paymentRequired,
         paid: status.paid,
         done: status.done
@@ -822,12 +830,14 @@
       $("authView").classList.add("hidden");
       $("appView").classList.remove("hidden");
       $("tabs").classList.add("show");
+      $("contactToolsBtn").classList.add("show");
       $("userEmail").textContent = user.email || user.uid;
       listenData();
     } else {
       $("authView").classList.remove("hidden");
       $("appView").classList.add("hidden");
       $("tabs").classList.remove("show");
+      $("contactToolsBtn").classList.remove("show");
       if(unsubscribeClients) unsubscribeClients();
       if(unsubscribeStatuses) unsubscribeStatuses();
       if(unsubscribePopups) unsubscribePopups();
@@ -954,11 +964,12 @@
 
   async function togglePresented(eventId){
     const status = normalizedStatus(eventId);
-    if(status.presented || status.done){
-      const quitar = confirm("¿Quieres quitar la marca de presentado y reiniciar este vencimiento?");
+    if(status.presented || status.noMovement || status.done){
+      const quitar = confirm("¿Quieres quitar la marca actual y reiniciar este vencimiento?");
       if(!quitar) return;
       await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
         presented:false,
+        noMovement:false,
         paymentRequired:false,
         paid:false,
         done:false,
@@ -969,9 +980,35 @@
     const generaPago = confirm("¿Este vencimiento genera pago?\n\nAceptar = Sí, mostrar check de Pagado.\nCancelar = No, quedará marcado como cumplido.");
     await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
       presented:true,
+      noMovement:false,
       paymentRequired:generaPago,
       paid:false,
       done: !generaPago,
+      updatedAt: serverTimestamp()
+    }, {merge:true});
+  }
+
+  async function toggleNoMovement(eventId){
+    const status = normalizedStatus(eventId);
+    if(status.noMovement){
+      const quitar = confirm("¿Quieres quitar la marca de no hay movimiento y reiniciar este vencimiento?");
+      if(!quitar) return;
+      await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
+        presented:false,
+        noMovement:false,
+        paymentRequired:false,
+        paid:false,
+        done:false,
+        updatedAt: serverTimestamp()
+      }, {merge:true});
+      return;
+    }
+    await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
+      presented:false,
+      noMovement:true,
+      paymentRequired:false,
+      paid:false,
+      done:true,
       updatedAt: serverTimestamp()
     }, {merge:true});
   }
@@ -981,6 +1018,7 @@
     const newPaid = !status.paid;
     await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
       presented:true,
+      noMovement:false,
       paymentRequired:true,
       paid:newPaid,
       done:newPaid,
@@ -992,6 +1030,7 @@
     const status = normalizedStatus(eventId);
     await setDoc(doc(db,"users",currentUser.uid,"vencimientos",eventId), {
       presented: !status.done,
+      noMovement:false,
       paymentRequired:false,
       paid:false,
       done: !status.done,
@@ -999,6 +1038,7 @@
     }, {merge:true});
   }
   window.togglePresented = togglePresented;
+  window.toggleNoMovement = toggleNoMovement;
   window.togglePaid = togglePaid;
   window.toggleDone = toggleDone;
 
@@ -1091,15 +1131,16 @@
     const cal = showCalendar ? googleCalendarUrl(e) : "";
     const calendarButton = showCalendar ? `<a class="btn small" target="_blank" rel="noopener" href="${cal}">Google Calendar</a>` : "";
     const statusBadges = `<div class="badges event-status">
-      <span class="badge ${e.presented ? "green" : "gray"}">${e.presented ? "Presentado" : "Sin presentar"}</span>
-      ${e.paymentRequired ? `<span class="badge ${e.paid ? "green" : "orange"}">${e.paid ? "Pagado" : "Pago pendiente"}</span>` : (e.presented ? `<span class="badge gray">No generó pago</span>` : "")}
+      ${e.noMovement ? `<span class="badge green">No hay movimiento</span>` : `<span class="badge ${e.presented ? "green" : "gray"}">${e.presented ? "Presentado" : "Sin presentar"}</span>`}
+      ${e.paymentRequired ? `<span class="badge ${e.paid ? "green" : "orange"}">${e.paid ? "Pagado" : "Pago pendiente"}</span>` : (e.presented && !e.noMovement ? `<span class="badge gray">No generó pago</span>` : "")}
     </div>`;
     const paidButton = e.paymentRequired ? `<button class="btn ${e.paid ? "secondary" : "warning"} small" onclick="togglePaid('${e.id}')">${e.paid ? "✅ Pagado" : "☐ Pagado"}</button>` : "";
+    const noMovementButton = `<button class="btn ${e.noMovement ? "secondary" : "light"} small" onclick="toggleNoMovement('${e.id}')">${e.noMovement ? "✅ No hay movimiento" : "☐ No hay movimiento"}</button>`;
     return `<article class="event ${e.done ? "done" : ""}">
       ${shortDateBox(e.date)}
       <div><h4>${escapeHtml(e.obligacion)}</h4><p><strong>${escapeHtml(e.cliente)}</strong> · NIT ${escapeHtml(e.nit)}<br>Periodo: ${escapeHtml(e.periodo)} · Vence: ${fmtDate(e.date)}<br><span class="mini-note">Aviso automático: 2 días antes, si las notificaciones están activas.</span></p>
       ${statusBadges}
-      <div class="event-actions"><button class="btn ${e.presented ? "secondary" : "light"} small" onclick="togglePresented('${e.id}')">${e.presented ? "✅ Presentado" : "☐ Presentado"}</button>${paidButton}${calendarButton}</div></div>
+      <div class="event-actions"><button class="btn ${e.presented && !e.noMovement ? "secondary" : "light"} small" onclick="togglePresented('${e.id}')">${e.presented && !e.noMovement ? "✅ Presentado" : "☐ Presentado"}</button>${noMovementButton}${paidButton}${calendarButton}</div></div>
     </article>`;
   }
 
