@@ -3,1071 +3,168 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>Software Multijuego Profesional | Mercado Digital</title>
-  <meta name="description" content="Compra un software multijuego completo para salas, bingos, eventos y entretenimiento. Incluye bingo, ruletas, ranking, subastas, lotería, dados, personalización visual y control total." />
-
+  <title>Mercado Digital | Software para empresas, ventas y automatización</title>
+  <meta name="description" content="Mercado Digital: soluciones de software para empresas, ventas, inventario, mensajería responsable, eventos, contadores, verificaciones y apps instalables. Solicita demo por WhatsApp." />
+  <meta name="theme-color" content="#07111f" />
+  <meta property="og:title" content="Mercado Digital | Softwares para empresas y negocios" />
+  <meta property="og:description" content="Soluciones digitales listas para vender, operar y automatizar: POS integral, mensajes masivos responsables, multijuego, fixture mundial, calendario tributario y verificador RUT." />
+  <meta property="og:image" content="imagenes/ChatGPT Image 15 jun 2026, 08_37_39 p.m..png" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="imagenes/ChatGPT Image 15 jun 2026, 08_37_39 p.m..png" type="image/svg+xml" />
   <style>
     :root{
-      --bg:#05060b;
-      --card:#101827;
-      --line:rgba(255,255,255,.11);
-      --text:#f5f8ff;
-      --muted:#b9c6df;
-      --gold:#ffc84d;
-      --gold2:#ff9f1f;
+      --bg:#050815;
+      --bg2:#07111f;
+      --card:#0e192b;
+      --card2:#111f35;
+      --line:rgba(255,255,255,.12);
+      --text:#f6f9ff;
+      --muted:#b7c4da;
       --cyan:#19d9ff;
       --green:#25d366;
-      --red:#ff4058;
-      --shadow:0 24px 70px rgba(0,0,0,.48);
+      --gold:#ffc84d;
+      --pink:#e83e8c;
+      --shadow:0 24px 80px rgba(0,0,0,.42);
+      --radius:28px;
     }
 
     *{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
     body{
-      font-family:Arial, Helvetica, sans-serif;
+      font-family:Inter,Segoe UI,Arial,sans-serif;
       color:var(--text);
       background:
-        radial-gradient(circle at 12% 0%, rgba(255,200,77,.14), transparent 26%),
-        radial-gradient(circle at 88% 8%, rgba(25,217,255,.12), transparent 24%),
-        radial-gradient(circle at 50% 48%, rgba(164,91,255,.08), transparent 32%),
-        linear-gradient(180deg,#05060b 0%,#09111f 48%,#04050a 100%);
+        radial-gradient(circle at 10% 0%, rgba(25,217,255,.15), transparent 28%),
+        radial-gradient(circle at 86% 10%, rgba(37,211,102,.13), transparent 26%),
+        radial-gradient(circle at 50% 60%, rgba(232,62,140,.08), transparent 34%),
+        linear-gradient(180deg,#050815 0%,#081327 48%,#050815 100%);
       overflow-x:hidden;
-      padding-bottom:86px;
     }
-
     body::before{
-      content:"";
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      background-image:radial-gradient(circle, rgba(255,255,255,.12) 1px, transparent 1px);
-      background-size:34px 34px;
-      opacity:.07;
-      z-index:-1;
+      content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+      background-image:radial-gradient(circle,rgba(255,255,255,.13) 1px,transparent 1px);
+      background-size:34px 34px;opacity:.055;
     }
-
     a{text-decoration:none;color:inherit}
     img{display:block;max-width:100%}
-    .container{width:min(1220px,92%);margin:auto}
-
-    .top-alert{
-      background:linear-gradient(90deg,rgba(255,64,88,.42),rgba(255,200,77,.28),rgba(25,217,255,.20));
-      border-bottom:1px solid rgba(255,255,255,.14);
-      color:#fff;
-      font-weight:1000;
-    }
-
-    .top-alert-inner{
-      min-height:58px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:14px;
-      text-align:center;
-      flex-wrap:wrap;
-      padding:10px 0;
-    }
-
-    .pill-timer{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:9px 16px;
-      border-radius:999px;
-      background:#090d16;
-      border:1px solid rgba(255,255,255,.18);
-      color:var(--gold);
-      font-family:"Courier New", monospace;
-      font-size:22px;
-      letter-spacing:1px;
-      box-shadow:0 0 28px rgba(255,200,77,.18);
-      animation:timerGlow 1.1s infinite alternate;
-    }
-
-    @keyframes timerGlow{
-      from{box-shadow:0 0 14px rgba(255,200,77,.22);transform:scale(1)}
-      to{box-shadow:0 0 34px rgba(255,64,88,.34);transform:scale(1.03)}
-    }
-
-    .top-alert a{
-      color:#111;
-      background:linear-gradient(135deg,var(--gold),var(--gold2));
-      padding:9px 15px;
-      border-radius:999px;
-      font-weight:1000;
-    }
-
-    .topbar{
-      position:sticky;
-      top:0;
-      z-index:80;
-      background:rgba(5,6,11,.84);
-      backdrop-filter:blur(16px);
-      border-bottom:1px solid var(--line);
-    }
-
-    .nav{
-      min-height:78px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:20px;
-      padding:12px 0;
-    }
-
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:14px;
-      font-weight:1000;
-    }
-
-    .brand-mark{
-      width:50px;
-      height:50px;
-      border-radius:16px;
-      display:grid;
-      place-items:center;
-      background:linear-gradient(135deg,var(--gold),var(--gold2));
-      color:#111;
-      box-shadow:0 0 34px rgba(255,200,77,.28);
-      font-size:24px;
-    }
-
-    .brand strong{display:block;font-size:18px}
-    .brand small{
-      display:block;
-      color:var(--gold);
-      text-transform:uppercase;
-      letter-spacing:1.6px;
-      font-size:12px;
-      margin-top:2px;
-    }
-
-    .nav-links{
-      display:flex;
-      gap:22px;
-      align-items:center;
-      font-weight:800;
-      color:var(--muted);
-      font-size:14px;
-    }
-    .nav-links a:hover{color:var(--gold)}
-
-    .btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-      border:none;
-      cursor:pointer;
-      padding:15px 24px;
-      border-radius:999px;
-      font-weight:1000;
-      transition:.24s ease;
-      white-space:nowrap;
-      box-shadow:0 14px 32px rgba(0,0,0,.28);
-    }
+    .container{width:min(1180px,92%);margin:auto}
+    .topbar{position:sticky;top:0;z-index:90;background:rgba(5,8,21,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+    .nav{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:1000}
+    .brand-mark{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--cyan),var(--green));color:#06101d;box-shadow:0 0 34px rgba(25,217,255,.25);font-size:25px}
+    .brand strong{display:block;font-size:19px;letter-spacing:.2px}
+    .brand small{display:block;color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:1.4px;margin-top:2px}
+    .nav-links{display:flex;align-items:center;gap:18px;color:var(--muted);font-size:14px;font-weight:850}
+    .nav-links a:hover{color:var(--cyan)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;padding:14px 22px;font-weight:1000;border:1px solid transparent;transition:.22s ease;white-space:nowrap;cursor:pointer}
     .btn:hover{transform:translateY(-2px)}
-    .btn-primary{color:#111;background:linear-gradient(135deg,var(--gold),var(--gold2))}
-    .btn-primary:hover{box-shadow:0 18px 42px rgba(255,200,77,.25)}
-    .btn-outline{color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
-    .btn-outline:hover{background:rgba(255,200,77,.08);border-color:rgba(255,200,77,.38)}
-
-    .hero{
-      position:relative;
-      padding:74px 0 62px;
-      overflow:hidden;
-    }
-
-    .hero-grid{
-      display:grid;
-      grid-template-columns:1.03fr .97fr;
-      gap:42px;
-      align-items:center;
-    }
-
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 16px;
-      border-radius:999px;
-      background:rgba(255,200,77,.10);
-      border:1px solid rgba(255,200,77,.22);
-      color:var(--gold);
-      font-weight:1000;
-      font-size:14px;
-      margin-bottom:18px;
-    }
-
-    h1{
-      font-size:clamp(42px,7vw,78px);
-      line-height:.94;
-      letter-spacing:-2px;
-      margin-bottom:20px;
-      text-transform:uppercase;
-    }
-    h1 .gold{color:var(--gold)}
-    h1 .accent{
-      display:inline-block;
-      background:linear-gradient(90deg,var(--cyan),#fff,var(--gold));
-      -webkit-background-clip:text;
-      background-clip:text;
-      -webkit-text-fill-color:transparent;
-    }
-
-    .lead{
-      color:var(--muted);
-      font-size:clamp(17px,2vw,20px);
-      line-height:1.68;
-      margin-bottom:26px;
-      max-width:720px;
-    }
+    .btn-primary{color:#07111f;background:linear-gradient(135deg,var(--cyan),var(--green));box-shadow:0 16px 36px rgba(25,217,255,.18)}
+    .btn-secondary{color:#07111f;background:linear-gradient(135deg,var(--gold),#ff9d1f)}
+    .btn-soft{color:#fff;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.13)}
+    .btn-soft:hover{background:rgba(25,217,255,.10);border-color:rgba(25,217,255,.34)}
+    .hero{padding:86px 0 74px;position:relative;overflow:hidden}
+    .hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:42px;align-items:center}
+    .eyebrow{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;background:rgba(25,217,255,.10);border:1px solid rgba(25,217,255,.22);color:var(--cyan);font-weight:1000;margin-bottom:20px}
+    h1{font-size:clamp(44px,7.5vw,88px);line-height:.92;letter-spacing:-2.7px;text-transform:uppercase;margin-bottom:22px}
+    .gradient-text{background:linear-gradient(90deg,var(--cyan),#fff,var(--green));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+    .lead{color:var(--muted);font-size:clamp(17px,2vw,21px);line-height:1.72;max-width:720px;margin-bottom:28px}
     .lead strong{color:#fff}
-
     .hero-actions{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:22px}
-
-    .trust-row{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:12px;
-      max-width:740px;
-      margin-bottom:20px;
-    }
-
-    .trust-item{
-      padding:15px 16px;
-      border-radius:18px;
-      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
-      border:1px solid rgba(255,255,255,.11);
-      color:#e1e9ff;
-      font-size:14px;
-      font-weight:900;
-    }
-
-    .urgency-card{
-      width:min(620px,100%);
-      border-radius:30px;
-      padding:18px;
-      background:
-        radial-gradient(circle at 12% 0%,rgba(255,64,88,.24),transparent 42%),
-        radial-gradient(circle at 86% 0%,rgba(255,200,77,.18),transparent 42%),
-        linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04));
-      border:1px solid rgba(255,200,77,.32);
-      box-shadow:0 20px 55px rgba(0,0,0,.34),0 0 48px rgba(255,200,77,.10);
-      position:relative;
-      overflow:hidden;
-    }
-
-    .urgency-card::before{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
-      transform:translateX(-100%);
-      animation:shine 4s infinite;
-      pointer-events:none;
-    }
-
-    @keyframes shine{
-      0%{transform:translateX(-100%)}
-      45%,100%{transform:translateX(100%)}
-    }
-
-    .urgency-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-      padding-bottom:15px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      position:relative;
-      z-index:1;
-    }
-
-    .urgency-head strong{
-      color:var(--gold);
-      font-size:18px;
-    }
-
-    .urgency-head span{
-      color:#fff;
-      background:rgba(255,64,88,.22);
-      border:1px solid rgba(255,64,88,.35);
-      padding:8px 12px;
-      border-radius:999px;
-      font-weight:900;
-      font-size:13px;
-    }
-
-    .mega-countdown{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
-      margin:16px 0;
-      position:relative;
-      z-index:1;
-    }
-
-    .mega-time{
-      border-radius:22px;
-      padding:18px 10px;
-      text-align:center;
-      background:rgba(0,0,0,.35);
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow:inset 0 0 28px rgba(255,200,77,.05);
-    }
-
-    .mega-time b{
-      display:block;
-      font-size:clamp(42px,7vw,68px);
-      line-height:.9;
-      font-family:"Courier New",monospace;
-      color:#fff;
-      text-shadow:0 0 18px rgba(255,200,77,.28);
-    }
-
-    .mega-time small{
-      display:block;
-      color:var(--gold);
-      font-weight:1000;
-      letter-spacing:1.6px;
-      text-transform:uppercase;
-      font-size:12px;
-      margin-top:10px;
-    }
-
-    .urgency-foot{
-      position:relative;
-      z-index:1;
-      display:grid;
-      gap:12px;
-      color:#e7eeff;
-      line-height:1.55;
-      font-size:14px;
-    }
-
-    .urgency-foot .btn{
-      width:100%;
-      font-size:17px;
-      justify-content:center;
-      animation:buttonPulse 1.4s infinite;
-    }
-
-    @keyframes buttonPulse{
-      0%,100%{box-shadow:0 14px 32px rgba(255,200,77,.18);transform:scale(1)}
-      50%{box-shadow:0 20px 48px rgba(255,200,77,.32);transform:scale(1.015)}
-    }
-
-    .hero-visual{position:relative;min-height:560px}
-    .glow{
-      position:absolute;
-      right:0;
-      bottom:0;
-      width:76%;
-      height:76%;
-      border-radius:50%;
-      background:radial-gradient(circle,rgba(255,200,77,.22),transparent 60%);
-      filter:blur(16px);
-    }
-
-    .screen-stack{position:relative;height:560px}
-    .screen{
-      position:absolute;
-      overflow:hidden;
-      border-radius:28px;
-      background:#0d1323;
-      border:1px solid rgba(255,255,255,.13);
-      box-shadow:var(--shadow);
-      transition:.25s ease;
-    }
-    .screen:hover{
-      transform:translateY(-5px) rotate(0deg)!important;
-      z-index:30;
-      border-color:rgba(255,200,77,.45);
-    }
-    .screen img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      object-position:top center;
-      background:#06070c;
-    }
-    .screen::before{
-      content:"";
-      position:absolute;
-      top:0;left:0;right:0;
-      height:44px;
-      background:linear-gradient(180deg,rgba(0,0,0,.62),transparent);
-      z-index:2;
-    }
-    .screen::after{
-      content:attr(data-label);
-      position:absolute;
-      top:12px;
-      left:16px;
-      z-index:3;
-      color:#111;
-      background:rgba(255,200,77,.95);
-      padding:7px 12px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:1000;
-    }
-
-    .screen.s1{inset:40px 0 0 76px;z-index:4;transform:rotate(2deg)}
-    .screen.s2{width:52%;height:40%;left:0;bottom:38px;z-index:6;transform:rotate(-4deg)}
-    .screen.s3{width:45%;height:34%;right:0;bottom:24px;z-index:7;transform:rotate(5deg)}
-    .screen.s4{width:42%;height:26%;right:12%;top:0;z-index:3;transform:rotate(-6deg)}
-
-    .floating-note{
-      position:absolute;
-      top:120px;
-      right:10px;
-      z-index:15;
-      max-width:230px;
-      padding:16px;
-      border-radius:20px;
-      background:rgba(6,10,20,.88);
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow:var(--shadow);
-    }
-    .floating-note strong{color:var(--gold);display:block;margin-bottom:8px}
-    .floating-note p{color:var(--muted);font-size:13px;line-height:1.55}
-
-    .section{padding:82px 0}
-    .section-header{
-      max-width:860px;
-      margin:0 auto 42px;
-      text-align:center;
-    }
-    .section-header .tag{
-      color:var(--gold);
-      display:block;
-      text-transform:uppercase;
-      font-size:13px;
-      font-weight:1000;
-      letter-spacing:2px;
-      margin-bottom:10px;
-    }
-    .section-header h2{
-      font-size:clamp(32px,5vw,54px);
-      line-height:1.05;
-      margin-bottom:14px;
-    }
-    .section-header p{
-      color:var(--muted);
-      font-size:18px;
-      line-height:1.7;
-    }
-
-    .stats{
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:16px;
-    }
-
-    .stat{
-      padding:24px;
-      border-radius:26px;
-      text-align:center;
-      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:0 16px 40px rgba(0,0,0,.20);
-    }
-    .stat strong{display:block;font-size:38px;color:var(--gold);margin-bottom:8px}
-    .stat span{color:var(--muted);line-height:1.45;font-weight:800;font-size:15px}
-
-    .conversion-banner{
-      border-radius:34px;
-      padding:26px;
-      display:grid;
-      grid-template-columns:1.1fr auto;
-      gap:18px;
-      align-items:center;
-      background:
-        radial-gradient(circle at 16% 0%,rgba(255,200,77,.22),transparent 35%),
-        linear-gradient(135deg,rgba(255,64,88,.18),rgba(25,217,255,.09));
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow:var(--shadow);
-    }
-    .conversion-banner h2{font-size:clamp(26px,4vw,40px);margin-bottom:8px}
-    .conversion-banner p{color:var(--muted);line-height:1.6}
-
-    .gallery-section{
-      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
-      border-block:1px solid rgba(255,255,255,.08);
-    }
-
-    .gallery-grid{
-      display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:26px;
-      align-items:start;
-    }
-
-    .viewer{
-      overflow:hidden;
-      border-radius:30px;
-      border:1px solid rgba(255,255,255,.12);
-      background:#0c1323;
-      box-shadow:var(--shadow);
-    }
-
-    .viewer-top{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:14px;
-      padding:18px 20px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.01));
-    }
-    .viewer-top h3{font-size:23px}
-    .viewer-top span{color:var(--muted);font-size:14px;font-weight:800}
-    .viewer-stage{aspect-ratio:16/10;background:#05070b}
-    .viewer-stage img{width:100%;height:100%;object-fit:contain;background:#05070b}
-
-    .thumb-grid{
-      display:grid;
-      grid-template-columns:repeat(2,1fr);
-      gap:16px;
-    }
-
-    .thumb{
-      cursor:pointer;
-      overflow:hidden;
-      border-radius:24px;
-      background:#0c1323;
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:0 12px 34px rgba(0,0,0,.22);
-      transition:.22s ease;
-    }
-    .thumb:hover,.thumb.active{
-      transform:translateY(-3px);
-      border-color:rgba(255,200,77,.42);
-      box-shadow:0 18px 42px rgba(255,200,77,.10);
-    }
-    .thumb-img{aspect-ratio:16/10;background:#05070b;overflow:hidden}
-    .thumb-img img{width:100%;height:100%;object-fit:cover;object-position:top center}
-    .thumb-body{padding:14px 16px}
-    .thumb-body strong{display:block;margin-bottom:6px}
-    .thumb-body p{color:var(--muted);font-size:14px;line-height:1.5}
-
-    .feature-grid{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:18px;
-    }
-
-    .feature{
-      padding:26px;
-      border-radius:28px;
-      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:0 16px 40px rgba(0,0,0,.20);
-    }
-
-    .icon{
-      width:60px;
-      height:60px;
-      border-radius:19px;
-      display:grid;
-      place-items:center;
-      margin-bottom:16px;
-      background:linear-gradient(135deg,var(--gold),var(--gold2));
-      color:#111;
-      font-size:28px;
-      font-weight:1000;
-      box-shadow:0 0 28px rgba(255,200,77,.18);
-    }
-
-    .feature h3{font-size:22px;margin-bottom:10px}
-    .feature p{color:var(--muted);font-size:15.5px;line-height:1.65}
-
-    .suite-grid{
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:16px;
-    }
-    .suite-card{
-      border-radius:26px;
-      padding:22px;
-      min-height:178px;
-      background:
-        radial-gradient(circle at 80% 12%,rgba(255,200,77,.14),transparent 35%),
-        linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:0 14px 34px rgba(0,0,0,.18);
-    }
-    .suite-card .emoji{display:block;font-size:34px;margin-bottom:14px}
-    .suite-card h3{font-size:19px;margin-bottom:8px}
-    .suite-card p{color:var(--muted);font-size:14.5px;line-height:1.55}
-
-    .split{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:24px;
-      align-items:stretch;
-    }
-    .panel{
-      border-radius:30px;
-      padding:30px;
-      background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:var(--shadow);
-    }
-    .panel h3{font-size:28px;margin-bottom:12px}
-    .panel p{color:var(--muted);line-height:1.7;margin-bottom:16px}
-
-    .list{list-style:none;display:grid;gap:13px}
-    .list li{
-      display:flex;
-      gap:12px;
-      color:#dce6ff;
-      line-height:1.5;
-      font-weight:800;
-    }
-    .list li::before{
-      content:"✓";
-      width:28px;
-      height:28px;
-      flex:0 0 28px;
-      display:grid;
-      place-items:center;
-      border-radius:50%;
-      color:#111;
-      background:linear-gradient(135deg,var(--gold),var(--gold2));
-      font-weight:1000;
-      margin-top:1px;
-    }
-
-    .mode-grid{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:18px;
-    }
-    .mode{
-      position:relative;
-      overflow:hidden;
-      border-radius:28px;
-      padding:28px;
-      background:
-        radial-gradient(circle at 80% 18%,rgba(255,200,77,.22),transparent 28%),
-        linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:var(--shadow);
-    }
-    .mode h3{font-size:30px;margin-bottom:8px}
-    .chip{
-      display:inline-flex;
-      padding:8px 12px;
-      border-radius:999px;
-      background:rgba(255,255,255,.10);
-      border:1px solid rgba(255,255,255,.12);
-      color:var(--gold);
-      font-weight:1000;
-      font-size:13px;
-      margin-bottom:14px;
-    }
-    .mode p{color:var(--muted);line-height:1.65;margin-bottom:18px}
-
-    .mini-board{
-      display:grid;
-      gap:6px;
-      background:rgba(0,0,0,.25);
-      border-radius:18px;
-      padding:14px;
-      width:min(250px,100%);
-    }
-    .mini-board.board5{grid-template-columns:repeat(5,1fr)}
-    .mini-board.board3{grid-template-columns:repeat(3,1fr)}
-    .mini-board.board9{grid-template-columns:repeat(9,1fr);gap:4px}
-    .mini-board span{aspect-ratio:1/1;border-radius:7px;background:#fff;opacity:.92}
-
-    .faq-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:18px;
-    }
-    details{
-      border-radius:22px;
-      background:rgba(255,255,255,.055);
-      border:1px solid rgba(255,255,255,.10);
-      padding:20px;
-      box-shadow:0 12px 28px rgba(0,0,0,.16);
-    }
-    summary{cursor:pointer;font-size:18px;font-weight:1000;color:#fff}
+    .hero-chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+    .hero-chips a{font-size:13px;font-weight:900;color:#dcecff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);padding:9px 12px;border-radius:999px}
+    .hero-chips a:hover{border-color:rgba(25,217,255,.35);color:#fff}
+    .hero-visual{position:relative;min-height:590px}
+    .orbit{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(25,217,255,.18),transparent 60%);filter:blur(18px)}
+    .showcase{position:relative;height:590px}
+    .shot{position:absolute;overflow:hidden;border-radius:30px;border:1px solid rgba(255,255,255,.14);background:#0d1729;box-shadow:var(--shadow);transition:.25s ease}
+    .shot:hover{transform:translateY(-7px) rotate(0deg)!important;z-index:20;border-color:rgba(25,217,255,.50)}
+    .shot img{width:100%;height:100%;object-fit:cover;object-position:top center}
+    .shot::after{content:attr(data-label);position:absolute;left:14px;top:14px;color:#07111f;background:linear-gradient(135deg,var(--cyan),var(--green));font-size:12px;font-weight:1000;border-radius:999px;padding:8px 12px}
+    .shot.one{width:72%;height:50%;right:0;top:6px;transform:rotate(2deg);z-index:5}
+    .shot.two{width:50%;height:42%;left:0;top:108px;transform:rotate(-6deg);z-index:6}
+    .shot.three{width:45%;height:38%;right:6%;bottom:0;transform:rotate(5deg);z-index:7}
+    .shot.four{width:38%;height:30%;left:12%;bottom:28px;transform:rotate(-3deg);z-index:8}
+    .metric-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:10px}
+    .metric{border-radius:22px;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.10)}
+    .metric b{display:block;color:var(--cyan);font-size:30px;margin-bottom:5px}
+    .metric span{color:var(--muted);font-weight:800;font-size:14px;line-height:1.4}
+    .section{padding:86px 0}
+    .section-header{text-align:center;max-width:880px;margin:0 auto 44px}
+    .tag{display:block;color:var(--cyan);text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:1000;margin-bottom:10px}
+    .section-header h2{font-size:clamp(32px,5vw,58px);line-height:1.05;margin-bottom:16px}
+    .section-header p{color:var(--muted);font-size:18px;line-height:1.7}
+    .product-grid{display:grid;gap:28px}
+    .product-card{display:grid;grid-template-columns:.95fr 1.05fr;gap:0;overflow:hidden;border-radius:34px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.11);box-shadow:var(--shadow)}
+    .product-card:nth-child(even){grid-template-columns:1.05fr .95fr}
+    .product-card:nth-child(even) .product-media{order:2}
+    .product-media{position:relative;min-height:480px;background:#06101d}
+    .product-media img{width:100%;height:100%;object-fit:cover;object-position:top center}
+    .product-media::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.42));z-index:1;pointer-events:none}
+    .product-badge{position:absolute;top:18px;left:18px;z-index:2;color:#06101d;background:var(--accent);border-radius:999px;padding:10px 14px;font-size:13px;font-weight:1000;box-shadow:0 12px 26px rgba(0,0,0,.25)}
+    .product-body{padding:42px;display:flex;flex-direction:column;justify-content:center}
+    .product-category{color:var(--cyan);text-transform:uppercase;letter-spacing:1.5px;font-size:12px;font-weight:1000;margin-bottom:12px}
+    .product-body h3{font-size:clamp(30px,4vw,48px);line-height:1.05;margin-bottom:16px}
+    .product-body p{color:var(--muted);line-height:1.72;font-size:17px;margin-bottom:18px}
+    .product-body ul{display:grid;gap:11px;list-style:none;margin:0 0 24px}
+    .product-body li{display:flex;gap:10px;color:#e6eeff;font-weight:800;line-height:1.45}
+    .product-body li::before{content:"✓";width:25px;height:25px;flex:0 0 25px;border-radius:50%;display:grid;place-items:center;color:#07111f;background:linear-gradient(135deg,var(--cyan),var(--green));font-weight:1000}
+    .product-actions{display:flex;gap:12px;flex-wrap:wrap}
+    .category-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+    .category-card{padding:24px;border-radius:26px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);box-shadow:0 16px 40px rgba(0,0,0,.18)}
+    .category-card span{font-size:34px;display:block;margin-bottom:12px}
+    .category-card h3{font-size:21px;margin-bottom:8px}
+    .category-card p{color:var(--muted);line-height:1.6;font-size:15px}
+    .process{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+    .step{position:relative;padding:28px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.10)}
+    .step b{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,var(--cyan),var(--green));color:#07111f;font-size:24px;margin-bottom:16px}
+    .step h3{font-size:22px;margin-bottom:10px}
+    .step p{color:var(--muted);line-height:1.62}
+    .cta-panel{text-align:center;border-radius:42px;padding:58px 26px;background:radial-gradient(circle at 16% 0%,rgba(25,217,255,.22),transparent 35%),radial-gradient(circle at 84% 0%,rgba(37,211,102,.18),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.12);box-shadow:var(--shadow)}
+    .cta-panel h2{font-size:clamp(34px,5vw,60px);line-height:1.05;margin-bottom:16px}
+    .cta-panel p{max-width:780px;margin:0 auto 24px;color:var(--muted);font-size:18px;line-height:1.7}
+    .phone{display:inline-flex;align-items:center;gap:12px;padding:16px 24px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.13);font-size:clamp(26px,4vw,42px);font-weight:1000;color:var(--green);margin:0 0 22px}
+    .faq{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    details{border-radius:22px;padding:20px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.10)}
+    summary{cursor:pointer;font-weight:1000;font-size:18px}
     details p{color:var(--muted);line-height:1.65;margin-top:12px}
-
-    .final-cta{
-      text-align:center;
-      border-radius:40px;
-      padding:52px 24px;
-      background:
-        radial-gradient(circle at 22% 0%,rgba(255,64,88,.22),transparent 32%),
-        radial-gradient(circle at 80% 10%,rgba(25,217,255,.18),transparent 34%),
-        linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04));
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow:var(--shadow);
-    }
-    .final-cta h2{
-      font-size:clamp(34px,5vw,58px);
-      line-height:1.04;
-      margin-bottom:16px;
-    }
-    .final-cta p{
-      color:var(--muted);
-      max-width:820px;
-      margin:0 auto 24px;
-      line-height:1.7;
-      font-size:18px;
-    }
-
-    .final-count{
-      display:flex;
-      justify-content:center;
-      gap:14px;
-      flex-wrap:wrap;
-      margin:22px 0;
-    }
-    .final-time{
-      min-width:120px;
-      padding:18px 14px;
-      border-radius:22px;
-      background:rgba(0,0,0,.33);
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow:0 0 26px rgba(255,200,77,.10);
-    }
-    .final-time b{
-      display:block;
-      font-family:"Courier New",monospace;
-      font-size:46px;
-      color:var(--gold);
-      line-height:1;
-    }
-    .final-time small{
-      display:block;
-      color:#fff;
-      font-size:12px;
-      font-weight:1000;
-      text-transform:uppercase;
-      margin-top:9px;
-      letter-spacing:1px;
-    }
-    .phone{
-      display:inline-flex;
-      align-items:center;
-      gap:12px;
-      padding:16px 26px;
-      border-radius:999px;
-      background:rgba(0,0,0,.30);
-      border:1px solid rgba(255,255,255,.12);
-      color:var(--gold);
-      font-size:clamp(24px,4vw,42px);
-      font-weight:1000;
-      margin:10px 0 20px;
-    }
-
-    .sticky-cta{
-      position:fixed;
-      left:50%;
-      bottom:16px;
-      transform:translateX(-50%);
-      z-index:120;
-      width:min(760px,92%);
-      padding:10px;
-      border-radius:999px;
-      background:rgba(5,6,11,.88);
-      border:1px solid rgba(255,255,255,.14);
-      backdrop-filter:blur(14px);
-      box-shadow:0 18px 48px rgba(0,0,0,.42);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-    }
-    .sticky-cta strong{padding-left:12px;font-size:14px;color:#fff}
-    .sticky-cta span{color:var(--gold);font-family:"Courier New",monospace;font-weight:1000}
-    .sticky-cta .btn{padding:12px 18px}
-
-    .floating-wa{
-      position:fixed;
-      right:20px;
-      bottom:92px;
-      width:64px;
-      height:64px;
-      border-radius:50%;
-      display:grid;
-      place-items:center;
-      background:var(--green);
-      color:#fff;
-      font-size:31px;
-      box-shadow:0 18px 42px rgba(37,211,102,.36);
-      z-index:121;
-      animation:waPulse 1.8s infinite;
-    }
-    @keyframes waPulse{
-      0%,100%{transform:scale(1)}
-      50%{transform:scale(1.08)}
-    }
-
-    footer{
-      padding:34px 0 110px;
-      border-top:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.22);
-    }
-    .footer-grid{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:18px;
-      flex-wrap:wrap;
-      color:#a9b7d5;
-      font-size:14px;
-    }
-    .notice{
-      max-width:820px;
-      padding:14px 16px;
-      border-radius:18px;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.08);
-      color:#dce5ff;
-      line-height:1.55;
-    }
-
-    @media (max-width:1000px){
-      .nav-links{display:none}
-      .hero-grid,.gallery-grid,.split,.feature-grid,.suite-grid,.mode-grid,.faq-grid,.stats{
-        grid-template-columns:1fr;
-      }
-      .trust-row{grid-template-columns:1fr}
-      .conversion-banner{grid-template-columns:1fr;text-align:center}
-      .hero-visual{min-height:470px}
-      .screen-stack{height:470px}
-      .screen.s1{inset:32px 0 0 50px}
-      .floating-note{top:94px;right:6px;max-width:190px}
-    }
-
-    @media (max-width:640px){
-      body{padding-bottom:150px}
-      .nav{height:auto;padding:14px 0}
-      .brand small{font-size:10px}
-      .top-alert-inner{font-size:14px}
-      .hero{padding-top:44px}
-      h1{letter-spacing:-1px}
-      .mega-countdown{grid-template-columns:1fr 1fr}
-      .hero-visual{min-height:370px}
-      .screen-stack{height:370px}
-      .screen.s1{inset:22px 0 0 22px}
-      .screen.s2{width:58%}
-      .screen.s3{width:50%}
-      .screen.s4{width:44%}
-      .floating-note{display:none}
-      .thumb-grid{grid-template-columns:1fr}
-      .phone{font-size:28px;padding:14px 18px}
-      .floating-wa{width:58px;height:58px;right:14px;bottom:150px}
-      .sticky-cta{border-radius:22px;align-items:stretch;flex-direction:column;text-align:center}
-      .sticky-cta strong{padding-left:0}
-      .sticky-cta .btn{width:100%}
-    }
-
-    .demo-popup-overlay{
-      position:fixed;
-      inset:0;
-      z-index:9999;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:22px;
-      background:rgba(0,0,0,.72);
-      backdrop-filter:blur(10px);
-    }
-
-    .demo-popup-overlay.show{
-      display:flex;
-      animation:fadeIn .25s ease both;
-    }
-
-    @keyframes fadeIn{
-      from{opacity:0}
-      to{opacity:1}
-    }
-
-    .demo-popup{
-      position:relative;
-      width:min(520px,100%);
-      border-radius:32px;
-      padding:34px 26px 28px;
-      text-align:center;
-      color:#fff;
-      background:
-        radial-gradient(circle at 20% 0%,rgba(255,200,77,.34),transparent 36%),
-        radial-gradient(circle at 80% 10%,rgba(25,217,255,.22),transparent 34%),
-        linear-gradient(180deg,rgba(20,31,52,.98),rgba(7,10,18,.98));
-      border:1px solid rgba(255,255,255,.16);
-      box-shadow:0 30px 90px rgba(0,0,0,.62),0 0 55px rgba(255,200,77,.16);
-      overflow:hidden;
-      animation:popUp .35s ease both;
-    }
-
-    @keyframes popUp{
-      from{transform:scale(.92) translateY(18px);opacity:0}
-      to{transform:scale(1) translateY(0);opacity:1}
-    }
-
-    .demo-popup::before{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
-      transform:translateX(-100%);
-      animation:popupShine 3.2s infinite;
-      pointer-events:none;
-    }
-
-    @keyframes popupShine{
-      0%{transform:translateX(-100%)}
-      55%,100%{transform:translateX(100%)}
-    }
-
-    .demo-popup-close{
-      position:absolute;
-      top:14px;
-      right:14px;
-      width:38px;
-      height:38px;
-      border-radius:50%;
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.08);
-      color:#fff;
-      font-size:22px;
-      font-weight:900;
-      cursor:pointer;
-      transition:.2s ease;
-      z-index:2;
-    }
-
-    .demo-popup-close:hover{
-      background:rgba(255,64,88,.22);
-      transform:rotate(90deg);
-    }
-
-    .demo-popup-icon{
-      width:78px;
-      height:78px;
-      margin:0 auto 16px;
-      border-radius:24px;
-      display:grid;
-      place-items:center;
-      background:linear-gradient(135deg,var(--gold),var(--gold2));
-      color:#111;
-      font-size:38px;
-      box-shadow:0 0 34px rgba(255,200,77,.30);
-    }
-
-    .demo-popup h2{
-      font-size:clamp(30px,5vw,44px);
-      line-height:1.05;
-      margin-bottom:12px;
-      text-transform:uppercase;
-    }
-
-    .demo-popup h2 span{
-      color:var(--gold);
-    }
-
-    .demo-popup p{
-      color:var(--muted);
-      line-height:1.65;
-      font-size:17px;
-      margin-bottom:22px;
-    }
-
-    .demo-popup-actions{
-      display:grid;
-      gap:12px;
-      position:relative;
-      z-index:2;
-    }
-
-    .demo-popup-actions .btn{
-      width:100%;
-      justify-content:center;
-      font-size:17px;
-    }
-
-    .demo-popup-note{
-      margin-top:14px;
-      color:#dce6ff;
-      font-size:13px;
-      line-height:1.45;
-      opacity:.9;
-    }
-
+    .floating-wa{position:fixed;right:20px;bottom:20px;z-index:120;width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff;font-size:30px;box-shadow:0 20px 44px rgba(37,211,102,.36);animation:pulse 1.8s infinite}
+    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+    footer{padding:34px 0 42px;border-top:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.22);color:#aab8d2}
+    .footer-grid{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:center}
+    .notice{max-width:720px;line-height:1.55;font-size:14px}
+    .mobile-cta{display:none;position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:121;width:min(92%,560px);padding:10px;border-radius:999px;background:rgba(5,8,21,.90);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 48px rgba(0,0,0,.42)}
+    .mobile-cta .btn{width:100%;font-size:15px}
+    @media(max-width:1000px){.nav-links{display:none}.hero-grid,.product-card,.product-card:nth-child(even),.category-row,.process,.faq,.metric-strip{grid-template-columns:1fr}.product-card:nth-child(even) .product-media{order:0}.hero-visual{min-height:480px}.showcase{height:480px}.product-media{min-height:420px}}
+    @media(max-width:640px){body{padding-bottom:88px}.hero{padding:50px 0 58px}h1{letter-spacing:-1.4px}.nav{min-height:68px}.brand small{display:none}.hero-actions .btn{width:100%}.hero-visual{min-height:380px}.showcase{height:380px}.shot.one{width:78%;height:45%}.shot.two{width:58%;height:35%;top:95px}.shot.three{width:54%;height:34%}.shot.four{width:48%;height:28%}.product-body{padding:28px}.product-media{min-height:360px}.category-row,.process{gap:12px}.floating-wa{display:none}.mobile-cta{display:block}}
   </style>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"Organization",
+    "name":"Mercado Digital",
+    "description":"Soluciones digitales para empresas, ventas, automatización, eventos, contadores y validaciones.",
+    "contactPoint":{"@type":"ContactPoint","telephone":"+573503875753","contactType":"sales","availableLanguage":"Spanish"}
+  }
+  </script>
 </head>
-
 <body>
-  <div class="demo-popup-overlay" id="demoPopup" aria-hidden="true">
-    <div class="demo-popup" role="dialog" aria-modal="true" aria-labelledby="demoPopupTitle">
-      <button class="demo-popup-close" type="button" id="demoPopupClose" aria-label="Cerrar ventana">×</button>
-
-      <div class="demo-popup-icon">🚀</div>
-
-      <h2 id="demoPopupTitle">Pide tu <span>prueba</span></h2>
-      <p>
-        Entra ahora y mira una prueba del software multijuego profesional.
-        Conoce cómo funciona antes de comprar o cotizar.
-      </p>
-
-      <div class="demo-popup-actions">
-        <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola,%20quiero%20probar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoción%20de%2015%20minutos." target="_blank" rel="noopener">
-          👉 Pide tu prueba e ingresa aquí
-        </a>
-        <a class="btn btn-outline" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">
-          💬 Quiero información por WhatsApp
-        </a>
-      </div>
-
-      <div class="demo-popup-note">
-        La prueba se abrirá en una nueva pestaña.
-      </div>
-    </div>
-  </div>
-
-  <div class="top-alert">
-    <div class="container top-alert-inner">
-      <span>🔥 Promoción activa: compra o cotiza tu software completo hoy</span>
-      <span class="pill-timer" id="miniCountdown">15:00</span>
-      <a href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">Solicitar software ahora</a>
-    </div>
-  </div>
-
-  <a class="floating-wa" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank" aria-label="WhatsApp">☎</a>
+  <a class="floating-wa" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20sobre%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener" aria-label="Contactar por WhatsApp">☎</a>
+  <div class="mobile-cta"><a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20una%20demo%20de%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener">💬 Solicitar demo por WhatsApp</a></div>
 
   <header class="topbar">
     <div class="container nav">
-      <a href="#inicio" class="brand">
-        <div class="brand-mark">★</div>
-        <div>
-          <strong>Mercado Digital</strong>
-          <small>Software Multijuego Profesional</small>
-        </div>
+      <a href="#inicio" class="brand" aria-label="Mercado Digital inicio">
+        <div class="brand-mark">✓</div>
+        <div><strong>Mercado Digital</strong><small>Soluciones de software</small></div>
       </a>
-
       <nav class="nav-links">
-        <a href="#capturas">Capturas</a>
-        <a href="#plataforma">Incluye</a>
-        <a href="#beneficios">Beneficios</a>
-        <a href="#modos">Bingo</a>
+        <a href="#productos">Productos</a>
+        <a href="#soluciones">Soluciones</a>
+        <a href="#proceso">Cómo comprar</a>
         <a href="#faq">Preguntas</a>
+        <a href="#contacto">Contacto</a>
       </nav>
-
-      <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">💬 Comprar / Cotizar</a>
+      <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20cotizar%20un%20software%20de%20Mercado%20Digital." target="_blank" rel="noopener">Cotizar ahora</a>
     </div>
   </header>
 
@@ -1075,268 +172,177 @@
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <div class="eyebrow">🎰 Software completo para salas, bingos, casinos sociales y eventos</div>
-          <h1>
-            Compra tu <span class="gold">Software</span><br>
-            <span class="accent">Multijuego Profesional</span>
-          </h1>
-
+          <div class="eyebrow">🚀 Soluciones digitales listas para vender, operar y automatizar</div>
+          <h1>Software profesional para <span class="gradient-text">impulsar tu negocio</span></h1>
           <p class="lead">
-            Obtén un sistema completo con varios juegos y herramientas en una sola plataforma:
-            <strong>Bingo 75, Bingo 18, Bingo 30, Bingo 90, ruleta de desempates, ruleta tipo casino,
-            subastas, ranking, lotería tradicional, dados, carrera de caballos, pantalla completa,
-            cámara flotante, multimedia, importación de datos, respaldos y exportación de cartones.</strong>
+            En <strong>Mercado Digital</strong> encuentras herramientas digitales listas para mejorar ventas, operación, comunicación, eventos, control tributario y validaciones. Elige el software que necesitas, solicita demo y recibe asesoría directa por WhatsApp.
           </p>
-
           <div class="hero-actions">
-            <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">📲 Quiero comprar el software</a>
-            <a class="btn btn-outline" href="#capturas">🖥️ Ver capturas reales</a>
+            <a class="btn btn-primary" href="#productos">Ver soluciones</a>
+            <a class="btn btn-soft" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20asesor%C3%ADa%20para%20elegir%20el%20software%20que%20necesito%20de%20Mercado%20Digital." target="_blank" rel="noopener">💬 Hablar con un asesor</a>
           </div>
-
-          <div class="trust-row">
-            <div class="trust-item">✅ Software completo con varios juegos</div>
-            <div class="trust-item">✅ Panel de control y personalización</div>
-            <div class="trust-item">✅ Ideal para operar salas y eventos</div>
+          <div class="metric-strip">
+            <div class="metric"><b>6</b><span>softwares disponibles</span></div>
+            <div class="metric"><b>Demo</b><span>asesoría y cotización por WhatsApp</span></div>
+            <div class="metric"><b>100%</b><span>soluciones listas para vender</span></div>
           </div>
-
-          <div class="urgency-card">
-            <div class="urgency-head">
-              <strong>⏳ Atención prioritaria activa</strong>
-              <span>Consulta disponible por tiempo limitado</span>
-            </div>
-            <div class="mega-countdown">
-              <div class="mega-time">
-                <b id="heroMin">15</b>
-                <small>Minutos</small>
-              </div>
-              <div class="mega-time">
-                <b id="heroSec">00</b>
-                <small>Segundos</small>
-              </div>
-            </div>
-            <div class="urgency-foot">
-              <p>Escríbenos antes de que termine el contador y recibe información rápida para comprar, cotizar o solicitar demo del software.</p>
-              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">🚀 Comprar / solicitar demo por WhatsApp</a>
-            </div>
-          </div>
+          <div class="hero-chips"><a href="#pos">Sistema POS Integral</a><a href="#whatsapp">Mensajes Masivos por WhatsApp</a><a href="#multijuego">Software Multijuego Profesional</a><a href="#fixture">Fixture Mundial 2026</a><a href="#tributario">Asistente / Calendario Tributario</a><a href="#rut">Verificador RUT</a></div>
         </div>
-
-        <div class="hero-visual">
-          <div class="glow"></div>
-          <div class="screen-stack">
-            <div class="screen s1" data-label="Bingo en vivo">
-              <img class="auto-image" data-base="ima1" alt="Bingo en vivo">
-            </div>
-            <div class="screen s2" data-label="Personalización">
-              <img class="auto-image" data-base="ima2" alt="Personalización visual">
-            </div>
-            <div class="screen s3" data-label="Ruleta casino">
-              <img class="auto-image" data-base="ima3" alt="Ruleta tipo casino">
-            </div>
-            <div class="screen s4" data-label="Ruleta desempates">
-              <img class="auto-image" data-base="ima4" alt="Ruleta de desempates">
-            </div>
-          </div>
-
-          <div class="floating-note">
-            <strong>Capturas reales</strong>
-            <p>Así se ve el software que recibirás: juegos, controles, tableros y personalización.</p>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="orbit"></div>
+          <div class="showcase">
+            <div class="shot one" data-label="Sistema POS"><img src="imagenes/ChatGPT Image 15 jun 2026, 08_37_39 p.m..png" alt=""></div>
+            <div class="shot two" data-label="Multijuego"><img src="imagenes/suite de juegos.jpg" alt=""></div>
+            <div class="shot three" data-label="Verificador RUT"><img src="imagenes/verificador de rut.jpg" alt=""></div>
+            <div class="shot four" data-label="Tributario"><img src="imagenes/calendario tributario.jpg" alt=""></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section">
-      <div class="container">
-        <div class="stats">
-          <div class="stat">
-            <strong>4</strong>
-            <span>modos principales de bingo: 75, 18, 30 y 90</span>
-          </div>
-          <div class="stat">
-            <strong>10+</strong>
-            <span>juegos y herramientas visuales incluidas</span>
-          </div>
-          <div class="stat">
-            <strong>1</strong>
-            <span>software central para administrar todo</span>
-          </div>
-          <div class="stat">
-            <strong>15</strong>
-            <span>minutos para atención prioritaria</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <div class="conversion-banner">
-          <div>
-            <h2>Obtén un software listo para operar juegos y actividades</h2>
-            <p>Compra una plataforma visual, completa y profesional para manejar bingos, ruletas, ranking, subastas, lotería y más desde un solo sistema.</p>
-          </div>
-          <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">💬 Solicitar precio y demo</a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section gallery-section" id="capturas">
+    <section class="section" id="soluciones">
       <div class="container">
         <div class="section-header">
-          <span class="tag">Capturas reales del software</span>
-          <h2>Mira lo que incluye la plataforma</h2>
-          <p>Estas son pantallas reales del software: tablero de bingo, personalización visual, ruleta tipo casino y ruleta de desempates.</p>
+          <span class="tag">Elige por necesidad</span>
+          <h2>Soluciones digitales para vender más y operar mejor</h2>
+          <p>Cada software está pensado para resolver una necesidad concreta: vender, administrar, comunicar, validar, organizar o entretener.</p>
         </div>
+        <div class="category-row">
+          <article class="category-card"><span>🏪</span><h3>Empresas y comercios</h3><p>POS integral, inventario, caja, compras, ventas y operación diaria.</p></article>
+          <article class="category-card"><span>📲</span><h3>Comunicación</h3><p>Mensajería comercial para contactos con consentimiento y gestión responsable.</p></article>
+          <article class="category-card"><span>🎮</span><h3>Eventos y entretenimiento</h3><p>Software multijuego, bingo, ruletas y fixture mundial.</p></article>
+          <article class="category-card"><span>🧾</span><h3>Contadores y validación</h3><p>Calendario tributario, vencimientos, alertas y verificación RUT.</p></article>
+        </div>
+      </div>
+    </section>
 
-        <div class="gallery-grid">
-          <div class="viewer">
-            <div class="viewer-top">
-              <div>
-                <h3 id="viewerTitle">Bingo en vivo</h3>
-                <span id="viewerDesc">Tablero visual con balotas, figuras activas y contador.</span>
-              </div>
-              <span>Haz clic en una captura</span>
-            </div>
-            <div class="viewer-stage">
-              <img id="mainViewer" class="auto-image" data-base="ima1" alt="Vista principal del sistema">
+    <section class="section" id="productos">
+      <div class="container">
+        <div class="section-header">
+          <span class="tag">Soluciones disponibles</span>
+          <h2>Elige el software que necesitas</h2>
+          <p>Conoce cada herramienta, revisa sus beneficios y solicita una demo o cotización según la solución que más se adapte a tu negocio.</p>
+        </div>
+        <div class="product-grid">
+          
+        <article class="product-card" id="pos">
+          <div class="product-media">
+            <span class="product-badge" style="--accent:#19d9ff">Gestión empresarial</span>
+            <img src="imagenes/ChatGPT Image 15 jun 2026, 08_37_39 p.m..png" alt="Sistema POS Integral - Mercado Digital" loading="lazy">
+          </div>
+          <div class="product-body">
+            <p class="product-category">Ventas, inventario y operación empresarial</p>
+            <h3>Sistema POS Integral</h3>
+            <p>Administra ventas, compras, inventario PEPS, caja, arqueo, báscula, remisiones, terceros, conductores, certificados y contabilidad desde una plataforma de escritorio personalizable.</p>
+            <ul><li>Multiempresa y configurable por administración</li><li>Ventas, compras e inventario PEPS</li><li>Caja, arqueo, báscula y remisiones</li><li>Certificados y terceros 360°</li><li>Reportes y módulos contables</li></ul>
+            <div class="product-actions">
+              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Sistema%20POS%20Integral.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
+              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
             </div>
           </div>
-
-          <div class="thumb-grid">
-            <article class="thumb active" data-base="ima1" data-title="Bingo en vivo" data-desc="Tablero visual con balotas, figuras activas y contador.">
-              <div class="thumb-img"><img class="auto-image" data-base="ima1" alt="Bingo en vivo"></div>
-              <div class="thumb-body">
-                <strong>Bingo en vivo</strong>
-                <p>Tablero profesional, balota actual, historial y visualización clara.</p>
-              </div>
-            </article>
-
-            <article class="thumb" data-base="ima2" data-title="Personalización visual" data-desc="Panel para cambiar colores, imágenes, logos y elementos del sistema.">
-              <div class="thumb-img"><img class="auto-image" data-base="ima2" alt="Personalización visual"></div>
-              <div class="thumb-body">
-                <strong>Personalización visual</strong>
-                <p>Adapta el software con colores, fondos e imágenes propias.</p>
-              </div>
-            </article>
-
-            <article class="thumb" data-base="ima3" data-title="Ruleta tipo casino" data-desc="Módulo visual de ruleta con tablero, fichas y últimos números.">
-              <div class="thumb-img"><img class="auto-image" data-base="ima3" alt="Ruleta tipo casino"></div>
-              <div class="thumb-body">
-                <strong>Ruleta tipo casino</strong>
-                <p>Módulo visual premium incluido dentro del sistema.</p>
-              </div>
-            </article>
-
-            <article class="thumb" data-base="ima4" data-title="Ruleta de desempates" data-desc="Selecciona participantes y genera una ruleta para desempates o dinámicas.">
-              <div class="thumb-img"><img class="auto-image" data-base="ima4" alt="Ruleta de desempates"></div>
-              <div class="thumb-body">
-                <strong>Ruleta de desempates</strong>
-                <p>Ideal para nombres, equipos, retos y selección visual.</p>
-              </div>
-            </article>
+        </article>
+    
+        <article class="product-card" id="whatsapp">
+          <div class="product-media">
+            <span class="product-badge" style="--accent:#25d366">Automatización</span>
+            <img src="imagenes/mensajes masivos.jpg" alt="Mensajes Masivos por WhatsApp - Mercado Digital" loading="lazy">
           </div>
+          <div class="product-body">
+            <p class="product-category">Comunicación comercial responsable</p>
+            <h3>Mensajes Masivos por WhatsApp</h3>
+            <p>Extensión para Chrome orientada a campañas con contactos autorizados. Ayuda a importar listas, enviar mensajes y automatizar respuestas de forma ordenada.</p>
+            <ul><li>Envía a listas con consentimiento</li><li>Importación fácil de contactos</li><li>Automatización de respuestas</li><li>Compatible con Windows, macOS y Linux</li><li>Enfoque responsable para evitar bloqueos</li></ul>
+            <div class="product-actions">
+              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Mensajes%20Masivos%20por%20WhatsApp.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
+              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+            </div>
+          </div>
+        </article>
+    
+        <article class="product-card" id="multijuego">
+          <div class="product-media">
+            <span class="product-badge" style="--accent:#ffc84d">Eventos y salas</span>
+            <img src="imagenes/suite de juegos.jpg" alt="Software Multijuego Profesional - Mercado Digital" loading="lazy">
+          </div>
+          <div class="product-body">
+            <p class="product-category">Bingo, ruletas y entretenimiento interactivo</p>
+            <h3>Software Multijuego Profesional</h3>
+            <p>Suite visual para salas, eventos y entretenimiento: bingo visual, ruletas, ranking, módulos personalizables y control en vivo.</p>
+            <ul><li>Bingo visual y tableros profesionales</li><li>Ruletas y dinámicas interactivas</li><li>Pantallas personalizables</li><li>Control en vivo para eventos</li><li>Diseñado para salas y entretenimiento</li></ul>
+            <div class="product-actions">
+              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Software%20Multijuego%20Profesional.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
+              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+            </div>
+          </div>
+        </article>
+    
+        <article class="product-card" id="fixture">
+          <div class="product-media">
+            <span class="product-badge" style="--accent:#e83e8c">Deportes</span>
+            <img src="imagenes/fixturi mundial 2026.jpg" alt="Fixture Mundial 2026 - Mercado Digital" loading="lazy">
+          </div>
+          <div class="product-body">
+            <p class="product-category">App instalable de partidos y predicciones</p>
+            <h3>Fixture Mundial 2026</h3>
+            <p>Herramienta para llevar el Mundial 2026 en el celular: partidos, grupos, calendario, predicciones y acceso rápido como app instalable.</p>
+            <ul><li>Consulta partidos y resultados</li><li>Guarda partidos favoritos</li><li>Calcula ganadores automáticamente</li><li>Agrega eventos al calendario</li><li>Instalable como app</li></ul>
+            <div class="product-actions">
+              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Fixture%20Mundial%202026.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
+              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+            </div>
+          </div>
+        </article>
+    
+        <article class="product-card" id="tributario">
+          <div class="product-media">
+            <span class="product-badge" style="--accent:#42d9ff">Contadores</span>
+            <img src="imagenes/calendario tributario.jpg" alt="Asistente / Calendario Tributario - Mercado Digital" loading="lazy">
+          </div>
+          <div class="product-body">
+            <p class="product-category">Organización de clientes y vencimientos</p>
+            <h3>Asistente / Calendario Tributario</h3>
+            <p>Herramienta para contadores y asesores que necesitan organizar clientes, obligaciones, vencimientos tributarios, alertas y calendario integrado.</p>
+            <ul><li>Control por cliente</li><li>Vencimientos por mes</li><li>Alertas anticipadas</li><li>Integración con calendario</li><li>Datos organizados y seguros</li></ul>
+            <div class="product-actions">
+              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Asistente%20%2F%20Calendario%20Tributario.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
+              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+            </div>
+          </div>
+        </article>
+    
+        <article class="product-card" id="rut">
+          <div class="product-media">
+            <span class="product-badge" style="--accent:#00d69f">Validación</span>
+            <img src="imagenes/verificador de rut.jpg" alt="Verificador RUT - Mercado Digital" loading="lazy">
+          </div>
+          <div class="product-body">
+            <p class="product-category">Consulta masiva rápida y organizada</p>
+            <h3>Verificador RUT</h3>
+            <p>Sistema para consultas masivas y validaciones rápidas. Permite pegar cédulas o NITs, procesar información y exportar resultados a Excel.</p>
+            <ul><li>Pega cédulas o NITs sin subir Excel</li><li>Consulta masiva rápida</li><li>Exportación de resultados a Excel</li><li>Interfaz profesional</li><li>Ideal para validación masiva</li></ul>
+            <div class="product-actions">
+              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Verificador%20RUT.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
+              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+            </div>
+          </div>
+        </article>
+    
         </div>
       </div>
     </section>
 
-    <section class="section" id="plataforma">
+    <section class="section" id="proceso">
       <div class="container">
         <div class="section-header">
-          <span class="tag">Software completo</span>
-          <h2>Todo lo que recibes en la plataforma</h2>
-          <p>El cliente no compra una sola pantalla: obtiene una suite multijuego con herramientas para operar actividades en vivo, personalizar la experiencia y controlar la sala.</p>
+          <span class="tag">Cómo comprar</span>
+          <h2>Compra fácil, rápida y asesorada</h2>
+          <p>El proceso está diseñado para que recibas asesoría rápida, demo y cotización directa por WhatsApp.</p>
         </div>
-
-        <div class="suite-grid">
-          <article class="suite-card"><span class="emoji">🎯</span><h3>Bingo 75</h3><p>Tablero clásico B-I-N-G-O, figuras activas, historial, contador y vista para público.</p></article>
-          <article class="suite-card"><span class="emoji">⚡</span><h3>Bingo 18</h3><p>Formato rápido tipo flash con cartones compactos y administración ágil.</p></article>
-          <article class="suite-card"><span class="emoji">💠</span><h3>Bingo 30</h3><p>Modo veloz 3x3 con seriales, control de números e importación.</p></article>
-          <article class="suite-card"><span class="emoji">🟧</span><h3>Bingo 90</h3><p>Modalidad amplia 9x3 con cartones de 15 números y tablero de 90 balotas.</p></article>
-          <article class="suite-card"><span class="emoji">🎡</span><h3>Ruleta desempates</h3><p>Ingresa jugadores o equipos y selecciona de forma visual con una rueda animada.</p></article>
-          <article class="suite-card"><span class="emoji">🎰</span><h3>Ruleta tipo casino</h3><p>Módulo visual con tablero, fichas, colores, números y últimos resultados.</p></article>
-          <article class="suite-card"><span class="emoji">🏆</span><h3>Ranking</h3><p>Pizarra de líderes para manejar puntos, participantes, equipos y posiciones.</p></article>
-          <article class="suite-card"><span class="emoji">🔨</span><h3>Subastas</h3><p>Foto del producto, puja actual, incremento configurable y botón de cierre.</p></article>
-          <article class="suite-card"><span class="emoji">🃏</span><h3>Lotería</h3><p>Baraja visual, historial, figuras, tablas y exportación para compartir.</p></article>
-          <article class="suite-card"><span class="emoji">🎲</span><h3>Dados</h3><p>Lanzador visual para actividades, retos, dinámicas o momentos interactivos.</p></article>
-          <article class="suite-card"><span class="emoji">🐎</span><h3>Carrera</h3><p>Simulador de carrera para dinámicas visuales y entretenimiento adicional.</p></article>
-          <article class="suite-card"><span class="emoji">🔐</span><h3>Control</h3><p>Login, sesiones, respaldos, configuraciones y administración centralizada.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="beneficios">
-      <div class="container">
-        <div class="section-header">
-          <span class="tag">Beneficios para quien compra</span>
-          <h2>Un sistema completo para operar con mejor presentación</h2>
-          <p>El software permite administrar los juegos de forma visual, profesional y ordenada, con controles pensados para el operador y pantallas atractivas para el público.</p>
-        </div>
-
-        <div class="feature-grid">
-          <article class="feature"><div class="icon">🖥️</div><h3>Pantalla completa</h3><p>Proyecta tableros y dinámicas en una pantalla grande para el público.</p></article>
-          <article class="feature"><div class="icon">🎨</div><h3>Personalización visual</h3><p>Cambia colores, fondos, logos, imágenes laterales y contenido multimedia.</p></article>
-          <article class="feature"><div class="icon">⚙️</div><h3>Manual o automático</h3><p>Controla cada jugada manualmente o usa temporizadores automáticos.</p></article>
-          <article class="feature"><div class="icon">📊</div><h3>Importación Excel</h3><p>Carga cartones o datos para ahorrar tiempo en la operación.</p></article>
-          <article class="feature"><div class="icon">💾</div><h3>Respaldos JSON</h3><p>Guarda y restaura información importante del sistema.</p></article>
-          <article class="feature"><div class="icon">📦</div><h3>Exportación</h3><p>Genera cartones, imágenes o archivos ZIP para compartir o imprimir.</p></article>
-          <article class="feature"><div class="icon">✅</div><h3>Verificación</h3><p>Revisa cartones y resultados de forma visual y más confiable.</p></article>
-          <article class="feature"><div class="icon">🎥</div><h3>Cámara flotante</h3><p>Ideal para transmisiones, presentaciones y eventos online.</p></article>
-          <article class="feature"><div class="icon">🚀</div><h3>Imagen profesional</h3><p>La sala o evento se ve más moderno, completo y llamativo.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="modos">
-      <div class="container">
-        <div class="section-header">
-          <span class="tag">Modos de bingo incluidos</span>
-          <h2>Varios formatos en el mismo software</h2>
-          <p>El sistema permite trabajar con actividades rápidas, clásicas o extensas según el tipo de público, evento o negocio.</p>
-        </div>
-
-        <div class="mode-grid">
-          <article class="mode">
-            <h3>Bingo 75</h3><span class="chip">Clásico 5x5</span>
-            <p>El formato tradicional con figuras, tablero B-I-N-G-O, historial y contador.</p>
-            <div class="mini-board board5"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          </article>
-          <article class="mode">
-            <h3>Bingo 30</h3><span class="chip">Rápido 3x3</span>
-            <p>Una modalidad ágil para sesiones cortas y dinámicas rápidas.</p>
-            <div class="mini-board board3"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          </article>
-          <article class="mode">
-            <h3>Bingo 90</h3><span class="chip">Amplio 9x3</span>
-            <p>Formato más extenso para eventos con más participantes y mayor duración.</p>
-            <div class="mini-board board9"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container split">
-        <div class="panel">
-          <h3>Ideal para quien necesita operar juegos en vivo</h3>
-          <p>Este software es para negocios, salas, organizadores o eventos que necesitan un sistema completo con varios módulos visuales.</p>
-          <ul class="list">
-            <li>Un solo sistema con múltiples juegos y herramientas.</li>
-            <li>Diseño profesional para proyectar al público.</li>
-            <li>Controles para administrar la operación desde el panel.</li>
-            <li>Personalización para adaptar el sistema a la marca o sala.</li>
-          </ul>
-        </div>
-
-        <div class="panel">
-          <h3>Qué obtiene el comprador</h3>
-          <p>Una suite visual lista para manejar actividades, mostrar pantallas atractivas y controlar la experiencia.</p>
-          <ul class="list">
-            <li>Bingos en diferentes modalidades.</li>
-            <li>Ruletas, subastas, ranking, lotería y dados.</li>
-            <li>Personalización visual y pantalla completa.</li>
-            <li>Importación, exportación, respaldos y verificación.</li>
-          </ul>
+        <div class="process">
+          <article class="step"><b>1</b><h3>Elige el software</h3><p>Revisa las soluciones disponibles y selecciona el software que necesitas.</p></article>
+          <article class="step"><b>2</b><h3>Solicita demo</h3><p>Solicita una demostración, asesoría o cotización por WhatsApp.</p></article>
+          <article class="step"><b>3</b><h3>Recibe cotización</h3><p>Confirmamos el alcance, características, forma de entrega y condiciones del software.</p></article>
+          <article class="step"><b>4</b><h3>Empieza a usarlo</h3><p>Recibe orientación para empezar a usar tu software de forma clara y organizada.</p></article>
         </div>
       </div>
     </section>
@@ -1344,210 +350,37 @@
     <section class="section" id="faq">
       <div class="container">
         <div class="section-header">
-          <span class="tag">Preguntas rápidas</span>
-          <h2>Antes de comprar el software</h2>
+          <span class="tag">Preguntas frecuentes</span>
+          <h2>Información rápida antes de contactar</h2>
         </div>
-
-        <div class="faq-grid">
-          <details open><summary>¿Qué estoy comprando?</summary><p>Estás solicitando un software multijuego profesional con varios módulos: bingos, ruletas, ranking, subastas, lotería, dados y herramientas de personalización.</p></details>
-          <details><summary>¿Sirve para salas y eventos?</summary><p>Sí. Está pensado para salas, bingos, casinos sociales, eventos y transmisiones donde se necesite una pantalla visual profesional.</p></details>
-          <details><summary>¿Se puede personalizar?</summary><p>Sí. Permite ajustar colores, fondos, imágenes, logos, zonas multimedia y estilos visuales.</p></details>
-          <details><summary>¿Cómo compro o cotizo?</summary><p>Presiona cualquier botón de WhatsApp y solicita precio, demo o información de compra.</p></details>
+        <div class="faq">
+          <details open><summary>¿Puedo pedir demo de cualquier software?</summary><p>Sí. Cada producto tiene un botón para solicitar demo, cotización o más información por WhatsApp.</p></details>
+          <details><summary>¿Los precios están publicados?</summary><p>La cotización se entrega por conversación, según el software elegido, alcance, condiciones de entrega y soporte requerido.</p></details>
+          <details><summary>¿Puedo revisar las soluciones desde celular?</summary><p>Sí. Puedes revisar las soluciones desde celular, tableta o computador.</p></details>
+          <details><summary>¿Cómo recibo el software?</summary><p>Después de la cotización se confirma la forma de entrega, instalación, configuración o acceso según el tipo de software.</p></details>
+          <details><summary>¿El módulo de mensajes masivos se debe usar con cuidado?</summary><p>Sí. La comunicación comercial debe hacerse con contactos autorizados y respetando las políticas de la plataforma correspondiente.</p></details>
+          <details><summary>¿Se puede cambiar el número de WhatsApp?</summary><p>Sí. Busca el número 573503875753 dentro del index.html y reemplázalo por el nuevo número en formato internacional.</p></details>
         </div>
       </div>
     </section>
 
     <section class="section" id="contacto">
       <div class="container">
-        <div class="final-cta">
-          <h2>Compra o cotiza tu software antes de que termine el contador</h2>
-          <p>Recibe información prioritaria, demo y orientación para adquirir la plataforma multijuego profesional.</p>
-
-          <div class="final-count">
-            <div class="final-time"><b id="ctaMin">15</b><small>Minutos</small></div>
-            <div class="final-time"><b id="ctaSec">00</b><small>Segundos</small></div>
-          </div>
-
-          <div class="phone">📞 350 387 5753</div>
-          <br>
-          <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">💬 Comprar / solicitar demo ahora</a>
+        <div class="cta-panel">
+          <h2>¿Listo para impulsar tu negocio con software profesional?</h2>
+          <p>Solicita asesoría ahora, elige la solución que necesitas y recibe una demo o cotización directa por WhatsApp.</p>
+          <div class="phone">📞 350 387 5753</div><br>
+          <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20sobre%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener">💬 Solicitar asesoría ahora</a>
         </div>
       </div>
     </section>
   </main>
 
-  <div class="sticky-cta">
-    <strong>⏳ Atención prioritaria termina en <span id="stickyCountdown">15:00</span></strong>
-    <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20comprar%20o%20cotizar%20el%20software%20multijuego%20profesional.%20Vi%20la%20promoci%C3%B3n%20de%2015%20minutos." target="_blank">Comprar software</a>
-  </div>
-
   <footer>
     <div class="container footer-grid">
-      <div>
-        <strong>Mercado Digital</strong><br>
-        Software Multijuego Profesional
-      </div>
-      <div class="notice">
-        Todos los derechos reservados MERCADO DIGITAL 
-      </div>
+      <div><strong>Mercado Digital</strong><br>Soluciones profesionales de software para negocios, eventos y automatización.</div>
+      <div class="notice">Uso responsable: las herramientas de comunicación deben utilizarse únicamente con contactos autorizados y respetando las políticas aplicables. Todos los derechos reservados.</div>
     </div>
   </footer>
-
-  <script>
-    const commonExt = ["jpg", "jpeg", "png", "webp"];
-    const cache = {};
-
-    function resolveImage(base){
-      if(cache[base]) return Promise.resolve(cache[base]);
-
-      return new Promise((resolve)=>{
-        let i = 0;
-
-        const tryNext = () => {
-          if(i >= commonExt.length){
-            cache[base] = "";
-            resolve("");
-            return;
-          }
-
-          const ext = commonExt[i++];
-          const path = `${base}.${ext}`;
-          const img = new Image();
-
-          img.onload = () => {
-            cache[base] = path;
-            resolve(path);
-          };
-
-          img.onerror = tryNext;
-          img.src = path;
-        };
-
-        tryNext();
-      });
-    }
-
-    async function hydrateImages(){
-      const imgs = document.querySelectorAll(".auto-image");
-
-      for(const el of imgs){
-        const base = el.dataset.base;
-        const src = await resolveImage(base);
-
-        if(src){
-          el.src = src;
-        }else{
-          el.alt = `No se encontró la imagen ${base}`;
-          el.style.minHeight = "180px";
-          el.style.objectFit = "contain";
-          el.style.background = "linear-gradient(135deg,#101827,#0a0f1d)";
-        }
-      }
-    }
-
-    function setupGallery(){
-      const thumbs = document.querySelectorAll(".thumb");
-      const viewer = document.getElementById("mainViewer");
-      const title = document.getElementById("viewerTitle");
-      const desc = document.getElementById("viewerDesc");
-
-      thumbs.forEach((thumb)=>{
-        thumb.addEventListener("click", async ()=>{
-          thumbs.forEach(t => t.classList.remove("active"));
-          thumb.classList.add("active");
-
-          const base = thumb.dataset.base;
-          const src = await resolveImage(base);
-          if(src) viewer.src = src;
-
-          title.textContent = thumb.dataset.title || "";
-          desc.textContent = thumb.dataset.desc || "";
-        });
-      });
-    }
-
-    function pad(num){
-      return String(num).padStart(2,"0");
-    }
-
-    function startCountdown(){
-      const duration = 15 * 60;
-      const key = "mercado_digital_software_timer_v3";
-      let start = Number(localStorage.getItem(key));
-
-      if(!start || Date.now() - start > duration * 1000){
-        start = Date.now();
-        localStorage.setItem(key, String(start));
-      }
-
-      const mini = document.getElementById("miniCountdown");
-      const sticky = document.getElementById("stickyCountdown");
-      const heroMin = document.getElementById("heroMin");
-      const heroSec = document.getElementById("heroSec");
-      const ctaMin = document.getElementById("ctaMin");
-      const ctaSec = document.getElementById("ctaSec");
-
-      function update(){
-        const elapsed = Math.floor((Date.now() - start) / 1000);
-        let remaining = duration - elapsed;
-        if(remaining < 0) remaining = 0;
-
-        const minutes = Math.floor(remaining / 60);
-        const seconds = remaining % 60;
-
-        const mm = pad(minutes);
-        const ss = pad(seconds);
-
-        if(mini) mini.textContent = `${mm}:${ss}`;
-        if(sticky) sticky.textContent = `${mm}:${ss}`;
-        if(heroMin) heroMin.textContent = mm;
-        if(heroSec) heroSec.textContent = ss;
-        if(ctaMin) ctaMin.textContent = mm;
-        if(ctaSec) ctaSec.textContent = ss;
-
-        if(remaining === 0){
-          document.querySelectorAll(".top-alert-inner span:first-child").forEach(el=>{
-            el.textContent = "🔥 La atención prioritaria puede seguir disponible. Escríbenos y confirma ahora.";
-          });
-        }
-      }
-
-      update();
-      setInterval(update, 1000);
-    }
-
-    hydrateImages().then(setupGallery);
-    startCountdown();
-
-    function setupDemoPopup(){
-      const popup = document.getElementById("demoPopup");
-      const closeBtn = document.getElementById("demoPopupClose");
-
-      if(!popup || !closeBtn) return;
-
-      const closePopup = () => {
-        popup.classList.remove("show");
-        popup.setAttribute("aria-hidden", "true");
-      };
-
-      setTimeout(() => {
-        popup.classList.add("show");
-        popup.setAttribute("aria-hidden", "false");
-      }, 900);
-
-      closeBtn.addEventListener("click", closePopup);
-
-      popup.addEventListener("click", (event) => {
-        if(event.target === popup) closePopup();
-      });
-
-      document.addEventListener("keydown", (event) => {
-        if(event.key === "Escape") closePopup();
-      });
-    }
-
-    setupDemoPopup();
-
-  </script>
 </body>
 </html>
