@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-06-13-v9";
+const APP_VERSION = "2026-06-16-v10-alertas";
 const CACHE_NAME = `dian-clientes-${APP_VERSION}`;
 const CACHE_PREFIX = "dian-clientes-";
 

@@ -241,8 +241,8 @@
 
       <section id="view-config" class="view">
         <div class="card">
-          <div class="card-title"><h2>Notificaciones</h2><span>2 días antes</span></div>
-          <p class="hint">Activa los avisos para recibir una alerta cuando falten 2 días para un vencimiento pendiente.</p>
+          <div class="card-title"><h2>Notificaciones</h2><span>2 días, 1 día y mismo día</span></div>
+          <p class="hint">Activa los avisos para recibir alertas cuando falten 2 días, cuando falte 1 día y el mismo día de un vencimiento pendiente.</p>
           <button id="enableNotificationsBtn" class="btn warning full notify-btn" type="button">🔔 Activar notificaciones</button>
           <p id="notificationsStatus" class="mini-note" style="margin-top:10px">Las notificaciones están pendientes de activación.</p>
         </div>
@@ -263,7 +263,7 @@
         </div>
         <div class="card">
           <div class="card-title"><h2>Calendario de Google</h2><span>eventos</span></div>
-          <p class="hint">El botón de Google Calendar abre un evento individual para revisarlo y guardarlo. El archivo .ICS solo exporta el mes seleccionado o el mes actual, para que el seguimiento mensual se haga desde la app.</p>
+          <p class="hint">El botón de Google Calendar abre un evento individual para revisarlo y guardarlo. El archivo .ICS solo exporta el mes seleccionado o el mes actual e incluye alertas de 2 días antes, 1 día antes y el mismo día.</p>
         </div>
       </section>
     </section>
@@ -326,8 +326,14 @@
 
   const $ = (id) => document.getElementById(id);
 
-  const APP_VERSION = "2026-06-13-v9";
-  const NOTIFY_DAYS_BEFORE = 2;
+  const APP_VERSION = "2026-06-16-v10-alertas";
+  const NOTIFY_DAYS_BEFORE = [2, 1, 0];
+  const NOTIFY_LABELS = {2:"en 2 días", 1:"mañana", 0:"hoy"};
+  const ICS_REMINDERS = [
+    {trigger:"-P2D", label:"2 días antes"},
+    {trigger:"-P1D", label:"1 día antes"},
+    {trigger:"PT0M", label:"el mismo día"}
+  ];
   const NOTIFY_ENABLED_KEY = "dianNotifyEnabled";
   const NOTIFY_SENT_KEY = "dianNotifySent";
 
@@ -1139,16 +1145,26 @@
     const noMovementButton = `<button class="btn ${e.noMovement ? "secondary" : "light"} small" onclick="toggleNoMovement('${e.id}')">${e.noMovement ? "✅ No hay movimiento" : "☐ No hay movimiento"}</button>`;
     return `<article class="event ${e.done ? "done" : ""}">
       ${shortDateBox(e.date)}
-      <div><h4>${escapeHtml(e.obligacion)}</h4><p><strong>${escapeHtml(e.cliente)}</strong> · NIT ${escapeHtml(e.nit)}<br>Periodo: ${escapeHtml(e.periodo)} · Vence: ${fmtDate(e.date)}<br><span class="mini-note">Aviso automático: 2 días antes, si las notificaciones están activas.</span></p>
+      <div><h4>${escapeHtml(eventTitle(e))}</h4><p>NIT ${escapeHtml(e.nit)}<br>Periodo: ${escapeHtml(e.periodo)} · Vence: ${fmtDate(e.date)}<br><span class="mini-note">Avisos automáticos: 2 días antes, 1 día antes y el mismo día, si las notificaciones están activas.</span></p>
       ${statusBadges}
       <div class="event-actions"><button class="btn ${e.presented && !e.noMovement ? "secondary" : "light"} small" onclick="togglePresented('${e.id}')">${e.presented && !e.noMovement ? "✅ Presentado" : "☐ Presentado"}</button>${noMovementButton}${paidButton}${calendarButton}</div></div>
     </article>`;
   }
 
+  function eventTitle(e){
+    return `${e.cliente} - ${e.obligacion}`;
+  }
+
   function googleCalendarUrl(e){
     const start = e.date.replaceAll("-",""); const end = addDaysISO(e.date,1).replaceAll("-","");
-    const text = encodeURIComponent(`${e.obligacion} - ${e.cliente}`);
-    const details = encodeURIComponent(`Cliente: ${e.cliente}\nNIT: ${e.nit}\nPeriodo: ${e.periodo}\nVencimiento DIAN 2026.\nBase: ${e.base}`);
+    const text = encodeURIComponent(eventTitle(e));
+    const details = encodeURIComponent(`Empresa: ${e.cliente}
+Obligación: ${e.obligacion}
+NIT: ${e.nit}
+Periodo: ${e.periodo}
+Vencimiento DIAN 2026.
+Base: ${e.base}
+Recordatorios sugeridos: 2 días antes, 1 día antes y el mismo día.`);
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}`;
   }
   function notificationButtons(){
@@ -1169,7 +1185,7 @@
     const status = $("notificationsStatus");
     if(status){
       if(!supported) status.textContent = "Este navegador no permite notificaciones web.";
-      else if(enabled) status.textContent = "Avisos activos: la app revisará tus vencimientos y notificará los que estén a 2 días.";
+      else if(enabled) status.textContent = "Avisos activos: la app revisará tus vencimientos y notificará 2 días antes, 1 día antes y el mismo día.";
       else if(permission === "denied") status.textContent = "Las notificaciones están bloqueadas. Actívalas desde los permisos del navegador.";
       else status.textContent = "Toca el botón para permitir notificaciones de vencimientos.";
     }
@@ -1198,16 +1214,19 @@
   function saveSentReminderMap(map){
     localStorage.setItem(NOTIFY_SENT_KEY, JSON.stringify(map));
   }
-  function reminderKey(e){
-    return `${currentUser?.uid || "local"}:${e.id}:${addDaysISO(e.date, -NOTIFY_DAYS_BEFORE)}`;
+  function reminderLabel(daysBefore){
+    return NOTIFY_LABELS[daysBefore] || `en ${daysBefore} días`;
   }
-  async function showDueNotification(e){
+  function reminderKey(e, daysBefore){
+    return `${currentUser?.uid || "local"}:${e.id}:${daysBefore}:${addDaysISO(e.date, -daysBefore)}`;
+  }
+  async function showDueNotification(e, daysBefore){
     const registration = await navigator.serviceWorker.ready;
-    await registration.showNotification(`Vence en ${NOTIFY_DAYS_BEFORE} días: ${e.obligacion}`, {
-      body: `${e.cliente} · ${e.periodo} · ${fmtDate(e.date)}`,
+    await registration.showNotification(`Vence ${reminderLabel(daysBefore)}: ${e.cliente}`, {
+      body: `${e.obligacion} · ${e.periodo} · ${fmtDate(e.date)}`,
       icon: "./icons/icon-192.png",
       badge: "./icons/icon-192.png",
-      tag: `dian-${e.id}`,
+      tag: `dian-${daysBefore}-${e.id}`,
       renotify: false,
       data: { url: googleCalendarUrl(e) }
     });
@@ -1215,22 +1234,26 @@
   async function checkDueNotifications(manual=false){
     updateNotificationUI();
     if(!notificationsEnabled()) return;
-    const targetDate = addDaysISO(todayISO(), NOTIFY_DAYS_BEFORE);
-    const due = allEvents().filter(e => e.date === targetDate && !e.done);
     const sent = sentReminderMap();
     let sentNow = 0;
-    for(const e of due){
-      const key = reminderKey(e);
-      if(sent[key]) continue;
-      await showDueNotification(e);
-      sent[key] = new Date().toISOString();
-      sentNow++;
+    let totalDue = 0;
+    for(const daysBefore of NOTIFY_DAYS_BEFORE){
+      const targetDate = addDaysISO(todayISO(), daysBefore);
+      const due = allEvents().filter(e => e.date === targetDate && !e.done);
+      totalDue += due.length;
+      for(const e of due){
+        const key = reminderKey(e, daysBefore);
+        if(sent[key]) continue;
+        await showDueNotification(e, daysBefore);
+        sent[key] = new Date().toISOString();
+        sentNow++;
+      }
     }
     saveSentReminderMap(sent);
     if(manual){
-      if(due.length === 0) alert(`Notificaciones activas. No hay vencimientos pendientes exactamente dentro de ${NOTIFY_DAYS_BEFORE} días.`);
-      else if(sentNow === 0) alert(`Notificaciones activas. Los avisos de los vencimientos dentro de ${NOTIFY_DAYS_BEFORE} días ya habían sido enviados.`);
-      else alert(`Notificaciones activas. Se enviaron ${sentNow} aviso(s) de prueba con vencimientos reales dentro de ${NOTIFY_DAYS_BEFORE} días.`);
+      if(totalDue === 0) alert("Notificaciones activas. No hay vencimientos pendientes para avisar hoy, mañana o dentro de 2 días.");
+      else if(sentNow === 0) alert("Notificaciones activas. Los avisos de hoy, mañana y dentro de 2 días ya habían sido enviados.");
+      else alert(`Notificaciones activas. Se enviaron ${sentNow} aviso(s) de prueba con vencimientos reales.`);
     }
   }
 
@@ -1332,6 +1355,16 @@
     URL.revokeObjectURL(url);
   }
 
+  function buildIcsAlarms(e){
+    return ICS_REMINDERS.flatMap(reminder => [
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      `TRIGGER:${reminder.trigger}`,
+      `DESCRIPTION:${icsEscape(`Recordatorio ${reminder.label}: ${eventTitle(e)}`)}`,
+      "END:VALARM"
+    ]);
+  }
+
   function downloadICS(events, filename="vencimientos-dian-2026.ics", emptyMessage="No hay eventos para exportar."){
     if(!events.length){ alert(emptyMessage); return; }
     const dtstamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
@@ -1344,13 +1377,14 @@
         `DTSTAMP:${dtstamp}`,
         `DTSTART;VALUE=DATE:${start}`,
         `DTEND;VALUE=DATE:${end}`,
-        `SUMMARY:${icsEscape(`${e.obligacion} - ${e.cliente}`)}`,
-        `DESCRIPTION:${icsEscape(`Cliente: ${e.cliente}\nNIT: ${e.nit}\nPeriodo: ${e.periodo}\nVencimiento DIAN 2026. Base: ${e.base}\nRecordatorio sugerido: 2 días antes.`)}`,
-        "BEGIN:VALARM",
-        "ACTION:DISPLAY",
-        "TRIGGER:-P2D",
-        `DESCRIPTION:${icsEscape(`Recordatorio DIAN: ${e.obligacion} - ${e.cliente}`)}`,
-        "END:VALARM",
+        `SUMMARY:${icsEscape(eventTitle(e))}`,
+        `DESCRIPTION:${icsEscape(`Empresa: ${e.cliente}
+Obligación: ${e.obligacion}
+NIT: ${e.nit}
+Periodo: ${e.periodo}
+Vencimiento DIAN 2026. Base: ${e.base}
+Recordatorios incluidos: 2 días antes, 1 día antes y el mismo día.`)}`,
+        ...buildIcsAlarms(e),
         "END:VEVENT"
       );
     });
