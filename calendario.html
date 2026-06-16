@@ -137,11 +137,12 @@
           <div class="card-title"><h2>Próximos vencimientos</h2><span>ordenados por fecha</span></div>
           <div class="actions" style="margin-bottom:12px">
             <button id="downloadAllIcsBtn" class="btn secondary small">📥 Exportar mes actual</button>
+            <button id="downloadYearIcsBtn" class="btn secondary small" type="button">📆 Exportar todo el año</button>
             <button id="notifyBtnHome" class="btn warning small notify-btn" type="button">🔔 Activar avisos</button>
             <button id="installBtnHome" class="btn warning small install-btn" type="button">📲 Instalar app</button>
             <button id="refreshBtn" class="btn light small">🔄 Actualizar app</button>
           </div>
-          <p class="mini-note" style="margin-top:-4px;margin-bottom:12px">La exportación .ICS descarga únicamente los vencimientos del mes actual. Así el seguimiento se mantiene mes a mes dentro de la app.</p>
+          <p class="mini-note" style="margin-top:-4px;margin-bottom:12px">Puedes exportar el mes actual o todo el año completo en archivo .ICS. Todos los eventos incluyen alertas de 2 días antes, 1 día antes y el mismo día.</p>
           <div id="nextEvents"></div>
         </div>
       </section>
@@ -232,9 +233,10 @@
           </div>
           <div class="actions">
             <button id="downloadFilteredIcsBtn" class="btn secondary small">📥 Exportar al calendario</button>
+            <button id="downloadYearIcsBtnCalendar" class="btn secondary small" type="button">📆 Exportar todo el año</button>
             <button id="exportExcelBtn" class="btn warning small" type="button">📊 Exportar Excel</button>
           </div>
-          <p class="mini-note" style="margin-top:10px">Puedes exportar el mes seleccionado a calendario o a Excel. El Excel trae fecha, cliente, NIT, obligación, periodo y estado actual para compartirlo y hacer seguimiento.</p>
+          <p class="mini-note" style="margin-top:10px">Puedes exportar el mes seleccionado o todo el año al calendario. El Excel trae fecha, cliente, NIT, obligación, periodo y estado actual para compartirlo y hacer seguimiento.</p>
         </div>
         <div id="calendarList"></div>
       </section>
@@ -263,7 +265,7 @@
         </div>
         <div class="card">
           <div class="card-title"><h2>Calendario de Google</h2><span>eventos</span></div>
-          <p class="hint">El botón de Google Calendar abre un evento individual para revisarlo y guardarlo. El archivo .ICS solo exporta el mes seleccionado o el mes actual e incluye alertas de 2 días antes, 1 día antes y el mismo día.</p>
+          <p class="hint">El botón de Google Calendar abre un evento individual para revisarlo y guardarlo. El archivo .ICS puede exportar el mes actual, el mes seleccionado o todo el año completo, con alertas de 2 días antes, 1 día antes y el mismo día.</p>
         </div>
       </section>
     </section>
@@ -326,7 +328,7 @@
 
   const $ = (id) => document.getElementById(id);
 
-  const APP_VERSION = "2026-06-16-v10-alertas";
+  const APP_VERSION = "2026-06-16-v11";
   const NOTIFY_DAYS_BEFORE = [2, 1, 0];
   const NOTIFY_LABELS = {2:"en 2 días", 1:"mañana", 0:"hoy"};
   const ICS_REMINDERS = [
@@ -1282,6 +1284,10 @@ Recordatorios sugeridos: 2 días antes, 1 día antes y el mismo día.`);
     const clientSuffix = client === "all" ? "todos-clientes" : "cliente-seleccionado";
     downloadICS(events, `vencimientos-dian-${ym}-${clientSuffix}.ics`, `No hay vencimientos en ${monthLabel(ym)} para exportar.`);
   }
+  function exportFullYearICS(){
+    const events = allEvents();
+    downloadICS(events, "vencimientos-dian-2026-anual-todos-clientes.ics", "No hay vencimientos anuales para exportar.");
+  }
 
   function selectedMonthEventsForExport(){
     let ym = $("monthFilter").value || currentMonthKey();
@@ -1393,7 +1399,9 @@ Recordatorios incluidos: 2 días antes, 1 día antes y el mismo día.`)}`,
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
   }
   $("downloadAllIcsBtn").addEventListener("click", exportCurrentMonthICS);
+  $("downloadYearIcsBtn").addEventListener("click", exportFullYearICS);
   $("downloadFilteredIcsBtn").addEventListener("click", exportSelectedMonthICS);
+  $("downloadYearIcsBtnCalendar").addEventListener("click", exportFullYearICS);
   $("exportExcelBtn").addEventListener("click", exportSelectedMonthExcel);
   $("refreshBtn").addEventListener("click", forceAppUpdate);
   notificationButtons().forEach(btn => btn.addEventListener("click", enableNotifications));
