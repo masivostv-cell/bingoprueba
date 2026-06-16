@@ -1,170 +1,837 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-CO">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mercado Digital | Software para empresas, ventas y automatización</title>
-  <meta name="description" content="Mercado Digital: soluciones de software para empresas, ventas, inventario, mensajería responsable, eventos, contadores, verificaciones y apps instalables. Solicita demo por WhatsApp." />
+
+  <title>Mercado Digital | Software de Bingo, Eventos, POS, RUT y Automatización</title>
+  <meta name="description" content="Software profesional para entretenimiento, eventos, bingo, fixture Mundial 2026, empresas, POS, verificador RUT, calendario tributario y mensajes masivos responsables por WhatsApp." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="author" content="Mercado Digital" />
   <meta name="theme-color" content="#07111f" />
-  <meta property="og:title" content="Mercado Digital | Softwares para empresas y negocios" />
-  <meta property="og:description" content="Soluciones digitales listas para vender, operar y automatizar: POS integral, mensajes masivos responsables, multijuego, fixture mundial, calendario tributario y verificador RUT." />
-  <meta property="og:image" content="imagenes/ChatGPT Image 15 jun 2026, 08_37_39 p.m..png" />
+
   <meta property="og:type" content="website" />
-  <link rel="icon" href="imagenes/ChatGPT Image 15 jun 2026, 08_37_39 p.m..png" type="image/svg+xml" />
+  <meta property="og:title" content="Mercado Digital | Software de Bingo, Eventos, POS, RUT y Automatización" />
+  <meta property="og:description" content="Soluciones digitales listas para entretenimiento, eventos, empresas, validaciones, tributaria y automatización comercial." />
+  <meta property="og:image" content="imagenes/suite%20de%20juegos.jpg" />
+  <meta property="og:locale" content="es_CO" />
+
   <style>
     :root{
-      --bg:#050815;
-      --bg2:#07111f;
-      --card:#0e192b;
-      --card2:#111f35;
+      --bg:#07111f;
+      --bg2:#0a1a31;
+      --card:#101d31;
+      --card2:#142542;
       --line:rgba(255,255,255,.12);
       --text:#f6f9ff;
-      --muted:#b7c4da;
-      --cyan:#19d9ff;
+      --muted:#b9c8df;
+      --blue:#22c7ff;
       --green:#25d366;
-      --gold:#ffc84d;
-      --pink:#e83e8c;
-      --shadow:0 24px 80px rgba(0,0,0,.42);
-      --radius:28px;
+      --gold:#ffc857;
+      --orange:#ff9f1c;
+      --pink:#ff4fa3;
+      --purple:#9b5cff;
+      --shadow:0 26px 78px rgba(0,0,0,.42);
+      --radius:30px;
     }
 
     *{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
     body{
-      font-family:Inter,Segoe UI,Arial,sans-serif;
+      font-family:Arial, Helvetica, sans-serif;
       color:var(--text);
       background:
-        radial-gradient(circle at 10% 0%, rgba(25,217,255,.15), transparent 28%),
-        radial-gradient(circle at 86% 10%, rgba(37,211,102,.13), transparent 26%),
-        radial-gradient(circle at 50% 60%, rgba(232,62,140,.08), transparent 34%),
-        linear-gradient(180deg,#050815 0%,#081327 48%,#050815 100%);
+        radial-gradient(circle at 8% 0%, rgba(255,200,87,.18), transparent 28%),
+        radial-gradient(circle at 90% 8%, rgba(34,199,255,.18), transparent 28%),
+        radial-gradient(circle at 50% 46%, rgba(155,92,255,.10), transparent 36%),
+        linear-gradient(180deg,var(--bg) 0%,var(--bg2) 48%,#040810 100%);
       overflow-x:hidden;
     }
+
     body::before{
-      content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
       background-image:radial-gradient(circle,rgba(255,255,255,.13) 1px,transparent 1px);
-      background-size:34px 34px;opacity:.055;
+      background-size:34px 34px;
+      opacity:.05;
+      z-index:-1;
     }
+
     a{text-decoration:none;color:inherit}
     img{display:block;max-width:100%}
-    .container{width:min(1180px,92%);margin:auto}
-    .topbar{position:sticky;top:0;z-index:90;background:rgba(5,8,21,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
-    .nav{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px}
-    .brand{display:flex;align-items:center;gap:12px;font-weight:1000}
-    .brand-mark{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--cyan),var(--green));color:#06101d;box-shadow:0 0 34px rgba(25,217,255,.25);font-size:25px}
-    .brand strong{display:block;font-size:19px;letter-spacing:.2px}
-    .brand small{display:block;color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:1.4px;margin-top:2px}
-    .nav-links{display:flex;align-items:center;gap:18px;color:var(--muted);font-size:14px;font-weight:850}
-    .nav-links a:hover{color:var(--cyan)}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;padding:14px 22px;font-weight:1000;border:1px solid transparent;transition:.22s ease;white-space:nowrap;cursor:pointer}
+    .container{width:min(1200px,92%);margin:auto}
+
+    .top-sale{
+      background:linear-gradient(90deg,rgba(255,200,87,.26),rgba(255,79,163,.18),rgba(34,199,255,.20));
+      border-bottom:1px solid var(--line);
+      color:#fff;
+      font-weight:900;
+    }
+    .top-sale .container{
+      min-height:48px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      flex-wrap:wrap;
+      text-align:center;
+      padding:8px 0;
+    }
+    .top-sale a{
+      color:#07111f;
+      background:linear-gradient(135deg,var(--gold),var(--orange));
+      padding:9px 15px;
+      border-radius:999px;
+      font-weight:1000;
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:rgba(7,17,31,.86);
+      backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--line);
+    }
+    .nav{
+      min-height:76px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      padding:10px 0;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-weight:1000;
+    }
+    .brand-mark{
+      width:48px;
+      height:48px;
+      border-radius:16px;
+      display:grid;
+      place-items:center;
+      background:linear-gradient(135deg,var(--gold),var(--pink));
+      color:#07111f;
+      font-size:20px;
+      box-shadow:0 0 36px rgba(255,200,87,.25);
+    }
+    .brand strong{display:block;font-size:18px}
+    .brand small{
+      display:block;
+      color:var(--gold);
+      letter-spacing:1.4px;
+      text-transform:uppercase;
+      font-size:11px;
+      margin-top:2px;
+    }
+
+    .nav-links{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      color:var(--muted);
+      font-size:14px;
+      font-weight:800;
+    }
+    .nav-links a:hover{color:#fff}
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      border-radius:999px;
+      padding:14px 22px;
+      font-weight:1000;
+      border:1px solid transparent;
+      transition:.22s ease;
+      cursor:pointer;
+      white-space:nowrap;
+    }
     .btn:hover{transform:translateY(-2px)}
-    .btn-primary{color:#07111f;background:linear-gradient(135deg,var(--cyan),var(--green));box-shadow:0 16px 36px rgba(25,217,255,.18)}
-    .btn-secondary{color:#07111f;background:linear-gradient(135deg,var(--gold),#ff9d1f)}
-    .btn-soft{color:#fff;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.13)}
-    .btn-soft:hover{background:rgba(25,217,255,.10);border-color:rgba(25,217,255,.34)}
-    .hero{padding:86px 0 74px;position:relative;overflow:hidden}
-    .hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:42px;align-items:center}
-    .eyebrow{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;background:rgba(25,217,255,.10);border:1px solid rgba(25,217,255,.22);color:var(--cyan);font-weight:1000;margin-bottom:20px}
-    h1{font-size:clamp(44px,7.5vw,88px);line-height:.92;letter-spacing:-2.7px;text-transform:uppercase;margin-bottom:22px}
-    .gradient-text{background:linear-gradient(90deg,var(--cyan),#fff,var(--green));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-    .lead{color:var(--muted);font-size:clamp(17px,2vw,21px);line-height:1.72;max-width:720px;margin-bottom:28px}
+    .btn-primary{
+      background:linear-gradient(135deg,var(--gold),var(--orange));
+      color:#07111f;
+      box-shadow:0 18px 42px rgba(255,200,87,.18);
+    }
+    .btn-blue{
+      background:linear-gradient(135deg,var(--blue),var(--green));
+      color:#07111f;
+      box-shadow:0 18px 42px rgba(34,199,255,.18);
+    }
+    .btn-soft{
+      background:rgba(255,255,255,.07);
+      border-color:rgba(255,255,255,.14);
+      color:#fff;
+    }
+    .btn-soft:hover{background:rgba(255,255,255,.11)}
+
+    .hero{
+      padding:76px 0 64px;
+      position:relative;
+    }
+    .hero-grid{
+      display:grid;
+      grid-template-columns:1.03fr .97fr;
+      gap:44px;
+      align-items:center;
+    }
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 15px;
+      border-radius:999px;
+      background:rgba(255,200,87,.12);
+      border:1px solid rgba(255,200,87,.24);
+      color:var(--gold);
+      font-size:14px;
+      font-weight:1000;
+      margin-bottom:18px;
+    }
+    h1{
+      font-size:clamp(42px,7vw,78px);
+      line-height:.96;
+      letter-spacing:-2.2px;
+      margin-bottom:20px;
+      text-transform:uppercase;
+    }
+    .gradient-text{
+      background:linear-gradient(90deg,var(--gold),#fff,var(--blue));
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+    .lead{
+      color:var(--muted);
+      font-size:clamp(17px,2vw,20px);
+      line-height:1.72;
+      margin-bottom:26px;
+      max-width:720px;
+    }
     .lead strong{color:#fff}
-    .hero-actions{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:22px}
-    .hero-chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
-    .hero-chips a{font-size:13px;font-weight:900;color:#dcecff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);padding:9px 12px;border-radius:999px}
-    .hero-chips a:hover{border-color:rgba(25,217,255,.35);color:#fff}
-    .hero-visual{position:relative;min-height:590px}
-    .orbit{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(25,217,255,.18),transparent 60%);filter:blur(18px)}
-    .showcase{position:relative;height:590px}
-    .shot{position:absolute;overflow:hidden;border-radius:30px;border:1px solid rgba(255,255,255,.14);background:#0d1729;box-shadow:var(--shadow);transition:.25s ease}
-    .shot:hover{transform:translateY(-7px) rotate(0deg)!important;z-index:20;border-color:rgba(25,217,255,.50)}
-    .shot img{width:100%;height:100%;object-fit:cover;object-position:top center}
-    .shot::after{content:attr(data-label);position:absolute;left:14px;top:14px;color:#07111f;background:linear-gradient(135deg,var(--cyan),var(--green));font-size:12px;font-weight:1000;border-radius:999px;padding:8px 12px}
-    .shot.one{width:72%;height:50%;right:0;top:6px;transform:rotate(2deg);z-index:5}
-    .shot.two{width:50%;height:42%;left:0;top:108px;transform:rotate(-6deg);z-index:6}
-    .shot.three{width:45%;height:38%;right:6%;bottom:0;transform:rotate(5deg);z-index:7}
-    .shot.four{width:38%;height:30%;left:12%;bottom:28px;transform:rotate(-3deg);z-index:8}
-    .metric-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:10px}
-    .metric{border-radius:22px;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.10)}
-    .metric b{display:block;color:var(--cyan);font-size:30px;margin-bottom:5px}
-    .metric span{color:var(--muted);font-weight:800;font-size:14px;line-height:1.4}
-    .section{padding:86px 0}
-    .section-header{text-align:center;max-width:880px;margin:0 auto 44px}
-    .tag{display:block;color:var(--cyan);text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:1000;margin-bottom:10px}
-    .section-header h2{font-size:clamp(32px,5vw,58px);line-height:1.05;margin-bottom:16px}
-    .section-header p{color:var(--muted);font-size:18px;line-height:1.7}
-    .product-grid{display:grid;gap:28px}
-    .product-card{display:grid;grid-template-columns:.95fr 1.05fr;gap:0;overflow:hidden;border-radius:34px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.11);box-shadow:var(--shadow)}
-    .product-card:nth-child(even){grid-template-columns:1.05fr .95fr}
-    .product-card:nth-child(even) .product-media{order:2}
-    .product-media{position:relative;min-height:480px;background:#06101d}
-    .product-media img{width:100%;height:100%;object-fit:cover;object-position:top center}
-    .product-media::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.42));z-index:1;pointer-events:none}
-    .product-badge{position:absolute;top:18px;left:18px;z-index:2;color:#06101d;background:var(--accent);border-radius:999px;padding:10px 14px;font-size:13px;font-weight:1000;box-shadow:0 12px 26px rgba(0,0,0,.25)}
-    .product-body{padding:42px;display:flex;flex-direction:column;justify-content:center}
-    .product-category{color:var(--cyan);text-transform:uppercase;letter-spacing:1.5px;font-size:12px;font-weight:1000;margin-bottom:12px}
-    .product-body h3{font-size:clamp(30px,4vw,48px);line-height:1.05;margin-bottom:16px}
-    .product-body p{color:var(--muted);line-height:1.72;font-size:17px;margin-bottom:18px}
-    .product-body ul{display:grid;gap:11px;list-style:none;margin:0 0 24px}
-    .product-body li{display:flex;gap:10px;color:#e6eeff;font-weight:800;line-height:1.45}
-    .product-body li::before{content:"✓";width:25px;height:25px;flex:0 0 25px;border-radius:50%;display:grid;place-items:center;color:#07111f;background:linear-gradient(135deg,var(--cyan),var(--green));font-weight:1000}
-    .product-actions{display:flex;gap:12px;flex-wrap:wrap}
-    .category-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-    .category-card{padding:24px;border-radius:26px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);box-shadow:0 16px 40px rgba(0,0,0,.18)}
-    .category-card span{font-size:34px;display:block;margin-bottom:12px}
-    .category-card h3{font-size:21px;margin-bottom:8px}
-    .category-card p{color:var(--muted);line-height:1.6;font-size:15px}
-    .process{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-    .step{position:relative;padding:28px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.10)}
-    .step b{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,var(--cyan),var(--green));color:#07111f;font-size:24px;margin-bottom:16px}
-    .step h3{font-size:22px;margin-bottom:10px}
-    .step p{color:var(--muted);line-height:1.62}
-    .cta-panel{text-align:center;border-radius:42px;padding:58px 26px;background:radial-gradient(circle at 16% 0%,rgba(25,217,255,.22),transparent 35%),radial-gradient(circle at 84% 0%,rgba(37,211,102,.18),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.12);box-shadow:var(--shadow)}
-    .cta-panel h2{font-size:clamp(34px,5vw,60px);line-height:1.05;margin-bottom:16px}
-    .cta-panel p{max-width:780px;margin:0 auto 24px;color:var(--muted);font-size:18px;line-height:1.7}
-    .phone{display:inline-flex;align-items:center;gap:12px;padding:16px 24px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.13);font-size:clamp(26px,4vw,42px);font-weight:1000;color:var(--green);margin:0 0 22px}
-    .faq{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    details{border-radius:22px;padding:20px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.10)}
-    summary{cursor:pointer;font-weight:1000;font-size:18px}
-    details p{color:var(--muted);line-height:1.65;margin-top:12px}
-    .floating-wa{position:fixed;right:20px;bottom:20px;z-index:120;width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff;font-size:30px;box-shadow:0 20px 44px rgba(37,211,102,.36);animation:pulse 1.8s infinite}
-    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-    footer{padding:34px 0 42px;border-top:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.22);color:#aab8d2}
-    .footer-grid{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:center}
-    .notice{max-width:720px;line-height:1.55;font-size:14px}
-    .mobile-cta{display:none;position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:121;width:min(92%,560px);padding:10px;border-radius:999px;background:rgba(5,8,21,.90);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 48px rgba(0,0,0,.42)}
-    .mobile-cta .btn{width:100%;font-size:15px}
-    @media(max-width:1000px){.nav-links{display:none}.hero-grid,.product-card,.product-card:nth-child(even),.category-row,.process,.faq,.metric-strip{grid-template-columns:1fr}.product-card:nth-child(even) .product-media{order:0}.hero-visual{min-height:480px}.showcase{height:480px}.product-media{min-height:420px}}
-    @media(max-width:640px){body{padding-bottom:88px}.hero{padding:50px 0 58px}h1{letter-spacing:-1.4px}.nav{min-height:68px}.brand small{display:none}.hero-actions .btn{width:100%}.hero-visual{min-height:380px}.showcase{height:380px}.shot.one{width:78%;height:45%}.shot.two{width:58%;height:35%;top:95px}.shot.three{width:54%;height:34%}.shot.four{width:48%;height:28%}.product-body{padding:28px}.product-media{min-height:360px}.category-row,.process{gap:12px}.floating-wa{display:none}.mobile-cta{display:block}}
+    .hero-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-bottom:20px;
+    }
+
+    .quick-links{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:18px;
+    }
+    .quick-links a{
+      padding:10px 13px;
+      border-radius:999px;
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.10);
+      color:#dce8ff;
+      font-size:13px;
+      font-weight:800;
+    }
+    .quick-links a:hover{
+      border-color:rgba(255,200,87,.45);
+      color:#fff;
+    }
+
+    .metric-strip{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+      margin-top:22px;
+      max-width:720px;
+    }
+    .metric{
+      padding:16px;
+      border-radius:20px;
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .metric b{
+      display:block;
+      color:var(--gold);
+      font-size:26px;
+      margin-bottom:5px;
+    }
+    .metric span{
+      color:#dbe7ff;
+      font-size:13px;
+      font-weight:800;
+      line-height:1.35;
+    }
+
+    .hero-visual{position:relative;min-height:540px}
+    .orbit{
+      position:absolute;
+      inset:8% 0 0 8%;
+      border-radius:50%;
+      background:radial-gradient(circle,rgba(255,200,87,.22),transparent 60%);
+      filter:blur(18px);
+    }
+    .showcase{position:relative;height:540px}
+    .shot{
+      position:absolute;
+      overflow:hidden;
+      border-radius:28px;
+      background:#071020;
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow:var(--shadow);
+      transition:.23s ease;
+    }
+    .shot:hover{
+      transform:translateY(-6px) rotate(0deg)!important;
+      z-index:12;
+    }
+    .shot::after{
+      content:attr(data-label);
+      position:absolute;
+      top:12px;
+      left:12px;
+      z-index:3;
+      padding:7px 12px;
+      border-radius:999px;
+      background:rgba(7,17,31,.88);
+      border:1px solid rgba(255,255,255,.12);
+      color:#fff;
+      font-size:12px;
+      font-weight:1000;
+    }
+    .shot img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      object-position:top center;
+    }
+    .shot.one{width:75%;height:64%;right:0;top:18px;z-index:4;transform:rotate(2deg)}
+    .shot.two{width:52%;height:35%;left:0;bottom:54px;z-index:5;transform:rotate(-5deg)}
+    .shot.three{width:46%;height:30%;right:0;bottom:18px;z-index:6;transform:rotate(5deg)}
+    .shot.four{width:44%;height:28%;left:8%;top:0;z-index:3;transform:rotate(-4deg)}
+
+    .section{padding:82px 0}
+    .section-alt{
+      background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01));
+      border-block:1px solid rgba(255,255,255,.08);
+    }
+    .section-header{
+      max-width:900px;
+      text-align:center;
+      margin:0 auto 44px;
+    }
+    .tag{
+      display:block;
+      color:var(--gold);
+      letter-spacing:2px;
+      text-transform:uppercase;
+      font-size:13px;
+      font-weight:1000;
+      margin-bottom:10px;
+    }
+    .section-header h2{
+      font-size:clamp(32px,5vw,54px);
+      line-height:1.06;
+      margin-bottom:14px;
+    }
+    .section-header p{
+      color:var(--muted);
+      font-size:18px;
+      line-height:1.7;
+    }
+
+    .category-row{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:16px;
+    }
+    .category-card{
+      padding:24px;
+      border-radius:26px;
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 14px 36px rgba(0,0,0,.18);
+      transition:.22s ease;
+    }
+    .category-card:hover{
+      transform:translateY(-4px);
+      border-color:rgba(255,200,87,.35);
+    }
+    .category-card span{
+      font-size:34px;
+      display:block;
+      margin-bottom:14px;
+    }
+    .category-card h3{
+      font-size:20px;
+      margin-bottom:8px;
+    }
+    .category-card p{
+      color:var(--muted);
+      line-height:1.55;
+      font-size:14.5px;
+    }
+
+    .featured-box{
+      margin-top:24px;
+      padding:24px;
+      border-radius:30px;
+      background:
+        radial-gradient(circle at 16% 0%,rgba(255,200,87,.20),transparent 36%),
+        linear-gradient(135deg,rgba(255,79,163,.12),rgba(34,199,255,.08));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:var(--shadow);
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:18px;
+      align-items:center;
+    }
+    .featured-box h3{font-size:26px;margin-bottom:8px}
+    .featured-box p{color:var(--muted);line-height:1.6}
+
+    .product-grid{display:grid;gap:26px}
+    .product-card{
+      display:grid;
+      grid-template-columns:.95fr 1.05fr;
+      gap:0;
+      overflow:hidden;
+      border-radius:34px;
+      background:
+        radial-gradient(circle at 0% 0%,rgba(255,200,87,.11),transparent 34%),
+        linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.035));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:var(--shadow);
+      scroll-margin-top:110px;
+    }
+    .product-card.business{
+      background:
+        radial-gradient(circle at 0% 0%,rgba(34,199,255,.11),transparent 34%),
+        linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.035));
+    }
+    .product-media{
+      position:relative;
+      min-height:330px;
+      background:#07111f;
+      border-right:1px solid rgba(255,255,255,.10);
+    }
+    .product-media img{
+      width:100%;
+      height:100%;
+      min-height:330px;
+      object-fit:cover;
+      object-position:top center;
+    }
+    .product-badge{
+      position:absolute;
+      top:18px;
+      left:18px;
+      z-index:2;
+      color:#07111f;
+      background:var(--accent,var(--gold));
+      padding:9px 14px;
+      border-radius:999px;
+      font-size:13px;
+      font-weight:1000;
+      box-shadow:0 14px 30px rgba(0,0,0,.30);
+    }
+    .product-body{padding:32px}
+    .product-category{
+      color:var(--gold);
+      font-weight:1000;
+      text-transform:uppercase;
+      letter-spacing:1.2px;
+      font-size:12px;
+      margin-bottom:10px;
+    }
+    .business .product-category{color:var(--blue)}
+    .product-body h2{
+      font-size:clamp(28px,4vw,42px);
+      line-height:1.08;
+      margin-bottom:14px;
+    }
+    .product-body p{
+      color:var(--muted);
+      line-height:1.7;
+      margin-bottom:16px;
+      font-size:16px;
+    }
+    .product-body ul{
+      list-style:none;
+      display:grid;
+      gap:10px;
+      margin:18px 0 24px;
+    }
+    .product-body li{
+      color:#dce8ff;
+      font-weight:800;
+      line-height:1.45;
+      display:flex;
+      gap:10px;
+    }
+    .product-body li::before{
+      content:"✓";
+      width:24px;
+      height:24px;
+      flex:0 0 24px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      color:#07111f;
+      background:linear-gradient(135deg,var(--gold),var(--orange));
+      font-size:14px;
+      font-weight:1000;
+      margin-top:1px;
+    }
+    .business .product-body li::before{
+      background:linear-gradient(135deg,var(--blue),var(--green));
+    }
+    .product-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+    }
+
+    .friendly-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:18px;
+    }
+    .friendly-card{
+      padding:26px;
+      border-radius:28px;
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 16px 42px rgba(0,0,0,.20);
+    }
+    .friendly-card span{
+      width:56px;
+      height:56px;
+      display:grid;
+      place-items:center;
+      border-radius:18px;
+      background:linear-gradient(135deg,var(--gold),var(--orange));
+      color:#07111f;
+      font-size:28px;
+      margin-bottom:16px;
+    }
+    .friendly-card h3{
+      font-size:22px;
+      margin-bottom:10px;
+    }
+    .friendly-card p{
+      color:var(--muted);
+      line-height:1.65;
+    }
+
+    .seo-text{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:22px;
+      align-items:start;
+    }
+    .info-panel{
+      padding:30px;
+      border-radius:30px;
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 18px 46px rgba(0,0,0,.22);
+    }
+    .info-panel h2{
+      font-size:30px;
+      margin-bottom:12px;
+    }
+    .info-panel p{
+      color:var(--muted);
+      line-height:1.7;
+      margin-bottom:14px;
+    }
+    .info-panel strong{color:#fff}
+
+    .process{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:16px;
+    }
+    .step{
+      padding:24px;
+      border-radius:26px;
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .step b{
+      display:grid;
+      place-items:center;
+      width:44px;
+      height:44px;
+      border-radius:14px;
+      background:linear-gradient(135deg,var(--gold),var(--orange));
+      color:#07111f;
+      font-size:20px;
+      margin-bottom:14px;
+    }
+    .step h3{
+      font-size:20px;
+      margin-bottom:8px;
+    }
+    .step p{
+      color:var(--muted);
+      line-height:1.55;
+      font-size:14.5px;
+    }
+
+    .faq{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+    }
+    details{
+      padding:22px;
+      border-radius:24px;
+      background:rgba(255,255,255,.065);
+      border:1px solid rgba(255,255,255,.11);
+    }
+    summary{
+      cursor:pointer;
+      font-size:18px;
+      font-weight:1000;
+      color:#fff;
+    }
+    details p{
+      color:var(--muted);
+      line-height:1.65;
+      margin-top:12px;
+    }
+
+    .cta-panel{
+      text-align:center;
+      border-radius:40px;
+      padding:54px 24px;
+      background:
+        radial-gradient(circle at 20% 0%,rgba(255,200,87,.22),transparent 34%),
+        radial-gradient(circle at 80% 12%,rgba(34,199,255,.18),transparent 32%),
+        linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:var(--shadow);
+    }
+    .cta-panel h2{
+      font-size:clamp(34px,5vw,58px);
+      line-height:1.05;
+      margin-bottom:14px;
+    }
+    .cta-panel p{
+      color:var(--muted);
+      max-width:820px;
+      margin:0 auto 24px;
+      font-size:18px;
+      line-height:1.7;
+    }
+    .phone{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:15px 24px;
+      border-radius:999px;
+      background:rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--gold);
+      font-size:clamp(24px,4vw,40px);
+      font-weight:1000;
+      margin-bottom:18px;
+    }
+
+    .floating-wa{
+      position:fixed;
+      right:20px;
+      bottom:20px;
+      width:64px;
+      height:64px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:var(--green);
+      color:#fff;
+      font-size:30px;
+      z-index:70;
+      box-shadow:0 20px 48px rgba(37,211,102,.36);
+    }
+
+    footer{
+      padding:34px 0;
+      border-top:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.20);
+    }
+    .footer-grid{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:18px;
+      flex-wrap:wrap;
+      color:#aebbd2;
+      font-size:14px;
+      line-height:1.5;
+    }
+    .notice{
+      max-width:760px;
+      padding:14px 16px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      color:#dce7ff;
+    }
+
+    @media(max-width:1000px){
+      .nav-links{display:none}
+      .hero-grid,.product-card,.seo-text,.category-row,.process,.faq,.friendly-grid{grid-template-columns:1fr}
+      .featured-box{grid-template-columns:1fr;text-align:center}
+      .hero-visual{min-height:430px}
+      .showcase{height:430px}
+      .metric-strip{grid-template-columns:1fr}
+      .product-media{
+        border-right:none;
+        border-bottom:1px solid rgba(255,255,255,.10);
+      }
+    }
+
+    @media(max-width:640px){
+      .top-sale .container{font-size:14px}
+      .nav{min-height:auto}
+      .brand small{font-size:10px}
+      .hero{padding:48px 0 44px}
+      h1{letter-spacing:-1px}
+      .hero-actions .btn,.product-actions .btn{width:100%}
+      .hero-visual{min-height:350px}
+      .showcase{height:350px}
+      .shot.one{width:82%;height:60%;right:0}
+      .shot.two{width:58%;height:32%}
+      .shot.three{width:54%;height:28%}
+      .shot.four{width:48%;height:25%}
+      .floating-wa{width:58px;height:58px;right:14px;bottom:14px}
+      .section{padding:58px 0}
+      .product-body{padding:24px}
+    }
   </style>
+
   <script type="application/ld+json">
   {
     "@context":"https://schema.org",
     "@type":"Organization",
     "name":"Mercado Digital",
-    "description":"Soluciones digitales para empresas, ventas, automatización, eventos, contadores y validaciones.",
-    "contactPoint":{"@type":"ContactPoint","telephone":"+573503875753","contactType":"sales","availableLanguage":"Spanish"}
+    "description":"Soluciones profesionales de software para entretenimiento, eventos, empresas, automatización, contadores y validaciones.",
+    "contactPoint":{
+      "@type":"ContactPoint",
+      "telephone":"+57 350 387 5753",
+      "contactType":"sales",
+      "areaServed":"CO",
+      "availableLanguage":"Spanish"
+    }
   }
   </script>
+
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"ItemList",
+    "name":"Soluciones de software Mercado Digital",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Software Multijuego Profesional","url":"#software-bingo-eventos"},
+      {"@type":"ListItem","position":2,"name":"Fixture Mundial 2026","url":"#fixture-mundial-2026"},
+      {"@type":"ListItem","position":3,"name":"Sistema POS Integral","url":"#software-pos"},
+      {"@type":"ListItem","position":4,"name":"Verificador RUT","url":"#verificador-rut"},
+      {"@type":"ListItem","position":5,"name":"Calendario Tributario","url":"#calendario-tributario"},
+      {"@type":"ListItem","position":6,"name":"Mensajes Masivos por WhatsApp","url":"#mensajes-masivos-whatsapp"}
+    ]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  [
+    {
+      "@context":"https://schema.org",
+      "@type":"SoftwareApplication",
+      "name":"Software Multijuego Profesional",
+      "applicationCategory":"GameApplication",
+      "operatingSystem":"Windows",
+      "description":"Software de bingo, ruletas, eventos, ranking, subastas y dinámicas interactivas para salas y entretenimiento."
+    },
+    {
+      "@context":"https://schema.org",
+      "@type":"SoftwareApplication",
+      "name":"Fixture Mundial 2026",
+      "applicationCategory":"SportsApplication",
+      "operatingSystem":"Web",
+      "description":"Aplicación de fixture Mundial 2026 con calendario, grupos, partidos, favoritos, predicciones y eventos."
+    },
+    {
+      "@context":"https://schema.org",
+      "@type":"SoftwareApplication",
+      "name":"Sistema POS Integral",
+      "applicationCategory":"BusinessApplication",
+      "operatingSystem":"Windows",
+      "description":"Software POS para ventas, compras, inventario PEPS, caja, arqueo, báscula, remisiones, certificados, terceros y contabilidad."
+    },
+    {
+      "@context":"https://schema.org",
+      "@type":"SoftwareApplication",
+      "name":"Verificador RUT",
+      "applicationCategory":"BusinessApplication",
+      "operatingSystem":"Web",
+      "description":"Sistema para verificación RUT, consultas masivas, validación de cédulas o NITs y exportación de resultados a Excel."
+    },
+    {
+      "@context":"https://schema.org",
+      "@type":"SoftwareApplication",
+      "name":"Calendario Tributario",
+      "applicationCategory":"BusinessApplication",
+      "operatingSystem":"Web",
+      "description":"Asistente para contadores con calendario tributario, vencimientos, clientes, alertas y organización de obligaciones."
+    },
+    {
+      "@context":"https://schema.org",
+      "@type":"SoftwareApplication",
+      "name":"Mensajes Masivos por WhatsApp",
+      "applicationCategory":"BusinessApplication",
+      "operatingSystem":"Chrome",
+      "description":"Herramienta para campañas responsables por WhatsApp con contactos autorizados, listas, mensajes y automatización."
+    }
+  ]
+  </script>
 </head>
+
 <body>
-  <a class="floating-wa" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20sobre%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener" aria-label="Contactar por WhatsApp">☎</a>
-  <div class="mobile-cta"><a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20una%20demo%20de%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener">💬 Solicitar demo por WhatsApp</a></div>
+  <div class="top-sale">
+    <div class="container">
+      <span>🎮 Soluciones digitales para eventos, entretenimiento, empresas y automatización.</span>
+      <a href="https://wa.me/573503875753?text=Hola%2C%20quiero%20cotizar%20un%20software%20de%20Mercado%20Digital." target="_blank" rel="noopener">Cotizar por WhatsApp</a>
+    </div>
+  </div>
+
+  <a class="floating-wa" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener" aria-label="WhatsApp">☎</a>
 
   <header class="topbar">
     <div class="container nav">
-      <a href="#inicio" class="brand" aria-label="Mercado Digital inicio">
-        <div class="brand-mark">✓</div>
-        <div><strong>Mercado Digital</strong><small>Soluciones de software</small></div>
+      <a href="#inicio" class="brand">
+        <div class="brand-mark">MD</div>
+        <div>
+          <strong>Mercado Digital</strong>
+          <small>Software profesional</small>
+        </div>
       </a>
-      <nav class="nav-links">
-        <a href="#productos">Productos</a>
-        <a href="#soluciones">Soluciones</a>
-        <a href="#proceso">Cómo comprar</a>
-        <a href="#faq">Preguntas</a>
-        <a href="#contacto">Contacto</a>
+
+      <nav class="nav-links" aria-label="Navegación principal">
+        <a href="#software-bingo-eventos">Bingo</a>
+        <a href="#fixture-mundial-2026">Fixture</a>
+        <a href="#software-pos">POS</a>
+        <a href="#verificador-rut">RUT</a>
+        <a href="#calendario-tributario">Tributario</a>
+        <a href="#mensajes-masivos-whatsapp">WhatsApp</a>
       </nav>
-      <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20cotizar%20un%20software%20de%20Mercado%20Digital." target="_blank" rel="noopener">Cotizar ahora</a>
+
+      <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20asesor%C3%ADa%20para%20elegir%20el%20software%20que%20necesito%20de%20Mercado%20Digital." target="_blank" rel="noopener">💬 Asesoría</a>
     </div>
   </header>
 
@@ -172,161 +839,332 @@
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <div class="eyebrow">🚀 Soluciones digitales listas para vender, operar y automatizar</div>
-          <h1>Software profesional para <span class="gradient-text">impulsar tu negocio</span></h1>
+          <div class="eyebrow">🎮 Software para bingo, eventos, entretenimiento, empresas y automatización</div>
+          <h1>Soluciones digitales para <span class="gradient-text">crear, vender y operar mejor</span></h1>
           <p class="lead">
-            En <strong>Mercado Digital</strong> encuentras herramientas digitales listas para mejorar ventas, operación, comunicación, eventos, control tributario y validaciones. Elige el software que necesitas, solicita demo y recibe asesoría directa por WhatsApp.
+            En <strong>Mercado Digital</strong> encuentras software listo para entretenimiento,
+            eventos, bingo, fixture Mundial 2026, ventas, POS, verificación RUT, calendario tributario
+            y comunicación comercial responsable.
           </p>
+
           <div class="hero-actions">
-            <a class="btn btn-primary" href="#productos">Ver soluciones</a>
-            <a class="btn btn-soft" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20asesor%C3%ADa%20para%20elegir%20el%20software%20que%20necesito%20de%20Mercado%20Digital." target="_blank" rel="noopener">💬 Hablar con un asesor</a>
+            <a class="btn btn-primary" href="#software-bingo-eventos">Ver entretenimiento</a>
+            <a class="btn btn-blue" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20una%20demo%20o%20cotizaci%C3%B3n%20de%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo</a>
           </div>
+
           <div class="metric-strip">
-            <div class="metric"><b>6</b><span>softwares disponibles</span></div>
-            <div class="metric"><b>Demo</b><span>asesoría y cotización por WhatsApp</span></div>
-            <div class="metric"><b>100%</b><span>soluciones listas para vender</span></div>
+            <div class="metric"><b>🎮</b><span>Bingo, ruletas, dinámicas y eventos en vivo</span></div>
+            <div class="metric"><b>⚽</b><span>Fixture Mundial 2026 para aficionados y negocios</span></div>
+            <div class="metric"><b>🏪</b><span>POS, RUT, tributario y automatización comercial</span></div>
           </div>
-          <div class="hero-chips"><a href="#pos">Sistema POS Integral</a><a href="#whatsapp">Mensajes Masivos por WhatsApp</a><a href="#multijuego">Software Multijuego Profesional</a><a href="#fixture">Fixture Mundial 2026</a><a href="#tributario">Asistente / Calendario Tributario</a><a href="#rut">Verificador RUT</a></div>
+
+          <div class="quick-links">
+            <a href="#software-bingo-eventos">Software de bingo y eventos</a>
+            <a href="#fixture-mundial-2026">Fixture Mundial 2026</a>
+            <a href="#software-pos">Sistema POS Integral</a>
+            <a href="#verificador-rut">Verificador RUT</a>
+            <a href="#calendario-tributario">Calendario tributario</a>
+            <a href="#mensajes-masivos-whatsapp">Mensajes masivos</a>
+          </div>
         </div>
+
         <div class="hero-visual" aria-hidden="true">
           <div class="orbit"></div>
           <div class="showcase">
-            <div class="shot one" data-label="Sistema POS"><img src="imagenes/ChatGPT Image 15 jun 2026, 08_37_39 p.m..png" alt=""></div>
-            <div class="shot two" data-label="Multijuego"><img src="imagenes/suite de juegos.jpg" alt=""></div>
-            <div class="shot three" data-label="Verificador RUT"><img src="imagenes/verificador de rut.jpg" alt=""></div>
-            <div class="shot four" data-label="Tributario"><img src="imagenes/calendario tributario.jpg" alt=""></div>
+            <div class="shot one" data-label="Multijuego"><img src="imagenes/suite%20de%20juegos.jpg" alt=""></div>
+            <div class="shot two" data-label="Fixture"><img src="imagenes/fixturi%20mundial%202026.jpg" alt=""></div>
+            <div class="shot three" data-label="Sistema POS"><img src="imagenes/ChatGPT%20Image%2015%20jun%202026,%2008_37_39%20p.m..png" alt=""></div>
+            <div class="shot four" data-label="RUT"><img src="imagenes/verificador%20de%20rut.jpg" alt=""></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section" id="soluciones">
+    <section class="section section-alt" id="soluciones">
       <div class="container">
         <div class="section-header">
           <span class="tag">Elige por necesidad</span>
-          <h2>Soluciones digitales para vender más y operar mejor</h2>
-          <p>Cada software está pensado para resolver una necesidad concreta: vender, administrar, comunicar, validar, organizar o entretener.</p>
+          <h2>Encuentra la solución ideal para tu necesidad</h2>
+          <p>
+            Explora primero las soluciones para entretenimiento y eventos: bingo, multijuego, ruletas, dinámicas y fixture. Luego encuentra herramientas para empresas, validación RUT, calendario tributario y comunicación comercial responsable.
+          </p>
         </div>
+
         <div class="category-row">
-          <article class="category-card"><span>🏪</span><h3>Empresas y comercios</h3><p>POS integral, inventario, caja, compras, ventas y operación diaria.</p></article>
-          <article class="category-card"><span>📲</span><h3>Comunicación</h3><p>Mensajería comercial para contactos con consentimiento y gestión responsable.</p></article>
-          <article class="category-card"><span>🎮</span><h3>Eventos y entretenimiento</h3><p>Software multijuego, bingo, ruletas y fixture mundial.</p></article>
-          <article class="category-card"><span>🧾</span><h3>Contadores y validación</h3><p>Calendario tributario, vencimientos, alertas y verificación RUT.</p></article>
+          <article class="category-card">
+            <span>🎮</span>
+            <h3>Bingo y eventos</h3>
+            <p>Software multijuego para bingo, ruletas, dinámicas, ranking, subastas y entretenimiento en vivo.</p>
+          </article>
+          <article class="category-card">
+            <span>⚽</span>
+            <h3>Deportes y Mundial</h3>
+            <p>Fixture Mundial 2026 para consultar partidos, grupos, predicciones, favoritos y calendario.</p>
+          </article>
+          <article class="category-card">
+            <span>🏪</span>
+            <h3>Empresas y comercios</h3>
+            <p>Sistema POS Integral para ventas, compras, inventario, caja, reportes y operación diaria.</p>
+          </article>
+          <article class="category-card">
+            <span>🧾</span>
+            <h3>RUT y tributario</h3>
+            <p>Verificador RUT, calendario tributario, vencimientos, alertas y organización de clientes.</p>
+          </article>
+        </div>
+
+        <div class="featured-box">
+          <div>
+            <h3>¿No sabes qué software necesitas?</h3>
+            <p>Escríbenos por WhatsApp, cuéntanos tu necesidad y recibe una recomendación clara.</p>
+          </div>
+          <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20asesor%C3%ADa%20para%20elegir%20un%20software%20de%20Mercado%20Digital." target="_blank" rel="noopener">Recibir asesoría</a>
         </div>
       </div>
     </section>
 
-    <section class="section" id="productos">
+    <section class="section" id="entretenimiento">
       <div class="container">
         <div class="section-header">
-          <span class="tag">Soluciones disponibles</span>
-          <h2>Elige el software que necesitas</h2>
-          <p>Conoce cada herramienta, revisa sus beneficios y solicita una demo o cotización según la solución que más se adapte a tu negocio.</p>
+          <span class="tag">Entretenimiento y eventos</span>
+          <h2>Software para bingo, dinámicas y experiencias interactivas</h2>
+          <p>
+            Soluciones visuales para negocios, eventos, salas, actividades sociales, entretenimiento y experiencias con público.
+          </p>
         </div>
+
         <div class="product-grid">
-          
-        <article class="product-card" id="pos">
-          <div class="product-media">
-            <span class="product-badge" style="--accent:#19d9ff">Gestión empresarial</span>
-            <img src="imagenes/ChatGPT Image 15 jun 2026, 08_37_39 p.m..png" alt="Sistema POS Integral - Mercado Digital" loading="lazy">
-          </div>
-          <div class="product-body">
-            <p class="product-category">Ventas, inventario y operación empresarial</p>
-            <h3>Sistema POS Integral</h3>
-            <p>Administra ventas, compras, inventario PEPS, caja, arqueo, báscula, remisiones, terceros, conductores, certificados y contabilidad desde una plataforma de escritorio personalizable.</p>
-            <ul><li>Multiempresa y configurable por administración</li><li>Ventas, compras e inventario PEPS</li><li>Caja, arqueo, báscula y remisiones</li><li>Certificados y terceros 360°</li><li>Reportes y módulos contables</li></ul>
-            <div class="product-actions">
-              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Sistema%20POS%20Integral.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
-              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+
+          <article class="product-card" id="software-bingo-eventos">
+            <div class="product-media">
+              <span class="product-badge" style="--accent:#ffc857">Bingo y eventos</span>
+              <img src="imagenes/suite%20de%20juegos.jpg" alt="Software de bingo y multijuego para eventos, salas, ruletas y entretenimiento" loading="lazy">
             </div>
-          </div>
-        </article>
-    
-        <article class="product-card" id="whatsapp">
-          <div class="product-media">
-            <span class="product-badge" style="--accent:#25d366">Automatización</span>
-            <img src="imagenes/mensajes masivos.jpg" alt="Mensajes Masivos por WhatsApp - Mercado Digital" loading="lazy">
-          </div>
-          <div class="product-body">
-            <p class="product-category">Comunicación comercial responsable</p>
-            <h3>Mensajes Masivos por WhatsApp</h3>
-            <p>Extensión para Chrome orientada a campañas con contactos autorizados. Ayuda a importar listas, enviar mensajes y automatizar respuestas de forma ordenada.</p>
-            <ul><li>Envía a listas con consentimiento</li><li>Importación fácil de contactos</li><li>Automatización de respuestas</li><li>Compatible con Windows, macOS y Linux</li><li>Enfoque responsable para evitar bloqueos</li></ul>
-            <div class="product-actions">
-              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Mensajes%20Masivos%20por%20WhatsApp.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
-              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+            <div class="product-body">
+              <p class="product-category">Software de bingo, ruletas y entretenimiento</p>
+              <h2>Software Multijuego Profesional</h2>
+              <p>
+                Suite visual para eventos, salas y entretenimiento. Incluye software de bingo,
+                ruletas, ranking, subastas, lotería, dados, carrera y módulos interactivos para proyectar al público.
+              </p>
+              <ul>
+                <li>Bingo 75, bingo 18, bingo 30 y bingo 90.</li>
+                <li>Ruleta tipo casino y ruleta para desempates.</li>
+                <li>Ranking, subastas, lotería, dados y carrera.</li>
+                <li>Pantalla completa para eventos y salas.</li>
+                <li>Personalización visual con logos, colores e imágenes.</li>
+              </ul>
+              <div class="product-actions">
+                <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Software%20Multijuego%20Profesional%20para%20bingo%20y%20eventos." target="_blank" rel="noopener">Solicitar demo multijuego</a>
+                <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+              </div>
             </div>
-          </div>
-        </article>
-    
-        <article class="product-card" id="multijuego">
-          <div class="product-media">
-            <span class="product-badge" style="--accent:#ffc84d">Eventos y salas</span>
-            <img src="imagenes/suite de juegos.jpg" alt="Software Multijuego Profesional - Mercado Digital" loading="lazy">
-          </div>
-          <div class="product-body">
-            <p class="product-category">Bingo, ruletas y entretenimiento interactivo</p>
-            <h3>Software Multijuego Profesional</h3>
-            <p>Suite visual para salas, eventos y entretenimiento: bingo visual, ruletas, ranking, módulos personalizables y control en vivo.</p>
-            <ul><li>Bingo visual y tableros profesionales</li><li>Ruletas y dinámicas interactivas</li><li>Pantallas personalizables</li><li>Control en vivo para eventos</li><li>Diseñado para salas y entretenimiento</li></ul>
-            <div class="product-actions">
-              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Software%20Multijuego%20Profesional.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
-              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+          </article>
+
+          <article class="product-card" id="fixture-mundial-2026">
+            <div class="product-media">
+              <span class="product-badge" style="--accent:#ff4fa3">Mundial 2026</span>
+              <img src="imagenes/fixturi%20mundial%202026.jpg" alt="Fixture Mundial 2026 con partidos, grupos, predicciones, favoritos y calendario" loading="lazy">
             </div>
-          </div>
-        </article>
-    
-        <article class="product-card" id="fixture">
-          <div class="product-media">
-            <span class="product-badge" style="--accent:#e83e8c">Deportes</span>
-            <img src="imagenes/fixturi mundial 2026.jpg" alt="Fixture Mundial 2026 - Mercado Digital" loading="lazy">
-          </div>
-          <div class="product-body">
-            <p class="product-category">App instalable de partidos y predicciones</p>
-            <h3>Fixture Mundial 2026</h3>
-            <p>Herramienta para llevar el Mundial 2026 en el celular: partidos, grupos, calendario, predicciones y acceso rápido como app instalable.</p>
-            <ul><li>Consulta partidos y resultados</li><li>Guarda partidos favoritos</li><li>Calcula ganadores automáticamente</li><li>Agrega eventos al calendario</li><li>Instalable como app</li></ul>
-            <div class="product-actions">
-              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Fixture%20Mundial%202026.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
-              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+            <div class="product-body">
+              <p class="product-category">Aplicación deportiva y calendario de partidos</p>
+              <h2>Fixture Mundial 2026</h2>
+              <p>
+                App de fixture Mundial 2026 para consultar partidos, grupos, calendario,
+                predicciones, favoritos y eventos importantes durante el torneo.
+              </p>
+              <ul>
+                <li>Calendario de partidos del Mundial 2026.</li>
+                <li>Organización por grupos y selecciones.</li>
+                <li>Predicciones y favoritos.</li>
+                <li>Acceso rápido como app instalable.</li>
+                <li>Ideal para aficionados, negocios y dinámicas deportivas.</li>
+              </ul>
+              <div class="product-actions">
+                <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Fixture%20Mundial%202026%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo fixture</a>
+                <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+              </div>
             </div>
-          </div>
-        </article>
-    
-        <article class="product-card" id="tributario">
-          <div class="product-media">
-            <span class="product-badge" style="--accent:#42d9ff">Contadores</span>
-            <img src="imagenes/calendario tributario.jpg" alt="Asistente / Calendario Tributario - Mercado Digital" loading="lazy">
-          </div>
-          <div class="product-body">
-            <p class="product-category">Organización de clientes y vencimientos</p>
-            <h3>Asistente / Calendario Tributario</h3>
-            <p>Herramienta para contadores y asesores que necesitan organizar clientes, obligaciones, vencimientos tributarios, alertas y calendario integrado.</p>
-            <ul><li>Control por cliente</li><li>Vencimientos por mes</li><li>Alertas anticipadas</li><li>Integración con calendario</li><li>Datos organizados y seguros</li></ul>
-            <div class="product-actions">
-              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Asistente%20%2F%20Calendario%20Tributario.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
-              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-header">
+          <span class="tag">Fácil de entender</span>
+          <h2>Una forma más simple de elegir tu software</h2>
+          <p>
+            Encuentra rápidamente qué hace cada software, revisa sus beneficios y solicita información sin complicaciones.
+          </p>
+        </div>
+
+        <div class="friendly-grid">
+          <article class="friendly-card">
+            <span>👀</span>
+            <h3>Fácil de revisar</h3>
+            <p>Las imágenes y descripciones te ayudan a identificar rápidamente la solución que necesitas.</p>
+          </article>
+          <article class="friendly-card">
+            <span>🧭</span>
+            <h3>Más organizado</h3>
+            <p>Encuentra primero entretenimiento y luego herramientas empresariales, tributarias y de automatización.</p>
+          </article>
+          <article class="friendly-card">
+            <span>💬</span>
+            <h3>Contacto directo</h3>
+            <p>Cada software tiene acceso directo para solicitar demo, cotización o asesoría por WhatsApp.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="empresas">
+      <div class="container">
+        <div class="section-header">
+          <span class="tag">Empresas, validación y automatización</span>
+          <h2>Herramientas para trabajar mejor y ahorrar tiempo</h2>
+          <p>
+            Soluciones para comercios, contadores, equipos administrativos, validación de datos y comunicación comercial responsable.
+          </p>
+        </div>
+
+        <div class="product-grid">
+
+          <article class="product-card business" id="software-pos">
+            <div class="product-media">
+              <span class="product-badge" style="--accent:#22c7ff">Sistema POS</span>
+              <img src="imagenes/ChatGPT%20Image%2015%20jun%202026,%2008_37_39%20p.m..png" alt="Sistema POS Integral para ventas, compras, inventario PEPS, caja, remisiones y certificados" loading="lazy">
             </div>
-          </div>
-        </article>
-    
-        <article class="product-card" id="rut">
-          <div class="product-media">
-            <span class="product-badge" style="--accent:#00d69f">Validación</span>
-            <img src="imagenes/verificador de rut.jpg" alt="Verificador RUT - Mercado Digital" loading="lazy">
-          </div>
-          <div class="product-body">
-            <p class="product-category">Consulta masiva rápida y organizada</p>
-            <h3>Verificador RUT</h3>
-            <p>Sistema para consultas masivas y validaciones rápidas. Permite pegar cédulas o NITs, procesar información y exportar resultados a Excel.</p>
-            <ul><li>Pega cédulas o NITs sin subir Excel</li><li>Consulta masiva rápida</li><li>Exportación de resultados a Excel</li><li>Interfaz profesional</li><li>Ideal para validación masiva</li></ul>
-            <div class="product-actions">
-              <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20y%20demo%20de%20Verificador%20RUT.%20Quiero%20cotizarlo%20con%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo por WhatsApp</a>
-              <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+            <div class="product-body">
+              <p class="product-category">Software POS para empresas y comercios</p>
+              <h2>Sistema POS Integral</h2>
+              <p>
+                Software POS de escritorio para administrar ventas, compras, inventario PEPS, caja, arqueo,
+                báscula, remisiones, terceros, conductores, certificados y contabilidad desde una solución configurable.
+              </p>
+              <ul>
+                <li>POS multiempresa configurable desde administración.</li>
+                <li>Ventas, compras, inventario PEPS y reportes.</li>
+                <li>Caja general, ingresos, pagos, gastos y arqueo.</li>
+                <li>Báscula, remisiones, terceros, conductores y placas.</li>
+                <li>Certificados personalizados con datos del responsable.</li>
+              </ul>
+              <div class="product-actions">
+                <a class="btn btn-blue" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Sistema%20POS%20Integral%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo POS</a>
+                <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+              </div>
             </div>
-          </div>
-        </article>
-    
+          </article>
+
+          <article class="product-card business" id="verificador-rut">
+            <div class="product-media">
+              <span class="product-badge" style="--accent:#00d69f">Verificación RUT</span>
+              <img src="imagenes/verificador%20de%20rut.jpg" alt="Verificador RUT para consultas masivas de cédulas, NIT y exportación a Excel" loading="lazy">
+            </div>
+            <div class="product-body">
+              <p class="product-category">Verificador RUT y consulta masiva</p>
+              <h2>Verificador RUT</h2>
+              <p>
+                Sistema para validar datos, consultar información de cédulas o NITs,
+                organizar resultados y exportar reportes a Excel de forma práctica.
+              </p>
+              <ul>
+                <li>Consulta masiva de cédulas o NITs.</li>
+                <li>Pega datos directamente sin cargar archivos complejos.</li>
+                <li>Organización de resultados en tabla.</li>
+                <li>Exportación a Excel para análisis y gestión.</li>
+                <li>Ideal para validaciones administrativas y comerciales.</li>
+              </ul>
+              <div class="product-actions">
+                <a class="btn btn-blue" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Verificador%20RUT%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo RUT</a>
+                <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="product-card business" id="calendario-tributario">
+            <div class="product-media">
+              <span class="product-badge" style="--accent:#42d9ff">Tributario</span>
+              <img src="imagenes/calendario%20tributario.jpg" alt="Calendario tributario para contadores, vencimientos, clientes y alertas" loading="lazy">
+            </div>
+            <div class="product-body">
+              <p class="product-category">Software para contadores y asesores tributarios</p>
+              <h2>Asistente / Calendario Tributario</h2>
+              <p>
+                Herramienta para contadores, asesores y equipos administrativos que necesitan organizar
+                clientes, obligaciones, vencimientos tributarios, alertas y calendario de trabajo.
+              </p>
+              <ul>
+                <li>Control de clientes y obligaciones tributarias.</li>
+                <li>Calendario mensual de vencimientos.</li>
+                <li>Alertas y seguimiento de tareas importantes.</li>
+                <li>Organización por fechas, clientes y responsabilidades.</li>
+                <li>Ideal para oficinas contables y asesores independientes.</li>
+              </ul>
+              <div class="product-actions">
+                <a class="btn btn-blue" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Calendario%20Tributario%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo tributaria</a>
+                <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="product-card business" id="mensajes-masivos-whatsapp">
+            <div class="product-media">
+              <span class="product-badge" style="--accent:#25d366">WhatsApp</span>
+              <img src="imagenes/mensajes%20masivos.jpg" alt="Mensajes masivos por WhatsApp para campañas comerciales responsables con contactos autorizados" loading="lazy">
+            </div>
+            <div class="product-body">
+              <p class="product-category">Mensajería comercial responsable</p>
+              <h2>Mensajes Masivos por WhatsApp</h2>
+              <p>
+                Herramienta para gestionar campañas comerciales por WhatsApp con contactos autorizados,
+                listas organizadas y mensajes preparados para comunicación empresarial responsable.
+              </p>
+              <ul>
+                <li>Envío a contactos con consentimiento.</li>
+                <li>Importación y organización de listas.</li>
+                <li>Mensajes personalizados para campañas comerciales.</li>
+                <li>Automatización de respuestas y seguimiento.</li>
+                <li>Uso responsable para proteger la reputación del negocio.</li>
+              </ul>
+              <div class="product-actions">
+                <a class="btn btn-blue" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20software%20de%20Mensajes%20Masivos%20por%20WhatsApp%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo WhatsApp</a>
+                <a class="btn btn-soft" href="#contacto">Cotizar ahora</a>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt">
+      <div class="container seo-text">
+        <div class="info-panel">
+          <h2>Software para bingo, eventos y entretenimiento</h2>
+          <p>
+            Las soluciones de entretenimiento de <strong>Mercado Digital</strong> ayudan a crear experiencias
+            visuales para eventos, salas, actividades sociales, transmisiones y dinámicas con público.
+          </p>
+          <p>
+            Puedes cotizar software de bingo, ruletas, multijuego o fixture Mundial 2026 para presentar
+            actividades de forma moderna y profesional.
+          </p>
+        </div>
+
+        <div class="info-panel">
+          <h2>Software para empresas, RUT y automatización</h2>
+          <p>
+            También puedes solicitar soluciones para operación empresarial:
+            <strong>sistema POS</strong>, <strong>verificador RUT</strong>,
+            <strong>calendario tributario</strong> y <strong>mensajes masivos responsables por WhatsApp</strong>.
+          </p>
+          <p>
+            Cada solución incluye descripción, beneficios principales y acceso directo para solicitar información por WhatsApp.
+          </p>
         </div>
       </div>
     </section>
@@ -334,32 +1172,68 @@
     <section class="section" id="proceso">
       <div class="container">
         <div class="section-header">
-          <span class="tag">Cómo comprar</span>
-          <h2>Compra fácil, rápida y asesorada</h2>
-          <p>El proceso está diseñado para que recibas asesoría rápida, demo y cotización directa por WhatsApp.</p>
+          <span class="tag">Compra fácil</span>
+          <h2>Recibe asesoría, demo y cotización</h2>
+          <p>Elige la solución que necesitas y comunícate por WhatsApp para recibir orientación directa.</p>
         </div>
+
         <div class="process">
-          <article class="step"><b>1</b><h3>Elige el software</h3><p>Revisa las soluciones disponibles y selecciona el software que necesitas.</p></article>
-          <article class="step"><b>2</b><h3>Solicita demo</h3><p>Solicita una demostración, asesoría o cotización por WhatsApp.</p></article>
-          <article class="step"><b>3</b><h3>Recibe cotización</h3><p>Confirmamos el alcance, características, forma de entrega y condiciones del software.</p></article>
-          <article class="step"><b>4</b><h3>Empieza a usarlo</h3><p>Recibe orientación para empezar a usar tu software de forma clara y organizada.</p></article>
+          <article class="step">
+            <b>1</b>
+            <h3>Elige el software</h3>
+            <p>Selecciona entretenimiento, fixture, POS, RUT, tributario o mensajes masivos.</p>
+          </article>
+          <article class="step">
+            <b>2</b>
+            <h3>Solicita demo</h3>
+            <p>Pide una demostración para conocer funciones, alcance y beneficios.</p>
+          </article>
+          <article class="step">
+            <b>3</b>
+            <h3>Recibe cotización</h3>
+            <p>Confirmamos características, forma de entrega, soporte y condiciones del software.</p>
+          </article>
+          <article class="step">
+            <b>4</b>
+            <h3>Empieza a usarlo</h3>
+            <p>Recibe orientación para iniciar con la solución adquirida de forma clara y organizada.</p>
+          </article>
         </div>
       </div>
     </section>
 
-    <section class="section" id="faq">
+    <section class="section section-alt" id="faq">
       <div class="container">
         <div class="section-header">
           <span class="tag">Preguntas frecuentes</span>
-          <h2>Información rápida antes de contactar</h2>
+          <h2>Información rápida antes de cotizar</h2>
         </div>
+
         <div class="faq">
-          <details open><summary>¿Puedo pedir demo de cualquier software?</summary><p>Sí. Cada producto tiene un botón para solicitar demo, cotización o más información por WhatsApp.</p></details>
-          <details><summary>¿Los precios están publicados?</summary><p>La cotización se entrega por conversación, según el software elegido, alcance, condiciones de entrega y soporte requerido.</p></details>
-          <details><summary>¿Puedo revisar las soluciones desde celular?</summary><p>Sí. Puedes revisar las soluciones desde celular, tableta o computador.</p></details>
-          <details><summary>¿Cómo recibo el software?</summary><p>Después de la cotización se confirma la forma de entrega, instalación, configuración o acceso según el tipo de software.</p></details>
-          <details><summary>¿El módulo de mensajes masivos se debe usar con cuidado?</summary><p>Sí. La comunicación comercial debe hacerse con contactos autorizados y respetando las políticas de la plataforma correspondiente.</p></details>
-          <details><summary>¿Se puede cambiar el número de WhatsApp?</summary><p>Sí. Busca el número 573503875753 dentro del index.html y reemplázalo por el nuevo número en formato internacional.</p></details>
+          <details open>
+            <summary>¿Cuál software aparece primero?</summary>
+            <p>Primero aparecen las soluciones de entretenimiento: Software Multijuego Profesional y Fixture Mundial 2026.</p>
+          </details>
+          <details>
+            <summary>¿Puedo pedir demo de cualquier software?</summary>
+            <p>Sí. Puedes solicitar demo, cotización o asesoría de cualquiera de las soluciones disponibles.</p>
+          </details>
+          <details>
+            <summary>¿Qué software puedo cotizar?</summary>
+            <p>Puedes cotizar Software Multijuego Profesional, Fixture Mundial 2026, Sistema POS Integral, Verificador RUT, Calendario Tributario o Mensajes Masivos por WhatsApp.</p>
+          </details>
+          <details>
+            <summary>¿Los precios están publicados?</summary>
+            <p>La cotización se entrega por conversación, según el software elegido, alcance, configuración y condiciones de entrega.</p>
+          </details>
+          <details>
+            <summary>¿El sistema de mensajes masivos se debe usar con cuidado?</summary>
+            <p>Sí. La comunicación comercial debe hacerse con contactos autorizados y respetando las políticas de la plataforma correspondiente.</p>
+          </details>
+          <details>
+            <summary>¿Puedo revisar las soluciones desde celular?</summary>
+            <p>Sí. El contenido se adapta a celulares, tabletas y computadores.</p>
+          </details>
         </div>
       </div>
     </section>
@@ -367,10 +1241,12 @@
     <section class="section" id="contacto">
       <div class="container">
         <div class="cta-panel">
-          <h2>¿Listo para impulsar tu negocio con software profesional?</h2>
-          <p>Solicita asesoría ahora, elige la solución que necesitas y recibe una demo o cotización directa por WhatsApp.</p>
+          <h2>¿Listo para empezar con una solución digital profesional?</h2>
+          <p>
+            Solicita asesoría ahora, elige el software que necesitas y recibe una demo o cotización directa por WhatsApp.
+          </p>
           <div class="phone">📞 350 387 5753</div><br>
-          <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20información%20sobre%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener">💬 Solicitar asesoría ahora</a>
+          <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20informaci%C3%B3n%2C%20demo%20o%20cotizaci%C3%B3n%20de%20los%20softwares%20de%20Mercado%20Digital." target="_blank" rel="noopener">💬 Solicitar asesoría ahora</a>
         </div>
       </div>
     </section>
@@ -378,8 +1254,13 @@
 
   <footer>
     <div class="container footer-grid">
-      <div><strong>Mercado Digital</strong><br>Soluciones profesionales de software para negocios, eventos y automatización.</div>
-      <div class="notice">Uso responsable: las herramientas de comunicación deben utilizarse únicamente con contactos autorizados y respetando las políticas aplicables. Todos los derechos reservados.</div>
+      <div>
+        <strong>Mercado Digital</strong><br>
+        Soluciones profesionales de software para entretenimiento, negocios, eventos y automatización.
+      </div>
+      <div class="notice">
+        Uso responsable: las herramientas de comunicación deben utilizarse únicamente con contactos autorizados y respetando las políticas aplicables. Todos los derechos reservados.
+      </div>
     </div>
   </footer>
 </body>
