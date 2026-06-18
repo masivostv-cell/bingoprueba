@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jugador Polla Mundialista</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body { margin: 0; background: #f2f2f2; color: #222; }
+    header { background: #006837; color: white; padding: 15px; text-align: center; }
+    header img { width: 90px; background: white; border-radius: 10px; padding: 5px; }
+    h1 { margin: 8px 0 0; font-size: 24px; }
+    .container { max-width: 1000px; margin: auto; padding: 20px; }
+    .card { background: white; border-radius: 14px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; color: #006837; }
+    input { width: 100%; padding: 12px; margin: 6px 0 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 15px; }
+    button { padding: 11px 16px; border: none; border-radius: 8px; background: #006837; color: white; font-weight: bold; cursor: pointer; margin: 4px 0; width: 100%; }
+    button:hover { background: #004d29; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .logout { background: #222; max-width: 180px; }
+    .danger { background: #d90000; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 15px; }
+    .match { border: 1px solid #ddd; border-radius: 12px; padding: 15px; background: #fafafa; }
+    .status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 8px; }
+    .open { background: #d8f5e3; color: #006837; }
+    .closed { background: #ffd8d8; color: #b00000; }
+    .pending { background: #fff1c2; color: #8a6200; }
+    .approved { background: #d8f5e3; color: #006837; }
+    .rejected { background: #ffd8d8; color: #b00000; }
+    .no-support { background: #e8e8e8; color: #444; }
+    .small { font-size: 13px; color: #555; }
+    .message { font-weight: bold; margin-top: 10px; min-height: 18px; }
+    .error { color: #d90000; }
+    .success { color: #006837; }
+    .info-box { background: #e8ffe8; border-left: 5px solid #006837; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+    .payment-img { max-width: 180px; width: 100%; border-radius: 10px; border: 1px solid #ccc; margin-top: 8px; display: block; }
+    .ocr-box { background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; max-height: 120px; overflow: auto; }
+    .profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
+    .profile-grid input { margin-bottom: 6px; }
+    .profile-actions { margin-top: 8px; }
+    .readonly-note { width: 100%; min-height: 110px; padding: 12px; border-radius: 10px; border: 1px solid #cfcfcf; background: #fff; color: #222; font-size: 15px; line-height: 1.45; resize: vertical; }
+    .money-box { background: #fff8d8; border-left: 5px solid #d99000; padding: 12px; border-radius: 8px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+<header>
+  <img src="logo-club-cazadores.jpeg" alt="Club de Cazadores">
+  <h1>Jugador</h1>
+  <p>Polla Mundialista - Club de Cazadores</p>
+  <button class="logout" onclick="logout()">Cerrar sesión</button>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h2>Bienvenido</h2>
+    <p id="userInfo">Cargando usuario...</p>
+    <div class="profile-grid">
+      <div>
+        <label>Nombre completo</label>
+        <input type="text" id="profileName" placeholder="Nombre completo">
+      </div>
+      <div>
+        <label>Cédula</label>
+        <input type="text" id="profileCedula" placeholder="Cédula">
+      </div>
+      <div>
+        <label>Teléfono</label>
+        <input type="tel" id="profilePhone" placeholder="Teléfono">
+      </div>
+    </div>
+    <div class="profile-actions">
+      <button onclick="guardarDatosJugador()">Guardar datos del jugador</button>
+      <div id="profileMessage" class="message"></div>
+    </div>
+    <div class="info-box">
+      <b>Regla importante:</b><br>
+      Puedes guardar tu marcador. Para participar oficialmente debes subir el soporte de pago.
+            Si pasan 24 horas desde que guardaste el marcador y no subes soporte, la apuesta queda vencida.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Información de pago</h2>
+    <textarea class="readonly-note" readonly>Realiza el pago al Nequi 320999999 para participar. Recuerda invitar a más amigos para que la bolsa sea más grande y sigue apoyando todos los eventos de nuestro Club de Cazadores.</textarea>
+    <div id="resumenValorApuesta" class="money-box">Cargando valor de apuesta...</div>
+  </div>
+
+  <div class="card">
+    <h2>Partidos disponibles</h2>
+    <div id="partidosList" class="grid">Cargando partidos...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc,
+    serverTimestamp, Timestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyASUME91F2DH3hv8mJs4SnrJKNaq-xH6_c",
+    authDomain: "polla-mundialista-c2577.firebaseapp.com",
+    projectId: "polla-mundialista-c2577",
+    storageBucket: "polla-mundialista-c2577.firebasestorage.app",
+    messagingSenderId: "799244469443",
+    appId: "1:799244469443:web:9971fc46a2506f07014e76",
+    measurementId: "G-2LW8L34X8Q"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const ADMIN_EMAILS = ["jorgemanuelp92@hotmail.com", "admin@cazadores.com"];
+
+  function isAdminEmail(email) {
+    return ADMIN_EMAILS.includes(String(email || "").toLowerCase());
+  }
+  const MAX_BASE64_CHARS = 500000;
+
+  let currentUser = null;
+  let userProfile = null;
+  let valorApuesta = 0;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+    if (isAdminEmail(user.email)) {
+      window.location.href = "adminpolla.html";
+      return;
+    }
+
+    currentUser = user;
+    await cargarPerfilUsuario();
+    await cargarConfiguracionGeneral();
+    await cargarPartidos();
+  });
+
+  window.logout = async function () {
+    await signOut(auth);
+    window.location.href = "login.html";
+  };
+
+  async function cargarPerfilUsuario() {
+    const refUser = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(refUser);
+
+    if (snap.exists()) {
+      userProfile = snap.data();
+    } else {
+      userProfile = { uid: currentUser.uid, nombre: "", cedula: "", telefono: "", correo: currentUser.email, rol: "jugador" };
+      await setDoc(refUser, { ...userProfile, fechaRegistro: serverTimestamp() }, { merge: true });
+    }
+
+    pintarPerfilUsuario();
+  }
+
+  function pintarPerfilUsuario() {
+    document.getElementById("userInfo").innerHTML = `
+      <b>Correo:</b> ${userProfile.correo || currentUser.email}<br>
+      <b>Nombre:</b> ${userProfile.nombre || "Sin nombre registrado"}<br>
+      <b>Cédula:</b> ${userProfile.cedula || "Sin cédula registrada"}<br>
+      <b>Teléfono:</b> ${userProfile.telefono || "Sin teléfono registrado"}
+    `;
+
+    document.getElementById("profileName").value = userProfile.nombre || "";
+    document.getElementById("profileCedula").value = userProfile.cedula || "";
+    document.getElementById("profilePhone").value = userProfile.telefono || "";
+  }
+
+  function mostrarMensajePerfil(texto, tipo = "success") {
+    const box = document.getElementById("profileMessage");
+    box.textContent = texto || "";
+    box.className = "message " + tipo;
+  }
+
+  function formatearPesos(valor) {
+    return Number(valor || 0).toLocaleString("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0
+    });
+  }
+
+  async function cargarConfiguracionGeneral() {
+    try {
+      const snap = await getDoc(doc(db, "config", "general"));
+      valorApuesta = snap.exists() ? Number(snap.data().valorApuesta || 0) : 0;
+      pintarResumenPago(0);
+    } catch (error) {
+      valorApuesta = 0;
+      pintarResumenPago(0);
+      console.error("No se pudo cargar la configuración general:", error);
+    }
+  }
+
+  function pintarResumenPago(aprobadosGlobal = 0) {
+    const box = document.getElementById("resumenValorApuesta");
+    if (!box) return;
+    if (valorApuesta > 0) {
+      box.innerHTML = `<b>Valor de la apuesta:</b> ${formatearPesos(valorApuesta)}<br><b>Bolsa visible:</b> se calcula en cada partido según los pagos aprobados.`;
+    } else {
+      box.innerHTML = `<b>Valor de la apuesta:</b> pendiente por definir por el administrador.`;
+    }
+  }
+
+  window.guardarDatosJugador = async function () {
+    const nombre = document.getElementById("profileName").value.trim();
+    const cedula = document.getElementById("profileCedula").value.trim();
+    const telefono = document.getElementById("profilePhone").value.trim();
+    const correo = (currentUser.email || "").toLowerCase();
+
+    if (!nombre || !cedula || !telefono) {
+      mostrarMensajePerfil("Completa nombre, cédula y teléfono.", "error");
+      return;
+    }
+
+    try {
+      await setDoc(doc(db, "users", currentUser.uid), {
+        uid: currentUser.uid,
+        nombre,
+        cedula,
+        telefono,
+        correo,
+        rol: "jugador",
+        actualizadoEn: serverTimestamp()
+      }, { merge: true });
+
+      userProfile = { ...(userProfile || {}), uid: currentUser.uid, nombre, cedula, telefono, correo, rol: "jugador" };
+      pintarPerfilUsuario();
+      mostrarMensajePerfil("Datos del jugador guardados correctamente.", "success");
+    } catch (error) {
+      mostrarMensajePerfil("No se pudieron guardar los datos. Revisa las reglas de Firestore.", "error");
+      console.error(error);
+    }
+  };
+
+  async function cargarPartidos() {
+    const contenedor = document.getElementById("partidosList");
+    contenedor.innerHTML = "Cargando partidos...";
+
+    try {
+      const snapshot = await getDocs(collection(db, "partidos"));
+      if (snapshot.empty) {
+        contenedor.innerHTML = "<p>No hay partidos disponibles.</p>";
+        return;
+      }
+
+      contenedor.innerHTML = "";
+      for (const partidoDoc of snapshot.docs) {
+        const partido = partidoDoc.data();
+        const partidoId = partidoDoc.id;
+        const fechaInicio = partido.fechaInicio?.toDate ? partido.fechaInicio.toDate() : null;
+        const fechaCierre = partido.fechaCierre?.toDate ? partido.fechaCierre.toDate() : null;
+        const ahora = new Date();
+        const cerradoPorFecha = fechaCierre ? ahora >= fechaCierre : false;
+        const cerrado = partido.apuestasCerradas === true || cerradoPorFecha;
+
+        const apuesta = await obtenerApuestaUsuario(partidoId);
+        if (apuesta && apuesta.estadoPago === "sin_soporte") {
+          await verificarApuestaVencida(partidoId, apuesta);
+        }
+        const apuestaActualizada = await obtenerApuestaUsuario(partidoId);
+        const estadoHtml = obtenerEstadoApuestaHtml(apuestaActualizada);
+        const disabled = cerrado || (apuestaActualizada && (apuestaActualizada.estadoPago === "aprobado" || apuestaActualizada.estadoPago === "vencida"));
+        const aprobados = partido.participantesAprobados || 0;
+        const bolsaPartido = aprobados * valorApuesta;
+
+        const div = document.createElement("div");
+        div.className = "match";
+        div.innerHTML = `
+          <span class="status ${cerrado ? "closed" : "open"}">${cerrado ? "Apuestas cerradas" : "Apuestas abiertas"}</span>
+          <h3>${partido.equipoA} vs ${partido.equipoB}</h3>
+          <p><b>Inicio:</b> ${fechaInicio ? fechaInicio.toLocaleString() : "Sin fecha"}</p>
+          <p><b>Cierre automático:</b> ${fechaCierre ? fechaCierre.toLocaleString() : "Sin fecha"}</p>
+          <p><b>Contador:</b> <span class="countdown" data-cierre="${fechaCierre ? fechaCierre.getTime() : ""}"></span></p>
+          <p><b>Hasta el momento han jugado:</b> ${aprobados} personas aprobadas</p>
+          <p><b>Valor de la apuesta:</b> ${valorApuesta > 0 ? formatearPesos(valorApuesta) : "Por definir"}</p>
+          <p><b>Bolsa acumulada:</b> ${valorApuesta > 0 ? formatearPesos(bolsaPartido) : "Por definir"}</p>
+          ${estadoHtml}
+          <hr>
+          <label>Goles ${partido.equipoA}</label>
+          <input type="number" min="0" id="golesA_${partidoId}" ${disabled ? "disabled" : ""} value="${apuestaActualizada?.golesA ?? ""}">
+          <label>Goles ${partido.equipoB}</label>
+          <input type="number" min="0" id="golesB_${partidoId}" ${disabled ? "disabled" : ""} value="${apuestaActualizada?.golesB ?? ""}">
+          <label>Subir imagen del depósito</label>
+          <input type="file" accept="image/*" id="soporte_${partidoId}" ${disabled ? "disabled" : ""}>
+          ${disabled ? `<button class="danger" disabled>No disponible</button>` : `<button onclick="guardarApuesta('${partidoId}', '${escapeJs(partido.equipoA)}', '${escapeJs(partido.equipoB)}')">Guardar participación</button>`}
+          <div id="msg_${partidoId}" class="message"></div>
+        `;
+        contenedor.appendChild(div);
+      }
+      iniciarContadores();
+    } catch (error) {
+      contenedor.innerHTML = "<p>Error cargando partidos. Revisa las reglas de Firestore.</p>";
+      console.error(error);
+    }
+  }
+
+  function escapeJs(text) {
+    return String(text || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  }
+
+  function iniciarContadores() {
+    function pintar() {
+      document.querySelectorAll(".countdown").forEach((span) => {
+        const cierreMs = Number(span.dataset.cierre || 0);
+        if (!cierreMs) { span.textContent = "Sin fecha"; return; }
+        const diferencia = cierreMs - Date.now();
+        if (diferencia <= 0) { span.textContent = "Cerrado"; return; }
+        const totalSeg = Math.floor(diferencia / 1000);
+        const dias = Math.floor(totalSeg / 86400);
+        const horas = Math.floor((totalSeg % 86400) / 3600);
+        const min = Math.floor((totalSeg % 3600) / 60);
+        const seg = totalSeg % 60;
+        span.textContent = `${dias}d ${horas}h ${min}m ${seg}s`;
+      });
+    }
+    pintar();
+    clearInterval(window.__contadorJugador);
+    window.__contadorJugador = setInterval(pintar, 1000);
+  }
+
+  function obtenerEstadoApuestaHtml(apuesta) {
+    if (!apuesta) return `<p class="small">Aún no has guardado marcador para este partido.</p>`;
+
+    let clase = "no-support";
+    let texto = "Marcador guardado sin soporte";
+    if (apuesta.estadoPago === "pendiente") { clase = "pending"; texto = "Soporte pendiente de aprobación"; }
+    if (apuesta.estadoPago === "aprobado") { clase = "approved"; texto = "Participación aprobada"; }
+    if (apuesta.estadoPago === "rechazado") { clase = "rejected"; texto = "Soporte rechazado"; }
+    if (apuesta.estadoPago === "vencida") { clase = "rejected"; texto = "Apuesta vencida por no subir soporte en 24 horas"; }
+
+    const soporte = apuesta.soporteImagenBase64 || "";
+    const textoOCR = apuesta.soporteTextoOCR || "";
+
+    return `
+      <div>
+        <span class="status ${clase}">${texto}</span>
+        <p><b>Tu marcador:</b> ${apuesta.golesA} - ${apuesta.golesB}</p>
+        ${soporte ? `<img src="${soporte}" class="payment-img" alt="Soporte de pago comprimido">` : `<p class="small">Sin soporte de pago subido.</p>`}
+        ${textoOCR ? `<p class="small"><b>Texto OCR guardado:</b></p><div class="ocr-box">${escapeHtml(textoOCR)}</div>` : ""}
+      </div>
+    `;
+  }
+
+  function escapeHtml(text) {
+    return String(text || "").replace(/[&<>'"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));
+  }
+
+  async function obtenerApuestaUsuario(partidoId) {
+    const apuestaId = `${currentUser.uid}_${partidoId}`;
+    try {
+      const snap = await getDoc(doc(db, "apuestas", apuestaId));
+      return snap.exists() ? { id: apuestaId, ...snap.data() } : null;
+    } catch (error) {
+      console.warn("No se pudo leer la apuesta del usuario para el partido:", partidoId, error);
+      return null;
+    }
+  }
+
+  async function verificarApuestaVencida(partidoId, apuesta) {
+    if (!apuesta.venceEn?.toDate) return;
+    const ahora = new Date();
+    const venceEn = apuesta.venceEn.toDate();
+    if (ahora > venceEn && !apuesta.soporteImagenBase64) {
+      const apuestaId = `${currentUser.uid}_${partidoId}`;
+      await updateDoc(doc(db, "apuestas", apuestaId), { estadoPago: "vencida", vencidaEn: serverTimestamp() });
+    }
+  }
+
+  function mostrarMensaje(partidoId, texto, tipo = "success") {
+    const box = document.getElementById(`msg_${partidoId}`);
+    if (!box) return;
+    box.textContent = texto;
+    box.className = "message " + tipo;
+  }
+
+  window.guardarApuesta = async function (partidoId, equipoA, equipoB) {
+    const golesA = document.getElementById(`golesA_${partidoId}`).value;
+    const golesB = document.getElementById(`golesB_${partidoId}`).value;
+    const fileInput = document.getElementById(`soporte_${partidoId}`);
+    const file = fileInput.files[0];
+
+    if (golesA === "" || golesB === "") {
+      mostrarMensaje(partidoId, "Ingresa los goles de ambos equipos.", "error");
+      return;
+    }
+    if (Number(golesA) < 0 || Number(golesB) < 0) {
+      mostrarMensaje(partidoId, "Los goles no pueden ser negativos.", "error");
+      return;
+    }
+
+    if (!userProfile?.nombre || !userProfile?.cedula || !userProfile?.telefono) {
+      mostrarMensaje(partidoId, "Primero guarda tus datos de jugador: nombre, cédula y teléfono.", "error");
+      document.getElementById("profileName")?.focus();
+      return;
+    }
+
+    try {
+      const partidoSnap = await getDoc(doc(db, "partidos", partidoId));
+      if (!partidoSnap.exists()) {
+        mostrarMensaje(partidoId, "El partido no existe.", "error");
+        return;
+      }
+
+      const partido = partidoSnap.data();
+      const fechaCierre = partido.fechaCierre?.toDate ? partido.fechaCierre.toDate() : null;
+      const ahora = new Date();
+      if (partido.apuestasCerradas === true || (fechaCierre && ahora >= fechaCierre)) {
+        mostrarMensaje(partidoId, "Las apuestas de este partido ya están cerradas.", "error");
+        return;
+      }
+
+      const apuestaActual = await obtenerApuestaUsuario(partidoId);
+      if (apuestaActual && apuestaActual.estadoPago === "aprobado") {
+        mostrarMensaje(partidoId, "Tu participación ya fue aprobada y no se puede modificar.", "error");
+        return;
+      }
+
+      let soporteImagenBase64 = apuestaActual?.soporteImagenBase64 || "";
+      let soporteTextoOCR = apuestaActual?.soporteTextoOCR || "";
+      let soporteNombreArchivo = apuestaActual?.soporteNombreArchivo || "";
+      let soporteMime = apuestaActual?.soporteMime || "";
+      let soporteTamanoBytes = apuestaActual?.soporteTamanoBytes || 0;
+      let estadoPago = apuestaActual?.estadoPago || "sin_soporte";
+
+      if (file) {
+        if (!file.type.startsWith("image/")) {
+          mostrarMensaje(partidoId, "El soporte debe ser una imagen.", "error");
+          return;
+        }
+
+        mostrarMensaje(partidoId, "Comprimiendo imagen...", "success");
+        const comprimida = await comprimirImagen(file);
+
+        if (comprimida.dataUrl.length > MAX_BASE64_CHARS) {
+          mostrarMensaje(partidoId, "La imagen sigue muy pesada. Toma una foto más cerca del soporte o recórtala y vuelve a subirla.", "error");
+          return;
+        }
+
+        mostrarMensaje(partidoId, "Leyendo texto de la imagen con OCR. Espera unos segundos...", "success");
+        let texto = "";
+        try {
+          const resultadoOCR = await window.Tesseract.recognize(comprimida.dataUrl, "spa+eng", {
+            logger: (m) => {
+              if (m.status === "recognizing text") {
+                const pct = Math.round((m.progress || 0) * 100);
+                mostrarMensaje(partidoId, `Leyendo texto OCR... ${pct}%`, "success");
+              }
+            }
+          });
+          texto = (resultadoOCR.data.text || "").trim();
+        } catch (ocrError) {
+          texto = "No se pudo reconocer texto automáticamente en la imagen.";
+          console.error("Error OCR:", ocrError);
+        }
+
+        soporteImagenBase64 = comprimida.dataUrl;
+        soporteTextoOCR = texto;
+        soporteNombreArchivo = file.name;
+        soporteMime = "image/jpeg";
+        soporteTamanoBytes = comprimida.bytes;
+        estadoPago = "pendiente";
+      } else if (!soporteImagenBase64) {
+        estadoPago = "sin_soporte";
+      }
+
+      const apuestaId = `${currentUser.uid}_${partidoId}`;
+      const venceEn = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await setDoc(doc(db, "apuestas", apuestaId), {
+        apuestaId,
+        partidoId,
+        userId: currentUser.uid,
+        equipoA,
+        equipoB,
+        golesA: Number(golesA),
+        golesB: Number(golesB),
+        nombre: userProfile.nombre || "",
+        cedula: userProfile.cedula || "",
+        telefono: userProfile.telefono || "",
+        correo: userProfile.correo || currentUser.email,
+        soporteImagenBase64,
+        soporteTextoOCR,
+        soporteNombreArchivo,
+        soporteMime,
+        soporteTamanoBytes,
+        estadoPago,
+        venceEn: apuestaActual?.venceEn || Timestamp.fromDate(venceEn),
+        creadaEn: apuestaActual?.creadaEn || serverTimestamp(),
+        actualizadaEn: serverTimestamp()
+      }, { merge: true });
+
+      if (estadoPago === "pendiente") {
+        mostrarMensaje(partidoId, "Soporte comprimido, convertido a texto y guardado. Queda pendiente de aprobación.", "success");
+      } else {
+        mostrarMensaje(partidoId, "Marcador guardado. Recuerda subir el soporte antes de 24 horas.", "success");
+      }
+
+      setTimeout(() => cargarPartidos(), 1500);
+    } catch (error) {
+      mostrarMensaje(partidoId, "Error guardando la participación. Revisa Firestore y las reglas.", "error");
+      console.error(error);
+    }
+  };
+
+  async function comprimirImagen(file) {
+    const dataOriginal = await leerArchivoComoDataUrl(file);
+    const img = await cargarImagen(dataOriginal);
+
+    let maxWidth = 900;
+    let calidad = 0.65;
+    let dataUrl = "";
+    let bytes = 0;
+
+    for (let intento = 0; intento < 8; intento++) {
+      const escala = Math.min(1, maxWidth / img.width);
+      const width = Math.round(img.width * escala);
+      const height = Math.round(img.height * escala);
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      dataUrl = canvas.toDataURL("image/jpeg", calidad);
+      bytes = Math.round((dataUrl.length * 3) / 4);
+
+      if (dataUrl.length <= MAX_BASE64_CHARS) break;
+      calidad -= 0.08;
+      if (calidad < 0.35) {
+        calidad = 0.55;
+        maxWidth -= 150;
+      }
+      if (maxWidth < 450) break;
+    }
+
+    return { dataUrl, bytes };
+  }
+
+  function leerArchivoComoDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function cargarImagen(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+</script>
+</body>
+</html>

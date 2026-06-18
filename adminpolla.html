@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Polla Mundialista</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body { margin: 0; background: #f2f2f2; color: #222; }
+    header { background: #006837; color: white; padding: 15px; text-align: center; }
+    header img { width: 90px; background: white; border-radius: 10px; padding: 5px; }
+    h1 { margin: 8px 0 0; font-size: 24px; }
+    .container { max-width: 1100px; margin: auto; padding: 20px; }
+    .card { background: white; border-radius: 14px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; color: #006837; }
+    input, textarea { width: 100%; padding: 12px; margin: 6px 0 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 15px; }
+    textarea { min-height: 120px; resize: vertical; }
+    button { padding: 11px 16px; border: none; border-radius: 8px; background: #006837; color: white; font-weight: bold; cursor: pointer; margin: 4px; }
+    button:hover { background: #004d29; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .danger { background: #d90000; }
+    .danger:hover { background: #a80000; }
+    .warning { background: #d99000; }
+    .warning:hover { background: #a96f00; }
+    .logout { background: #222; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+    .match { border: 1px solid #ddd; border-radius: 12px; padding: 15px; background: #fafafa; }
+    .status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 8px; }
+    .open { background: #d8f5e3; color: #006837; }
+    .closed { background: #ffd8d8; color: #b00000; }
+    .pending { background: #fff1c2; color: #8a6200; }
+    .approved { background: #d8f5e3; color: #006837; }
+    .rejected { background: #ffd8d8; color: #b00000; }
+    .payment-img { max-width: 240px; width: 100%; border-radius: 10px; border: 1px solid #ccc; margin-top: 8px; display: block; }
+    .message { font-weight: bold; margin-top: 10px; }
+    .error { color: #d90000; }
+    .success { color: #006837; }
+    .small { font-size: 13px; color: #555; }
+    .winner { background: #e8ffe8; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid #006837; }
+    .hidden { display: none; }
+    .ocr-box { background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; max-height: 180px; overflow: auto; }
+  </style>
+</head>
+<body>
+<header>
+  <img src="logo-club-cazadores.jpeg" alt="Club de Cazadores">
+  <h1>Panel Administrador</h1>
+  <p>Polla Mundialista - Club de Cazadores</p>
+  <button class="logout" onclick="logout()">Cerrar sesión</button>
+</header>
+
+<div class="container">
+  <div id="accessDenied" class="card hidden">
+    <h2>Acceso denegado</h2>
+    <p>No tienes permiso para entrar al panel administrador.</p>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+    <div class="card">
+      <h2>Configuración general</h2>
+      <label>Valor de la apuesta</label>
+      <input type="number" id="valorApuesta" placeholder="Ejemplo: 10000" min="0" step="1000">
+      <button onclick="guardarValorApuesta()">Guardar valor de apuesta</button>
+      <div id="configMessage" class="message"></div>
+      <p id="configResumen" class="small">Cargando configuración...</p>
+    </div>
+
+    <div class="card">
+      <h2>Crear partido</h2>
+      <input type="text" id="equipoA" placeholder="Equipo 1. Ejemplo: Colombia">
+      <input type="text" id="equipoB" placeholder="Equipo 2. Ejemplo: Brasil">
+      <label>Fecha y hora del partido</label>
+      <input type="datetime-local" id="fechaPartido">
+      <button onclick="crearPartido()">Crear partido</button>
+      <div id="createMessage" class="message"></div>
+    </div>
+
+    <div class="card">
+      <h2>Partidos creados</h2>
+      <div id="partidosList" class="grid"></div>
+    </div>
+
+    <div class="card">
+      <h2>Soportes de pago pendientes</h2>
+      <p class="small">Los soportes se guardan como imagen comprimida en Firestore y texto OCR. No se usa Firebase Storage.</p>
+      <div id="pagosPendientes"></div>
+    </div>
+
+    <div class="card">
+      <h2>Ganadores</h2>
+      <div id="ganadoresList"><p class="small">Cuando registres el marcador final de un partido, aquí aparecerán los ganadores exactos.</p></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, addDoc, getDocs, getDoc, setDoc, updateDoc,
+    query, where, serverTimestamp, Timestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyASUME91F2DH3hv8mJs4SnrJKNaq-xH6_c",
+    authDomain: "polla-mundialista-c2577.firebaseapp.com",
+    projectId: "polla-mundialista-c2577",
+    storageBucket: "polla-mundialista-c2577.firebasestorage.app",
+    messagingSenderId: "799244469443",
+    appId: "1:799244469443:web:9971fc46a2506f07014e76",
+    measurementId: "G-2LW8L34X8Q"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const ADMIN_EMAILS = ["jorgemanuelp92@hotmail.com", "admin@cazadores.com"];
+
+  function isAdminEmail(email) {
+    return ADMIN_EMAILS.includes(String(email || "").toLowerCase());
+  }
+  let currentAdmin = null;
+  let valorApuesta = 0;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    const email = user.email.toLowerCase();
+    if (!isAdminEmail(email)) {
+      document.getElementById("accessDenied").classList.remove("hidden");
+      document.getElementById("adminPanel").classList.add("hidden");
+      return;
+    }
+
+    currentAdmin = user;
+
+    await setDoc(doc(db, "users", user.uid), {
+      uid: user.uid,
+      correo: email,
+      rol: "admin",
+      actualizadoEn: serverTimestamp()
+    }, { merge: true });
+
+    document.getElementById("accessDenied").classList.add("hidden");
+    document.getElementById("adminPanel").classList.remove("hidden");
+    await cargarConfiguracionGeneral();
+    cargarPartidos();
+    cargarPagosPendientes();
+  });
+
+  window.logout = async function () {
+    await signOut(auth);
+    window.location.href = "login.html";
+  };
+
+  function showMessage(id, text, type = "success") {
+    const box = document.getElementById(id);
+    box.textContent = text;
+    box.className = "message " + type;
+  }
+
+  function formatearPesos(valor) {
+    return Number(valor || 0).toLocaleString("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0
+    });
+  }
+
+  async function cargarConfiguracionGeneral() {
+    try {
+      const snap = await getDoc(doc(db, "config", "general"));
+      valorApuesta = snap.exists() ? Number(snap.data().valorApuesta || 0) : 0;
+      document.getElementById("valorApuesta").value = valorApuesta > 0 ? valorApuesta : "";
+      pintarResumenConfig();
+    } catch (error) {
+      showMessage("configMessage", "No se pudo cargar la configuración.", "error");
+      console.error(error);
+    }
+  }
+
+  function pintarResumenConfig() {
+    const resumen = document.getElementById("configResumen");
+    if (!resumen) return;
+    resumen.innerHTML = valorApuesta > 0
+      ? `<b>Valor actual:</b> ${formatearPesos(valorApuesta)} por participación. La bolsa se calcula con participantes aprobados × valor de apuesta.`
+      : "Aún no hay valor de apuesta definido.";
+  }
+
+  window.guardarValorApuesta = async function () {
+    const valor = Number(document.getElementById("valorApuesta").value || 0);
+    if (!Number.isFinite(valor) || valor <= 0) {
+      showMessage("configMessage", "Ingresa un valor de apuesta válido mayor a cero.", "error");
+      return;
+    }
+
+    try {
+      await setDoc(doc(db, "config", "general"), {
+        valorApuesta: valor,
+        actualizadoPor: currentAdmin.email,
+        actualizadoEn: serverTimestamp()
+      }, { merge: true });
+      valorApuesta = valor;
+      pintarResumenConfig();
+      showMessage("configMessage", "Valor de apuesta guardado correctamente.", "success");
+      cargarPartidos();
+    } catch (error) {
+      showMessage("configMessage", "Error guardando el valor. Revisa las reglas de Firestore.", "error");
+      console.error(error);
+    }
+  };
+
+  window.crearPartido = async function () {
+    const equipoA = document.getElementById("equipoA").value.trim();
+    const equipoB = document.getElementById("equipoB").value.trim();
+    const fechaValue = document.getElementById("fechaPartido").value;
+
+    if (!equipoA || !equipoB || !fechaValue) {
+      showMessage("createMessage", "Completa todos los datos del partido.", "error");
+      return;
+    }
+
+    const fechaInicio = new Date(fechaValue);
+    const fechaCierre = new Date(fechaInicio.getTime() + 20 * 60 * 1000);
+
+    try {
+      await addDoc(collection(db, "partidos"), {
+        equipoA,
+        equipoB,
+        fechaInicio: Timestamp.fromDate(fechaInicio),
+        fechaCierre: Timestamp.fromDate(fechaCierre),
+        apuestasCerradas: false,
+        cierreManual: false,
+        cierreAutomatico: false,
+        marcadorFinalGuardado: false,
+        golesFinalA: null,
+        golesFinalB: null,
+        participantesAprobados: 0,
+        creadoPor: currentAdmin.email,
+        creadoEn: serverTimestamp()
+      });
+
+      document.getElementById("equipoA").value = "";
+      document.getElementById("equipoB").value = "";
+      document.getElementById("fechaPartido").value = "";
+      showMessage("createMessage", "Partido creado correctamente.", "success");
+      cargarPartidos();
+    } catch (error) {
+      showMessage("createMessage", "Error creando el partido. Revisa las reglas de Firestore.", "error");
+      console.error(error);
+    }
+  };
+
+  async function cargarPartidos() {
+    const contenedor = document.getElementById("partidosList");
+    contenedor.innerHTML = "Cargando partidos...";
+
+    try {
+      const snapshot = await getDocs(collection(db, "partidos"));
+      if (snapshot.empty) {
+        contenedor.innerHTML = "<p>No hay partidos creados.</p>";
+        return;
+      }
+
+      contenedor.innerHTML = "";
+      for (const partidoDoc of snapshot.docs) {
+        const partidoId = partidoDoc.id;
+        let partido = partidoDoc.data();
+        await verificarCierreAutomatico(partidoId, partido);
+        await actualizarConteoPartido(partidoId);
+
+        const partidoActualizadoSnap = await getDoc(doc(db, "partidos", partidoId));
+        partido = partidoActualizadoSnap.data();
+
+        const fechaInicio = partido.fechaInicio?.toDate ? partido.fechaInicio.toDate() : null;
+        const fechaCierre = partido.fechaCierre?.toDate ? partido.fechaCierre.toDate() : null;
+        const cerrado = partido.apuestasCerradas === true;
+        const aprobados = partido.participantesAprobados || 0;
+        const bolsaPartido = aprobados * valorApuesta;
+
+        const div = document.createElement("div");
+        div.className = "match";
+        div.innerHTML = `
+          <span class="status ${cerrado ? "closed" : "open"}">${cerrado ? "Apuestas cerradas" : "Apuestas abiertas"}</span>
+          <h3>${partido.equipoA} vs ${partido.equipoB}</h3>
+          <p><b>Inicio:</b> ${fechaInicio ? fechaInicio.toLocaleString() : "Sin fecha"}</p>
+          <p><b>Cierre automático:</b> ${fechaCierre ? fechaCierre.toLocaleString() : "Sin fecha"}</p>
+          <p><b>Contador:</b> <span class="countdown" data-cierre="${fechaCierre ? fechaCierre.getTime() : ""}"></span></p>
+          <p><b>Participantes aprobados:</b> ${aprobados}</p>
+          <p><b>Valor de la apuesta:</b> ${valorApuesta > 0 ? formatearPesos(valorApuesta) : "Por definir"}</p>
+          <p><b>Bolsa acumulada:</b> ${valorApuesta > 0 ? formatearPesos(bolsaPartido) : "Por definir"}</p>
+          <hr>
+          <h4>Marcador final</h4>
+          <input type="number" id="finalA_${partidoId}" placeholder="Goles ${partido.equipoA}" min="0" value="${partido.golesFinalA ?? ""}">
+          <input type="number" id="finalB_${partidoId}" placeholder="Goles ${partido.equipoB}" min="0" value="${partido.golesFinalB ?? ""}">
+          <button onclick="guardarMarcadorFinal('${partidoId}')">Guardar marcador final</button>
+          <button class="warning" onclick="verGanadores('${partidoId}')">Ver ganadores</button>
+          <button class="danger" onclick="cerrarApuestas('${partidoId}')">Cerrar apuestas</button>
+        `;
+        contenedor.appendChild(div);
+      }
+      iniciarContadores();
+    } catch (error) {
+      contenedor.innerHTML = "<p>Error cargando partidos. Revisa permisos de Firestore.</p>";
+      console.error(error);
+    }
+  }
+
+  function iniciarContadores() {
+    function pintar() {
+      document.querySelectorAll(".countdown").forEach((span) => {
+        const cierreMs = Number(span.dataset.cierre || 0);
+        if (!cierreMs) { span.textContent = "Sin fecha"; return; }
+        const diferencia = cierreMs - Date.now();
+        if (diferencia <= 0) { span.textContent = "Cerrado"; return; }
+        const totalSeg = Math.floor(diferencia / 1000);
+        const dias = Math.floor(totalSeg / 86400);
+        const horas = Math.floor((totalSeg % 86400) / 3600);
+        const min = Math.floor((totalSeg % 3600) / 60);
+        const seg = totalSeg % 60;
+        span.textContent = `${dias}d ${horas}h ${min}m ${seg}s`;
+      });
+    }
+    pintar();
+    clearInterval(window.__contadorAdmin);
+    window.__contadorAdmin = setInterval(pintar, 1000);
+  }
+
+  async function verificarCierreAutomatico(partidoId, partido) {
+    if (partido.apuestasCerradas === true) return;
+    if (!partido.fechaCierre?.toDate) return;
+    if (new Date() >= partido.fechaCierre.toDate()) {
+      await updateDoc(doc(db, "partidos", partidoId), {
+        apuestasCerradas: true,
+        cierreAutomatico: true,
+        cerradoEn: serverTimestamp()
+      });
+    }
+  }
+
+  async function contarAprobados(partidoId) {
+    // Se consulta solo por partidoId y se filtra estadoPago en JavaScript.
+    // Así evitamos errores por falta de índice compuesto en Firestore.
+    const q = query(collection(db, "apuestas"), where("partidoId", "==", partidoId));
+    const snapshot = await getDocs(q);
+    let total = 0;
+    snapshot.forEach((docSnap) => {
+      if (docSnap.data().estadoPago === "aprobado") total++;
+    });
+    return total;
+  }
+
+  async function actualizarConteoPartido(partidoId) {
+    const total = await contarAprobados(partidoId);
+    await updateDoc(doc(db, "partidos", partidoId), { participantesAprobados: total });
+    return total;
+  }
+
+  window.cerrarApuestas = async function (partidoId) {
+    if (!confirm("¿Seguro que deseas cerrar las apuestas de este partido?")) return;
+    try {
+      await updateDoc(doc(db, "partidos", partidoId), {
+        apuestasCerradas: true,
+        cierreManual: true,
+        cerradoEn: serverTimestamp()
+      });
+      alert("Apuestas cerradas correctamente.");
+      cargarPartidos();
+    } catch (error) {
+      alert("Error cerrando apuestas.");
+      console.error(error);
+    }
+  };
+
+  async function cargarPagosPendientes() {
+    const contenedor = document.getElementById("pagosPendientes");
+    contenedor.innerHTML = "Cargando pagos pendientes...";
+
+    try {
+      const q = query(collection(db, "apuestas"), where("estadoPago", "==", "pendiente"));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        contenedor.innerHTML = "<p>No hay soportes pendientes.</p>";
+        return;
+      }
+
+      contenedor.innerHTML = "";
+      snapshot.forEach((docSnap) => {
+        const apuesta = docSnap.data();
+        const apuestaId = docSnap.id;
+        const soporte = apuesta.soporteImagenBase64 || "";
+        const textoOCR = apuesta.soporteTextoOCR || "Sin texto reconocido.";
+
+        const div = document.createElement("div");
+        div.className = "match";
+        div.innerHTML = `
+          <span class="status pending">Pago pendiente</span>
+          <p><b>Nombre:</b> ${apuesta.nombre || "Sin nombre"}</p>
+          <p><b>Cédula:</b> ${apuesta.cedula || "Sin cédula"}</p>
+          <p><b>Teléfono:</b> ${apuesta.telefono || "Sin teléfono"}</p>
+          <p><b>Correo:</b> ${apuesta.correo || apuesta.email || "Sin correo"}</p>
+          <p><b>Partido:</b> ${apuesta.equipoA || "Equipo A"} vs ${apuesta.equipoB || "Equipo B"}</p>
+          <p><b>Marcador apostado:</b> ${apuesta.golesA} - ${apuesta.golesB}</p>
+          <p><b>Peso guardado:</b> ${apuesta.soporteTamanoBytes || 0} bytes</p>
+          ${soporte ? `<img src="${soporte}" class="payment-img" alt="Soporte de pago comprimido">` : `<p class="error">No tiene imagen de soporte.</p>`}
+          <h4>Texto leído por OCR</h4>
+          <div class="ocr-box">${escapeHtml(textoOCR)}</div>
+          <br>
+          <button onclick="aprobarPago('${apuestaId}')">Aprobar</button>
+          <button class="danger" onclick="rechazarPago('${apuestaId}')">Rechazar</button>
+        `;
+        contenedor.appendChild(div);
+      });
+    } catch (error) {
+      contenedor.innerHTML = "<p>Error cargando pagos pendientes.</p>";
+      console.error(error);
+    }
+  }
+
+  function escapeHtml(text) {
+    return String(text || "").replace(/[&<>'"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));
+  }
+
+  window.aprobarPago = async function (apuestaId) {
+    try {
+      const apuestaRef = doc(db, "apuestas", apuestaId);
+      const apuestaSnap = await getDoc(apuestaRef);
+      if (!apuestaSnap.exists()) { alert("No existe la apuesta."); return; }
+      const apuesta = apuestaSnap.data();
+
+      await updateDoc(apuestaRef, {
+        estadoPago: "aprobado",
+        aprobadoPor: currentAdmin.email,
+        aprobadoEn: serverTimestamp()
+      });
+      if (apuesta.partidoId) await actualizarConteoPartido(apuesta.partidoId);
+      alert("Pago aprobado.");
+      cargarPagosPendientes();
+      cargarPartidos();
+    } catch (error) {
+      alert("Error aprobando el pago.");
+      console.error(error);
+    }
+  };
+
+  window.rechazarPago = async function (apuestaId) {
+    try {
+      const apuestaRef = doc(db, "apuestas", apuestaId);
+      const apuestaSnap = await getDoc(apuestaRef);
+      const apuesta = apuestaSnap.exists() ? apuestaSnap.data() : null;
+
+      await updateDoc(apuestaRef, {
+        estadoPago: "rechazado",
+        rechazadoPor: currentAdmin.email,
+        rechazadoEn: serverTimestamp()
+      });
+      if (apuesta?.partidoId) await actualizarConteoPartido(apuesta.partidoId);
+      alert("Pago rechazado.");
+      cargarPagosPendientes();
+      cargarPartidos();
+    } catch (error) {
+      alert("Error rechazando el pago.");
+      console.error(error);
+    }
+  };
+
+  window.guardarMarcadorFinal = async function (partidoId) {
+    const golesA = document.getElementById(`finalA_${partidoId}`).value;
+    const golesB = document.getElementById(`finalB_${partidoId}`).value;
+    if (golesA === "" || golesB === "") {
+      alert("Ingresa los goles finales de ambos equipos.");
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, "partidos", partidoId), {
+        golesFinalA: Number(golesA),
+        golesFinalB: Number(golesB),
+        marcadorFinalGuardado: true,
+        apuestasCerradas: true,
+        marcadorGuardadoEn: serverTimestamp()
+      });
+      alert("Marcador final guardado.");
+      verGanadores(partidoId);
+      cargarPartidos();
+    } catch (error) {
+      alert("Error guardando marcador final.");
+      console.error(error);
+    }
+  };
+
+  window.verGanadores = async function (partidoId) {
+    const ganadoresBox = document.getElementById("ganadoresList");
+    ganadoresBox.innerHTML = "Buscando ganadores...";
+
+    try {
+      const partidoSnap = await getDoc(doc(db, "partidos", partidoId));
+      if (!partidoSnap.exists()) {
+        ganadoresBox.innerHTML = "<p>No existe el partido.</p>";
+        return;
+      }
+
+      const partido = partidoSnap.data();
+      if (partido.marcadorFinalGuardado !== true) {
+        ganadoresBox.innerHTML = "<p>Aún no se ha guardado marcador final para este partido.</p>";
+        return;
+      }
+
+      // Se consulta solo por partidoId y se filtra estadoPago en JavaScript.
+      // Así evitamos errores por falta de índice compuesto en Firestore.
+      const q = query(collection(db, "apuestas"), where("partidoId", "==", partidoId));
+      const snapshot = await getDocs(q);
+      const ganadores = [];
+      snapshot.forEach((docSnap) => {
+        const apuesta = docSnap.data();
+        if (apuesta.estadoPago === "aprobado" && Number(apuesta.golesA) === Number(partido.golesFinalA) && Number(apuesta.golesB) === Number(partido.golesFinalB)) {
+          ganadores.push(apuesta);
+        }
+      });
+
+      if (ganadores.length === 0) {
+        ganadoresBox.innerHTML = `<h3>${partido.equipoA} ${partido.golesFinalA} - ${partido.golesFinalB} ${partido.equipoB}</h3><p>No hubo ganadores exactos.</p>`;
+        return;
+      }
+
+      ganadoresBox.innerHTML = `<h3>${partido.equipoA} ${partido.golesFinalA} - ${partido.golesFinalB} ${partido.equipoB}</h3><p><b>Total ganadores:</b> ${ganadores.length}</p>`;
+      ganadores.forEach((g) => {
+        const div = document.createElement("div");
+        div.className = "winner";
+        div.innerHTML = `<b>${g.nombre || "Sin nombre"}</b><br>Cédula: ${g.cedula || "Sin cédula"}<br>Teléfono: ${g.telefono || "Sin teléfono"}<br>Correo: ${g.correo || g.email || "Sin correo"}<br>Marcador apostado: ${g.golesA} - ${g.golesB}`;
+        ganadoresBox.appendChild(div);
+      });
+    } catch (error) {
+      ganadoresBox.innerHTML = "<p>Error buscando ganadores.</p>";
+      console.error(error);
+    }
+  };
+</script>
+</body>
+</html>

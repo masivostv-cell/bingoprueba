@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Polla Mundialista - Login</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body { margin: 0; min-height: 100vh; background: linear-gradient(135deg, #006837, #ffffff, #d90000); display: flex; justify-content: center; align-items: center; padding: 20px; }
+    .container { width: 100%; max-width: 390px; background: white; border-radius: 20px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); text-align: center; }
+    .logo { width: 130px; margin-bottom: 10px; }
+    h1 { font-size: 24px; margin: 5px 0; color: #222; }
+    p { color: #555; font-size: 14px; margin-bottom: 20px; }
+    input { width: 100%; padding: 13px; margin: 8px 0; border: 1px solid #ccc; border-radius: 10px; font-size: 15px; }
+    button { width: 100%; padding: 13px; margin-top: 12px; border: none; border-radius: 10px; background: #006837; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button:hover { background: #004d29; }
+    .secondary-btn { background: #d90000; }
+    .secondary-btn:hover { background: #a80000; }
+    .links { margin-top: 18px; display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+    .links span { color: #006837; cursor: pointer; font-weight: bold; }
+    .links span:hover { text-decoration: underline; }
+    .hidden { display: none; }
+    .message { margin-top: 15px; font-size: 14px; font-weight: bold; min-height: 18px; }
+    .success { color: #006837; }
+    .error { color: #d90000; }
+    .footer { margin-top: 20px; font-size: 12px; color: #777; }
+    .checkbox-row { display: flex; align-items: flex-start; gap: 8px; text-align: left; font-size: 12px; color: #555; margin: 10px 0; line-height: 1.35; }
+    .checkbox-row input { width: auto; margin: 2px 0 0; flex: 0 0 auto; }
+    .checkbox-row span { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="logo-club-cazadores.jpeg" class="logo" alt="Club de Cazadores">
+    <h1>Polla Mundialista</h1>
+    <p>Club de Cazadores</p>
+
+    <div id="loginSection">
+      <input type="email" id="loginEmail" placeholder="Correo electrónico" autocomplete="email">
+      <input type="password" id="loginPassword" placeholder="Clave" autocomplete="current-password">
+      <button onclick="loginUser()">Ingresar</button>
+      <div class="links">
+        <span onclick="showRegister()">Registrarme</span>
+        <span onclick="showReset()">Olvidé mi contraseña</span>
+      </div>
+    </div>
+
+    <div id="registerSection" class="hidden">
+      <input type="text" id="registerName" placeholder="Nombre completo" autocomplete="name">
+      <input type="text" id="registerCedula" placeholder="Cédula">
+      <input type="tel" id="registerPhone" placeholder="Teléfono" autocomplete="tel">
+      <input type="email" id="registerEmail" placeholder="Correo electrónico" autocomplete="email">
+      <input type="password" id="registerPassword" placeholder="Clave mínimo 6 caracteres" autocomplete="new-password">
+      <label class="checkbox-row">
+        <input type="checkbox" id="acceptDataPolicy">
+        <span>Acepto el tratamiento de mis datos personales. Entiendo que serán utilizados únicamente para esta actividad de la polla mundialista y que el Club de Cazadores no cobra nada por esta actividad.</span>
+      </label>
+      <button onclick="registerUser()">Crear cuenta y entrar</button>
+      <button class="secondary-btn" onclick="showLogin()">Volver al ingreso</button>
+    </div>
+
+    <div id="resetSection" class="hidden">
+      <input type="email" id="resetEmail" placeholder="Correo registrado" autocomplete="email">
+      <button onclick="resetPassword()">Recuperar contraseña</button>
+      <button class="secondary-btn" onclick="showLogin()">Volver al ingreso</button>
+    </div>
+
+    <div id="message" class="message"></div>
+    <div class="footer">© Club de Cazadores</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyASUME91F2DH3hv8mJs4SnrJKNaq-xH6_c",
+      authDomain: "polla-mundialista-c2577.firebaseapp.com",
+      projectId: "polla-mundialista-c2577",
+      storageBucket: "polla-mundialista-c2577.firebasestorage.app",
+      messagingSenderId: "799244469443",
+      appId: "1:799244469443:web:9971fc46a2506f07014e76",
+      measurementId: "G-2LW8L34X8Q"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const ADMIN_EMAILS = ["jorgemanuelp92@hotmail.com", "admin@cazadores.com"];
+
+    function isAdminEmail(email) {
+      return ADMIN_EMAILS.includes(String(email || "").toLowerCase());
+    }
+
+    function showMessage(text, type = "success") {
+      const msg = document.getElementById("message");
+      msg.textContent = text || "";
+      msg.className = "message " + type;
+    }
+
+    window.showLogin = function () {
+      document.getElementById("loginSection").classList.remove("hidden");
+      document.getElementById("registerSection").classList.add("hidden");
+      document.getElementById("resetSection").classList.add("hidden");
+      showMessage("");
+    };
+
+    window.showRegister = function () {
+      document.getElementById("loginSection").classList.add("hidden");
+      document.getElementById("registerSection").classList.remove("hidden");
+      document.getElementById("resetSection").classList.add("hidden");
+      showMessage("");
+    };
+
+    window.showReset = function () {
+      document.getElementById("loginSection").classList.add("hidden");
+      document.getElementById("registerSection").classList.add("hidden");
+      document.getElementById("resetSection").classList.remove("hidden");
+      showMessage("");
+    };
+
+    window.loginUser = async function () {
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+      const password = document.getElementById("loginPassword").value.trim();
+
+      if (!email || !password) {
+        showMessage("Ingresa correo y clave.", "error");
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        showMessage("Ingreso exitoso.", "success");
+        setTimeout(() => {
+          window.location.href = isAdminEmail(email) ? "adminpolla.html" : "jugadorpolla.html";
+        }, 500);
+      } catch (error) {
+        showMessage("Correo o clave incorrectos.", "error");
+      }
+    };
+
+    window.registerUser = async function () {
+      const name = document.getElementById("registerName").value.trim();
+      const cedula = document.getElementById("registerCedula").value.trim();
+      const phone = document.getElementById("registerPhone").value.trim();
+      const email = document.getElementById("registerEmail").value.trim().toLowerCase();
+      const password = document.getElementById("registerPassword").value.trim();
+      const acceptDataPolicy = document.getElementById("acceptDataPolicy").checked;
+
+      if (!name || !cedula || !phone || !email || !password) {
+        showMessage("Completa todos los campos.", "error");
+        return;
+      }
+      if (password.length < 6) {
+        showMessage("La clave debe tener mínimo 6 caracteres.", "error");
+        return;
+      }
+      if (!acceptDataPolicy) {
+        showMessage("Debes aceptar el tratamiento de datos personales para registrarte.", "error");
+        return;
+      }
+
+      try {
+        showMessage("Creando cuenta...", "success");
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          nombre: name,
+          cedula: cedula,
+          telefono: phone,
+          correo: email,
+          rol: isAdminEmail(email) ? "admin" : "jugador",
+          datosPersonalesAceptados: true,
+          textoAceptacionDatos: "Acepta tratamiento de datos únicamente para esta actividad. El Club de Cazadores no cobra nada por esta actividad.",
+          aceptacionDatosEn: serverTimestamp(),
+          fechaRegistro: serverTimestamp()
+        });
+
+        showMessage("Cuenta creada. Entrando...", "success");
+        setTimeout(() => {
+          window.location.href = isAdminEmail(email) ? "adminpolla.html" : "jugadorpolla.html";
+        }, 700);
+      } catch (error) {
+        if (error.code === "auth/email-already-in-use") {
+          showMessage("Este correo ya está registrado.", "error");
+        } else if (error.code === "auth/invalid-email") {
+          showMessage("Correo inválido.", "error");
+        } else {
+          showMessage("No se pudo crear la cuenta.", "error");
+          console.error(error);
+        }
+      }
+    };
+
+    window.resetPassword = async function () {
+      const email = document.getElementById("resetEmail").value.trim().toLowerCase();
+      if (!email) {
+        showMessage("Ingresa tu correo registrado.", "error");
+        return;
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+        showMessage("Te enviamos un correo para recuperar la clave.", "success");
+        setTimeout(() => showLogin(), 1500);
+      } catch (error) {
+        showMessage("No se pudo enviar el correo de recuperación.", "error");
+      }
+    };
+  </script>
+</body>
+</html>
