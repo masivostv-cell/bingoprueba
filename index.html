@@ -328,6 +328,94 @@
     .portfolio-links{display:flex;flex-wrap:wrap;gap:10px}.portfolio-links a{font-weight:1000;color:#00121f;background:linear-gradient(135deg,#e8fbff,var(--cyan));border-radius:999px;padding:10px 13px;font-size:13px}
     .portfolio-small{min-height:220px}.portfolio-small h3{font-size:27px}
 
+
+    .product-link-panel{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:10px;
+      margin:-22px auto 30px;
+      max-width:1040px;
+    }
+    .product-link-panel a{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:11px 14px;
+      border-radius:999px;
+      color:#eaffff;
+      font-size:13px;
+      font-weight:1000;
+      background:rgba(47,230,255,.075);
+      border:1px solid rgba(47,230,255,.18);
+      box-shadow:0 0 24px rgba(47,230,255,.06);
+      transition:.22s ease;
+    }
+    .product-link-panel a:hover{
+      transform:translateY(-2px);
+      border-color:rgba(47,230,255,.42);
+      background:rgba(47,230,255,.13);
+      box-shadow:0 0 32px rgba(47,230,255,.14);
+    }
+    .product-mode-status{
+      margin:0 auto 24px;
+      max-width:860px;
+      text-align:center;
+      color:#c9eaff;
+      font-size:14px;
+      font-weight:850;
+      line-height:1.5;
+    }
+    .product-direct-link{
+      display:inline-flex;
+      align-items:center;
+      width:max-content;
+      max-width:100%;
+      margin:-2px 0 16px;
+      padding:8px 11px;
+      border-radius:999px;
+      color:#dff8ff;
+      font-size:12px;
+      font-weight:950;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(47,230,255,.13);
+    }
+    .product-grid.product-focus{
+      grid-template-columns:minmax(280px,920px);
+      justify-content:center;
+    }
+    .product-grid.product-focus .product-card:not(.is-selected){
+      display:none;
+    }
+    .product-grid.product-focus .product-card.is-selected{
+      width:100%;
+      max-width:920px;
+      min-height:auto;
+      border-color:rgba(47,230,255,.45);
+      box-shadow:var(--shadow),0 0 64px rgba(47,230,255,.18);
+    }
+    .product-grid.product-focus .product-card.is-selected .product-media{
+      height:320px;
+    }
+    .product-grid.product-focus .product-card.is-selected .product-body h2{
+      font-size:clamp(30px,4vw,44px);
+    }
+    .back-catalog{
+      display:none;
+    }
+    .product-grid.product-focus .back-catalog{
+      display:inline-flex;
+    }
+    .product-grid.product-focus .view-product{
+      display:none;
+    }
+    .btn-hotmart{
+      color:#1d0f00;
+      background:linear-gradient(135deg,#fff3d5,var(--orange));
+      box-shadow:0 18px 42px rgba(255,184,77,.21);
+    }
+
     .product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
     .product-card{
       position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:100%;
@@ -715,6 +803,18 @@
           <p>Tarjetas más visuales, con enfoque comercial, botones directos a WhatsApp y lectura rápida desde celular.</p>
         </div>
 
+        <div class="product-link-panel" aria-label="Enlaces directos a cada producto">
+          <a href="#software-bingo-eventos">🎮 Suite de Juegos</a>
+          <a href="#fixture-mundial-2026">⚽ Fixture 2026</a>
+          <a href="#software-pos">🏪 Sistema POS</a>
+          <a href="#verificador-rut">🧾 Verificador RUT</a>
+          <a href="#calendario-tributario">📅 Tributario</a>
+          <a href="#mensajes-masivos-whatsapp">💬 WhatsApp</a>
+        </div>
+        <p class="product-mode-status" id="productModeStatus" aria-live="polite">
+          Abre cualquier producto con su enlace directo y la página mostrará solo esa solución usando la misma URL con #.
+        </p>
+
         <div class="product-grid">
           <article class="product-card" id="software-bingo-eventos">
             <div class="product-media">
@@ -724,6 +824,7 @@
             <div class="product-body">
               <p class="product-category">Software de bingo, ruletas y entretenimiento</p>
               <h2>Software Multijuego Profesional</h2>
+              <a class="product-direct-link" href="#software-bingo-eventos">Link directo: #software-bingo-eventos</a>
               <p>Suite visual para eventos, salas y entretenimiento. Incluye bingo, ruletas, ranking, subastas, lotería, dados, carrera y módulos interactivos.</p>
               <ul>
                 <li>Bingo 75, bingo 18, bingo 30 y bingo 90.</li>
@@ -731,8 +832,10 @@
                 <li>Pantalla completa para eventos y salas.</li>
               </ul>
               <div class="product-actions">
+                <a class="btn btn-hotmart" href="https://pay.hotmart.com/B106426578M" target="_blank" rel="noopener">Comprar Suite de Juegos</a>
                 <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Software%20Multijuego%20Profesional%20para%20bingo%20y%20eventos." target="_blank" rel="noopener">Solicitar demo</a>
-                <a class="btn btn-ghost" href="#contacto">Cotizar</a>
+                <a class="btn btn-ghost view-product" href="#software-bingo-eventos">Ver producto</a>
+                <a class="btn btn-ghost back-catalog" href="#productos">← Volver al catálogo</a>
               </div>
             </div>
           </article>
@@ -745,6 +848,7 @@
             <div class="product-body">
               <p class="product-category">Aplicación deportiva</p>
               <h2>Fixture Mundial 2026</h2>
+              <a class="product-direct-link" href="#fixture-mundial-2026">Link directo: #fixture-mundial-2026</a>
               <p>App para consultar partidos, grupos, calendario, predicciones, favoritos y eventos importantes durante el torneo.</p>
               <ul>
                 <li>Calendario de partidos del Mundial 2026.</li>
@@ -753,7 +857,9 @@
               </ul>
               <div class="product-actions">
                 <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Fixture%20Mundial%202026%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo</a>
+                <a class="btn btn-ghost view-product" href="#fixture-mundial-2026">Ver producto</a>
                 <a class="btn btn-ghost" href="#contacto">Cotizar</a>
+                <a class="btn btn-ghost back-catalog" href="#productos">← Volver al catálogo</a>
               </div>
             </div>
           </article>
@@ -766,6 +872,7 @@
             <div class="product-body">
               <p class="product-category">Software POS para comercios</p>
               <h2>Sistema POS Integral</h2>
+              <a class="product-direct-link" href="#software-pos">Link directo: #software-pos</a>
               <p>Software de escritorio para administrar ventas, compras, inventario PEPS, caja, arqueo, báscula, remisiones y certificados.</p>
               <ul>
                 <li>POS multiempresa configurable.</li>
@@ -774,7 +881,9 @@
               </ul>
               <div class="product-actions">
                 <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Sistema%20POS%20Integral%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo</a>
+                <a class="btn btn-ghost view-product" href="#software-pos">Ver producto</a>
                 <a class="btn btn-ghost" href="#contacto">Cotizar</a>
+                <a class="btn btn-ghost back-catalog" href="#productos">← Volver al catálogo</a>
               </div>
             </div>
           </article>
@@ -787,6 +896,7 @@
             <div class="product-body">
               <p class="product-category">Verificador RUT</p>
               <h2>Verificador RUT</h2>
+              <a class="product-direct-link" href="#verificador-rut">Link directo: #verificador-rut</a>
               <p>Sistema para validar datos, consultar información de cédulas o NIT, organizar resultados y exportar reportes a Excel.</p>
               <ul>
                 <li>Consulta masiva de cédulas o NIT.</li>
@@ -795,7 +905,9 @@
               </ul>
               <div class="product-actions">
                 <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Verificador%20RUT%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo</a>
+                <a class="btn btn-ghost view-product" href="#verificador-rut">Ver producto</a>
                 <a class="btn btn-ghost" href="#contacto">Cotizar</a>
+                <a class="btn btn-ghost back-catalog" href="#productos">← Volver al catálogo</a>
               </div>
             </div>
           </article>
@@ -808,6 +920,7 @@
             <div class="product-body">
               <p class="product-category">Software para contadores</p>
               <h2>Asistente Tributario</h2>
+              <a class="product-direct-link" href="#calendario-tributario">Link directo: #calendario-tributario</a>
               <p>Herramienta para organizar clientes, obligaciones, vencimientos tributarios, alertas y calendario de trabajo.</p>
               <ul>
                 <li>Control de clientes y obligaciones.</li>
@@ -816,7 +929,9 @@
               </ul>
               <div class="product-actions">
                 <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20Calendario%20Tributario%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo</a>
+                <a class="btn btn-ghost view-product" href="#calendario-tributario">Ver producto</a>
                 <a class="btn btn-ghost" href="#contacto">Cotizar</a>
+                <a class="btn btn-ghost back-catalog" href="#productos">← Volver al catálogo</a>
               </div>
             </div>
           </article>
@@ -829,6 +944,7 @@
             <div class="product-body">
               <p class="product-category">Mensajería comercial responsable</p>
               <h2>Mensajes Masivos por WhatsApp</h2>
+              <a class="product-direct-link" href="#mensajes-masivos-whatsapp">Link directo: #mensajes-masivos-whatsapp</a>
               <p>Herramienta para gestionar campañas comerciales con contactos autorizados, listas organizadas y mensajes preparados.</p>
               <ul>
                 <li>Uso con contactos autorizados.</li>
@@ -837,7 +953,9 @@
               </ul>
               <div class="product-actions">
                 <a class="btn btn-primary" href="https://wa.me/573503875753?text=Hola%2C%20quiero%20demo%20y%20cotizaci%C3%B3n%20del%20software%20de%20Mensajes%20Masivos%20por%20WhatsApp%20de%20Mercado%20Digital." target="_blank" rel="noopener">Solicitar demo</a>
+                <a class="btn btn-ghost view-product" href="#mensajes-masivos-whatsapp">Ver producto</a>
                 <a class="btn btn-ghost" href="#contacto">Cotizar</a>
+                <a class="btn btn-ghost back-catalog" href="#productos">← Volver al catálogo</a>
               </div>
             </div>
           </article>
@@ -1021,10 +1139,46 @@
   <script>
     const menuToggle = document.getElementById('menuToggle');
     const navLinks = document.getElementById('navLinks');
+
     if(menuToggle && navLinks){
       menuToggle.addEventListener('click', () => navLinks.classList.toggle('open'));
       navLinks.querySelectorAll('a').forEach(link => link.addEventListener('click', () => navLinks.classList.remove('open')));
     }
+
+    const productGrid = document.querySelector('.product-grid');
+    const productCards = Array.from(document.querySelectorAll('.product-card[id]'));
+    const productStatus = document.getElementById('productModeStatus');
+    const productIds = productCards.map(card => card.id);
+
+    function updateProductView(){
+      const currentHash = decodeURIComponent(window.location.hash.replace('#',''));
+
+      if(productGrid && productIds.includes(currentHash)){
+        productGrid.classList.add('product-focus');
+
+        productCards.forEach(card => {
+          card.classList.toggle('is-selected', card.id === currentHash);
+        });
+
+        const selectedProduct = document.getElementById(currentHash);
+        const selectedTitle = selectedProduct?.querySelector('h2')?.textContent?.trim() || 'producto seleccionado';
+
+        if(productStatus){
+          productStatus.textContent = `Mostrando solo: ${selectedTitle}. Usa “Volver al catálogo” para ver todos los productos.`;
+        }
+      }else if(productGrid){
+        productGrid.classList.remove('product-focus');
+        productCards.forEach(card => card.classList.remove('is-selected'));
+
+        if(productStatus){
+          productStatus.textContent = 'Abre cualquier producto con su enlace directo y la página mostrará solo esa solución usando la misma URL con #.';
+        }
+      }
+    }
+
+    window.addEventListener('hashchange', updateProductView);
+    window.addEventListener('DOMContentLoaded', updateProductView);
+    updateProductView();
   </script>
 </body>
 </html>
