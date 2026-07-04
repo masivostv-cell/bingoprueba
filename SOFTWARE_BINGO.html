@@ -1410,38 +1410,8 @@
     letter-spacing: 0.5px;
 }
 
-/* =========================================================
-   JMP FIX: mostrar imágenes izquierda/derecha en vista clásica
-   Antes se ocultaban todas las .media-zone dentro de #pantalla-principal.
-   Ahora quedan visibles, flotantes, redimensionables y arrastrables.
-   ========================================================= */
-#pantalla-principal.vista-clasica #media-left,
-#pantalla-principal.vista-clasica #media-right {
-    display: flex !important;
-    position: absolute;
-    top: auto;
-    bottom: 18px;
-    width: min(250px, 18vw);
-    height: min(170px, 22vh);
-    min-width: 120px;
-    min-height: 85px;
-    z-index: 99991;
-    resize: both;
-    overflow: hidden;
-    cursor: move;
-    border: 3px dashed rgba(244,209,154,0.72);
-    background: rgba(0,0,0,0.12);
-    border-radius: 10px;
-}
-#pantalla-principal.vista-clasica #media-left { left: 18px; right: auto; }
-#pantalla-principal.vista-clasica #media-right { right: 18px; left: auto; }
-#pantalla-principal.vista-clasica #media-left img,
-#pantalla-principal.vista-clasica #media-right img,
-#pantalla-principal.vista-clasica #media-left video,
-#pantalla-principal.vista-clasica #media-right video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+#pantalla-principal.vista-clasica .media-zone {
+    display: none !important;
 }
 
 /* Cámaras flotantes */
@@ -1807,6 +1777,76 @@
     background: transparent !important;
 }
 
+
+
+/* =========================================================
+   FIX FINAL: imágenes laterales visibles en tabla clásica
+   - Vacías: no muestran cuadro.
+   - Con imagen/video: aparecen en vista normal y tabla clásica.
+   - No toca login ni navegación de juegos.
+   ========================================================= */
+#media-left:empty,
+#media-right:empty,
+#pantalla-principal.vista-clasica #media-left:empty,
+#pantalla-principal.vista-clasica #media-right:empty {
+    display: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+}
+
+#media-left:not(:empty),
+#media-right:not(:empty),
+#pantalla-principal.vista-clasica #media-left:not(:empty),
+#pantalla-principal.vista-clasica #media-right:not(:empty) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+#pantalla-principal.vista-clasica #media-left:not(:empty),
+#pantalla-principal.vista-clasica #media-right:not(:empty) {
+    position: absolute !important;
+    top: auto !important;
+    bottom: 18px !important;
+    width: min(250px, 18vw) !important;
+    height: min(170px, 22vh) !important;
+    z-index: 99991 !important;
+    resize: both !important;
+    overflow: hidden !important;
+    cursor: move !important;
+    touch-action: none !important;
+    border: 3px dashed transparent !important;
+    background: transparent !important;
+}
+
+#pantalla-principal.vista-clasica #media-left:not(:empty) {
+    left: 18px !important;
+    right: auto !important;
+}
+
+#pantalla-principal.vista-clasica #media-right:not(:empty) {
+    right: 18px !important;
+    left: auto !important;
+}
+
+#pantalla-principal.vista-clasica #media-left:not(:empty):hover,
+#pantalla-principal.vista-clasica #media-right:not(:empty):hover {
+    border: 3px dashed #facc15 !important;
+    background: rgba(0,0,0,0.18) !important;
+}
+
+#media-left:empty:hover,
+#media-right:empty:hover,
+#pantalla-principal.vista-clasica #media-left:empty:hover,
+#pantalla-principal.vista-clasica #media-right:empty:hover {
+    border: 0 !important;
+    background: transparent !important;
+}
 </style>
 </head>
 <body>
@@ -2787,6 +2827,92 @@
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape' || e.key === 'Esc') window.close(); });
 })();
 <\/script>
+
+
+<style>
+/* =========================================================
+   JMP FIX ESTABLE: multimedia sin cuadro vacío + vista clásica
+   - No usa MutationObserver ni envuelve funciones de juegos.
+   - Si la zona está vacía, desaparece por completo.
+   - Si tiene imagen/video, se muestra también en tabla clásica.
+   ========================================================= */
+.media-zone:empty,
+#pantalla-principal.vista-clasica .media-zone:empty,
+#media-left:empty,
+#media-right:empty,
+#b18-media-left:empty,
+#b18-media-right:empty,
+#b30-media-left:empty,
+#b30-media-right:empty,
+#b90-media-left:empty,
+#b90-media-right:empty,
+#loteria-media-left:empty,
+#loteria-media-right:empty,
+#lotto-media-left:empty,
+#lotto-media-right:empty,
+#subastas-media-left:empty,
+#subastas-media-right:empty,
+#rs-media-left:empty,
+#rs-media-right:empty {
+    display: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+}
+
+.media-zone:not(:empty),
+#pantalla-principal.vista-clasica .media-zone:not(:empty),
+#media-left:not(:empty),
+#media-right:not(:empty),
+#b18-media-left:not(:empty),
+#b18-media-right:not(:empty),
+#b30-media-left:not(:empty),
+#b30-media-right:not(:empty),
+#b90-media-left:not(:empty),
+#b90-media-right:not(:empty),
+#loteria-media-left:not(:empty),
+#loteria-media-right:not(:empty),
+#lotto-media-left:not(:empty),
+#lotto-media-right:not(:empty),
+#subastas-media-left:not(:empty),
+#subastas-media-right:not(:empty),
+#rs-media-left:not(:empty),
+#rs-media-right:not(:empty) {
+    display: flex !important;
+    pointer-events: auto !important;
+}
+
+/* En Bingo 75 clásico, las imágenes laterales aparecen abajo para no tapar el tablero. */
+#pantalla-principal.vista-clasica #media-left:not(:empty),
+#pantalla-principal.vista-clasica #media-right:not(:empty) {
+    position: absolute !important;
+    top: auto;
+    bottom: 18px;
+    width: min(250px, 18vw);
+    height: min(170px, 22vh);
+    z-index: 99991 !important;
+    resize: both !important;
+    overflow: hidden !important;
+    cursor: move !important;
+    touch-action: none !important;
+}
+#pantalla-principal.vista-clasica #media-left:not(:empty) {
+    left: 18px;
+    right: auto;
+}
+#pantalla-principal.vista-clasica #media-right:not(:empty) {
+    right: 18px;
+    left: auto;
+}
+
+/* Evita que el hover dibuje borde en zonas vacías. */
+.media-zone:empty:hover {
+    border: 0 !important;
+    background: transparent !important;
+}
+</style>
+
 </body>
 </html>`;
 
@@ -8281,161 +8407,6 @@ setTimeout(() => { const c = document.getElementById('mirror-controls'); if(c) c
     else iniciarFix();
 })();
 </script>
-
-
-<script id="jmp-login-estable-fullres-patch">
-(function(){
-    'use strict';
-    function byId(id){ return document.getElementById(id); }
-    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
-
-    function aplicarColorBroadcastEstable(){
-        var color = localStorage.getItem('casino_color_softblue_global') || '#6c0810';
-        var input = byId('color-soft-blue');
-        if(input) input.value = color;
-        var p = byId('pantalla-principal');
-        if(p) {
-            p.style.setProperty('--b75-broadcast-bg', color);
-            p.style.backgroundColor = color;
-        }
-        ['pantalla-principal-18','pantalla-principal-30','pantalla-principal-90'].forEach(function(id){
-            var el = byId(id);
-            if(el && el.classList.contains('vista-clasica')) el.style.backgroundColor = color;
-        });
-    }
-
-    var colorOriginal = window.cambiarColorSoftBlue;
-    window.cambiarColorSoftBlue = function(color){
-        try {
-            localStorage.setItem('casino_color_softblue_global', color);
-            if(typeof colorOriginal === 'function') colorOriginal.call(this, color);
-            aplicarColorBroadcastEstable();
-            if(typeof window.bingoMirrorSolicitarCaptura === 'function') window.bingoMirrorSolicitarCaptura(80);
-        } catch(e) { console.error('No se pudo cambiar el color:', e); }
-    };
-
-    var resetColorOriginal = window.restablecerColorSoftBlue;
-    window.restablecerColorSoftBlue = function(){
-        var input = byId('color-soft-blue');
-        var color = '#6c0810';
-        if(input) input.value = color;
-        localStorage.setItem('casino_color_softblue_global', color);
-        aplicarColorBroadcastEstable();
-        if(typeof resetColorOriginal === 'function') {
-            try { resetColorOriginal.call(this); } catch(e) {}
-        }
-    };
-
-    function activarFigurasMoviblesEstable(){
-        var z = byId('zona-figuras');
-        if(!z) return;
-        z.style.position = 'absolute';
-        z.style.resize = 'both';
-        z.style.overflow = 'auto';
-        z.style.cursor = 'move';
-        z.style.touchAction = 'none';
-        z.style.zIndex = '99990';
-        if(!z.dataset.jmpStablePos){
-            var w = clamp(Math.round(window.innerWidth * 0.30), 260, 460);
-            var h = clamp(Math.round(window.innerHeight * 0.18), 115, 220);
-            z.style.width = w + 'px';
-            z.style.height = h + 'px';
-            z.style.left = clamp(Math.round(window.innerWidth * 0.43), 8, Math.max(8, window.innerWidth - w - 8)) + 'px';
-            z.style.top = clamp(Math.round(window.innerHeight * 0.66), 8, Math.max(8, window.innerHeight - h - 8)) + 'px';
-            z.style.bottom = 'auto';
-            z.dataset.jmpStablePos = '1';
-        }
-        if(typeof window.hacerArrastrable === 'function' && !z.dataset.jmpDragStable){
-            window.hacerArrastrable(z);
-            z.dataset.jmpDragStable = '1';
-        }
-    }
-
-    function ajusteVisualEstable(){
-        aplicarColorBroadcastEstable();
-        activarFigurasMoviblesEstable();
-    }
-
-    ['renderizar','aplicarVistaGlobal','toggleVista','guardarConfigLocal','agregarFiguraLista','limpiarFigurasLista'].forEach(function(nombre){
-        if(typeof window[nombre] !== 'function' || window['__jmpEstableWrap_' + nombre]) return;
-        var original = window[nombre];
-        window[nombre] = function(){
-            var r = original.apply(this, arguments);
-            setTimeout(ajusteVisualEstable, 0);
-            setTimeout(ajusteVisualEstable, 130);
-            return r;
-        };
-        window['__jmpEstableWrap_' + nombre] = true;
-    });
-
-    function blindarLogin(){
-        var btn = byId('btn-login');
-        var error = byId('login-error');
-        if(!btn || btn.dataset.jmpLoginBlindado) return;
-        btn.dataset.jmpLoginBlindado = '1';
-
-        var originalLogin = window.validarLogin;
-        if(typeof originalLogin === 'function' && !window.__jmpLoginOriginal){
-            window.__jmpLoginOriginal = originalLogin;
-            window.validarLogin = async function(){
-                if(btn.disabled) return;
-                btn.disabled = true;
-                var textoAnterior = btn.innerText || 'ENTRAR AL SISTEMA';
-                try {
-                    return await window.__jmpLoginOriginal.apply(this, arguments);
-                } catch(e) {
-                    console.error('Error interno del login:', e);
-                    if(error){
-                        error.innerText = 'Error interno de ingreso. Abre la consola o usa esta versión estable.';
-                        error.style.display = 'block';
-                    } else {
-                        alert('Error interno de ingreso.');
-                    }
-                } finally {
-                    btn.disabled = false;
-                    if(btn.innerText === 'VALIDANDO...' || !btn.innerText.trim()) btn.innerText = textoAnterior;
-                }
-            };
-        }
-
-        btn.addEventListener('click', function(){
-            setTimeout(function(){
-                if(typeof window.validarLogin !== 'function') {
-                    if(error){
-                        error.innerText = 'El código de ingreso no cargó. Usa el archivo estable corregido.';
-                        error.style.display = 'block';
-                    }
-                    console.error('validarLogin no está definido. Revisa que no exista un error de JavaScript anterior.');
-                }
-            }, 0);
-        }, true);
-
-        ['user-email','user-pass'].forEach(function(id){
-            var inp = byId(id);
-            if(inp && !inp.dataset.jmpEnterLogin){
-                inp.dataset.jmpEnterLogin = '1';
-                inp.addEventListener('keydown', function(e){
-                    if(e.key === 'Enter') {
-                        e.preventDefault();
-                        if(typeof window.validarLogin === 'function') window.validarLogin();
-                    }
-                });
-            }
-        });
-    }
-
-    if(document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function(){ blindarLogin(); ajusteVisualEstable(); });
-    } else {
-        blindarLogin();
-        ajusteVisualEstable();
-    }
-    window.addEventListener('resize', function(){ setTimeout(ajusteVisualEstable, 120); });
-    window.addEventListener('error', function(e){ console.error('Error JavaScript detectado:', e.message, e.filename, e.lineno); });
-})();
-</script>
-
-
 <!-- =========================================================
      JMP FINAL FIX: resize cámaras + números negros + fondo editable
      ========================================================= -->
@@ -9189,61 +9160,255 @@ html body #pantalla-principal.vista-clasica #contador-balotas::before {
 }
 </style>
 
-<script>
-/* JMP FIX: asegura que las imágenes izquierda/derecha sigan visibles al entrar a tabla clásica. */
+
+<!-- =========================================================
+     FIX FINAL SEGURO: imágenes laterales movibles en tabla clásica
+     - Insertado al final real del documento.
+     - No toca login, usuarios, contraseñas ni botones de juegos.
+     - Vacías: siguen ocultas.
+     - Con imagen/video: visibles y movibles.
+     ========================================================= -->
+<style id="jmp-media-drag-final-css">
+#pantalla-principal.vista-clasica #media-left.jmp-media-free:not(:empty),
+#pantalla-principal.vista-clasica #media-right.jmp-media-free:not(:empty) {
+    position: absolute !important;
+    top: var(--jmp-media-top, 18px) !important;
+    left: var(--jmp-media-left, 18px) !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: 100000 !important;
+    display: flex !important;
+    pointer-events: auto !important;
+    cursor: move !important;
+    touch-action: none !important;
+    resize: both !important;
+    overflow: hidden !important;
+}
+#pantalla-principal.vista-clasica #media-left:not(:empty),
+#pantalla-principal.vista-clasica #media-right:not(:empty) {
+    pointer-events: auto !important;
+    cursor: move !important;
+    touch-action: none !important;
+}
+#pantalla-principal.vista-clasica #media-left:empty,
+#pantalla-principal.vista-clasica #media-right:empty {
+    display: none !important;
+    pointer-events: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+</style>
+<script id="jmp-media-drag-final-js">
 (function(){
-    function jmpFixMediaClasica(){
-        var pantalla = document.getElementById('pantalla-principal');
-        if(!pantalla || !pantalla.classList.contains('vista-clasica')) return;
-        ['media-left','media-right'].forEach(function(id){
-            var z = document.getElementById(id);
-            if(!z) return;
-            z.style.setProperty('display', 'flex', 'important');
-            z.style.position = 'absolute';
-            z.style.zIndex = '99991';
-            z.style.resize = 'both';
-            z.style.overflow = 'hidden';
-            z.style.cursor = 'move';
-            z.style.touchAction = 'none';
-            if(!z.dataset.jmpClassicMediaDefault){
-                z.style.top = 'auto';
-                z.style.bottom = '18px';
-                z.style.width = 'min(250px, 18vw)';
-                z.style.height = 'min(170px, 22vh)';
-                if(id === 'media-left') { z.style.left = '18px'; z.style.right = 'auto'; }
-                if(id === 'media-right') { z.style.right = '18px'; z.style.left = 'auto'; }
-                z.dataset.jmpClassicMediaDefault = '1';
+    'use strict';
+    function byId(id){ return document.getElementById(id); }
+    function hasContent(el){ return !!(el && el.children && el.children.length > 0); }
+    function clamp(n, min, max){ n = Number(n) || 0; return Math.max(min, Math.min(max, n)); }
+
+    function getStage(){ return byId('pantalla-principal') || document.body; }
+
+    function setImportant(el, prop, value){
+        try { el.style.setProperty(prop, value, 'important'); }
+        catch(e) { el.style[prop] = value; }
+    }
+
+    function makeFree(el){
+        if(!el || !hasContent(el)) return;
+        var stage = getStage();
+        var sr = stage.getBoundingClientRect();
+        var er = el.getBoundingClientRect();
+        var left = er.left - sr.left + (stage.scrollLeft || 0);
+        var top = er.top - sr.top + (stage.scrollTop || 0);
+
+        el.classList.add('jmp-media-free');
+        setImportant(el, 'position', 'absolute');
+        setImportant(el, 'right', 'auto');
+        setImportant(el, 'bottom', 'auto');
+        setImportant(el, 'left', Math.round(left) + 'px');
+        setImportant(el, 'top', Math.round(top) + 'px');
+        setImportant(el, 'z-index', '100000');
+        setImportant(el, 'pointer-events', 'auto');
+        setImportant(el, 'touch-action', 'none');
+        setImportant(el, 'cursor', 'move');
+        el.style.setProperty('--jmp-media-left', Math.round(left) + 'px');
+        el.style.setProperty('--jmp-media-top', Math.round(top) + 'px');
+    }
+
+    function activate(el){
+        if(!el || el.dataset.jmpMediaFinalDrag === '1') return;
+        el.dataset.jmpMediaFinalDrag = '1';
+
+        el.addEventListener('pointerdown', function(e){
+            if(!hasContent(el)) return;
+            var tag = (e.target && e.target.tagName || '').toUpperCase();
+            if(['INPUT','LABEL','SMALL','BUTTON','SELECT','TEXTAREA'].includes(tag)) return;
+
+            var rect = el.getBoundingClientRect();
+            var resizeZone = e.clientX > rect.right - 30 && e.clientY > rect.bottom - 30;
+            if(resizeZone) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            makeFree(el);
+
+            var stage = getStage();
+            var startX = e.clientX;
+            var startY = e.clientY;
+            var startLeft = parseFloat(el.style.left) || 0;
+            var startTop = parseFloat(el.style.top) || 0;
+
+            function move(ev){
+                ev.preventDefault();
+                var maxLeft = Math.max(0, (stage.clientWidth || window.innerWidth) - el.offsetWidth);
+                var maxTop = Math.max(0, (stage.clientHeight || window.innerHeight) - el.offsetHeight);
+                var newLeft = clamp(startLeft + (ev.clientX - startX), 0, maxLeft);
+                var newTop = clamp(startTop + (ev.clientY - startY), 0, maxTop);
+                setImportant(el, 'left', Math.round(newLeft) + 'px');
+                setImportant(el, 'top', Math.round(newTop) + 'px');
+                setImportant(el, 'right', 'auto');
+                setImportant(el, 'bottom', 'auto');
+                el.style.setProperty('--jmp-media-left', Math.round(newLeft) + 'px');
+                el.style.setProperty('--jmp-media-top', Math.round(newTop) + 'px');
             }
-            if(typeof window.hacerArrastrable === 'function' && !z.dataset.jmpClassicMediaDrag){
-                window.hacerArrastrable(z);
-                z.dataset.jmpClassicMediaDrag = '1';
+            function up(){
+                document.removeEventListener('pointermove', move, true);
+                document.removeEventListener('pointerup', up, true);
+                document.removeEventListener('pointercancel', up, true);
             }
+            document.addEventListener('pointermove', move, true);
+            document.addEventListener('pointerup', up, true);
+            document.addEventListener('pointercancel', up, true);
+        }, true);
+    }
+
+    function install(){
+        activate(byId('media-left'));
+        activate(byId('media-right'));
+    }
+
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
+    else install();
+    window.addEventListener('load', install);
+})();
+</script>
+
+
+<!-- =========================================================
+     JMP FIX FINAL REAL: tamaño manual para imágenes laterales
+     - No toca login ni navegación.
+     - La esquina inferior derecha agranda/achica con mouse o dedo.
+     - Mantiene arrastre normal fuera de esa esquina.
+     ========================================================= -->
+<style id="jmp-media-resize-manual-css">
+/* Imágenes laterales tipo figuras: movibles y redimensionables, sin flecha visible encima. */
+html body .media-zone::after,
+html body #pantalla-principal.vista-clasica #media-left::after,
+html body #pantalla-principal.vista-clasica #media-right::after {
+    content: none !important;
+    display: none !important;
+}
+html body .media-zone:not(:empty),
+html body #pantalla-principal.vista-clasica #media-left:not(:empty),
+html body #pantalla-principal.vista-clasica #media-right:not(:empty) {
+    min-width: 70px !important;
+    min-height: 55px !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    resize: both !important;
+}
+html body .media-zone.jmp-resizing-media,
+html body .media-zone.jmp-resizing-media * {
+    cursor: nwse-resize !important;
+}
+</style>
+<script id="jmp-media-resize-manual-js">
+(function(){
+    'use strict';
+    function byId(id){ return document.getElementById(id); }
+    function clamp(n, min, max){ n = Number(n) || 0; return Math.max(min, Math.min(max, n)); }
+    function setImportant(el, prop, value){
+        try { el.style.setProperty(prop, value, 'important'); }
+        catch(e) { el.style[prop] = value; }
+    }
+    function hasRealMedia(el){
+        if(!el || !el.children) return false;
+        return Array.prototype.some.call(el.children, function(ch){
+            return ch && ch.nodeType === 1 && !ch.classList.contains('jmp-resize-handle');
         });
     }
-    document.addEventListener('DOMContentLoaded', function(){
-        jmpFixMediaClasica();
-        setTimeout(jmpFixMediaClasica, 300);
-        setTimeout(jmpFixMediaClasica, 1000);
-    });
-    ['toggleVista','aplicarVistaGlobal','renderizar','restaurarMediosGuardados','cargarMedia'].forEach(function(nombre){
-        var intento = 0;
-        var timer = setInterval(function(){
-            intento++;
-            if(typeof window[nombre] === 'function' && !window['__jmpMediaClasicaWrap_' + nombre]){
-                var original = window[nombre];
-                window[nombre] = function(){
-                    var r = original.apply(this, arguments);
-                    setTimeout(jmpFixMediaClasica, 0);
-                    setTimeout(jmpFixMediaClasica, 150);
-                    return r;
-                };
-                window['__jmpMediaClasicaWrap_' + nombre] = true;
-                clearInterval(timer);
+    function getStage(){ return byId('pantalla-principal') || document.body; }
+    function makeFree(el){
+        var stage = getStage();
+        var sr = stage.getBoundingClientRect();
+        var er = el.getBoundingClientRect();
+        var left = er.left - sr.left + (stage.scrollLeft || 0);
+        var top = er.top - sr.top + (stage.scrollTop || 0);
+        el.classList.add('jmp-media-free');
+        setImportant(el, 'position', 'absolute');
+        setImportant(el, 'right', 'auto');
+        setImportant(el, 'bottom', 'auto');
+        setImportant(el, 'left', Math.round(left) + 'px');
+        setImportant(el, 'top', Math.round(top) + 'px');
+        setImportant(el, 'z-index', '100000');
+        setImportant(el, 'pointer-events', 'auto');
+        setImportant(el, 'touch-action', 'none');
+        el.style.setProperty('--jmp-media-left', Math.round(left) + 'px');
+        el.style.setProperty('--jmp-media-top', Math.round(top) + 'px');
+    }
+    function activateResize(el){
+        if(!el || el.dataset.jmpResizeManual === '1') return;
+        el.dataset.jmpResizeManual = '1';
+        el.addEventListener('pointerdown', function(e){
+            if(!hasRealMedia(el)) return;
+            var rect = el.getBoundingClientRect();
+            var inCorner = e.clientX >= rect.right - 42 && e.clientY >= rect.bottom - 42;
+            if(!inCorner) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+            makeFree(el);
+            el.classList.add('jmp-resizing-media');
+            var stage = getStage();
+            var startX = e.clientX;
+            var startY = e.clientY;
+            var startW = rect.width;
+            var startH = rect.height;
+            var startLeft = parseFloat(el.style.left) || 0;
+            var startTop = parseFloat(el.style.top) || 0;
+            function move(ev){
+                ev.preventDefault();
+                var stageW = stage.clientWidth || window.innerWidth;
+                var stageH = stage.clientHeight || window.innerHeight;
+                var maxW = Math.max(90, stageW - startLeft - 4);
+                var maxH = Math.max(70, stageH - startTop - 4);
+                var newW = clamp(startW + (ev.clientX - startX), 70, maxW);
+                var newH = clamp(startH + (ev.clientY - startY), 55, maxH);
+                setImportant(el, 'width', Math.round(newW) + 'px');
+                setImportant(el, 'height', Math.round(newH) + 'px');
+                setImportant(el, 'max-width', 'none');
+                setImportant(el, 'max-height', 'none');
+                setImportant(el, 'right', 'auto');
+                setImportant(el, 'bottom', 'auto');
             }
-            if(intento > 30) clearInterval(timer);
-        }, 100);
-    });
-    window.jmpFixMediaClasica = jmpFixMediaClasica;
+            function up(){
+                el.classList.remove('jmp-resizing-media');
+                document.removeEventListener('pointermove', move, true);
+                document.removeEventListener('pointerup', up, true);
+                document.removeEventListener('pointercancel', up, true);
+            }
+            document.addEventListener('pointermove', move, true);
+            document.addEventListener('pointerup', up, true);
+            document.addEventListener('pointercancel', up, true);
+        }, true);
+    }
+    function install(){
+        ['media-left','media-right','b18-media-left','b18-media-right','b30-media-left','b30-media-right','b90-media-left','b90-media-right','loteria-media-left','loteria-media-right','lotto-media-left','lotto-media-right','rs-media-left','rs-media-right','subastas-media-left','subastas-media-right'].forEach(function(id){ activateResize(byId(id)); });
+    }
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
+    else install();
+    window.addEventListener('load', install);
 })();
 </script>
 
