@@ -1410,8 +1410,38 @@
     letter-spacing: 0.5px;
 }
 
-#pantalla-principal.vista-clasica .media-zone {
-    display: none !important;
+/* =========================================================
+   JMP FIX: mostrar imágenes izquierda/derecha en vista clásica
+   Antes se ocultaban todas las .media-zone dentro de #pantalla-principal.
+   Ahora quedan visibles, flotantes, redimensionables y arrastrables.
+   ========================================================= */
+#pantalla-principal.vista-clasica #media-left,
+#pantalla-principal.vista-clasica #media-right {
+    display: flex !important;
+    position: absolute;
+    top: auto;
+    bottom: 18px;
+    width: min(250px, 18vw);
+    height: min(170px, 22vh);
+    min-width: 120px;
+    min-height: 85px;
+    z-index: 99991;
+    resize: both;
+    overflow: hidden;
+    cursor: move;
+    border: 3px dashed rgba(244,209,154,0.72);
+    background: rgba(0,0,0,0.12);
+    border-radius: 10px;
+}
+#pantalla-principal.vista-clasica #media-left { left: 18px; right: auto; }
+#pantalla-principal.vista-clasica #media-right { right: 18px; left: auto; }
+#pantalla-principal.vista-clasica #media-left img,
+#pantalla-principal.vista-clasica #media-right img,
+#pantalla-principal.vista-clasica #media-left video,
+#pantalla-principal.vista-clasica #media-right video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 /* Cámaras flotantes */
@@ -4826,7 +4856,7 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
             img.src = src;
         });
 
-        window[`${prefix}guardarDatos`] = () => { if(!SISTEMA_AUTORIZADO) return; try { const copy = { ...dbLocal }; copy.headerCartonBase64 = null; copy.media = { left: null, right: null }; localStorage.setItem(storageKey, JSON.stringify(copy)); window[`${prefix}renderizar`](); } catch (e) { alert("Memoria llena."); } };
+        window[`${prefix}guardarDatos`] = () => { if(!SISTEMA_AUTORIZADO) return; try { const copy = { ...dbLocal }; copy.headerCartonBase64 = null; copy.media = { left: null, right: null }; localStorage.setItem(storageKey, JSON.stringify(copy)); window[`${prefix}renderizar`](); } catch (e) { alert('Memoria llena: el navegador no pudo guardar todo en localStorage. Exporta el serial en JSON y borra seriales antiguos o migra a IndexedDB para seriales grandes.'); } };
         window[`${prefix}cargarMedia`] = (input, lado) => { if(!checkSecurity()) return; const cont = document.getElementById(`${idPrefix}media-${lado}`), file = input.files[0]; if (!file) return; const url = URL.createObjectURL(file); cont.innerHTML = ''; if (file.type.startsWith('image/')) { const img = document.createElement('img'); img.src = url; cont.appendChild(img); const reader = new FileReader(); reader.onloadend = function() { dbLocal.media[lado] = reader.result; window[`${prefix}renderizar`](); }; reader.readAsDataURL(file); } else if (file.type.startsWith('video/')) { const vid = document.createElement('video'); vid.src = url; vid.autoplay = true; vid.loop = true; vid.muted = true; cont.appendChild(vid); const reader = new FileReader(); reader.onloadend = function() { dbLocal.media[lado] = reader.result; window[`${prefix}renderizar`](); }; reader.readAsDataURL(file); } };
         window[`${prefix}restaurarMedios`] = () => { if(dbLocal.media.left) document.getElementById(`${idPrefix}media-left`).innerHTML = `<img src="${dbLocal.media.left}">`; if(dbLocal.media.right) document.getElementById(`${idPrefix}media-right`).innerHTML = `<img src="${dbLocal.media.right}">`; };
         window[`${prefix}cambiarColorTablero`] = (color) => { if(!checkSecurity()) return; if(!manualUnlocked) document.getElementById(`pantalla-principal-${maxNum}`).style.backgroundColor = color; dbLocal.colores.tablero = color; window[`${prefix}guardarDatos`](); };
@@ -4841,7 +4871,46 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         window[`${prefix}permitirSonido`] = () => { vozOK = true; document.getElementById(`${idPrefix}btn-activar-voz`).style.display='none'; };
         
         window[`${prefix}exportarSerialExcel`] = (idx) => { if(!checkSecurity()) return; const s = dbLocal.serialesExtra[idx]; const ws = XLSX.utils.aoa_to_sheet(s.lista.map(c => [c.carton, ...normalizarNumerosCarton(c.numeros)])); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "BINGO"); XLSX.writeFile(wb, `Serial_${maxNum}_${s.nombre}.xlsx`); };
-        window[`${prefix}exportarBaseDatos`] = () => { const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(dbLocal)], {type:"application/json"})); l.download = `respaldo${maxNum}.json`; l.click(); };
+        window[`${prefix}exportarSerialJSON`] = (idx) => {
+            if(!checkSecurity()) return;
+            const s = dbLocal.serialesExtra[idx];
+            if(!s) return alert('No se encontró el serial.');
+            try {
+                const json = JSON.stringify(s);
+                const blob = new Blob([json], {type:"application/json;charset=utf-8"});
+                const url = URL.createObjectURL(blob);
+                const l = document.createElement('a');
+                l.href = url;
+                l.download = `serial_B${maxNum}_${String(s.nombre || 'SIN_NOMBRE').replace(/[^a-z0-9_\-]+/gi, '_')}.json`;
+                document.body.appendChild(l);
+                l.click();
+                l.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch(err) {
+                alert('No se pudo exportar el serial JSON: ' + err.message);
+            }
+        };
+
+        window[`${prefix}exportarBaseDatos`] = () => {
+            if(!checkSecurity()) return;
+            try {
+                const copy = JSON.parse(JSON.stringify(dbLocal));
+                copy.headerCartonBase64 = null;
+                copy.media = { left: null, right: null };
+                const json = JSON.stringify(copy);
+                const blob = new Blob([json], {type:"application/json;charset=utf-8"});
+                const url = URL.createObjectURL(blob);
+                const l = document.createElement('a');
+                l.href = url;
+                l.download = `respaldo${maxNum}.json`;
+                document.body.appendChild(l);
+                l.click();
+                l.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch(err) {
+                alert('No se pudo crear el respaldo JSON: ' + err.message);
+            }
+        };
         window[`${prefix}importarDesdeExcel`] = (event) => { if(!checkSecurity()) return; const reader = new FileReader(); reader.onload = (e) => { const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' }); const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }); let nuevoS = { nombre: event.target.files[0].name.toUpperCase(), lista: [] }; let rechazados = 0; rows.forEach(fila => { let nC = parseInt(fila[0]); const raw = fila.slice(1).filter(v => v !== null && typeof v !== 'undefined' && String(v).trim() !== ''); if (!isNaN(nC)) { let numeros = null; if(esBingo90) { numeros = raw.length >= 27 ? normalizarNumerosCarton(raw.slice(0,27)) : matrizBingo90DesdeNumeros(raw); if(!numeros || !validarMatrizBingo90(numeros)) { rechazados++; return; } } else { const nums = raw.map(n => parseInt(n)).filter(n => !isNaN(n) && n >= 1 && n <= maxNum); if(nums.length >= numerosPorCarton) { const base = nums.slice(0, numerosPorCarton); if(new Set(base).size !== numerosPorCarton) { rechazados++; return; } numeros = base; } } if(numeros) nuevoS.lista.push({ carton: nC, numeros }); } }); if(nuevoS.lista.length === 0) return alert(esBingo90 ? "No se importó ningún cartón. Para Bingo 90 el Excel debe traer 15 números válidos repartidos por columnas 1-9, 10-19...80-90, o una matriz de 27 celdas con espacios en blanco." : "No se importó ningún cartón válido."); dbLocal.serialesExtra.push(nuevoS); window[`${prefix}guardarDatos`](); window[`${prefix}actualizarListaSeriales`](); if(rechazados > 0) alert(`Importado con ${rechazados} fila(s) rechazadas por no cumplir el formato de Bingo ${maxNum}.`); }; reader.readAsArrayBuffer(event.target.files[0]); };
         
         window[`${prefix}descargarSerialImagenes`] = async (idx) => {
@@ -5073,7 +5142,7 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
             const div = document.getElementById(`${idPrefix}lista-seriales-div`); div.innerHTML = "";
             dbLocal.serialesExtra.forEach((s, idx) => {
                 let item = document.createElement('div'); item.className = "serial-item" + (dbLocal.serialActivoIndex === idx ? " activo" : "");
-                item.innerHTML = `<span><b>${s.nombre} (${s.lista.length})</b></span><div><button onclick="${prefix}descargarSerialImagenes(${idx})" class="admin-btn" style="background:#8e0000; padding:5px;">📷 ZIP</button>${esBingo90 ? `<button onclick="${prefix}imprimirSerialPDF(${idx})" class="admin-btn" style="background:#f97316; padding:5px;">🖨️ PDF 1-4</button>` : ``}<button onclick="${prefix}exportarSerialExcel(${idx})" class="admin-btn" style="background:#198754; padding:5px;">📊 Excel</button><button onclick="${prefix}seleccionarSerial(${idx})" class="admin-btn" style="background:#004080; padding:5px 10px;">USAR</button><button onclick="${prefix}eliminarSerial(${idx})" class="admin-btn" style="background:#dc3545; padding:5px 10px;">🗑</button></div>`;
+                item.innerHTML = `<span><b>${s.nombre} (${s.lista.length})</b></span><div><button onclick="${prefix}descargarSerialImagenes(${idx})" class="admin-btn" style="background:#8e0000; padding:5px;">📷 ZIP</button>${esBingo90 ? `<button onclick="${prefix}imprimirSerialPDF(${idx})" class="admin-btn" style="background:#f97316; padding:5px;">🖨️ PDF 1-4</button>` : ``}<button onclick="${prefix}exportarSerialExcel(${idx})" class="admin-btn" style="background:#198754; padding:5px;">📊 Excel</button><button onclick="${prefix}exportarSerialJSON(${idx})" class="admin-btn" style="background:#6c757d; padding:5px;">💾 JSON</button><button onclick="${prefix}seleccionarSerial(${idx})" class="admin-btn" style="background:#004080; padding:5px 10px;">USAR</button><button onclick="${prefix}eliminarSerial(${idx})" class="admin-btn" style="background:#dc3545; padding:5px 10px;">🗑</button></div>`;
                 div.appendChild(item);
             });
             cartonesActuales = dbLocal.serialesExtra[dbLocal.serialActivoIndex]?.lista || []; window[`${prefix}renderizar`]();
@@ -5503,6 +5572,7 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         "LETRA Z": [1,1,1,1,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,1,1,1,1]
     };
     let dbLocal = JSON.parse(localStorage.getItem('bingoSala2_V15_MASTER')) || { juego: [], config: { figura: new Array(25).fill(false), nombre: "---", autoWin: false }, serialesExtra: [], serialActivoIndex: -1, colores: { tablero: "#f8f9fa", balotas: "#e9ecef", cartonExport: "#004080", cartonFondo: "#002b5c" }, media: { left: null, right: null }, headerCartonBase64: null, centerLogoBase64: null };
+    dbLocal = b75_descompactarDbLocal(dbLocal);
     if(!dbLocal.config.bibliotecaFiguras) dbLocal.config.bibliotecaFiguras = [];
     if(!dbLocal.config.rangoJuego) dbLocal.config.rangoJuego = { desde: '', hasta: '' };
     if(!Array.isArray(dbLocal.config.tablasSeleccionadas)) dbLocal.config.tablasSeleccionadas = [];
@@ -5577,7 +5647,94 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         });
     };
 
-    window.guardarDatos = () => { if(!SISTEMA_AUTORIZADO) return; try { const copy = { ...dbLocal }; copy.headerCartonBase64 = null; copy.centerLogoBase64 = null; copy.media = { left: null, right: null }; localStorage.setItem('bingoSala2_V15_MASTER', JSON.stringify(copy)); renderizar(); } catch (e) { alert("Memoria llena."); } };
+
+
+    /* =========================================================
+       BINGO 75 - GUARDADO LIVIANO PARA EVITAR MEMORIA LLENA
+       Guarda los seriales en formato compacto dentro de localStorage.
+       En memoria se siguen usando como antes: { nombre, lista:[...] }.
+       ========================================================= */
+    function b75_compactarSerial(serial) {
+        if(!serial || !Array.isArray(serial.lista)) return serial;
+        return {
+            nombre: serial.nombre || 'SERIAL',
+            compact75: true,
+            total: serial.lista.length,
+            data: serial.lista.map(c => {
+                const carton = parseInt(c.carton) || 0;
+                const numeros = Array.isArray(c.numeros) ? c.numeros.map(n => parseInt(n) || 0).join(',') : '';
+                return carton + '|' + numeros;
+            }).join(';')
+        };
+    }
+
+    function b75_descompactarSerial(serial) {
+        if(!serial || !serial.compact75 || typeof serial.data !== 'string') return serial;
+        const lista = serial.data ? serial.data.split(';').filter(Boolean).map(linea => {
+            const partes = linea.split('|');
+            const carton = parseInt(partes[0]) || 0;
+            const numeros = String(partes[1] || '').split(',').map(n => parseInt(n) || 0);
+            return { carton, numeros };
+        }) : [];
+        return { nombre: serial.nombre || 'SERIAL', lista };
+    }
+
+    function b75_descompactarDbLocal(db) {
+        if(!db || typeof db !== 'object') return db;
+        if(Array.isArray(db.serialesExtra)) {
+            db.serialesExtra = db.serialesExtra.map(b75_descompactarSerial);
+        } else {
+            db.serialesExtra = [];
+        }
+        if(!db.config) db.config = { figura: new Array(25).fill(false), nombre: '---', autoWin: false };
+        if(!db.colores) db.colores = { tablero: '#f8f9fa', balotas: '#e9ecef', cartonExport: '#004080', cartonFondo: '#002b5c' };
+        if(!db.media) db.media = { left: null, right: null };
+        if(!Array.isArray(db.juego)) db.juego = [];
+        return db;
+    }
+
+    function b75_dbParaGuardarLocal() {
+        const copy = {
+            ...dbLocal,
+            headerCartonBase64: null,
+            centerLogoBase64: null,
+            media: { left: null, right: null },
+            serialesExtra: (dbLocal.serialesExtra || []).map(b75_compactarSerial),
+            __b75GuardadoCompacto: true,
+            __b75VersionGuardado: 2
+        };
+        return copy;
+    }
+
+    function b75_guardarLocalSeguro() {
+        const json = JSON.stringify(b75_dbParaGuardarLocal());
+        localStorage.setItem('bingoSala2_V15_MASTER', json);
+        return json.length;
+    }
+
+    window.guardarDatos = () => {
+        if(!SISTEMA_AUTORIZADO) return;
+        try {
+            b75_guardarLocalSeguro();
+            renderizar();
+        } catch (e) {
+            try {
+                // Último recurso: conserva configuración y partida, pero evita que el navegador se bloquee.
+                const respaldoSeriales = dbLocal.serialesExtra || [];
+                const serialActivo = dbLocal.serialActivoIndex;
+                const copiaLigera = b75_dbParaGuardarLocal();
+                copiaLigera.serialesExtra = [];
+                copiaLigera.serialActivoIndex = -1;
+                localStorage.setItem('bingoSala2_V15_MASTER', JSON.stringify(copiaLigera));
+                dbLocal.serialesExtra = respaldoSeriales;
+                dbLocal.serialActivoIndex = serialActivo;
+                alert('⚠️ El navegador llegó al límite de memoria. La configuración se guardó, pero este serial es demasiado grande para localStorage. Usa el botón 💾 JSON del serial para descargarlo y luego borra seriales antiguos.');
+                renderizar();
+            } catch(e2) {
+                alert('⚠️ Memoria llena: no se pudo guardar en el navegador. Exporta el serial en JSON y borra datos antiguos.');
+            }
+        }
+    };
 
     function getEstadoExternoBingo75(verificacion = null) {
         const figuras = (dbLocal.config.figurasMultiples && dbLocal.config.figurasMultiples.length > 0)
@@ -5610,7 +5767,50 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     function cargarHeaderCarton(input) { if(!checkSecurity()) return; const file = input.files[0]; if (!file) return; const reader = new FileReader(); reader.onloadend = function() { dbLocal.headerCartonBase64 = reader.result; mostrarPreviewHeader(); }; reader.readAsDataURL(file); }
     function mostrarPreviewHeader() { const cont = document.getElementById('preview-header-carton'); cont.innerHTML = ''; if(dbLocal.headerCartonBase64) { cont.innerHTML = `<div style="display:inline-block; position:relative;"><img src="${dbLocal.headerCartonBase64}" style="height:40px; border:1px solid #555; border-radius:4px;"><button onclick="borrarHeaderCarton()" style="position:absolute; top:-5px; right:-5px; background:red; color:white; border:none; border-radius:50%; width:15px; height:15px; font-size:10px; cursor:pointer;">X</button></div>`; } else cont.innerHTML = '<small style="color:#aaa;">Sin imagen</small>'; }
     function borrarHeaderCarton() { if(confirm("¿Eliminar imagen?")) { dbLocal.headerCartonBase64 = null; mostrarPreviewHeader(); } }
-    window.restaurarRespaldo = (event) => { if(!checkSecurity()) return; const file = event.target.files[0]; if(!file) return; if(!confirm("Se borrará todo el progreso 75. ¿Continuar?")) { event.target.value = ''; return; } const reader = new FileReader(); reader.onload = (e) => { try { const data = JSON.parse(e.target.result); data.headerCartonBase64 = null; data.centerLogoBase64 = null; data.media = { left: null, right: null }; localStorage.setItem('bingoSala2_V15_MASTER', JSON.stringify(data)); alert("Respaldo restaurado."); location.reload(); } catch(err) { alert("Error"); } }; reader.readAsText(file); };
+    window.restaurarRespaldo = (event) => {
+        if(!checkSecurity()) return;
+        const file = event.target.files[0];
+        if(!file) return;
+        if(!confirm("Se borrará todo el progreso 75. ¿Continuar?")) { event.target.value = ''; return; }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = b75_descompactarDbLocal(JSON.parse(e.target.result));
+                data.headerCartonBase64 = null;
+                data.centerLogoBase64 = null;
+                data.media = { left: null, right: null };
+                dbLocal = data;
+                b75_guardarLocalSeguro();
+                alert("Respaldo restaurado.");
+                location.reload();
+            } catch(err) {
+                alert("Error restaurando respaldo: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    window.exportarBaseDatos = () => {
+        if(!checkSecurity()) return;
+        try {
+            const copy = JSON.parse(JSON.stringify(dbLocal));
+            copy.headerCartonBase64 = null;
+            copy.centerLogoBase64 = null;
+            copy.media = { left: null, right: null };
+            const json = JSON.stringify(copy);
+            const blob = new Blob([json], {type:"application/json;charset=utf-8"});
+            const url = URL.createObjectURL(blob);
+            const l = document.createElement('a');
+            l.href = url;
+            l.download = 'respaldo75.json';
+            document.body.appendChild(l);
+            l.click();
+            l.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch(err) {
+            alert('No se pudo crear el respaldo JSON: ' + err.message);
+        }
+    };
     window.borrarDatosFabrica = () => { if(confirm("¿Borrar TODO Bingo 75?")) { localStorage.removeItem('bingoSala2_V15_MASTER'); location.reload(); } };
 
     function iniciarAppBingo() {
@@ -5649,46 +5849,61 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
     XLSX.writeFile(wb, `Serial_${s.nombre}.xlsx`); 
 };
     function construirCartonImagenPDFStyle(c) {
-        const bgFondo = dbLocal.colores.cartonFondo || "#002b5c";
-        const bgHeader = dbLocal.colores.cartonExport || "#004080";
-        const colorTexto = dbLocal.colores.cartonTexto || "#ffffff";
+        const bgFondo = dbLocal.colores.cartonFondo || '#002b5c';
+        const bgHeader = dbLocal.colores.cartonExport || '#004080';
+        const colorTexto = dbLocal.colores.cartonTexto || '#ffffff';
         const numeroEnCentroSinLogo = !!(dbLocal.config && dbLocal.config.numeroCentroSinLogo && !dbLocal.centerLogoBase64);
 
-        // EXPORTACIÓN PNG 12:15. La pantalla del juego no cambia.
-        // Tamaño de imagen: 1200 x 1500 px, equivalente proporcional a 12 cm x 15 cm.
+        // MISMO DISEÑO DEL PDF 4 POR HOJA, PERO EN PNG.
+        // El ancho queda en 1200 px y el alto se calcula con la misma proporción del cartón PDF.
         const cardW = 1200;
-        const cardH = 1500;
-        const padX = 35;
-        const padY = 30;
-        const headerH = 235;
-        const lettersH = 90;
-        const cellGapX = 18;
-        const cellGapY = 15;
-        const gridPadX = 15;
-        const bottomNumH = 78;
-        const bottomNumW = 560;
+        const pxPorCm = cardW / PDF75_CARD_W_CM;
+        const cardH = Math.round(PDF75_CARD_H_CM * pxPorCm);
+        const s = PDF75_SCALE;
+        const px = (cm) => Math.round(cm * pxPorCm * 1000) / 1000;
+        const fontPx = (pt) => Math.max(1, Math.round((pt / 28.3465) * pxPorCm));
+
+        const padX = px(0.35 * s);
+        const padY = px(0.30 * s);
+        const headerH = px(2.35 * s);
+        const lettersH = px(0.90 * s);
+        const cellGapX = px(0.18 * s);
+        const cellGapY = px(0.15 * s);
+        const gridPadX = px(0.15 * s);
+        const bottomNumH = px(0.78 * s);
+        const bottomNumW = px(5.60 * s);
 
         const headerX = padX;
         const headerY = padY;
         const headerW = cardW - (padX * 2);
-        const lettersY = padY + headerH + 15;
+        const lettersY = padY + headerH + px(0.15);
         const gridX = padX + gridPadX;
-        const gridY = lettersY + lettersH + 10;
-        const numX = (cardW - bottomNumW) / 2;
+        const gridY = lettersY + lettersH + px(0.10);
         const numY = cardH - padY - bottomNumH;
         const cellW = (cardW - (padX * 2) - (gridPadX * 2) - (cellGapX * 4)) / 5;
-        const gridBottomY = numY - 18;
+        const gridBottomY = numY - px(0.14);
         const gridAreaH = gridBottomY - gridY;
         const cellH = (gridAreaH - (cellGapY * 4)) / 5;
         const letterW = cellW;
 
+        const titleFont = fontPx(32 * s);
+        const letterFont = fontPx(36 * s);
+        const cellFont = fontPx(36 * s);
+        const centerSmallFont = fontPx(7 * s);
+        const centerBigFont = fontPx(14 * s);
+        const bottomFont = fontPx(15 * s);
+        const cellRadius = px(0.20 * s);
+        const borderCell = Math.max(2, Math.round(px(0.055 * s)));
+        const bottomRadius = px(0.16 * s);
+        const bottomBorder = Math.max(2, Math.round(px(0.045 * s)));
+
         const headerHtml = dbLocal.headerCartonBase64
             ? `<img src="${dbLocal.headerCartonBase64}" style="width:100%; height:100%; display:block; object-fit:fill;">`
-            : `<div style="width:100%; height:100%; background:${bgHeader}; color:${colorTexto}; display:flex; align-items:center; justify-content:center; font-size:82px; font-weight:900; letter-spacing:2px;">BINGO 75</div>`;
+            : `<div style="width:100%; height:100%; background:${bgHeader}; color:${colorTexto}; border-radius:${px(0.12 * s)}px; display:flex; align-items:center; justify-content:center; font-size:${titleFont}px; font-weight:900; letter-spacing:${px(0.02)}px; line-height:1; box-sizing:border-box;">BINGO 75</div>`;
 
         const letrasHtml = ['B','I','N','G','O'].map((l, i) => {
             const left = gridX + i * (cellW + cellGapX);
-            return `<div style="position:absolute; left:${left}px; top:${lettersY}px; width:${letterW}px; height:${lettersH}px; color:${bgHeader}; display:flex; align-items:center; justify-content:center; font-size:82px; font-weight:900; line-height:1;">${l}</div>`;
+            return `<div style="position:absolute; left:${left}px; top:${lettersY}px; width:${letterW}px; height:${lettersH}px; color:${bgHeader}; display:flex; align-items:center; justify-content:center; font-size:${letterFont}px; font-weight:900; line-height:1;">${l}</div>`;
         }).join('');
 
         const celdasHtml = mapeoCarton.map((m, i) => {
@@ -5699,60 +5914,86 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
             let contenido = c.numeros[m];
             if (contenido == 0 && dbLocal.centerLogoBase64) {
                 contenido = `<img src="${dbLocal.centerLogoBase64}" style="width:80%; height:80%; object-fit:contain; display:block;">`;
-            } else if (contenido == 0 && dbLocal.config && dbLocal.config.numeroCentroSinLogo) {
-                contenido = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; text-align:center;"><span style="font-size:22px; font-weight:900;">CARTÓN #</span><span style="font-size:38px; font-weight:900;">${c.carton}</span></div>`;
+            } else if (contenido == 0 && numeroEnCentroSinLogo) {
+                contenido = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; text-align:center;"><span style="font-size:${centerSmallFont}px; font-weight:900;">CARTÓN #</span><span style="font-size:${centerBigFont}px; font-weight:900;">${c.carton}</span></div>`;
             } else if (contenido == 0) {
                 contenido = 'X';
             }
-            return `<div style="position:absolute; left:${left}px; top:${top}px; width:${cellW}px; height:${cellH}px; background:white; border:6px solid #111; border-radius:22px; color:#000; display:flex; align-items:center; justify-content:center; font-size:78px; font-weight:900; line-height:1; box-sizing:border-box; overflow:hidden;"><div style="position:relative; z-index:2; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">${contenido}</div></div>`;
+            return `<div style="position:absolute; left:${left}px; top:${top}px; width:${cellW}px; height:${cellH}px; background:#ffffff; border:${borderCell}px solid #111111; border-radius:${cellRadius}px; color:#000000; display:flex; align-items:center; justify-content:center; font-size:${cellFont}px; font-weight:900; line-height:1; box-sizing:border-box; overflow:hidden;"><div style="position:relative; z-index:2; width:100%; height:100%; display:flex; align-items:center; justify-content:center; text-align:center;">${contenido}</div></div>`;
         }).join('');
 
-        return `<div class="carton-export-base" id="carton-img-${c.carton}" style="width:${cardW}px; height:${cardH}px; position:relative; background:${bgFondo}; font-family:Arial, sans-serif; overflow:hidden; box-sizing:border-box;">
+        const numX = (cardW - bottomNumW) / 2;
+        return `<div class="carton-export-base" id="carton-img-${c.carton}" style="width:${cardW}px; height:${cardH}px; position:relative; background:${bgFondo}; font-family:Arial, Helvetica, sans-serif; overflow:hidden; box-sizing:border-box;">
             <div style="position:absolute; left:${headerX}px; top:${headerY}px; width:${headerW}px; height:${headerH}px; background:white; overflow:hidden; box-sizing:border-box;">${headerHtml}</div>
             ${letrasHtml}
             ${celdasHtml}
-            <div style="position:absolute; left:${numX}px; top:${numY}px; width:${bottomNumW}px; height:${bottomNumH}px; background:white; border:6px solid ${bgHeader}; border-radius:28px; color:${bgHeader}; display:flex; align-items:center; justify-content:center; font-size:38px; font-weight:900; box-sizing:border-box; white-space:nowrap;">CARTÓN #${c.carton}</div>
+            <div style="position:absolute; left:${numX}px; top:${numY}px; width:${bottomNumW}px; height:${bottomNumH}px; background:white; border:${bottomBorder}px solid ${bgHeader}; border-radius:${bottomRadius}px; color:${bgHeader}; display:flex; align-items:center; justify-content:center; font-size:${bottomFont}px; font-weight:900; box-sizing:border-box; white-space:nowrap; line-height:1;">CARTÓN #${c.carton}</div>
         </div>`;
     }
 
     window.descargarSerialImagenes = async (idx) => {
         if(!checkSecurity()) return;
         const s = dbLocal.serialesExtra[idx];
+        if(!s || !s.lista || s.lista.length === 0) return alert('Este serial no tiene cartones.');
         const total = s.lista.length;
-        if(!confirm(`¿Generar ${total} imágenes?`)) return;
+        const safeName = String(s.nombre || 'serial').replace(/[\/:*?"<>|]+/g, '_');
+
+        let porZip = total > 500 ? parseInt(prompt(`Vas a generar ${total} imágenes. Para evitar memoria llena se crearán varios ZIP.\n\n¿Cuántos cartones quieres por cada ZIP?`, '300')) : total;
+        if(!porZip || porZip <= 0) porZip = Math.min(total, 300);
+        porZip = Math.min(Math.max(porZip, 50), 1000);
+        const partes = Math.ceil(total / porZip);
+        if(!confirm(`¿Generar ${total} imágenes PNG?\n\nDiseño igual al PDF 4 por hoja.\nSe descargará en ${partes} archivo(s) ZIP de máximo ${porZip} cartones para evitar memoria llena.`)) return;
 
         const loader = document.getElementById('loading-overlay');
         const loaderText = document.getElementById('loading-text');
         const loaderBar = document.getElementById('loading-bar');
         const area = document.getElementById('export-area');
-        const zip = new JSZip();
 
         loader.style.display = 'flex';
         loaderBar.style.width = '0%';
 
         try {
-            for (let i = 0; i < total; i++) {
-                const c = s.lista[i];
-                const percent = Math.round(((i + 1) / total) * 100);
-                loaderText.innerText = `Procesando imagen ${i + 1} de ${total} (${percent}%)`;
-                loaderBar.style.width = percent + "%";
+            for(let inicio = 0; inicio < total; inicio += porZip) {
+                const fin = Math.min(inicio + porZip, total);
+                const zip = new JSZip();
+                const parteActual = Math.floor(inicio / porZip) + 1;
 
-                area.innerHTML = construirCartonImagenPDFStyle(c);
-                await new Promise(r => setTimeout(r, 20));
+                for (let i = inicio; i < fin; i++) {
+                    const c = s.lista[i];
+                    const percent = Math.round(((i + 1) / total) * 100);
+                    loaderText.innerText = `Procesando imagen ${i + 1} de ${total} (${percent}%) - ZIP ${parteActual}/${partes}`;
+                    loaderBar.style.width = percent + '%';
 
-                const node = area.querySelector('.carton-export-base');
-                const canvas = await html2canvas(node, { scale: 1, backgroundColor: null, useCORS: true });
-                zip.file(`Carton_${c.carton}.png`, canvas.toDataURL('image/png').split(',')[1], {base64: true});
+                    area.innerHTML = construirCartonImagenPDFStyle(c);
+                    await new Promise(r => setTimeout(r, 0));
 
-                if(i % 10 === 0) await new Promise(r => setTimeout(r, 20));
+                    const node = area.querySelector('.carton-export-base');
+                    const canvas = await html2canvas(node, { scale: 1, backgroundColor: null, useCORS: true, logging: false });
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    if(!blob) throw new Error('No se pudo crear la imagen del cartón #' + c.carton);
+                    zip.file(`Carton_${String(c.carton).padStart(5, '0')}.png`, blob);
+
+                    canvas.width = 1;
+                    canvas.height = 1;
+                    area.innerHTML = '';
+
+                    if(i % 10 === 0) await new Promise(r => setTimeout(r, 0));
+                }
+
+                loaderText.innerText = `Comprimiendo ZIP ${parteActual}/${partes}...`;
+                const zipBlob = await zip.generateAsync({
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 1 }
+                });
+                saveAs(zipBlob, `Imagenes_${safeName}_parte_${parteActual}_de_${partes}.zip`);
+                await new Promise(r => setTimeout(r, 600));
             }
-            loaderText.innerText = "Comprimiendo ZIP...";
-            const safeName = String(s.nombre || 'serial').replace(/[\\/:*?"<>|]+/g, '_');
-            saveAs(await zip.generateAsync({type:"blob"}), `Imagenes_${safeName}.zip`);
+            loaderText.innerText = 'Proceso terminado.';
         } catch (err) {
-            alert("Error generando imágenes: " + err.message);
+            alert('Error generando imágenes: ' + err.message);
         } finally {
-            area.innerHTML = "";
+            area.innerHTML = '';
             loader.style.display = 'none';
         }
     };
@@ -6285,7 +6526,21 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         }
     };
 
-    window.exportarSerialJSON = (idx) => { if(!checkSecurity()) return; const s = dbLocal.serialesExtra[idx]; const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(s)], {type:"application/json"})); l.download = `serial_${s.nombre}.json`; l.click(); };
+    window.exportarSerialJSON = (idx) => {
+        if(!checkSecurity()) return;
+        const s = dbLocal.serialesExtra[idx];
+        if(!s) return;
+        const safeName = String(s.nombre || 'serial').replace(/[\/:*?"<>|]+/g, '_');
+        const blob = new Blob([JSON.stringify(s)], {type:'application/json;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const l = document.createElement('a');
+        l.href = url;
+        l.download = `serial_${safeName}.json`;
+        document.body.appendChild(l);
+        l.click();
+        l.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
     window.crearNuevoSerial = () => {
         if(!checkSecurity()) return;
         const nombre = prompt("Nombre:");
@@ -6351,7 +6606,7 @@ if (e.key === "ArrowUp") { e.preventDefault(); if(isB75) toggleAutomatico(); els
         };
         reader.readAsArrayBuffer(event.target.files[0]);
     };
-    window.actualizarListaSeriales = () => { const div = document.getElementById('lista-seriales-div'); div.innerHTML = ""; dbLocal.serialesExtra.forEach((s, idx) => { let item = document.createElement('div'); item.className = "serial-item" + (dbLocal.serialActivoIndex === idx ? " activo" : ""); item.innerHTML = `<span><b>${s.nombre} (${s.lista.length})</b></span><div><button onclick="exportarSerialPDF4(${idx})" class="admin-btn" style="background:#6f42c1; padding:5px;">📄 PDF 4 + CORTE</button><button onclick="descargarSerialImagenes(${idx})" class="admin-btn" style="background:#8e0000; padding:5px;">📷 ZIP</button><button onclick="exportarSerialExcel(${idx})" class="admin-btn" style="background:#198754; padding:5px;">📊 Excel</button><button onclick="seleccionarSerial(${idx})" class="admin-btn" style="background:#004080; padding:5px 10px;">USAR</button><button onclick="eliminarSerial(${idx})" class="admin-btn" style="background:#dc3545; padding:5px 10px;">🗑</button></div>`; div.appendChild(item); }); cartonesActuales = dbLocal.serialesExtra[dbLocal.serialActivoIndex]?.lista || []; renderizar(); };
+    window.actualizarListaSeriales = () => { const div = document.getElementById('lista-seriales-div'); div.innerHTML = ""; dbLocal.serialesExtra.forEach((s, idx) => { let item = document.createElement('div'); item.className = "serial-item" + (dbLocal.serialActivoIndex === idx ? " activo" : ""); item.innerHTML = `<span><b>${s.nombre} (${s.lista.length})</b></span><div><button onclick="exportarSerialPDF4(${idx})" class="admin-btn" style="background:#6f42c1; padding:5px;">📄 PDF 4 + CORTE</button><button onclick="descargarSerialImagenes(${idx})" class="admin-btn" style="background:#8e0000; padding:5px;">📷 ZIP</button><button onclick="exportarSerialExcel(${idx})" class="admin-btn" style="background:#198754; padding:5px;">📊 Excel</button><button onclick="exportarSerialJSON(${idx})" class="admin-btn" style="background:#6c757d; padding:5px;">💾 JSON</button><button onclick="seleccionarSerial(${idx})" class="admin-btn" style="background:#004080; padding:5px 10px;">USAR</button><button onclick="eliminarSerial(${idx})" class="admin-btn" style="background:#dc3545; padding:5px 10px;">🗑</button></div>`; div.appendChild(item); }); cartonesActuales = dbLocal.serialesExtra[dbLocal.serialActivoIndex]?.lista || []; renderizar(); };
     window.seleccionarSerial = (idx) => { if(!checkSecurity()) return; dbLocal.serialActivoIndex = idx; lastWinSignature = ''; guardarDatos(); actualizarListaSeriales(); }; window.eliminarSerial = (idx) => { if(!checkSecurity() || !confirm("¿Borrar?")) return; dbLocal.serialesExtra.splice(idx,1); dbLocal.serialActivoIndex=-1; lastWinSignature = ''; guardarDatos(); actualizarListaSeriales(); };
     // --- LÓGICA DE SECUENCIA ---
     window.guardarSecuenciaInput = () => {
@@ -8933,5 +9188,64 @@ html body #pantalla-principal.vista-clasica #contador-balotas::before {
     }
 }
 </style>
+
+<script>
+/* JMP FIX: asegura que las imágenes izquierda/derecha sigan visibles al entrar a tabla clásica. */
+(function(){
+    function jmpFixMediaClasica(){
+        var pantalla = document.getElementById('pantalla-principal');
+        if(!pantalla || !pantalla.classList.contains('vista-clasica')) return;
+        ['media-left','media-right'].forEach(function(id){
+            var z = document.getElementById(id);
+            if(!z) return;
+            z.style.setProperty('display', 'flex', 'important');
+            z.style.position = 'absolute';
+            z.style.zIndex = '99991';
+            z.style.resize = 'both';
+            z.style.overflow = 'hidden';
+            z.style.cursor = 'move';
+            z.style.touchAction = 'none';
+            if(!z.dataset.jmpClassicMediaDefault){
+                z.style.top = 'auto';
+                z.style.bottom = '18px';
+                z.style.width = 'min(250px, 18vw)';
+                z.style.height = 'min(170px, 22vh)';
+                if(id === 'media-left') { z.style.left = '18px'; z.style.right = 'auto'; }
+                if(id === 'media-right') { z.style.right = '18px'; z.style.left = 'auto'; }
+                z.dataset.jmpClassicMediaDefault = '1';
+            }
+            if(typeof window.hacerArrastrable === 'function' && !z.dataset.jmpClassicMediaDrag){
+                window.hacerArrastrable(z);
+                z.dataset.jmpClassicMediaDrag = '1';
+            }
+        });
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+        jmpFixMediaClasica();
+        setTimeout(jmpFixMediaClasica, 300);
+        setTimeout(jmpFixMediaClasica, 1000);
+    });
+    ['toggleVista','aplicarVistaGlobal','renderizar','restaurarMediosGuardados','cargarMedia'].forEach(function(nombre){
+        var intento = 0;
+        var timer = setInterval(function(){
+            intento++;
+            if(typeof window[nombre] === 'function' && !window['__jmpMediaClasicaWrap_' + nombre]){
+                var original = window[nombre];
+                window[nombre] = function(){
+                    var r = original.apply(this, arguments);
+                    setTimeout(jmpFixMediaClasica, 0);
+                    setTimeout(jmpFixMediaClasica, 150);
+                    return r;
+                };
+                window['__jmpMediaClasicaWrap_' + nombre] = true;
+                clearInterval(timer);
+            }
+            if(intento > 30) clearInterval(timer);
+        }, 100);
+    });
+    window.jmpFixMediaClasica = jmpFixMediaClasica;
+})();
+</script>
+
 </body>
 </html>
