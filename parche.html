@@ -490,6 +490,16 @@
       border: 1px solid rgba(201,21,21,.28);
     }
 
+    .field-error {
+      border-color: var(--red) !important;
+      box-shadow: 0 0 0 3px rgba(201,21,21,.16) !important;
+    }
+
+    .choice-error span {
+      border-color: var(--red) !important;
+      box-shadow: 0 0 0 3px rgba(201,21,21,.16) !important;
+    }
+
     .note {
       margin: 12px 0 0;
       color: var(--muted);
@@ -596,10 +606,10 @@
   <main class="wrap">
     <section class="intro">
       <h1>Menú <span>Interactivo</span></h1>
-      <p>Escoge tu hamburguesa, cantidad y observaciones. Al finalizar se guarda el pedido en Google Sheets y se abre WhatsApp para enviarlo.</p>
+      <p>Escoge tu hamburguesa, cantidad y observaciones. Al finalizar se abrirá WhatsApp con el resumen del pedido.</p>
     </section>
 
-    <form id="orderForm" class="layout">
+    <form id="orderForm" class="layout" novalidate>
       <section class="menu-list" id="products"></section>
 
       <aside class="order-panel" id="resumen">
@@ -660,21 +670,17 @@
           <textarea id="generalNotes" placeholder="Ej: llamar al llegar, cambio, sin picante..."></textarea>
         </div>
 
-        <button class="btn" type="submit">Guardar y enviar pedido por WhatsApp</button>
+        <button class="btn" type="submit">Enviar pedido por WhatsApp</button>
 
         <div id="status" class="status"></div>
-
-        <p class="note">
-         Que tengas un buen provecho.
-        </p>
-      </aside>
+</aside>
     </form>
 
     <p class="footer">Parche Burger Express · WhatsApp 3189040086</p>
   </main>
 
   <script>
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbnTy-i229guNPKgRiZCb6cpsoDSh17M3S_-pHV-G8F_XaXlfERb4OKzHDuXJdYE2H/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxKS4lxrzJCkKxsiMKT8AL2Lk2lHHhU7MesLg5fGf6tfBr806gbeeyg5wkXrsZylwcu/exec";
     const WHATSAPP_NUMBER = "573189040086";
 
     const MENU = [
@@ -898,37 +904,63 @@
       };
     }
 
+    function clearValidationMarks() {
+      document.querySelectorAll(".field-error").forEach(el => el.classList.remove("field-error"));
+      document.querySelectorAll(".choice-error").forEach(el => el.classList.remove("choice-error"));
+    }
+
+    function markField(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add("field-error");
+    }
+
+    function markChoice(name) {
+      document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+        const label = input.closest(".choice");
+        if (label) label.classList.add("choice-error");
+      });
+    }
+
     function validatePayload(payload) {
+      clearValidationMarks();
+
+      const missing = [];
+
       if (!payload.productos.length) {
-        setStatus("error", "Selecciona al menos una hamburguesa.");
-        return false;
+        missing.push("seleccionar al menos una hamburguesa");
       }
 
       if (!payload.formaPago) {
-        setStatus("error", "Selecciona si paga en efectivo o transferencia.");
-        return false;
+        missing.push("forma de pago");
+        markChoice("payment");
       }
 
       if (!payload.tipoPedido) {
-        setStatus("error", "Selecciona si es para llevar o para comer en el sitio.");
-        return false;
+        missing.push("tipo de pedido");
+        markChoice("orderType");
       }
 
       if (!payload.cliente) {
-        setStatus("error", "Escribe el nombre del cliente.");
-        return false;
+        missing.push("nombre");
+        markField("customerName");
       }
 
       if (payload.tipoPedido === "Para llevar") {
         if (!payload.telefono) {
-          setStatus("error", "Para llevar debes escribir el teléfono.");
-          return false;
+          missing.push("teléfono");
+          markField("customerPhone");
         }
 
         if (!payload.direccion) {
-          setStatus("error", "Para llevar debes escribir la dirección.");
-          return false;
+          missing.push("dirección");
+          markField("customerAddress");
         }
+      }
+
+      if (missing.length) {
+        setStatus("error", `Falta completar: ${missing.join(", ")}.`);
+        statusEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        return false;
       }
 
       return true;
@@ -972,8 +1004,13 @@
 
     function openWhatsapp(payload) {
       const message = encodeURIComponent(buildWhatsappMessage(payload));
-      const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
-      window.open(url, "_blank");
+      const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}`;
+
+      /*
+        En iPhone/Safari es más seguro usar window.location.href.
+        window.open puede bloquearse cuando antes hay un proceso asíncrono.
+      */
+      window.location.href = url;
     }
 
     async function saveToGoogleSheets(payload) {
@@ -997,14 +1034,14 @@
       const payload = buildPayload();
       if (!validatePayload(payload)) return;
 
-      setStatus("warn", "Guardando pedido en Google Sheets...");
+      setStatus("warn", "Preparando tu pedido...");
 
       try {
         await saveToGoogleSheets(payload);
-        setStatus("ok", "Pedido enviado a Google Sheets. Se abrirá WhatsApp para confirmar.");
+        setStatus("ok", "Pedido listo. Abriendo WhatsApp...");
         openWhatsapp(payload);
       } catch (err) {
-        setStatus("warn", "No se guardó en Google Sheets porque falta configurar la URL. Se abrirá WhatsApp con el pedido.");
+        setStatus("ok", "Pedido listo. Abriendo WhatsApp...");
         openWhatsapp(payload);
       }
     });
