@@ -21,6 +21,7 @@
       linear-gradient(180deg,#050505 0%,#111 100%);color:var(--text)}
     button,input,textarea,select{font:inherit}
     .hidden{display:none!important}
+    body.start-open{overflow:hidden}
     .topbar{position:sticky;top:0;z-index:20;background:rgba(5,5,5,.92);
       border-bottom:1px solid rgba(255,255,255,.09);backdrop-filter:blur(12px)}
     .topbar-inner{width:min(1120px,94%);margin:auto;display:flex;align-items:center;
@@ -51,32 +52,38 @@
     .menu-list{display:grid;gap:18px}
     .category-section{display:grid;gap:12px}
     .category-heading{margin:5px 2px 0;color:var(--yellow);font-size:24px;text-transform:uppercase}
-    .product{display:grid;grid-template-columns:180px 1fr;gap:14px;background:
+    /* Tarjetas compactas tipo app de domicilios: información a la izquierda e imagen pequeña a la derecha. */
+    .product{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:12px;background:
       linear-gradient(135deg,rgba(255,255,255,.055),rgba(255,255,255,.025)),var(--card);
-      border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:13px;
-      box-shadow:0 14px 34px rgba(0,0,0,.28);overflow:hidden}
-    .product-img{min-height:150px;border-radius:18px;overflow:hidden;background:#0b0b0b;
-      border:1px solid rgba(246,168,0,.22);display:grid;place-items:center}
+      border:1px solid rgba(255,255,255,.1);border-radius:17px;padding:12px;
+      box-shadow:0 10px 24px rgba(0,0,0,.24);overflow:hidden}
+    .product-img{grid-column:2;grid-row:1;width:108px;height:108px;min-height:0;border-radius:14px;
+      overflow:hidden;background:#0b0b0b;border:1px solid rgba(246,168,0,.22);display:grid;
+      place-items:center;align-self:start}
     .product-img img{width:100%;height:100%;object-fit:cover;display:block}
-    .no-image{font-size:42px;opacity:.7}
-    .product-info{display:grid;gap:10px;align-content:start}
-    .product-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .product-name{font-size:23px;line-height:1;font-weight:1000;color:var(--yellow);text-transform:uppercase}
-    .product-desc{margin:5px 0 0;color:#ededed;font-size:13px;line-height:1.4}
-    .price{min-width:95px;text-align:center;font-weight:1000;font-size:22px;color:#fff;
-      background:linear-gradient(90deg,rgba(246,168,0,.95),rgba(246,168,0,.22));
-      border-radius:15px;padding:10px;border:1px solid rgba(255,255,255,.12)}
-    .controls{display:grid;grid-template-columns:170px 1fr;gap:10px;align-items:end}
-    .qty-control{display:grid;grid-template-columns:46px 1fr 46px;gap:8px;align-items:center}
-    .qty-btn{width:46px;height:46px;border:0;border-radius:14px;cursor:pointer;color:#111;
-      background:linear-gradient(135deg,var(--yellow),var(--orange));font-size:28px;font-weight:1000}
-    .qty-btn.minus{color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16)}
+    .no-image{font-size:34px;opacity:.7}
+    .product-info{grid-column:1;grid-row:1;display:grid;gap:8px;align-content:start;min-width:0}
+    .product-head{display:block;min-width:0}
+    .product-name{font-size:18px;line-height:1.08;font-weight:1000;color:#fff;text-transform:none}
+    .product-desc{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.35;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .price{display:inline-block;min-width:0;text-align:left;font-weight:1000;font-size:18px;color:var(--yellow);
+      background:transparent;border-radius:0;padding:6px 0 0;border:0}
+    .controls{display:grid;grid-template-columns:auto minmax(90px,1fr);gap:8px;align-items:end}
+    .controls>div:first-child>label{display:none}
+    .controls>div:last-child label{font-size:11px;margin-bottom:4px;color:var(--muted)}
+    .qty-control{display:grid;grid-template-columns:34px 40px 34px;gap:5px;align-items:center}
+    .qty-btn{width:34px;height:34px;border:0;border-radius:50%;cursor:pointer;color:#111;
+      background:linear-gradient(135deg,var(--yellow),var(--orange));font-size:21px;font-weight:1000;
+      display:grid;place-items:center;padding:0}
+    .qty-btn.minus{color:#fff;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16)}
     label{display:block;font-weight:900;font-size:13px;margin:0 0 6px}
     input,textarea,select{width:100%;border:1px solid rgba(255,255,255,.14);background:#080808;
       color:#fff;border-radius:14px;padding:12px;outline:none}
     input:focus,textarea:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(246,168,0,.12)}
     textarea{resize:vertical;min-height:45px}
-    .qty-number{height:46px;text-align:center;font-weight:1000;font-size:20px;pointer-events:none}
+    .product .obs{min-height:34px;height:34px;padding:8px 9px;border-radius:10px;font-size:12px;resize:none}
+    .qty-number{height:34px;padding:4px;text-align:center;font-weight:1000;font-size:16px;pointer-events:none;border-radius:10px}
     .order-panel{position:sticky;top:128px;background:linear-gradient(180deg,rgba(32,32,32,.98),rgba(13,13,13,.98));
       border:1px solid var(--line2);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
     .panel-title{margin:0 0 10px;color:var(--yellow);text-transform:uppercase;font-size:22px}
@@ -130,15 +137,42 @@
     .continue-btn{flex:1;border:0;border-radius:14px;padding:13px 16px;background:linear-gradient(135deg,var(--yellow),var(--orange));font-weight:1000;cursor:pointer}
     @media(max-width:930px){.layout{grid-template-columns:1fr}.order-panel{position:static}}
     @media(max-width:640px){
-      .service-grid,.form-grid,.choice-grid,.controls{grid-template-columns:1fr}
-      .product{grid-template-columns:125px 1fr;gap:10px;padding:10px}
-      .product-img{min-height:135px}.product-name{font-size:19px}.price{font-size:18px;min-width:82px}
+      .service-grid,.form-grid,.choice-grid{grid-template-columns:1fr}
+      .product{grid-template-columns:minmax(0,1fr) 92px;gap:10px;padding:10px}
+      .product-img{width:92px;height:92px}.product-name{font-size:16px}.price{font-size:16px}
+      .controls{grid-template-columns:auto minmax(76px,1fr)}
+      .qty-control{grid-template-columns:32px 34px 32px;gap:4px}
+      .qty-btn{width:32px;height:32px;font-size:20px}.qty-number{height:32px;font-size:15px}
       .toolbar{top:66px}.order-panel{top:auto}
     }
-    @media(max-width:440px){.product{grid-template-columns:1fr}.product-img{min-height:180px}}
+    @media(max-width:390px){
+      .product{grid-template-columns:minmax(0,1fr) 82px}
+      .product-img{width:82px;height:82px}
+      .controls{grid-template-columns:1fr}
+      .controls>div:last-child{display:none}
+    }
   </style>
 </head>
-<body>
+<body class="start-open">
+  <section id="startScreen" class="start-screen" aria-modal="true" role="dialog" aria-labelledby="startTitle">
+    <div class="start-card">
+      <div class="start-logo">🍔</div>
+      <h1 id="startTitle">¿Cómo quieres <span>tu pedido?</span></h1>
+      <p class="start-sub">Selecciona una opción para entrar al menú.</p>
+      <div class="service-grid">
+        <button class="service-option" type="button" data-order-type="Para la mesa">
+          <span class="service-icon">🍽️</span>
+          <b>Para la mesa</b>
+          <small>Ordena y dinos el número de la mesa.</small>
+        </button>
+        <button class="service-option" type="button" data-order-type="Para llevar">
+          <span class="service-icon">🥡</span>
+          <b>Para llevar</b>
+          <small>Recoge tu pedido o registra los datos de entrega.</small>
+        </button>
+      </div>
+    </div>
+  </section>
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
@@ -152,7 +186,10 @@
   <main class="wrap">
     <section class="intro">
       <h1>Menú <span>Interactivo</span></h1>
-      <p>Primero elige tus productos. Al terminar, completa los datos del pedido y envíalo por WhatsApp.</p>
+      <p>Elige tus productos, revisa el pedido y envíalo por WhatsApp.</p>
+      <div class="service-badge">📌 <span id="selectedServiceText">Tipo de pedido pendiente</span>
+        <button id="changeServiceButton" type="button">Cambiar</button>
+      </div>
     </section>
 
     <div class="toolbar"><div id="categoryTabs" class="category-tabs"></div></div>
@@ -171,7 +208,7 @@
 
         <label>Tipo de pedido</label>
         <div class="choice-grid">
-          <label class="choice"><input type="radio" name="orderType" value="Comer en el sitio"><span>🍽️ Comer aquí</span></label>
+          <label class="choice"><input type="radio" name="orderType" value="Para la mesa"><span>🍽️ Para la mesa</span></label>
           <label class="choice"><input type="radio" name="orderType" value="Para llevar"><span>🛵 Para llevar</span></label>
         </div>
 
@@ -612,9 +649,9 @@
     function validatePayload(payload) {
       if (!payload.productos.length) { setStatus("error","Selecciona al menos un producto."); return false; }
       if (!payload.formaPago) { setStatus("error","Selecciona una forma de pago."); return false; }
-      if (!payload.tipoPedido) { setStatus("error","Selecciona si es para comer aquí o para llevar."); return false; }
+      if (!payload.tipoPedido) { setStatus("error","Selecciona si el pedido es para la mesa o para llevar."); return false; }
       if (!payload.cliente) { setStatus("error","Escribe el nombre del cliente."); return false; }
-      if (payload.tipoPedido==="Comer en el sitio" && !payload.mesa) { setStatus("error","Falta el número de mesa."); return false; }
+      if (payload.tipoPedido==="Para la mesa" && !payload.mesa) { setStatus("error","Falta el número de mesa."); return false; }
       if (payload.tipoPedido==="Para llevar" && (!payload.telefono || !payload.direccion)) {
         setStatus("error","Para llevar requiere teléfono y dirección."); return false;
       }
@@ -624,7 +661,7 @@
     function whatsappMessage(payload) {
       const lines=["🍔 *NUEVO PEDIDO - PARCHE BURGER EXPRESS*","",
         `👤 Cliente: ${payload.cliente}`,`📌 Tipo: ${payload.tipoPedido}`];
-      if(payload.tipoPedido==="Comer en el sitio") lines.push(`🪑 Mesa: ${payload.mesa}`);
+      if(payload.tipoPedido==="Para la mesa") lines.push(`🪑 Mesa: ${payload.mesa}`);
       if(payload.telefono) lines.push(`📞 Teléfono: ${payload.telefono}`);
       if(payload.direccion) lines.push(`🏠 Dirección: ${payload.direccion}`);
       lines.push(`💳 Pago: ${payload.formaPago}`,"","🛒 *Productos:*");
@@ -660,16 +697,44 @@
 
     function updateOrderTypeFields() {
       const type=document.querySelector('input[name="orderType"]:checked')?.value || "";
-      tableBox.classList.toggle("hidden",type!=="Comer en el sitio");
+      tableBox.classList.toggle("hidden",type!=="Para la mesa");
       addressBox.classList.toggle("hidden",type!=="Para llevar");
       phoneRequiredMark.textContent=type==="Para llevar"?"*":"(opcional)";
 
-      if(type!=="Comer en el sitio") document.getElementById("customerTable").value="";
+      if(type!=="Para la mesa") document.getElementById("customerTable").value="";
       if(type!=="Para llevar") document.getElementById("customerAddress").value="";
     }
 
     document.querySelectorAll('input[name="orderType"]').forEach(input=>{
-      input.addEventListener("change",updateOrderTypeFields);
+      input.addEventListener("change",()=>{
+        updateOrderTypeFields();
+        document.getElementById("selectedServiceText").textContent=input.value;
+      });
+    });
+
+    const startScreen=document.getElementById("startScreen");
+    const changeServiceButton=document.getElementById("changeServiceButton");
+    const selectedServiceText=document.getElementById("selectedServiceText");
+
+    function chooseService(type){
+      const radio=[...document.querySelectorAll('input[name="orderType"]')]
+        .find(input=>input.value===type);
+      if(!radio) return;
+      radio.checked=true;
+      selectedServiceText.textContent=type;
+      updateOrderTypeFields();
+      startScreen.classList.add("hidden");
+      document.body.classList.remove("start-open");
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+
+    document.querySelectorAll("[data-order-type]").forEach(button=>{
+      button.addEventListener("click",()=>chooseService(button.dataset.orderType));
+    });
+
+    changeServiceButton.addEventListener("click",()=>{
+      startScreen.classList.remove("hidden");
+      document.body.classList.add("start-open");
     });
 
     loadMenu();
