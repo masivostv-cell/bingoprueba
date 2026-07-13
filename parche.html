@@ -153,26 +153,7 @@
     }
   </style>
 </head>
-<body class="start-open">
-  <section id="startScreen" class="start-screen" aria-modal="true" role="dialog" aria-labelledby="startTitle">
-    <div class="start-card">
-      <div class="start-logo">🍔</div>
-      <h1 id="startTitle">¿Cómo quieres <span>tu pedido?</span></h1>
-      <p class="start-sub">Selecciona una opción para entrar al menú.</p>
-      <div class="service-grid">
-        <button class="service-option" type="button" data-order-type="Para la mesa">
-          <span class="service-icon">🍽️</span>
-          <b>Para la mesa</b>
-          <small>Ordena y dinos el número de la mesa.</small>
-        </button>
-        <button class="service-option" type="button" data-order-type="Para llevar">
-          <span class="service-icon">🥡</span>
-          <b>Para llevar</b>
-          <small>Recoge tu pedido o registra los datos de entrega.</small>
-        </button>
-      </div>
-    </div>
-  </section>
+<body>
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
@@ -187,9 +168,6 @@
     <section class="intro">
       <h1>Menú <span>Interactivo</span></h1>
       <p>Elige tus productos, revisa el pedido y envíalo por WhatsApp.</p>
-      <div class="service-badge">📌 <span id="selectedServiceText">Tipo de pedido pendiente</span>
-        <button id="changeServiceButton" type="button">Cambiar</button>
-      </div>
     </section>
 
     <div class="toolbar"><div id="categoryTabs" class="category-tabs"></div></div>
@@ -204,9 +182,9 @@
           <div class="total"><span>Total</span><strong id="totalText">$0</strong></div>
         </div>
 
-        <h3 class="wizard-title" style="font-size:19px;margin-top:18px">Completa tus datos</h3>
+        <h3 class="wizard-title" style="font-size:19px;margin-top:18px">Finaliza tu pedido</h3>
 
-        <label>Tipo de pedido</label>
+        <label>¿Cómo quieres recibirlo? *</label>
         <div class="choice-grid">
           <label class="choice"><input type="radio" name="orderType" value="Para la mesa"><span>🍽️ Para la mesa</span></label>
           <label class="choice"><input type="radio" name="orderType" value="Para llevar"><span>🛵 Para llevar</span></label>
@@ -706,36 +684,10 @@
     }
 
     document.querySelectorAll('input[name="orderType"]').forEach(input=>{
-      input.addEventListener("change",()=>{
-        updateOrderTypeFields();
-        document.getElementById("selectedServiceText").textContent=input.value;
-      });
+      input.addEventListener("change",updateOrderTypeFields);
     });
 
-    const startScreen=document.getElementById("startScreen");
-    const changeServiceButton=document.getElementById("changeServiceButton");
-    const selectedServiceText=document.getElementById("selectedServiceText");
-
-    function chooseService(type){
-      const radio=[...document.querySelectorAll('input[name="orderType"]')]
-        .find(input=>input.value===type);
-      if(!radio) return;
-      radio.checked=true;
-      selectedServiceText.textContent=type;
-      updateOrderTypeFields();
-      startScreen.classList.add("hidden");
-      document.body.classList.remove("start-open");
-      window.scrollTo({top:0,behavior:"smooth"});
-    }
-
-    document.querySelectorAll("[data-order-type]").forEach(button=>{
-      button.addEventListener("click",()=>chooseService(button.dataset.orderType));
-    });
-
-    changeServiceButton.addEventListener("click",()=>{
-      startScreen.classList.remove("hidden");
-      document.body.classList.add("start-open");
-    });
+    updateOrderTypeFields();
 
     loadMenu();
   </script>
