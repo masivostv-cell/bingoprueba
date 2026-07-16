@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buscador de empresas y NIT</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #172033;
+      background: #f4f7fb;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    .container { max-width: 1180px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.6rem, 3vw, 2.4rem); }
+    .intro { margin: 0 0 24px; color: #586174; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #dfe5ef;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(24, 39, 75, .06);
+    }
+    .card h2 { font-size: 1.05rem; margin: 0 0 14px; }
+    label { display: block; font-weight: 700; margin: 12px 0 6px; }
+    input, select, button {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 10px;
+      border: 1px solid #cfd7e6;
+      padding: 9px 11px;
+      font: inherit;
+      background: #fff;
+    }
+    input[type="range"] { padding: 0; }
+    button {
+      border: 0;
+      font-weight: 800;
+      cursor: pointer;
+      background: #2457e6;
+      color: #fff;
+    }
+    button.secondary {
+      background: #eef2ff;
+      color: #1c3f9e;
+      border: 1px solid #cbd6ff;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+    .actions button { width: auto; min-width: 180px; }
+    .status {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #f7f9fc;
+      border-radius: 10px;
+      color: #526079;
+      font-size: .92rem;
+      min-height: 42px;
+    }
+    .threshold-row { display: flex; gap: 12px; align-items: center; }
+    .threshold-row input { flex: 1; }
+    .threshold-value {
+      min-width: 58px;
+      text-align: center;
+      padding: 8px;
+      border-radius: 8px;
+      background: #edf2ff;
+      font-weight: 800;
+    }
+    .table-wrap {
+      margin-top: 22px;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid #dfe5ef;
+      border-radius: 14px;
+      max-height: 62vh;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e8edf5;
+      text-align: left;
+      vertical-align: top;
+      font-size: .9rem;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #eef3fb;
+      z-index: 1;
+      white-space: nowrap;
+    }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-weight: 800;
+      font-size: .78rem;
+      white-space: nowrap;
+    }
+    .ok { background: #dcfce7; color: #166534; }
+    .review { background: #fef3c7; color: #92400e; }
+    .none { background: #fee2e2; color: #991b1b; }
+    .small { font-size: .84rem; color: #68748a; margin-top: 6px; }
+    .summary {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      background: #fff;
+      border: 1px solid #dfe5ef;
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .metric strong { display: block; font-size: 1.4rem; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Buscador de empresas y NIT</h1>
+    <p class="intro">
+      Compara nombres incompletos como “Cinética” o “Cinética SAS” contra una base maestra como
+      “Energía Cinética S.A.S.” y devuelve el NIT más probable. Los archivos se procesan en tu navegador.
+    </p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>1. Base maestra real</h2>
+        <label for="masterFile">Archivo Excel o CSV</label>
+        <input id="masterFile" type="file" accept=".xlsx,.xls,.csv" />
+        <div id="masterStatus" class="status">No se ha cargado ningún archivo.</div>
+
+        <label for="masterNameCol">Columna del nombre de empresa</label>
+        <select id="masterNameCol" disabled></select>
+
+        <label for="masterNitCol">Columna del NIT</label>
+        <select id="masterNitCol" disabled></select>
+      </section>
+
+      <section class="card">
+        <h2>2. Listado por identificar</h2>
+        <label for="lookupFile">Archivo Excel o CSV</label>
+        <input id="lookupFile" type="file" accept=".xlsx,.xls,.csv" />
+        <div id="lookupStatus" class="status">No se ha cargado ningún archivo.</div>
+
+        <label for="lookupNameCol">Columna con el nombre parcial</label>
+        <select id="lookupNameCol" disabled></select>
+      </section>
+
+      <section class="card">
+        <h2>3. Configuración</h2>
+        <label for="threshold">Coincidencia mínima</label>
+        <div class="threshold-row">
+          <input id="threshold" type="range" min="40" max="100" value="72" />
+          <span id="thresholdValue" class="threshold-value">72%</span>
+        </div>
+        <p class="small">
+          85% o más suele ser confiable. Entre el mínimo elegido y 84% se marca para revisión.
+        </p>
+
+        <div class="actions">
+          <button id="compareBtn" disabled>Comparar empresas</button>
+          <button id="exportBtn" class="secondary" disabled>Exportar CSV</button>
+        </div>
+        <div id="processStatus" class="status">Carga los dos archivos y selecciona las columnas.</div>
+      </section>
+    </div>
+
+    <div id="summary" class="summary" hidden></div>
+
+    <div class="table-wrap" id="tableWrap" hidden>
+      <table>
+        <thead id="resultsHead"></thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let masterRows = [];
+    let lookupRows = [];
+    let results = [];
+
+    const masterFile = document.getElementById("masterFile");
+    const lookupFile = document.getElementById("lookupFile");
+    const masterNameCol = document.getElementById("masterNameCol");
+    const masterNitCol = document.getElementById("masterNitCol");
+    const lookupNameCol = document.getElementById("lookupNameCol");
+    const compareBtn = document.getElementById("compareBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const threshold = document.getElementById("threshold");
+    const thresholdValue = document.getElementById("thresholdValue");
+
+    threshold.addEventListener("input", () => {
+      thresholdValue.textContent = threshold.value + "%";
+    });
+
+    masterFile.addEventListener("change", async (event) => {
+      try {
+        masterRows = await readTabularFile(event.target.files[0]);
+        populateSelect(masterNameCol, Object.keys(masterRows[0] || {}));
+        populateSelect(masterNitCol, Object.keys(masterRows[0] || {}));
+        autoSelect(masterNameCol, ["empresa", "razon social", "razón social", "nombre"]);
+        autoSelect(masterNitCol, ["nit", "identificacion", "identificación", "documento"]);
+        document.getElementById("masterStatus").textContent =
+          `Archivo cargado: ${masterRows.length.toLocaleString("es-CO")} filas.`;
+        checkReady();
+      } catch (error) {
+        masterRows = [];
+        document.getElementById("masterStatus").textContent = "Error: " + error.message;
+        checkReady();
+      }
+    });
+
+    lookupFile.addEventListener("change", async (event) => {
+      try {
+        lookupRows = await readTabularFile(event.target.files[0]);
+        populateSelect(lookupNameCol, Object.keys(lookupRows[0] || {}));
+        autoSelect(lookupNameCol, ["empresa", "razon social", "razón social", "nombre"]);
+        document.getElementById("lookupStatus").textContent =
+          `Archivo cargado: ${lookupRows.length.toLocaleString("es-CO")} filas.`;
+        checkReady();
+      } catch (error) {
+        lookupRows = [];
+        document.getElementById("lookupStatus").textContent = "Error: " + error.message;
+        checkReady();
+      }
+    });
+
+    [masterNameCol, masterNitCol, lookupNameCol].forEach(el => {
+      el.addEventListener("change", checkReady);
+    });
+
+    compareBtn.addEventListener("click", compareData);
+    exportBtn.addEventListener("click", exportCSV);
+
+    async function readTabularFile(file) {
+      if (!file) throw new Error("No seleccionaste un archivo.");
+
+      const extension = file.name.split(".").pop().toLowerCase();
+
+      if (extension === "csv") {
+        const text = await file.text();
+        return parseCSV(text);
+      }
+
+      if (!window.XLSX) {
+        throw new Error("No se pudo cargar el lector de Excel. Verifica tu conexión a internet.");
+      }
+
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      if (!rows.length) throw new Error("El archivo no contiene filas utilizables.");
+      return rows;
+    }
+
+    function parseCSV(text) {
+      const delimiter = detectDelimiter(text);
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let quoted = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"' && quoted && next === '"') {
+          cell += '"';
+          i++;
+        } else if (char === '"') {
+          quoted = !quoted;
+        } else if (char === delimiter && !quoted) {
+          row.push(cell);
+          cell = "";
+        } else if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && next === "\n") i++;
+          row.push(cell);
+          if (row.some(value => value.trim() !== "")) rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += char;
+        }
+      }
+
+      if (cell.length || row.length) {
+        row.push(cell);
+        if (row.some(value => value.trim() !== "")) rows.push(row);
+      }
+
+      if (rows.length < 2) throw new Error("El CSV no contiene suficientes datos.");
+
+      const headers = rows[0].map((h, index) => h.trim() || `Columna_${index + 1}`);
+      return rows.slice(1).map(values => {
+        const obj = {};
+        headers.forEach((header, index) => obj[header] = values[index] ?? "");
+        return obj;
+      });
+    }
+
+    function detectDelimiter(text) {
+      const firstLine = text.split(/\r?\n/)[0] || "";
+      const candidates = [",", ";", "\t", "|"];
+      return candidates
+        .map(d => ({ d, count: firstLine.split(d).length - 1 }))
+        .sort((a, b) => b.count - a.count)[0].d;
+    }
+
+    function populateSelect(select, columns) {
+      select.innerHTML = "";
+      columns.forEach(column => {
+        const option = document.createElement("option");
+        option.value = column;
+        option.textContent = column;
+        select.appendChild(option);
+      });
+      select.disabled = columns.length === 0;
+    }
+
+    function autoSelect(select, keywords) {
+      const options = [...select.options];
+      const found = options.find(option => {
+        const value = normalizeBasic(option.value);
+        return keywords.some(keyword => value.includes(normalizeBasic(keyword)));
+      });
+      if (found) select.value = found.value;
+    }
+
+    function checkReady() {
+      const ready =
+        masterRows.length > 0 &&
+        lookupRows.length > 0 &&
+        masterNameCol.value &&
+        masterNitCol.value &&
+        lookupNameCol.value;
+
+      compareBtn.disabled = !ready;
+      document.getElementById("processStatus").textContent = ready
+        ? "Todo listo para comparar."
+        : "Carga los dos archivos y selecciona las columnas.";
+    }
+
+    function normalizeBasic(value) {
+      return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    }
+
+    function normalizeCompanyName(value) {
+      let text = normalizeBasic(value)
+        .replace(/&/g, " y ")
+        .replace(/\b(s[\s.]?a[\s.]?s|s[\s.]?a|ltda|limitada|inc|llc|corp|corporacion|corporación)\b/g, " ")
+        .replace(/\b(empresa|compania|compañia|compañía|sociedad)\b/g, " ")
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      return text;
+    }
+
+    function tokenize(value) {
+      const stop = new Set(["de", "del", "la", "las", "el", "los", "y", "en", "para"]);
+      return normalizeCompanyName(value)
+        .split(" ")
+        .filter(token => token.length > 1 && !stop.has(token));
+    }
+
+    function levenshtein(a, b) {
+      if (a === b) return 0;
+      if (!a.length) return b.length;
+      if (!b.length) return a.length;
+
+      const prev = Array(b.length + 1).fill(0).map((_, i) => i);
+      const curr = Array(b.length + 1).fill(0);
+
+      for (let i = 1; i <= a.length; i++) {
+        curr[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          curr[j] = Math.min(
+            curr[j - 1] + 1,
+            prev[j] + 1,
+            prev[j - 1] + cost
+          );
+        }
+        for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+      }
+      return prev[b.length];
+    }
+
+    function similarity(query, candidate) {
+      const q = normalizeCompanyName(query);
+      const c = normalizeCompanyName(candidate);
+
+      if (!q || !c) return 0;
+      if (q === c) return 1;
+
+      const qTokens = tokenize(q);
+      const cTokens = tokenize(c);
+      const qSet = new Set(qTokens);
+      const cSet = new Set(cTokens);
+
+      const intersection = [...qSet].filter(token => cSet.has(token)).length;
+      const union = new Set([...qSet, ...cSet]).size || 1;
+      const jaccard = intersection / union;
+      const coverage = qSet.size ? intersection / qSet.size : 0;
+
+      const distance = levenshtein(q, c);
+      const lev = 1 - distance / Math.max(q.length, c.length);
+
+      let contains = 0;
+      if (c.includes(q) || q.includes(c)) {
+        const ratio = Math.min(q.length, c.length) / Math.max(q.length, c.length);
+        contains = 0.86 + (0.12 * ratio);
+      }
+
+      let score = Math.max(
+        contains,
+        (0.48 * lev) + (0.34 * coverage) + (0.18 * jaccard)
+      );
+
+      if (qTokens.length === 1 && q.length <= 4 && q !== c) {
+        score *= 0.78;
+      }
+
+      return Math.max(0, Math.min(1, score));
+    }
+
+    function compareData() {
+      const masterNameKey = masterNameCol.value;
+      const masterNitKey = masterNitCol.value;
+      const lookupNameKey = lookupNameCol.value;
+      const minScore = Number(threshold.value) / 100;
+
+      const preparedMaster = masterRows
+        .map(row => ({
+          originalName: String(row[masterNameKey] ?? "").trim(),
+          nit: String(row[masterNitKey] ?? "").trim()
+        }))
+        .filter(item => item.originalName);
+
+      results = lookupRows.map(row => {
+        const searched = String(row[lookupNameKey] ?? "").trim();
+
+        if (!searched) {
+          return {
+            sourceRow: { ...row },
+            searched,
+            bestName: "",
+            nit: "",
+            score: 0,
+            status: "Sin dato",
+            secondName: "",
+            secondNit: ""
+          };
+        }
+
+        const candidates = preparedMaster
+          .map(item => ({
+            ...item,
+            score: similarity(searched, item.originalName)
+          }))
+          .sort((a, b) => b.score - a.score);
+
+        const best = candidates[0] || { originalName: "", nit: "", score: 0 };
+        const second = candidates[1] || { originalName: "", nit: "", score: 0 };
+
+        let status = "Sin coincidencia";
+        if (best.score >= 0.85) status = "Coincidencia alta";
+        else if (best.score >= minScore) status = "Revisar";
+        else {
+          best.originalName = "";
+          best.nit = "";
+        }
+
+        return {
+          sourceRow: { ...row },
+          searched,
+          bestName: best.originalName,
+          nit: best.nit,
+          score: best.score,
+          status,
+          secondName: second.score >= minScore - 0.08 ? second.originalName : "",
+          secondNit: second.score >= minScore - 0.08 ? second.nit : ""
+        };
+      });
+
+      renderResults();
+    }
+
+    function renderResults() {
+      const body = document.getElementById("resultsBody");
+      const head = document.getElementById("resultsHead");
+      body.innerHTML = "";
+      head.innerHTML = "";
+
+      const originalColumns = Object.keys(lookupRows[0] || {});
+      const extraColumns = [
+        "Empresa encontrada",
+        "NIT encontrado",
+        "Coincidencia",
+        "Estado",
+        "Segunda opción",
+        "NIT alternativo"
+      ];
+
+      const headerRow = document.createElement("tr");
+      [...originalColumns, ...extraColumns].forEach(column => {
+        const th = document.createElement("th");
+        th.textContent = column;
+        headerRow.appendChild(th);
+      });
+      head.appendChild(headerRow);
+
+      results.forEach(result => {
+        const tr = document.createElement("tr");
+        const badgeClass =
+          result.status === "Coincidencia alta" ? "ok" :
+          result.status === "Revisar" ? "review" : "none";
+
+        const originalCells = originalColumns.map(column =>
+          `<td>${escapeHTML(result.sourceRow?.[column] ?? "")}</td>`
+        ).join("");
+
+        tr.innerHTML = `
+          ${originalCells}
+          <td>${escapeHTML(result.bestName)}</td>
+          <td><strong>${escapeHTML(result.nit)}</strong></td>
+          <td>${(result.score * 100).toFixed(1)}%</td>
+          <td><span class="badge ${badgeClass}">${escapeHTML(result.status)}</span></td>
+          <td>${escapeHTML(result.secondName)}</td>
+          <td>${escapeHTML(result.secondNit)}</td>
+        `;
+        body.appendChild(tr);
+      });
+
+      const high = results.filter(r => r.status === "Coincidencia alta").length;
+      const review = results.filter(r => r.status === "Revisar").length;
+      const none = results.length - high - review;
+
+      const summary = document.getElementById("summary");
+      summary.innerHTML = `
+        <div class="metric">Total analizados<strong>${results.length.toLocaleString("es-CO")}</strong></div>
+        <div class="metric">Coincidencia alta<strong>${high.toLocaleString("es-CO")}</strong></div>
+        <div class="metric">Para revisar<strong>${review.toLocaleString("es-CO")}</strong></div>
+        <div class="metric">Sin coincidencia<strong>${none.toLocaleString("es-CO")}</strong></div>
+      `;
+      summary.hidden = false;
+      document.getElementById("tableWrap").hidden = false;
+      exportBtn.disabled = false;
+      document.getElementById("processStatus").textContent =
+        `Comparación terminada: ${results.length.toLocaleString("es-CO")} registros procesados. El NIT quedó agregado a cada fila del listado original.`;
+    }
+
+    function exportCSV() {
+      const originalColumns = Object.keys(lookupRows[0] || {});
+      const extraColumns = [
+        "Empresa encontrada",
+        "NIT encontrado",
+        "Coincidencia",
+        "Estado",
+        "Segunda opción",
+        "NIT alternativo"
+      ];
+
+      const headers = [...originalColumns, ...extraColumns];
+
+      const rows = results.map(r => [
+        ...originalColumns.map(column => r.sourceRow?.[column] ?? ""),
+        r.bestName,
+        r.nit,
+        (r.score * 100).toFixed(1) + "%",
+        r.status,
+        r.secondName,
+        r.secondNit
+      ]);
+
+      const csv = [headers, ...rows]
+        .map(row => row.map(csvEscape).join(";"))
+        .join("\n");
+
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "listado_con_nit_encontrado.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function csvEscape(value) {
+      const text = String(value ?? "").replace(/"/g, '""');
+      return `"${text}"`;
+    }
+
+    function escapeHTML(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
