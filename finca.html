@@ -1,0 +1,113 @@
+<!--
+  ESTE ARCHIVO VA EN SU PÁGINA WEB.
+  Cambie únicamente la dirección que aparece en FORMULARIO_URL.
+-->
+<section class="peticoca-contract-page">
+  <div class="peticoca-contract-header">
+    <p class="peticoca-eyebrow">CABAÑA LA PETICOCA</p>
+    <h1>Contrato de alojamiento turístico</h1>
+    <p>Chinácota, Norte de Santander</p>
+  </div>
+
+  <div class="peticoca-contract-frame">
+    <iframe
+      id="peticocaContractFrame"
+      title="Formulario de contrato de alojamiento Cabaña La Peticoca"
+      loading="eager"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allow="clipboard-write"
+    ></iframe>
+  </div>
+
+  <noscript>
+    Para diligenciar el contrato debe activar JavaScript en su navegador.
+  </noscript>
+</section>
+
+<style>
+  .peticoca-contract-page {
+    width: 100%;
+    margin: 0;
+    padding: 18px 10px 36px;
+    background: #f5f8f6;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .peticoca-contract-header {
+    width: min(1180px, 100%);
+    margin: 0 auto 16px;
+    padding: 26px 18px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #274f40, #3d6b59);
+    color: #ffffff;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(28, 67, 51, 0.16);
+  }
+
+  .peticoca-contract-header h1 {
+    margin: 4px 0 7px;
+    font-size: clamp(25px, 4vw, 38px);
+    line-height: 1.15;
+  }
+
+  .peticoca-contract-header p {
+    margin: 0;
+  }
+
+  .peticoca-eyebrow {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    opacity: 0.86;
+  }
+
+  .peticoca-contract-frame {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid #cbd8d2;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgba(28, 67, 51, 0.12);
+  }
+
+  #peticocaContractFrame {
+    display: block;
+    width: 100%;
+    min-height: 3150px;
+    border: 0;
+    background: #ffffff;
+  }
+
+  @media (max-width: 800px) {
+    .peticoca-contract-page {
+      padding: 8px 2px 24px;
+    }
+
+    .peticoca-contract-header {
+      border-radius: 10px;
+      padding: 20px 12px;
+    }
+
+    .peticoca-contract-frame {
+      border-radius: 8px;
+    }
+
+    #peticocaContractFrame {
+      min-height: 3950px;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    /*
+      REEMPLACE SOLO ESTA URL por la dirección /exec
+      que le entrega Google Apps Script al publicar.
+    */
+    const FORMULARIO_URL =
+      'https://script.google.com/macros/s/AKfycby6cxdpv3rS5QP8cKwLt4kzNUsEokJJ5zEi7vOtT79YMPkPQHMuJ5LoHyuLoOupXOq5bg/exec';
+
+    document.getElementById('peticocaContractFrame').src = FORMULARIO_URL;
+  })();
+</script>
