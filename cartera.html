@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Cartera Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .dropdown-item:hover { background-color: #e5e7eb; cursor: pointer; }
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow { animation: spin-slow 2s linear infinite; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen pb-10">
+
+    <script>
+        // ========================================================
+        // ⚠️ PEGA AQUÍ LA NUEVA URL DE TU WEB APP DE GOOGLE APPS SCRIPT
+        // ========================================================
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytV0jri4UtksE_fOpry5q-6vTKTNizuLRYflJMJBQgTjsU9xx2rt3FvZZ6sP8_4ZLA/exec'; 
+        
+        let appData = { clients: [], invoices: [] };
+        let currentClient = null;
+        let currentInvoices = []; 
+        
+        // Mock data para pruebas
+        const mockData = {
+            clients: [
+                { nombre: "Tecnologías SAS", nit: "900123456" },
+                { nombre: "Inversiones El Sol", nit: "800987654" }
+            ],
+            invoices: [
+                { nit: "900123456", factura: "FV-001", fecha: "2023-01-15T00:00:00.000Z", detalle: "Venta computadores", saldo: 30000 },
+                { nit: "900123456", factura: "FV-005", fecha: "2023-02-10T00:00:00.000Z", detalle: "Mantenimiento servidores", saldo: 30000 },
+                { nit: "800987654", factura: "FV-012", fecha: "2023-04-20T00:00:00.000Z", detalle: "Licencias software", saldo: 150000 }
+            ]
+        };
+    </script>
+
+    <div class="max-w-5xl mx-auto pt-8 px-4 sm:px-6">
+        <header class="mb-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-900">Gestión de Cartera</h1>
+                <p class="text-gray-500 mt-1">Busca clientes, registra abonos y genera reportes para WhatsApp.</p>
+            </div>
+            <div>
+                <a href="https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit?gid=577489251#gid=577489251" target="_blank" rel="noopener noreferrer" 
+                   class="inline-flex items-center justify-center gap-2 bg-green-50 hover:bg-green-100 text-green-800 border border-green-200 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-all w-full sm:w-auto">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    Abrir Base de Datos
+                </a>
+            </div>
+        </header>
+
+        <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+
+        <!-- Panel 1: Búsqueda -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4 border-b pb-2">1. Buscar Cliente</h2>
+            <div class="relative w-full max-w-lg">
+                <label for="searchInput" class="block text-sm font-medium text-gray-700 mb-1">Nombre o NIT del Cliente</label>
+                <div class="relative">
+                    <input type="text" id="searchInput" autocomplete="off" 
+                        class="w-full pl-11 pr-10 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm text-gray-800"
+                        placeholder="Busca por nombre o NIT...">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <button id="clearSearchBtn" class="absolute right-4 top-3.5 text-gray-400 hover:text-gray-700 hidden" onclick="clearSearch()">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div id="dropdownList" class="absolute z-20 w-full bg-white mt-2 rounded-xl shadow-xl border border-gray-100 hidden max-h-64 overflow-y-auto divide-y divide-gray-50"></div>
+            </div>
+            
+            <div id="selectedClientBadge" class="mt-4 hidden items-center gap-2">
+                <span class="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full flex items-center shadow-sm border border-green-200">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Cliente: <span id="clientNameSpan" class="ml-1 font-bold"></span> 
+                    <span id="clientNitSpan" class="ml-1 text-green-700"></span>
+                </span>
+                <button onclick="resetSearch()" class="text-sm text-gray-500 hover:text-red-500 underline ml-2">Cambiar cliente</button>
+            </div>
+        </div>
+
+        <!-- Panel 2: Facturas y Pago -->
+        <div id="invoicesPanel" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 hidden">
+            <h2 class="text-lg font-semibold mb-4 border-b pb-2">2. Estado de Cuenta y Abonos</h2>
+            
+            <div id="noInvoicesMsg" class="hidden bg-gray-50 p-4 rounded-lg text-gray-500 text-center italic mb-4">
+                Este cliente no tiene facturas pendientes.
+            </div>
+
+            <div id="invoicesTableContainer" class="overflow-x-auto hidden mb-6 border border-gray-200 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 w-10 text-center"><input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes(this)" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer" checked></th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factura</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Detalle</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo Pendiente</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoicesTbody" class="bg-white divide-y divide-gray-200"></tbody>
+                    <tfoot class="bg-gray-50 font-bold border-t-2 border-gray-200">
+                        <tr>
+                            <td colspan="4" class="px-4 py-3 text-right text-gray-700">Deuda Total (Seleccionadas):</td>
+                            <td id="totalDebtCell" class="px-4 py-3 text-right text-blue-700 text-lg">$0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Formulario de Abono -->
+            <div id="paymentForm" class="hidden bg-blue-50 p-5 rounded-lg border border-blue-100 mt-6 shadow-inner">
+                <h3 class="font-semibold text-blue-900 mb-4">Registrar Nuevo Abono</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-5 items-end">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor ($)</label>
+                        <input type="number" id="paymentAmount" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ej: 70000">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
+                        <select id="paymentMethod" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Consignación">Consignación</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                        <input type="text" id="paymentObservations" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Opcional">
+                    </div>
+                    <div>
+                        <button onclick="calculatePayment()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg shadow-md flex justify-center items-center gap-2">
+                            Distribuir Pago
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Resultado (Mensaje y Guardar) -->
+        <div id="resultPanel" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hidden">
+            <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-green-700">3. Resumen y Confirmación</h2>
+            <div class="bg-green-50 border border-green-200 p-5 rounded-lg mb-6 shadow-inner">
+                <h4 class="font-semibold text-green-900 mb-2">Mensaje generado para el cliente:</h4>
+                <textarea id="whatsappMessage" class="w-full p-4 bg-white border border-green-200 rounded-lg text-gray-700 h-40 focus:ring-2 focus:ring-green-500 shadow-sm leading-relaxed" readonly></textarea>
+                <div class="mt-4 flex justify-end">
+                    <button onclick="copyToClipboard()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium shadow-sm">
+                        Copiar Mensaje
+                    </button>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t border-gray-100">
+                <p class="text-sm text-gray-500 italic">Verifica que la información sea correcta.</p>
+                <button id="saveBtn" onclick="saveToSheet()" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg">
+                    GUARDAR PAGO EN EXCEL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicador de Sincronización -->
+    <div id="syncStatus" class="fixed bottom-4 right-4 bg-white px-4 py-2 rounded-full shadow-lg border border-gray-200 flex items-center gap-2 text-sm font-medium z-50">
+        <svg id="syncIcon" class="w-4 h-4 text-blue-500 animate-spin-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        <span id="syncText" class="text-gray-600">Iniciando...</span>
+    </div>
+
+    <script>
+        const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+        const monthNames = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        
+        function getMonthName(dateString) {
+            const date = new Date(dateString);
+            return monthNames[date.getMonth()];
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+            toast.className = `${bgClass} text-white px-5 py-3 rounded-lg shadow-xl mb-2 flex items-center gap-3 font-medium`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove() }, 4000);
+        }
+
+        // Sincronización en segundo plano
+        function updateSyncUI(state) {
+            const icon = document.getElementById('syncIcon');
+            const text = document.getElementById('syncText');
+            if (state === 'syncing') {
+                icon.classList.add('animate-spin-slow');
+                icon.classList.replace('text-green-500', 'text-blue-500');
+                text.textContent = 'Actualizando datos...';
+            } else if (state === 'success') {
+                icon.classList.remove('animate-spin-slow');
+                icon.classList.replace('text-blue-500', 'text-green-500');
+                text.textContent = 'Cartera actualizada';
+            } else if (state === 'offline') {
+                icon.classList.remove('animate-spin-slow');
+                icon.classList.replace('text-blue-500', 'text-gray-400');
+                text.textContent = 'Modo Prueba';
+            }
+        }
+
+        async function fetchAllDataInBackground() {
+            if (!SCRIPT_URL) { appData = mockData; updateSyncUI('offline'); return; }
+            try {
+                updateSyncUI('syncing');
+                const response = await fetch(`${SCRIPT_URL}?action=getAllData`);
+                const data = await response.json();
+                if (data.clients) {
+                    appData = data;
+                    updateSyncUI('success');
+                    
+                    // CORRECCIÓN: Solo actualizar la interfaz si NO estás viendo el mensaje final
+                    // Así evitamos que se te borre el mensaje si te demoras copiándolo.
+                    const isResultVisible = !document.getElementById('resultPanel').classList.contains('hidden');
+                    if (currentClient && !isResultVisible) {
+                        loadInvoicesFromCache(currentClient.nit);
+                    }
+                }
+            } catch (error) {
+                if (appData.clients.length === 0) appData = mockData;
+                updateSyncUI('offline');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            fetchAllDataInBackground();
+            setInterval(fetchAllDataInBackground, 30000); // 30 seg
+        });
+
+        const searchInput = document.getElementById('searchInput');
+        const dropdownList = document.getElementById('dropdownList');
+        let currentFocus = -1;
+        
+        searchInput.addEventListener('input', function() {
+            const val = this.value.toLowerCase();
+            dropdownList.innerHTML = '';
+            currentFocus = -1;
+            
+            if (!val) { dropdownList.classList.add('hidden'); document.getElementById('clearSearchBtn').classList.add('hidden'); return; }
+            
+            document.getElementById('clearSearchBtn').classList.remove('hidden');
+            const filtered = appData.clients.filter(c => c.nombre.toLowerCase().includes(val) || String(c.nit).toLowerCase().includes(val));
+
+            if (filtered.length > 0) {
+                dropdownList.classList.remove('hidden');
+                filtered.forEach(client => {
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item px-4 py-3 cursor-pointer border-b border-gray-50';
+                    div.innerHTML = `<div class="font-medium text-gray-800">${client.nombre}</div><div class="text-xs text-gray-500">NIT: ${client.nit}</div>`;
+                    div.onclick = () => selectClient(client);
+                    dropdownList.appendChild(div);
+                });
+            } else {
+                dropdownList.classList.remove('hidden');
+                dropdownList.innerHTML = `<div class="px-4 py-3 text-sm text-gray-500 italic">No se encontraron clientes</div>`;
+            }
+        });
+
+        function selectClient(client) {
+            currentClient = client;
+            searchInput.value = '';
+            dropdownList.classList.add('hidden');
+            searchInput.parentElement.parentElement.classList.add('hidden');
+            document.getElementById('selectedClientBadge').classList.remove('hidden');
+            document.getElementById('selectedClientBadge').classList.add('flex');
+            document.getElementById('clientNameSpan').textContent = client.nombre;
+            document.getElementById('clientNitSpan').textContent = `(${client.nit})`;
+            
+            loadInvoicesFromCache(client.nit);
+        }
+
+        function resetSearch() {
+            currentClient = null;
+            currentInvoices = [];
+            searchInput.parentElement.parentElement.classList.remove('hidden');
+            document.getElementById('selectedClientBadge').classList.add('hidden');
+            document.getElementById('selectedClientBadge').classList.remove('flex');
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            document.getElementById('invoicesPanel').classList.add('hidden');
+            document.getElementById('resultPanel').classList.add('hidden');
+            
+            // Limpiar formulario
+            document.getElementById('paymentAmount').value = '';
+            document.getElementById('paymentObservations').value = '';
+            setTimeout(() => searchInput.focus(), 100);
+        }
+
+        function loadInvoicesFromCache(nit) {
+            document.getElementById('invoicesPanel').classList.remove('hidden');
+            document.getElementById('invoicesTableContainer').classList.add('hidden');
+            document.getElementById('noInvoicesMsg').classList.add('hidden');
+            document.getElementById('paymentForm').classList.add('hidden');
+            document.getElementById('resultPanel').classList.add('hidden');
+
+            currentInvoices = appData.invoices.filter(inv => String(inv.nit) === String(nit));
+            
+            const tbody = document.getElementById('invoicesTbody');
+            tbody.innerHTML = '';
+            
+            if (currentInvoices.length === 0) {
+                document.getElementById('noInvoicesMsg').classList.remove('hidden');
+                return;
+            }
+
+            // Ordenar de la más vieja a la más nueva
+            currentInvoices.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            currentInvoices.forEach(inv => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-2 text-center w-10">
+                        <input type="checkbox" value="${inv.factura}" data-saldo="${inv.saldo}" class="invoice-checkbox w-4 h-4 cursor-pointer" checked onchange="updateTotalSelected()">
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${inv.factura}</td>
+                    <td class="px-4 py-2 text-sm text-gray-500">${new Date(inv.fecha).toLocaleDateString('es-CO')}</td>
+                    <td class="px-4 py-2 text-sm text-gray-600 truncate max-w-[150px]" title="${inv.detalle || ''}">${inv.detalle || '-'}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900 font-semibold text-right">${formatter.format(inv.saldo)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updateTotalSelected();
+            document.getElementById('invoicesTableContainer').classList.remove('hidden');
+            document.getElementById('paymentForm').classList.remove('hidden');
+        }
+
+        function toggleAllCheckboxes(source) {
+            document.querySelectorAll('.invoice-checkbox').forEach(cb => cb.checked = source.checked);
+            updateTotalSelected();
+        }
+
+        function updateTotalSelected() {
+            let total = 0;
+            document.querySelectorAll('.invoice-checkbox:checked').forEach(cb => total += parseFloat(cb.getAttribute('data-saldo')));
+            document.getElementById('totalDebtCell').textContent = formatter.format(total);
+        }
+
+        let finalPaymentDetails = "";
+
+        function calculatePayment() {
+            let amount = parseFloat(document.getElementById('paymentAmount').value);
+            if (isNaN(amount) || amount <= 0) { showToast("Abono inválido.", "error"); return; }
+
+            const checkedBoxes = document.querySelectorAll('.invoice-checkbox:checked');
+            if (checkedBoxes.length === 0) { showToast("Selecciona al menos una factura.", "error"); return; }
+            
+            const selectedFacturas = Array.from(checkedBoxes).map(cb => cb.value);
+            let tempInvoices = JSON.parse(JSON.stringify(currentInvoices));
+            let selectedInvoices = tempInvoices.filter(inv => selectedFacturas.includes(inv.factura));
+            let unselectedInvoices = tempInvoices.filter(inv => !selectedFacturas.includes(inv.factura));
+            
+            let remainingPayment = amount;
+            let totalSelectedDebt = 0;
+            let affectedInvoices = [];
+
+            for (let inv of selectedInvoices) {
+                totalSelectedDebt += inv.saldo;
+                if (remainingPayment > 0) {
+                    let amountToPay = Math.min(inv.saldo, remainingPayment);
+                    remainingPayment -= amountToPay;
+                    inv.saldo -= amountToPay;
+                    affectedInvoices.push({ factura: inv.factura, mes: getMonthName(inv.fecha), abonado: amountToPay });
+                }
+            }
+
+            if (amount > totalSelectedDebt) {
+                showToast(`El abono supera la deuda seleccionada. Sobran ${formatter.format(amount - totalSelectedDebt)}`, "error");
+                return;
+            }
+
+            generateMessage(affectedInvoices, amount, [...selectedInvoices, ...unselectedInvoices]);
+        }
+
+        function generateMessage(affected, totalAmount, allClientInvoices) {
+            let facturasStr = affected.map(i => i.factura).join(' y ');
+            let mesesStr = Array.from(new Set(affected.map(i => i.mes))).join(' y ');
+            let totalRemaining = allClientInvoices.reduce((sum, inv) => sum + inv.saldo, 0);
+
+            let msj = `Hola ${currentClient.nombre},\n\n`;
+            msj += `Hemos recibido el abono a la factura ${facturasStr} correspondiente al mes de ${mesesStr} por un valor de ${formatter.format(totalAmount)}.\n\n`;
+            
+            // Condicional: Si debe algo, muestra el saldo y los meses. Si no, está al día.
+            if (totalRemaining > 0) {
+                // NUEVO: Calcular saldo exacto por cada mes
+                let pendingInvoices = allClientInvoices.filter(inv => inv.saldo > 0);
+                let balancesByMonth = {};
+                for (let inv of pendingInvoices) {
+                    let m = getMonthName(inv.fecha);
+                    if (!balancesByMonth[m]) balancesByMonth[m] = 0;
+                    balancesByMonth[m] += inv.saldo;
+                }
+                
+                let pendingDetails = [];
+                for (let m in balancesByMonth) {
+                    pendingDetails.push(`${m} por ${formatter.format(balancesByMonth[m])}`);
+                }
+                
+                let pendingStr = "";
+                if (pendingDetails.length > 1) {
+                    const last = pendingDetails.pop();
+                    pendingStr = pendingDetails.join(', ') + ' y ' + last;
+                } else if (pendingDetails.length === 1) {
+                    pendingStr = pendingDetails[0];
+                }
+
+                msj += `Actualmente tu saldo pendiente total es de ${formatter.format(totalRemaining)} distribuido así: ${pendingStr}.`;
+            } else {
+                msj += `¡Actualmente te encuentras al día con nosotros!`;
+            }
+            
+            msj += `\n\nFirma: Área de Cartera - JP`;
+
+            document.getElementById('whatsappMessage').value = msj;
+            
+            // Construir el Detalle para Excel
+            const currentDateStr = new Date().toLocaleDateString('es-CO');
+            const method = document.getElementById('paymentMethod').value;
+            const obs = document.getElementById('paymentObservations').value.trim();
+            
+            let abonosDetalle = affected.map(a => `Abono ${formatter.format(a.abonado)} a Fac. ${a.factura} (Mes: ${a.mes})`).join(' | ');
+            finalPaymentDetails = `${abonosDetalle} | Fecha reg: ${currentDateStr} | Pago: ${method}${obs ? ' | Obs: ' + obs : ''} | JP`;
+
+            document.getElementById('resultPanel').classList.remove('hidden');
+            document.getElementById('resultPanel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyToClipboard() {
+            document.getElementById("whatsappMessage").select();
+            document.execCommand("copy");
+            showToast("¡Mensaje copiado!");
+        }
+
+        function saveToSheet() {
+            const amount = document.getElementById('paymentAmount').value;
+            const method = document.getElementById('paymentMethod').value;
+            const clientName = currentClient.nombre;
+            
+            const payload = {
+                cliente: clientName,
+                nit: currentClient.nit,
+                valor: amount,
+                formaPago: method,
+                detalle: finalPaymentDetails
+            };
+
+            // 1. Mostrar mensaje y liberar pantalla INMEDIATAMENTE
+            showToast("Guardando pago de " + clientName + "...", "success");
+            resetSearch(); 
+
+            // 2. Ejecutar la subida por detrás
+            if (SCRIPT_URL) {
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showToast(`¡Pago de ${clientName} registrado exitosamente!`);
+                        fetchAllDataInBackground(); // Refrescar los saldos ocultamente
+                    } else {
+                        showToast("Error al guardar: " + result.error, "error");
+                    }
+                }).catch(() => showToast("Fallo conexión con Google Sheets", "error"));
+            }
+        }
+    </script>
+</body>
+</html>
