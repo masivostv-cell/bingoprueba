@@ -4,468 +4,488 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Cartera</title>
-    
-    <!-- Carga rápida de estilos (Evita que la pantalla se bloquee o los íconos se rompan) -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    
+    <!-- Cargamos Tailwind desde un link estático ultraligero para evitar bloqueos y lentitud -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        /* Candado estricto para que los íconos nunca crezcan de más */
-        svg { max-width: 24px !important; max-height: 24px !important; display: inline-block; }
-        body { font-family: system-ui, -apple-system, sans-serif; }
-        
-        /* Estilos del buscador y animaciones */
         .highlight { color: #2563eb; font-weight: bold; }
         .search-item.active { background-color: #f3f4f6; border-left: 4px solid #3b82f6; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Seguro para íconos */
+        svg { max-width: 24px; max-height: 24px; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
 
-    <script>
-        // ==========================================
-        // ⚠️ PEGA AQUÍ TU NUEVA URL DE APPS SCRIPT ⚠️
-        // ==========================================
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwM7NdZWmt2Tz6OA1PlgNKKPjrSRzE0Z5r99v46V4vr0RmH5JtbDZR7Z78w1R2lDs0C/exec'; // ¡REEMPLAZA ESTO!
-        
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit?gid=577489251#gid=577489251';
-    </script>
+<script>
+    // ==========================================
+    // ⚠️ PEGA AQUÍ TU NUEVA URL DE APPS SCRIPT ⚠️
+    // ==========================================
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhxOar1IKcNhyUflqsugVh4IhxiSdW5xu9Z0GVvSBmrHA09byxbCnabpoz1fA_Mftj/exec';
+    
+    const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit?gid=577489251#gid=577489251';
+</script>
 
-    <div class="max-w-5xl mx-auto p-4 sm:p-6">
-        
-        <!-- Encabezado con Botón Abrir Sheet -->
-        <header class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">Gestión de Cartera</h1>
-                <p class="text-sm text-gray-500 mt-1">Búsqueda rápida y aplicación de abonos</p>
-            </div>
-            <a href="javascript:void(0)" onclick="window.open(SHEET_URL, '_blank')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow flex items-center transition-colors">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Abrir Sheet
-            </a>
-        </header>
+<div class="max-w-6xl mx-auto p-4 sm:p-6">
+    
+    <!-- Encabezado -->
+    <header class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Gestión de Cartera</h1>
+            <p class="text-sm text-gray-500 mt-1">Búsqueda rápida y aplicación de abonos</p>
+        </div>
+        <a href="javascript:void(0)" onclick="window.open(SHEET_URL, '_blank')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow flex items-center transition-colors">
+            <svg class="w-5 h-5 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Abrir Sheet
+        </a>
+    </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Columna Izquierda -->
+        <div class="lg:col-span-2 space-y-6">
             
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Panel 1: Buscar Cliente -->
-                <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-200">
-                    <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">1. Buscar Cliente</h2>
+            <!-- Panel 1: Búsqueda -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-200">
+                <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">1. Buscar Cliente</h2>
+                
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400 inline-block" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <input type="text" id="searchInput" autocomplete="off" class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm" placeholder="Escribe nombre o NIT...">
                     
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
-                        </div>
-                        <input type="text" id="searchInput" autocomplete="off" class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm" placeholder="Escribe el nombre o NIT del cliente...">
-                        
-                        <button id="clearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 hidden">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <div id="searchResults" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto hidden"></div>
+                    <button id="clearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 hidden">
+                        <svg class="h-5 w-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
                 </div>
-
-                <!-- Panel 2: Estado de Cuenta y Abonos -->
-                <div id="facturasPanel" class="bg-white rounded-xl shadow-sm border border-gray-200 hidden fade-in">
-                    <div class="p-5 border-b bg-gray-50 rounded-t-xl flex justify-between items-center">
-                        <div>
-                            <h2 class="text-lg font-semibold text-gray-800">2. Estado de Cuenta y Abonos</h2>
-                            <p id="clienteSeleccionadoInfo" class="text-sm text-gray-600 mt-1"></p>
-                        </div>
-                    </div>
-                    
-                    <div class="p-0 overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        <input type="checkbox" id="selectAllInvoices" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" checked>
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factura</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
-                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th>
-                                </tr>
-                            </thead>
-                            <tbody id="facturasTableBody" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                            <tfoot class="bg-gray-50 font-semibold">
-                                <tr>
-                                    <td colspan="4" class="px-4 py-4 text-right text-sm text-gray-700">Total Seleccionado:</td>
-                                    <td id="totalSeleccionadoTxt" class="px-4 py-4 text-right text-lg text-red-600">$0</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
+                <div id="searchResults" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto hidden"></div>
             </div>
 
-            <div class="space-y-6">
-                
-                <!-- Panel 3: Registrar Pago -->
-                <div id="pagoPanel" class="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hidden fade-in sticky top-6">
-                    <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">3. Registrar Pago</h2>
-                    <form id="pagoForm" class="space-y-4">
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
-                            <input type="date" id="fechaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Valor Abonado</label>
-                            <div class="relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 sm:text-sm">$</span>
-                                </div>
-                                <input type="number" id="valorAbono" required min="1" step="any" class="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-lg font-bold text-gray-900" placeholder="0">
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
-                            <select id="formaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border bg-white">
-                                <option value="Transferencia Bancolombia">Transferencia Bancolombia</option>
-                                <option value="Transferencia Davivienda">Transferencia Davivienda</option>
-                                <option value="Efectivo">Efectivo</option>
-                                <option value="Nequi">Nequi</option>
-                                <option value="Daviplata">Daviplata</option>
-                                <option value="Cheque">Cheque</option>
-                                <option value="Otro">Otro</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-                            <textarea id="observaciones" rows="2" class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2" placeholder="Opcional..."></textarea>
-                        </div>
-                        
-                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
-                            Distribuir Pago (FIFO)
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Panel 4: Mensaje y Confirmación -->
-                <div id="mensajePanel" class="bg-green-50 rounded-xl shadow-sm border border-green-200 hidden fade-in">
-                    <div class="p-5">
-                        <h3 class="text-md font-bold text-green-800 mb-2 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
-                            Pago Procesado
-                        </h3>
-                        <p class="text-xs text-green-600 mb-4 font-semibold animate-pulse">Guardando en segundo plano...</p>
-                        
-                        <textarea id="textoMensaje" readonly rows="10" class="block w-full bg-white border border-green-300 rounded-md shadow-sm text-sm p-3 text-gray-800 focus:ring-green-500 focus:border-green-500 resize-none"></textarea>
-                        
-                        <div class="mt-4 flex gap-2">
-                            <button onclick="copiarMensaje()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
-                                Copiar
-                            </button>
-                            <button onclick="reiniciarUI()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition-colors text-sm">
-                                Nuevo
-                            </button>
-                        </div>
+            <!-- Panel 2: Facturas -->
+            <div id="facturasPanel" class="bg-white rounded-xl shadow-sm border border-gray-200 hidden fade-in">
+                <div class="p-5 border-b bg-gray-50 rounded-t-xl flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800">2. Estado de Cuenta y Abonos</h2>
+                        <p id="clienteSeleccionadoInfo" class="text-sm text-gray-600 mt-1"></p>
                     </div>
+                    <!-- NUEVO BOTÓN: Copiar Deuda de Seleccionadas -->
+                    <button id="btnCopiarDeuda" onclick="copiarEstadoCuenta()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded text-sm font-medium border border-blue-300 transition-colors flex items-center">
+                        <svg class="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        Copiar Deuda Seleccionada
+                    </button>
                 </div>
-
+                
+                <div class="p-0 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <input type="checkbox" id="selectAllInvoices" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" checked>
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factura</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="facturasTableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                        <tfoot class="bg-gray-50 font-semibold">
+                            <tr>
+                                <td colspan="4" class="px-4 py-4 text-right text-sm text-gray-700">Total Seleccionado:</td>
+                                <td id="totalSeleccionadoTxt" class="px-4 py-4 text-right text-lg text-red-600">$0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Indicador de Estado -->
-    <div id="statusBadge" class="fixed bottom-4 right-4 bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border border-yellow-300">
-        <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-        Iniciando...
-    </div>
-
-    <script>
-        // Variables globales
-        let allData = { clientes: [], cartera: [] };
-        let currentClient = null;
-        let selectedInvoices = [];
-        let currentInvoices = [];
-        let activeIndex = -1;
-        let isMessageVisible = false;
-
-        // Elementos del DOM
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-        const clearSearchBtn = document.getElementById('clearSearch');
-        const statusBadge = document.getElementById('statusBadge');
-        
-        // Función para establecer la fecha actual de forma segura
-        function setFechaHoy() {
-            const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
-            const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
-            document.getElementById('fechaPago').value = localISOTime;
-        }
-        setFechaHoy();
-
-        // Utilidades de formato
-        const formatCurrency = (amount) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount);
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return dateStr;
-            return d.toLocaleDateString('es-CO', { timeZone: 'UTC' });
-        }
-
-        function getMonthName(dateStr) {
-            if (!dateStr) return "mes no especificado";
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return "mes no especificado";
-            return d.toLocaleString('es-CO', { month: 'long', timeZone: 'UTC' }).toLowerCase();
-        }
-
-        function formatearLista(array) {
-            if (array.length === 0) return "";
-            if (array.length === 1) return array[0];
-            const ultimo = array.pop();
-            return array.join(", ") + " y " + ultimo;
-        }
-
-        function fetchData() {
-            if (isMessageVisible) return;
-
-            if(!SCRIPT_URL.includes("script.google.com")) {
-                setStatus("Falta SCRIPT_URL válida", "bg-red-100", "text-red-800", "border-red-300", false);
-                return;
-            }
-
-            setStatus("Actualizando...", "bg-yellow-100", "text-yellow-800", "border-yellow-300", true);
-
-            fetch(SCRIPT_URL + '?action=getData')
-                .then(res => {
-                    if (!res.ok) throw new Error('Error en red');
-                    return res.json();
-                })
-                .then(data => {
-                    if(data && data.clientes) {
-                        allData = data;
-                        setStatus("Cartera actualizada ✅", "bg-green-100", "text-green-800", "border-green-300", false);
-                    } else {
-                        throw new Error('Datos vacíos');
-                    }
-                })
-                .catch(err => {
-                    console.error("Error Fetch:", err);
-                    setStatus("Error al cargar", "bg-red-100", "text-red-800", "border-red-300", false);
-                });
-        }
-
-        fetchData();
-        setInterval(fetchData, 30000); 
-
-        function setStatus(text, bg, textColor, border, loading = false) {
-            statusBadge.className = `fixed bottom-4 right-4 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border transition-colors ${bg} ${textColor} ${border}`;
-            statusBadge.innerHTML = loading 
-                ? `<svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${text}`
-                : text;
-        }
-
-        searchInput.addEventListener('input', function(e) {
-            const term = e.target.value.toLowerCase().trim();
-            activeIndex = -1;
+        <!-- Columna Derecha -->
+        <div class="space-y-6">
             
-            if (term.length > 0) {
-                clearSearchBtn.classList.remove('hidden');
-                const filtered = allData.clientes.filter(c => 
-                    c.nombre.toLowerCase().includes(term) || c.nit.toLowerCase().includes(term)
-                ).slice(0, 10); 
-                renderSearchResults(filtered, term);
-            } else {
-                clearSearchBtn.classList.add('hidden');
-                searchResults.classList.add('hidden');
-                searchResults.innerHTML = '';
-            }
-        });
-
-        searchInput.addEventListener('keydown', function(e) {
-            const items = searchResults.querySelectorAll('.search-item');
-            if (items.length === 0) return;
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                activeIndex = (activeIndex + 1) % items.length;
-                updateActiveItem(items);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                activeIndex = (activeIndex - 1 + items.length) % items.length;
-                updateActiveItem(items);
-            } else if (e.key === 'Enter' && activeIndex >= 0) {
-                e.preventDefault();
-                items[activeIndex].click();
-            }
-        });
-
-        function updateActiveItem(items) {
-            items.forEach((item, index) => {
-                if (index === activeIndex) {
-                    item.classList.add('active');
-                    item.scrollIntoView({ block: 'nearest' });
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        }
-
-        function renderSearchResults(results, term) {
-            if (results.length === 0) {
-                searchResults.innerHTML = '<div class="p-3 text-sm text-gray-500">No se encontraron clientes.</div>';
-            } else {
-                const html = results.map((c, index) => {
-                    const regex = new RegExp(`(${term})`, 'gi');
-                    const nombreHighlighted = c.nombre.replace(regex, '<span class="highlight">$1</span>');
-                    const nitHighlighted = c.nit.replace(regex, '<span class="highlight">$1</span>');
+            <!-- Panel 3: Pago -->
+            <div id="pagoPanel" class="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hidden fade-in sticky top-6">
+                <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">3. Registrar Pago</h2>
+                <form id="pagoForm" class="space-y-4">
                     
-                    return `
-                        <div class="search-item cursor-pointer p-3 border-b hover:bg-blue-50 transition-colors" onclick="selectClient('${c.nit}', '${c.nombre.replace(/'/g, "\\'")}')">
-                            <div class="font-medium text-gray-800">${nombreHighlighted}</div>
-                            <div class="text-xs text-gray-500">NIT: ${nitHighlighted}</div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
+                        <input type="date" id="fechaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor Abonado</label>
+                        <div class="relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">$</span>
+                            </div>
+                            <input type="number" id="valorAbono" required min="1" step="any" class="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-lg font-bold text-gray-900" placeholder="0">
                         </div>
-                    `;
-                }).join('');
-                searchResults.innerHTML = html;
-            }
-            searchResults.classList.remove('hidden');
-            searchResults.style.top = (searchInput.offsetTop + searchInput.offsetHeight) + 'px';
-            searchResults.style.left = searchInput.offsetLeft + 'px';
-            searchResults.style.width = searchInput.offsetWidth + 'px';
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
+                        <select id="formaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border bg-white">
+                            <option value="Transferencia Bancolombia">Transferencia Bancolombia</option>
+                            <option value="Transferencia Davivienda">Transferencia Davivienda</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Nequi">Nequi</option>
+                            <option value="Daviplata">Daviplata</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                        <textarea id="observaciones" rows="2" class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2" placeholder="Opcional..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                        Distribuir Pago (FIFO)
+                    </button>
+                </form>
+            </div>
+
+            <!-- Panel 4: Mensaje -->
+            <div id="mensajePanel" class="bg-green-50 rounded-xl shadow-sm border border-green-200 hidden fade-in">
+                <div class="p-5">
+                    <h3 class="text-md font-bold text-green-800 mb-2 flex items-center">
+                        <svg class="w-5 h-5 mr-2 inline-block" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        Pago Distribuido
+                    </h3>
+                    <p class="text-xs text-green-600 mb-4 font-semibold animate-pulse">Guardando en segundo plano...</p>
+                    
+                    <textarea id="textoMensaje" readonly rows="10" class="block w-full bg-white border border-green-300 rounded-md shadow-sm text-sm p-3 text-gray-800 focus:ring-green-500 focus:border-green-500 resize-none"></textarea>
+                    
+                    <div class="mt-4 flex gap-2">
+                        <button onclick="copiarMensaje()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
+                            Copiar
+                        </button>
+                        <button onclick="reiniciarUI()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition-colors text-sm">
+                            Nuevo Cliente
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Indicador de Estado -->
+<div id="statusBadge" class="fixed bottom-4 right-4 bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border border-yellow-300">
+    <svg class="animate-spin h-3 w-3 inline-block" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+    Iniciando...
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    // Variables Globales
+    let allData = { clientes: [], cartera: [] };
+    let currentClient = null;
+    let selectedInvoices = [];
+    let currentInvoices = [];
+    let activeIndex = -1;
+    let isMessageVisible = false;
+
+    // Elementos del DOM
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const statusBadge = document.getElementById('statusBadge');
+    
+    // Asignar Fecha Actual al input
+    function setFechaHoy() {
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+        const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+        document.getElementById('fechaPago').value = localISOTime;
+    }
+    setFechaHoy();
+
+    // Utilidades de formato
+    const formatCurrency = (amount) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount);
+    
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('es-CO', { timeZone: 'UTC' });
+    }
+
+    function getMonthName(dateStr) {
+        if (!dateStr) return "mes no especificado";
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return "mes no especificado";
+        return d.toLocaleString('es-CO', { month: 'long', timeZone: 'UTC' }).toLowerCase();
+    }
+
+    function formatearLista(array) {
+        if (array.length === 0) return "";
+        if (array.length === 1) return array[0];
+        const ultimo = array.pop();
+        return array.join(", ") + " y " + ultimo;
+    }
+
+    // Datos Mock de Prueba si no hay URL configurada
+    const mockData = {
+        clientes: [
+            {nombre: "COMERCIALIZADORA EL ROBLE SAS", nit: "900123456-1"},
+            {nombre: "TECH SOLUTIONS LTDA", nit: "800987654-2"}
+        ],
+        cartera: [
+            {nit: "900123456-1", factura: "FV-001", detalle: "Sede Centro", fecha: "2026-03-15", saldo: 500000},
+            {nit: "900123456-1", factura: "FV-002", detalle: "Sede Norte", fecha: "2026-04-10", saldo: 700000},
+            {nit: "800987654-2", factura: "FV-003", detalle: "-", fecha: "2026-05-01", saldo: 250000}
+        ]
+    };
+
+    function fetchData() {
+        if (isMessageVisible) return;
+
+        if(!SCRIPT_URL.includes("script.google.com") || SCRIPT_URL.includes("TU_ID_AQUI")) {
+            allData = mockData;
+            setStatus("Modo Prueba (Falta tu URL real)", "bg-gray-100", "text-gray-800", "border-gray-300", false);
+            return;
         }
 
-        clearSearchBtn.addEventListener('click', () => {
-            reiniciarUI();
-            isMessageVisible = false;
-        });
+        setStatus("Actualizando...", "bg-yellow-100", "text-yellow-800", "border-yellow-300", true);
 
-        document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-                searchResults.classList.add('hidden');
-            }
-        });
-
-        window.selectClient = function(nit, nombre) {
-            currentClient = { nit, nombre };
-            searchInput.value = `${nombre} (NIT: ${nit})`;
-            searchResults.classList.add('hidden');
-            
-            currentInvoices = allData.cartera
-                .filter(f => f.nit === nit)
-                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-
-            selectedInvoices = currentInvoices.map(inv => inv.factura);
-            
-            document.getElementById('clienteSeleccionadoInfo').textContent = `${nombre} | NIT: ${nit}`;
-            renderTable();
-            
-            document.getElementById('facturasPanel').classList.remove('hidden');
-            document.getElementById('pagoPanel').classList.remove('hidden');
-            document.getElementById('mensajePanel').classList.add('hidden');
-            isMessageVisible = false;
-            
-            setTimeout(() => document.getElementById('valorAbono').focus(), 100);
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('facturasTableBody');
-            const selectAllCheckbox = document.getElementById('selectAllInvoices');
-            
-            if (currentInvoices.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500 font-medium">Sin facturas pendientes para este cliente.</td></tr>';
-                document.getElementById('totalSeleccionadoTxt').textContent = '$0';
-                selectAllCheckbox.checked = false;
-                return;
-            }
-
-            let total = 0;
-            let html = '';
-            
-            currentInvoices.forEach((inv) => {
-                const isChecked = selectedInvoices.includes(inv.factura);
-                if(isChecked) total += inv.saldo;
-                
-                html += `
-                    <tr class="${isChecked ? 'bg-blue-50' : ''} hover:bg-gray-50 transition-colors">
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <input type="checkbox" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                   value="${inv.factura}" ${isChecked ? 'checked' : ''} onchange="toggleInvoice('${inv.factura}', this.checked)">
-                        </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${inv.factura}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(inv.fecha)}</td>
-                        <td class="px-4 py-3 text-sm text-gray-500 truncate max-w-xs" title="${inv.detalle}">${inv.detalle || '-'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-right">${formatCurrency(inv.saldo)}</td>
-                    </tr>
-                `;
-            });
-            
-            tbody.innerHTML = html;
-            document.getElementById('totalSeleccionadoTxt').textContent = formatCurrency(total);
-            selectAllCheckbox.checked = (selectedInvoices.length === currentInvoices.length && currentInvoices.length > 0);
-        }
-
-        window.toggleInvoice = function(factura, isChecked) {
-            if (isChecked) {
-                if (!selectedInvoices.includes(factura)) selectedInvoices.push(factura);
-            } else {
-                selectedInvoices = selectedInvoices.filter(f => f !== factura);
-            }
-            renderTable();
-        }
-
-        document.getElementById('selectAllInvoices').addEventListener('change', function(e) {
-            selectedInvoices = e.target.checked ? currentInvoices.map(inv => inv.factura) : [];
-            renderTable();
-        });
-
-        document.getElementById('pagoForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if(!currentClient) return;
-            
-            if(currentInvoices.length > 0 && selectedInvoices.length === 0) {
-                alert("Debes seleccionar al menos una factura. Si el pago es mayor a la deuda, selecciona primero las facturas que vas a cancelar.");
-                return;
-            }
-
-            const abonoInput = parseFloat(document.getElementById('valorAbono').value);
-            if(isNaN(abonoInput) || abonoInput <= 0) return;
-
-            const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
-
-            let saldoRestanteAbono = abonoInput;
-            let abonosRealizados = [];
-            let carteraRestante = JSON.parse(JSON.stringify(currentInvoices)); 
-
-            for (let i = 0; i < facturasAProcesar.length; i++) {
-                if (saldoRestanteAbono <= 0) break;
-                
-                let inv = facturasAProcesar[i];
-                let abonado = 0;
-
-                if (saldoRestanteAbono >= inv.saldo) {
-                    abonado = inv.saldo;
-                    saldoRestanteAbono -= inv.saldo;
+        fetch(SCRIPT_URL + '?action=getData')
+            .then(res => {
+                if (!res.ok) throw new Error('Error en red');
+                return res.json();
+            })
+            .then(data => {
+                if(data && data.clientes) {
+                    allData = data;
+                    setStatus("Cartera actualizada ✅", "bg-green-100", "text-green-800", "border-green-300", false);
                 } else {
-                    abonado = saldoRestanteAbono;
-                    saldoRestanteAbono = 0;
+                    throw new Error('Datos vacíos');
                 }
+            })
+            .catch(err => {
+                console.error("Error Fetch:", err);
+                setStatus("Error al cargar (Intenta recargar)", "bg-red-100", "text-red-800", "border-red-300", false);
+            });
+    }
 
-                let invEnCartera = carteraRestante.find(f => f.factura === inv.factura);
-                if(invEnCartera) invEnCartera.saldo -= abonado;
+    fetchData();
+    setInterval(fetchData, 30000); 
 
-                abonosRealizados.push({
-                    factura: inv.factura,
-                    mes: getMonthName(inv.fecha),
-                    abonado: abonado
-                });
+    function setStatus(text, bg, textColor, border, loading = false) {
+        statusBadge.className = `fixed bottom-4 right-4 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border transition-colors ${bg} ${textColor} ${border}`;
+        statusBadge.innerHTML = loading 
+            ? `<svg class="animate-spin h-3 w-3 inline-block" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${text}`
+            : text;
+    }
+
+    searchInput.addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase().trim();
+        activeIndex = -1;
+        
+        if (term.length > 0) {
+            clearSearchBtn.classList.remove('hidden');
+            const filtered = allData.clientes.filter(c => 
+                c.nombre.toLowerCase().includes(term) || c.nit.toLowerCase().includes(term)
+            ).slice(0, 10); 
+            renderSearchResults(filtered, term);
+        } else {
+            clearSearchBtn.classList.add('hidden');
+            searchResults.classList.add('hidden');
+            searchResults.innerHTML = '';
+        }
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        const items = searchResults.querySelectorAll('.search-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = (activeIndex + 1) % items.length;
+            updateActiveItem(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = (activeIndex - 1 + items.length) % items.length;
+            updateActiveItem(items);
+        } else if (e.key === 'Enter' && activeIndex >= 0) {
+            e.preventDefault();
+            items[activeIndex].click();
+        }
+    });
+
+    function updateActiveItem(items) {
+        items.forEach((item, index) => {
+            if (index === activeIndex) {
+                item.classList.add('active');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    function renderSearchResults(results, term) {
+        if (results.length === 0) {
+            searchResults.innerHTML = '<div class="p-3 text-sm text-gray-500">No se encontraron clientes.</div>';
+        } else {
+            const html = results.map((c, index) => {
+                const regex = new RegExp(`(${term})`, 'gi');
+                const nombreHighlighted = c.nombre.replace(regex, '<span class="highlight">$1</span>');
+                const nitHighlighted = c.nit.replace(regex, '<span class="highlight">$1</span>');
+                
+                return `
+                    <div class="search-item cursor-pointer p-3 border-b hover:bg-blue-50 transition-colors" onclick="selectClient('${c.nit}', '${c.nombre.replace(/'/g, "\\'")}')">
+                        <div class="font-medium text-gray-800">${nombreHighlighted}</div>
+                        <div class="text-xs text-gray-500">NIT: ${nitHighlighted}</div>
+                    </div>
+                `;
+            }).join('');
+            searchResults.innerHTML = html;
+        }
+        searchResults.classList.remove('hidden');
+        searchResults.style.top = (searchInput.offsetTop + searchInput.offsetHeight) + 'px';
+        searchResults.style.left = searchInput.offsetLeft + 'px';
+        searchResults.style.width = searchInput.offsetWidth + 'px';
+    }
+
+    clearSearchBtn.addEventListener('click', () => {
+        window.reiniciarUI();
+        isMessageVisible = false;
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.classList.add('hidden');
+        }
+    });
+
+    window.selectClient = function(nit, nombre) {
+        currentClient = { nit, nombre };
+        searchInput.value = `${nombre} (NIT: ${nit})`;
+        searchResults.classList.add('hidden');
+        
+        currentInvoices = allData.cartera
+            .filter(f => f.nit === nit)
+            .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+        selectedInvoices = currentInvoices.map(inv => inv.factura);
+        
+        document.getElementById('clienteSeleccionadoInfo').textContent = `${nombre} | NIT: ${nit}`;
+        renderTable();
+        
+        document.getElementById('facturasPanel').classList.remove('hidden');
+        document.getElementById('pagoPanel').classList.remove('hidden');
+        document.getElementById('mensajePanel').classList.add('hidden');
+        isMessageVisible = false;
+        
+        setTimeout(() => document.getElementById('valorAbono').focus(), 100);
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('facturasTableBody');
+        const selectAllCheckbox = document.getElementById('selectAllInvoices');
+        
+        if (currentInvoices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500 font-medium">Sin facturas pendientes.</td></tr>';
+            document.getElementById('totalSeleccionadoTxt').textContent = '$0';
+            selectAllCheckbox.checked = false;
+            return;
+        }
+
+        let total = 0;
+        let html = '';
+        
+        currentInvoices.forEach((inv) => {
+            const isChecked = selectedInvoices.includes(inv.factura);
+            if(isChecked) total += inv.saldo;
+            
+            html += `
+                <tr class="${isChecked ? 'bg-blue-50' : ''} hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="checkbox" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+                               value="${inv.factura}" ${isChecked ? 'checked' : ''} onchange="toggleInvoice('${inv.factura}', this.checked)">
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${inv.factura}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(inv.fecha)}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 truncate max-w-xs" title="${inv.detalle}">${inv.detalle || '-'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-right">${formatCurrency(inv.saldo)}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+        document.getElementById('totalSeleccionadoTxt').textContent = formatCurrency(total);
+        selectAllCheckbox.checked = (selectedInvoices.length === currentInvoices.length && currentInvoices.length > 0);
+    }
+
+    window.toggleInvoice = function(factura, isChecked) {
+        if (isChecked) {
+            if (!selectedInvoices.includes(factura)) selectedInvoices.push(factura);
+        } else {
+            selectedInvoices = selectedInvoices.filter(f => f !== factura);
+        }
+        renderTable();
+    }
+
+    document.getElementById('selectAllInvoices').addEventListener('change', function(e) {
+        selectedInvoices = e.target.checked ? currentInvoices.map(inv => inv.factura) : [];
+        renderTable();
+    });
+
+    document.getElementById('pagoForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if(!currentClient) return;
+        
+        if(currentInvoices.length > 0 && selectedInvoices.length === 0) {
+            alert("Debes seleccionar al menos una factura de la sede correspondiente.");
+            return;
+        }
+
+        const abonoInput = parseFloat(document.getElementById('valorAbono').value);
+        if(isNaN(abonoInput) || abonoInput <= 0) return;
+
+        const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
+
+        let saldoRestanteAbono = abonoInput;
+        let abonosRealizados = [];
+        let carteraRestante = JSON.parse(JSON.stringify(currentInvoices)); 
+
+        for (let i = 0; i < facturasAProcesar.length; i++) {
+            if (saldoRestanteAbono <= 0) break;
+            
+            let inv = facturasAProcesar[i];
+            let abonado = 0;
+
+            if (saldoRestanteAbono >= inv.saldo) {
+                abonado = inv.saldo;
+                saldoRestanteAbono -= inv.saldo;
+            } else {
+                abonado = saldoRestanteAbono;
+                saldoRestanteAbono = 0;
             }
 
-            const anticipo = saldoRestanteAbono; // Lo que sobra se vuelve anticipo
-            generarYGuardar(abonoInput, abonosRealizados, carteraRestante, anticipo);
-        });
+            let invEnCartera = carteraRestante.find(f => f.factura === inv.factura);
+            if(invEnCartera) invEnCartera.saldo -= abonado;
 
-        function generarYGuardar(totalAbono, abonosRealizados, carteraRestante, anticipo) {
+            abonosRealizados.push({
+                factura: inv.factura,
+                mes: getMonthName(inv.fecha),
+                abonado: abonado,
+                detalle: inv.detalle // NUEVO: Extraemos la sede/detalle
+            });
+        }
+
+        const anticipo = saldoRestanteAbono;
+        generarYGuardar(abonoInput, abonosRealizados, carteraRestante, anticipo);
+    });
+
+    function generarYGuardar(totalAbono, abonosRealizados, carteraRestante, anticipo) {
         isMessageVisible = true;
         
         const fechaPagoVal = document.getElementById('fechaPago').value; 
@@ -477,59 +497,69 @@
         
         let msj = `Hola, hemos recibido un pago a nombre de *${currentClient.nombre}* por ${formatCurrency(totalAbono)}.\n\n`;
 
+        // Extraer detalles únicos (sedes) de los abonos
+        const detallesAbonos = [...new Set(abonosRealizados.map(a => a.detalle).filter(d => d && d.trim() !== '' && d !== '-'))];
+        const stringDetallesAbonos = detallesAbonos.length > 0 ? ` (${formatearLista(detallesAbonos)})` : "";
+
         if (abonosRealizados.length > 0) {
             const facturasTxt = formatearLista(abonosRealizados.map(a => a.factura));
-                const mesesUnicos = [...new Set(abonosRealizados.map(a => a.mes))];
-                const mesesTxt = formatearLista(mesesUnicos);
-                
-                const totalAplicado = totalAbono - anticipo;
+            const mesesUnicos = [...new Set(abonosRealizados.map(a => a.mes))];
+            const mesesTxt = formatearLista(mesesUnicos);
+            
+            const totalAplicado = totalAbono - anticipo;
 
-                if (anticipo > 0) {
-                    msj += `De este valor, aplicamos ${formatCurrency(totalAplicado)} a las facturas ${facturasTxt} (${mesesTxt}) y te ha quedado un saldo a favor (anticipo) por ${formatCurrency(anticipo)}.`;
-                } else {
-                    msj += `El pago fue aplicado a las facturas ${facturasTxt} correspondientes a los meses de ${mesesTxt}.`;
-                }
+            if (anticipo > 0) {
+                msj += `De este valor, aplicamos ${formatCurrency(totalAplicado)} a las facturas ${facturasTxt}${stringDetallesAbonos} correspondientes a los meses de ${mesesTxt} y ha quedado un saldo a favor (anticipo) por ${formatCurrency(anticipo)}.`;
             } else {
-                msj += `Como no tenías facturas pendientes, este valor ha quedado en su totalidad como saldo a favor (anticipo).`;
+                msj += `El pago fue aplicado a las facturas ${facturasTxt}${stringDetallesAbonos} correspondientes a los meses de ${mesesTxt}.`;
             }
+        } else {
+            msj += `Como no se abonó a facturas de esta selección, este valor ha quedado en su totalidad como saldo a favor (anticipo).`;
+        }
 
-            const saldosPorMes = {};
-            carteraRestante.forEach(inv => {
-                if (inv.saldo > 0) {
-                    const mes = getMonthName(inv.fecha);
-                    saldosPorMes[mes] = (saldosPorMes[mes] || 0) + inv.saldo;
-                }
-            });
-
-            const totalPendiente = Object.values(saldosPorMes).reduce((a, b) => a + b, 0);
-
-            if (totalPendiente > 0) {
-                const desgloses = Object.entries(saldosPorMes).map(([mes, saldo]) => `${mes} por ${formatCurrency(saldo)}`);
-                const desgloseTxt = formatearLista(desgloses);
-                msj += `\n\nActualmente tu saldo pendiente es de ${formatCurrency(totalPendiente)} distribuido así: ${desgloseTxt}.`;
-            } else {
-                msj += `\n\nActualmente estás al día con nosotros, muchas gracias.`;
+        // Cálculo de saldos restantes SOLO DE LAS FACTURAS SELECCIONADAS
+        const saldosPorMes = {};
+        const facturasRestantesSeleccionadas = carteraRestante.filter(inv => selectedInvoices.includes(inv.factura));
+        
+        facturasRestantesSeleccionadas.forEach(inv => {
+            if (inv.saldo > 0) {
+                const mes = getMonthName(inv.fecha);
+                saldosPorMes[mes] = (saldosPorMes[mes] || 0) + inv.saldo;
             }
+        });
 
-            msj += `\n\nFirma:\nÁrea de Cartera.`;
+        const totalPendiente = Object.values(saldosPorMes).reduce((a, b) => a + b, 0);
 
-            document.getElementById('textoMensaje').value = msj;
-            document.getElementById('facturasPanel').classList.add('hidden');
-            document.getElementById('pagoPanel').classList.add('hidden');
-            document.getElementById('mensajePanel').classList.remove('hidden');
+        if (totalPendiente > 0) {
+            const desgloses = Object.entries(saldosPorMes).map(([mes, saldo]) => `${mes} por ${formatCurrency(saldo)}`);
+            const desgloseTxt = formatearLista(desgloses);
+            msj += `\n\nActualmente el saldo pendiente de lo consultado es de ${formatCurrency(totalPendiente)} distribuido así: ${desgloseTxt}.`;
+        } else if (facturasRestantesSeleccionadas.length > 0) {
+            msj += `\n\nCon este pago, las facturas consultadas quedan totalmente al día, muchas gracias.`;
+        } else {
+            msj += `\n\nActualmente estás al día con nosotros, muchas gracias.`;
+        }
 
-            // Envío ÚNICO de datos al Sheets
-            let detalleFacturas = "";
-            if (abonosRealizados.length > 0) {
-                let abonosTxt = abonosRealizados.map(a => a.factura).join(", ");
-                detalleFacturas = ` a Facs: ${abonosTxt}`;
-            }
-            
-            let detalleAnticipo = anticipo > 0 ? ` | Anticipo a favor: ${formatCurrency(anticipo)}` : "";
-            let stringObs = obs ? ` | Obs: ${obs}` : "";
-            
-            let detalleSheet = `Abono total ${formatCurrency(totalAbono)}${detalleFacturas}${detalleAnticipo} | Fecha reg: ${fechaParaTexto} | Pago: ${formaPago}${stringObs} | JP`;
-            
+        msj += `\n\nFirma:\nÁrea de Cartera.`;
+
+        document.getElementById('textoMensaje').value = msj;
+        document.getElementById('facturasPanel').classList.add('hidden');
+        document.getElementById('pagoPanel').classList.add('hidden');
+        document.getElementById('mensajePanel').classList.remove('hidden');
+
+        // Construir nota para Excel consolidada
+        let detalleFacturas = "";
+        if (abonosRealizados.length > 0) {
+            let abonosTxt = abonosRealizados.map(a => a.factura).join(", ");
+            detalleFacturas = ` a Facs: ${abonosTxt}${stringDetallesAbonos}`;
+        }
+        
+        let detalleAnticipo = anticipo > 0 ? ` | Anticipo a favor: ${formatCurrency(anticipo)}` : "";
+        let stringObs = obs ? ` | Obs: ${obs}` : "";
+        
+        let detalleSheet = `Abono total ${formatCurrency(totalAbono)}${detalleFacturas}${detalleAnticipo} | Fecha reg: ${fechaParaTexto} | Pago: ${formaPago}${stringObs} | JP`;
+        
+        if (SCRIPT_URL.includes("script.google.com") && !SCRIPT_URL.includes("TU_ID_AQUI")) {
             const payload = {
                 fechaRegistro: fechaPagoVal,
                 cliente: currentClient.nombre,
@@ -544,34 +574,95 @@
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             }).catch(e => console.error("Error al guardar:", e));
+        } else {
+            console.log("Datos de prueba, no se guardó en Google Sheets. Payload:", detalleSheet);
+        }
+    }
+
+    window.copiarEstadoCuenta = function() {
+        const btn = document.getElementById("btnCopiarDeuda");
+        if (!currentClient || currentInvoices.length === 0) {
+            alert("Este cliente no tiene saldo pendiente.");
+            return;
+        }
+        if (selectedInvoices.length === 0) {
+            alert("Por favor, selecciona las facturas que deseas incluir en el mensaje de cobro.");
+            return;
         }
 
-        window.copiarMensaje = function() {
-            const text = document.getElementById('textoMensaje');
-            text.select();
-            document.execCommand('copy');
-            alert("¡Mensaje copiado al portapapeles!");
-        }
+        const facturasSeleccionadas = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
+        const totalPendiente = facturasSeleccionadas.reduce((sum, inv) => sum + inv.saldo, 0);
+        const facturasTxt = formatearLista(facturasSeleccionadas.map(inv => inv.factura));
+        
+        const detallesUnicos = [...new Set(facturasSeleccionadas.map(inv => inv.detalle).filter(d => d && d.trim() !== '' && d !== '-'))];
+        const stringDetalles = detallesUnicos.length > 0 ? ` (${formatearLista(detallesUnicos)})` : "";
 
-        window.reiniciarUI = function() {
-            searchInput.value = '';
-            document.getElementById('valorAbono').value = '';
-            document.getElementById('observaciones').value = '';
-            setFechaHoy(); 
-            
-            document.getElementById('facturasPanel').classList.add('hidden');
-            document.getElementById('pagoPanel').classList.add('hidden');
-            document.getElementById('mensajePanel').classList.add('hidden');
-            clearSearchBtn.classList.add('hidden');
-            
-            currentClient = null;
-            selectedInvoices = [];
-            currentInvoices = [];
-            isMessageVisible = false;
-            
-            fetchData(); 
-            searchInput.focus();
-        }
-    </script>
+        const saldosPorMes = {};
+        facturasSeleccionadas.forEach(inv => {
+            if (inv.saldo > 0) {
+                const mes = getMonthName(inv.fecha);
+                saldosPorMes[mes] = (saldosPorMes[mes] || 0) + inv.saldo;
+            }
+        });
+
+        const desgloses = Object.entries(saldosPorMes).map(([mes, saldo]) => `${mes} por ${formatCurrency(saldo)}`);
+        const desgloseTxt = formatearLista(desgloses);
+
+        let msj = `Hola, un saludo cordial.\n\n`;
+        msj += `Te compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n`;
+        msj += `Presentas un saldo pendiente de ${formatCurrency(totalPendiente)}, correspondiente a las facturas ${facturasTxt}${stringDetalles}.\n\n`;
+        msj += `Este saldo se encuentra distribuido así: ${desgloseTxt}.\n\n`;
+        msj += `Quedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
+
+        const tempTextArea = document.createElement("textarea");
+        tempTextArea.value = msj;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempTextArea);
+
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<svg class="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> ¡Copiado!`;
+        btn.classList.replace("text-blue-700", "text-green-700");
+        btn.classList.replace("bg-blue-100", "bg-green-100");
+        btn.classList.replace("border-blue-300", "border-green-300");
+
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.replace("text-green-700", "text-blue-700");
+            btn.classList.replace("bg-green-100", "bg-blue-100");
+            btn.classList.replace("border-green-300", "border-blue-300");
+        }, 2000);
+    }
+
+    window.copiarMensaje = function() {
+        const text = document.getElementById('textoMensaje');
+        text.select();
+        document.execCommand('copy');
+        alert("¡Mensaje copiado al portapapeles!");
+    }
+
+    window.reiniciarUI = function() {
+        searchInput.value = '';
+        document.getElementById('valorAbono').value = '';
+        document.getElementById('observaciones').value = '';
+        setFechaHoy(); 
+        
+        document.getElementById('facturasPanel').classList.add('hidden');
+        document.getElementById('pagoPanel').classList.add('hidden');
+        document.getElementById('mensajePanel').classList.add('hidden');
+        clearSearchBtn.classList.add('hidden');
+        
+        currentClient = null;
+        selectedInvoices = [];
+        currentInvoices = [];
+        isMessageVisible = false;
+        
+        fetchData(); 
+        searchInput.focus();
+    }
+
+});
+</script>
 </body>
 </html>
