@@ -198,6 +198,15 @@ document.addEventListener("DOMContentLoaded", function() {
     const clearSearchBtn = document.getElementById('clearSearch');
     const statusBadge = document.getElementById('statusBadge');
     
+    // Función para actualizar el letrero de "Iniciando..."
+    function setStatus(text, bg, textColor, border, loading = false) {
+        if(!statusBadge) return;
+        statusBadge.className = `fixed bottom-4 right-4 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border transition-colors ${bg} ${textColor} ${border}`;
+        statusBadge.innerHTML = loading 
+            ? `<svg class="animate-spin h-3 w-3 inline-block" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${text}`
+            : text;
+    }
+
     // Asignar Fecha Actual al input
     function setFechaHoy() {
         const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
@@ -274,24 +283,26 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     fetchData();
-    setInterval(fetchData, 30000); 
-
-    function setStatus(text, bg, textColor, border, loading = false) {
-        statusBadge.className = `fixed bottom-4 right-4 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border transition-colors ${bg} ${textColor} ${border}`;
-        statusBadge.innerHTML = loading 
-            ? `<svg class="animate-spin h-3 w-3 inline-block" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${text}`
-            : text;
-    }
-
+    setInterval(fetchData, 30000); // Vuelve a cargar los datos en segundo plano cada 30 segundos
+    
+    // Buscador
     searchInput.addEventListener('input', function(e) {
         const term = e.target.value.toLowerCase().trim();
         activeIndex = -1;
         
         if (term.length > 0) {
             clearSearchBtn.classList.remove('hidden');
-            const filtered = allData.clientes.filter(c => 
-                c.nombre.toLowerCase().includes(term) || c.nit.toLowerCase().includes(term)
-            ).slice(0, 10); 
+            
+            // NUEVO: Buscar por nombre, NIT o detalle en la cartera
+            const filtered = allData.clientes.filter(c => {
+                const matchNombre = c.nombre.toLowerCase().includes(term);
+                const matchNit = c.nit.toLowerCase().includes(term);
+                const matchDetalle = allData.cartera.some(inv => 
+                    inv.nit === c.nit && inv.detalle && inv.detalle.toLowerCase().includes(term)
+                );
+                return matchNombre || matchNit || matchDetalle;
+            }).slice(0, 10); 
+            
             renderSearchResults(filtered, term);
         } else {
             clearSearchBtn.classList.add('hidden');
@@ -334,14 +345,32 @@ document.addEventListener("DOMContentLoaded", function() {
             searchResults.innerHTML = '<div class="p-3 text-sm text-gray-500">No se encontraron clientes.</div>';
         } else {
             const html = results.map((c, index) => {
-                const regex = new RegExp(`(${term})`, 'gi');
+                // Escapar caracteres para evitar errores si buscan con paréntesis o símbolos
+                const safeTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${safeTerm})`, 'gi');
                 const nombreHighlighted = c.nombre.replace(regex, '<span class="highlight">$1</span>');
                 const nitHighlighted = c.nit.replace(regex, '<span class="highlight">$1</span>');
+                
+                // NUEVO: Buscar si hay coincidencias en el detalle para mostrarlo abajo
+                const matchedDetalles = allData.cartera
+                    .filter(inv => inv.nit === c.nit && inv.detalle && inv.detalle.toLowerCase().includes(term))
+                    .map(inv => inv.detalle);
+                const uniqueDetalles = [...new Set(matchedDetalles)]; // Quitar duplicados
+                
+                let detalleHtml = '';
+                if (uniqueDetalles.length > 0) {
+                    const detHighlighted = uniqueDetalles.join(", ").replace(regex, '<span class="highlight">$1</span>');
+                    detalleHtml = `<div class="text-xs text-blue-600 mt-1 font-medium flex items-center">
+                        <svg class="w-3 h-3 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        ${detHighlighted}
+                    </div>`;
+                }
                 
                 return `
                     <div class="search-item cursor-pointer p-3 border-b hover:bg-blue-50 transition-colors" onclick="selectClient('${c.nit}', '${c.nombre.replace(/'/g, "\\'")}')">
                         <div class="font-medium text-gray-800">${nombreHighlighted}</div>
                         <div class="text-xs text-gray-500">NIT: ${nitHighlighted}</div>
+                        ${detalleHtml}
                     </div>
                 `;
             }).join('');
@@ -551,7 +580,13 @@ document.addEventListener("DOMContentLoaded", function() {
         let detalleFacturas = "";
         if (abonosRealizados.length > 0) {
             let abonosTxt = abonosRealizados.map(a => a.factura).join(", ");
-            detalleFacturas = ` a Facs: ${abonosTxt}${stringDetallesAbonos}`;
+            
+            // Extraer los meses para el Excel
+            let mesesUnicosSheet = [...new Set(abonosRealizados.map(a => a.mes))];
+            let mesesTxtSheet = formatearLista(mesesUnicosSheet);
+            let etiquetaMes = mesesUnicosSheet.length > 1 ? "Meses" : "Mes";
+            
+            detalleFacturas = ` a Facs: ${abonosTxt}${stringDetallesAbonos} (${etiquetaMes}: ${mesesTxtSheet})`;
         }
         
         let detalleAnticipo = anticipo > 0 ? ` | Anticipo a favor: ${formatCurrency(anticipo)}` : "";
