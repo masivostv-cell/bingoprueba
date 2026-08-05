@@ -47,7 +47,7 @@
                 <p class="text-blue-100 text-sm mt-1">Ingresa los datos del comprobante para guardarlos en Google Sheets</p>
             </div>
             
-            <!-- NUEVO: Indicador de estado de red -->
+            <!-- Indicador de estado de red -->
             <div id="networkBadge" class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20 text-green-50 border border-green-400/30 text-sm font-medium transition-colors">
                 <span id="networkDot" class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
                 <span id="networkText">En línea</span>
@@ -151,15 +151,14 @@
                         <option value="Efectivo">Efectivo</option>
                         <option value="Transferencia">Transferencia</option>
                         <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-                        <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+                        <option value="Tarjeta de Débito">Tarjeta de Crédito</option>
                         <option value="Cheque">Cheque</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Botones -->
             <div class="pt-6 flex justify-end gap-3">
-                <button type="button" onclick="document.getElementById('gastosForm').reset(); calcularTotales();" class="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium">Limpiar</button>
+                <button type="button" onclick="document.getElementById('gastosForm').reset(); calcularTotales(); document.getElementById('documento').value='';" class="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium">Limpiar</button>
                 <button type="submit" id="btnSubmit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center">
                     <span id="btnText">Guardar Registro</span>
                     <svg id="btnLoader" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -171,7 +170,7 @@
         </form>
     </div>
 
-    <!-- Modal de Mensaje Personalizado (Evita usar alert) -->
+    <!-- Modal de Mensaje Personalizado -->
     <div id="msgModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden flex items-center justify-center z-50">
         <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 transform transition-all">
             <h3 id="msgTitle" class="text-lg font-bold text-slate-800 mb-2">Mensaje</h3>
@@ -180,27 +179,46 @@
         </div>
     </div>
 
-    <script>
-        // URL INDEXADA (Actualizada con tu link)
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCPTM-NLbRWJuOs8q3hmzpWIoELxQKD3SQh-E_h58N0nrKW3en0zYXthhOtsuPASM-/exec"; 
+    <!-- Modal para Crear Nuevo Tercero -->
+    <div id="modalNuevoTercero" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 transform transition-all">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Crear Nuevo Tercero</h3>
+            <p class="text-sm text-slate-600 mb-4">Se agregará a <strong id="nuevoTerceroNombre" class="text-slate-800"></strong> a la base de datos.</p>
+            
+            <label class="block text-sm font-medium text-slate-700 mb-1">NÚMERO DE DOCUMENTO / NIT</label>
+            <input type="text" id="nuevoTerceroDoc" placeholder="Ej: 900123456" class="w-full px-4 py-2 border border-slate-300 rounded-lg mb-6 focus:ring-2 focus:ring-blue-500 outline-none">
+            
+            <div class="flex justify-end gap-3">
+                <button onclick="cerrarModalNuevoTercero()" class="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition">Cancelar</button>
+                <button onclick="guardarNuevoTercero()" id="btnGuardarTercero" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center">
+                    <span id="textGuardarTercero">Guardar Tercero</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
-        // Lista de TERCEROS que se llenará desde Google Sheets o Caché
+    <script>
+        // TU URL DE GOOGLE APPS SCRIPT
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgQpHI_K--kXAV2hAjYTCNSjs2cePKEOnuVNzMiJyCdgN0i5ctzVW4rnOO9j4rtnA/exec"; 
+
         let listaTerceros = [];
+        let nombreTerceroPendiente = ""; // Guarda temporalmente el nombre que se está creando
 
         // UI de Red
         const networkBadge = document.getElementById('networkBadge');
         const networkDot = document.getElementById('networkDot');
         const networkText = document.getElementById('networkText');
 
-        // Función para actualizar indicador visual de conexión
         function actualizarEstadoRed() {
-            let pendientes = JSON.parse(localStorage.getItem('gastos_pendientes') || '[]');
+            let pGastos = JSON.parse(localStorage.getItem('gastos_pendientes') || '[]');
+            let pTerceros = JSON.parse(localStorage.getItem('terceros_pendientes') || '[]');
+            let total = pGastos.length + pTerceros.length;
             
             if (navigator.onLine) {
-                if (pendientes.length > 0) {
+                if (total > 0) {
                     networkBadge.className = "hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-800 border border-yellow-400 text-sm font-medium transition-colors";
                     networkDot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
-                    networkText.innerText = `Sincronizando ${pendientes.length}...`;
+                    networkText.innerText = `Sincronizando ${total}...`;
                     sincronizarPendientes();
                 } else {
                     networkBadge.className = "hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20 text-green-50 border border-green-400/30 text-sm font-medium transition-colors";
@@ -211,56 +229,52 @@
                 networkBadge.className = "hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-100 border border-red-500 text-sm font-medium transition-colors";
                 networkDot.className = "w-2 h-2 rounded-full bg-red-500";
                 let texto = "Sin conexión";
-                if(pendientes.length > 0) texto += ` (${pendientes.length} ptes)`;
+                if(total > 0) texto += ` (${total} ptes)`;
                 networkText.innerText = texto;
             }
         }
 
-        // Escuchar eventos de red del navegador
         window.addEventListener('online', actualizarEstadoRed);
         window.addEventListener('offline', actualizarEstadoRed);
 
-        // Función para sincronizar datos guardados sin conexión
         async function sincronizarPendientes() {
-            let pendientes = JSON.parse(localStorage.getItem('gastos_pendientes') || '[]');
-            if (pendientes.length === 0) return;
+            let pGastos = JSON.parse(localStorage.getItem('gastos_pendientes') || '[]');
+            let pTerceros = JSON.parse(localStorage.getItem('terceros_pendientes') || '[]');
+            if (pGastos.length === 0 && pTerceros.length === 0) return;
 
-            let restantes = [];
+            let rGastos = [], rTerceros = [];
             let subidos = 0;
 
-            for (let i = 0; i < pendientes.length; i++) {
+            // Sincronizar Terceros primero
+            for (let i = 0; i < pTerceros.length; i++) {
                 try {
-                    const response = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(pendientes[i])
-                    });
-                    const data = await response.json();
-                    
-                    if (data.status === "success") {
-                        subidos++;
-                    } else {
-                        restantes.push(pendientes[i]); // Mantener si hay error de base de datos
-                    }
-                } catch (error) {
-                    restantes.push(pendientes[i]); // Mantener si hay error de red
-                }
+                    const res = await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(pTerceros[i]) });
+                    const data = await res.json();
+                    if (data.status === "success") subidos++;
+                    else rTerceros.push(pTerceros[i]);
+                } catch (e) { rTerceros.push(pTerceros[i]); }
             }
 
-            localStorage.setItem('gastos_pendientes', JSON.stringify(restantes));
+            // Sincronizar Gastos
+            for (let i = 0; i < pGastos.length; i++) {
+                try {
+                    const res = await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(pGastos[i]) });
+                    const data = await res.json();
+                    if (data.status === "success") subidos++;
+                    else rGastos.push(pGastos[i]);
+                } catch (e) { rGastos.push(pGastos[i]); }
+            }
+
+            localStorage.setItem('terceros_pendientes', JSON.stringify(rTerceros));
+            localStorage.setItem('gastos_pendientes', JSON.stringify(rGastos));
+            
             actualizarEstadoRed();
-
-            if (subidos > 0) {
-                mostrarModal("Sincronización Exitosa", `Se han subido ${subidos} registros que estaban guardados en el dispositivo.`);
-            }
+            if (subidos > 0) mostrarModal("Sincronización Exitosa", `Se han subido ${subidos} registros guardados sin conexión.`);
         }
 
-        // Función para descargar Terceros con soporte offline
         async function cargarTerceros() {
             const nombreInput = document.getElementById('nombre');
             nombreInput.disabled = true;
-
-            // Revisar si hay caché guardado de veces anteriores
             const cache = localStorage.getItem('terceros_cache');
 
             if (!navigator.onLine) {
@@ -278,31 +292,22 @@
             nombreInput.placeholder = "Cargando base de datos...";
 
             try {
-                // Se agrega redirect 'follow' para manejar correctamente las respuestas de Google
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'GET',
-                    redirect: 'follow'
-                });
+                const response = await fetch(GOOGLE_SCRIPT_URL, { method: 'GET', redirect: 'follow' });
                 const result = await response.json();
 
                 if (result.status === "success") {
                     listaTerceros = result.data;
-                    // Guardar en caché para cuando no haya internet
                     localStorage.setItem('terceros_cache', JSON.stringify(listaTerceros));
                     nombreInput.placeholder = "Escribe para buscar...";
                 } else {
-                    // AQUÍ MOSTRAMOS EL ERROR EXACTO QUE MANDA GOOGLE
                     nombreInput.placeholder = "Error: " + result.message;
-                    console.error("Error desde Apps Script:", result.message);
                 }
             } catch (error) {
-                // Si hay error de red o de permisos (CORS), usamos el caché o advertimos al usuario
                 if (cache) {
                     listaTerceros = JSON.parse(cache);
                     nombreInput.placeholder = "Modo offline (Terceros en caché)";
                 } else {
-                    nombreInput.placeholder = "⚠️ Sin acceso a Google Sheets (Revisa permisos)";
-                    console.warn("No se pudo conectar con Apps Script. Asegúrate de que 'Quién tiene acceso' sea 'Cualquier persona'.");
+                    nombreInput.placeholder = "⚠️ Fallo la conexión";
                 }
             } finally {
                 nombreInput.disabled = false;
@@ -310,14 +315,10 @@
             }
         }
 
-        // Ejecutar inicializaciones
         actualizarEstadoRed();
         cargarTerceros();
-
-        // Establecer la fecha actual por defecto
         document.getElementById('fecha').valueAsDate = new Date();
 
-        // Referencias a los campos de cálculo
         const inputValor = document.getElementById('valor');
         const inputRetencion = document.getElementById('porcentaje_retencion');
         const inputValorRete = document.getElementById('valor_rete');
@@ -330,42 +331,38 @@
             const pRetencion = parseFloat(inputRetencion.value) || 0;
             const pIca = parseFloat(inputIca.value) || 0;
 
-            // Calcular Valores (Porcentajes)
             const valorRete = (valor * pRetencion) / 100;
             const vlIca = (valor * pIca) / 100;
             const neto = valor - valorRete - vlIca;
 
-            // Actualizar inputs (redondeados sin decimales para mostrar, o con 2 si prefieres)
             inputValorRete.value = Math.round(valorRete);
             inputVlIca.value = Math.round(vlIca);
             inputNeto.value = Math.round(neto);
         }
 
-        // Eventos para recalcular en tiempo real
         inputValor.addEventListener('input', calcularTotales);
         inputRetencion.addEventListener('input', calcularTotales);
         inputIca.addEventListener('input', calcularTotales);
 
         function autocompletar(inp, arr) {
-            let currentFocus;
-            
             inp.addEventListener("input", function(e) {
                 let a, b, i, val = this.value;
                 cerrarListas();
-                if (!val) { 
-                    document.getElementById('documento').value = '';
-                    return false; 
-                }
-                currentFocus = -1;
+                if (!val) { document.getElementById('documento').value = ''; return false; }
                 
                 a = document.getElementById("nombre-autocomplete-list");
                 a.classList.remove('hidden');
 
                 let count = 0;
+                let exactMatch = false;
+
                 for (i = 0; i < arr.length; i++) {
                     if (arr[i].nombre.toUpperCase().includes(val.toUpperCase()) || arr[i].documento.includes(val)) {
+                        if (arr[i].nombre.toUpperCase() === val.toUpperCase()) exactMatch = true;
+
                         b = document.createElement("DIV");
                         let indexMatch = arr[i].nombre.toUpperCase().indexOf(val.toUpperCase());
+                        
                         if(indexMatch !== -1) {
                             b.innerHTML = arr[i].nombre.substring(0, indexMatch);
                             b.innerHTML += "<strong>" + arr[i].nombre.substring(indexMatch, indexMatch + val.length) + "</strong>";
@@ -388,18 +385,26 @@
                         if(count > 10) break;
                     }
                 }
-                if(count === 0) {
+                
+                // Si no hay coincidencias exactas, muestra el botón para CREAR
+                if(!exactMatch) {
                     b = document.createElement("DIV");
-                    b.innerHTML = "<span class='text-slate-400 italic'>No se encontraron coincidencias...</span>";
+                    b.innerHTML = `
+                        <div class="text-blue-600 font-semibold hover:text-blue-800 p-1 flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Crear nuevo tercero: "${val.toUpperCase()}"
+                        </div>
+                    `;
+                    b.addEventListener("click", function(e) {
+                        abrirModalNuevoTercero(val.toUpperCase());
+                        cerrarListas();
+                    });
                     a.appendChild(b);
-                    document.getElementById('documento').value = '';
                 }
             });
 
             document.addEventListener("click", function (e) {
-                if (e.target !== inp) {
-                    cerrarListas();
-                }
+                if (e.target !== inp) cerrarListas();
             });
         }
 
@@ -409,7 +414,83 @@
             a.classList.add('hidden');
         }
 
-        // Nueva función para guardar de forma local (Offline)
+        function abrirModalNuevoTercero(nombre) {
+            nombreTerceroPendiente = nombre;
+            document.getElementById('nuevoTerceroNombre').innerText = nombre;
+            document.getElementById('nuevoTerceroDoc').value = '';
+            document.getElementById('modalNuevoTercero').classList.remove('hidden');
+            document.getElementById('nuevoTerceroDoc').focus();
+        }
+
+        function cerrarModalNuevoTercero() {
+            document.getElementById('modalNuevoTercero').classList.add('hidden');
+        }
+
+        async function guardarNuevoTercero() {
+            const doc = document.getElementById('nuevoTerceroDoc').value.trim();
+            if(!doc) {
+                mostrarModal("Atención", "Por favor ingresa un número de documento válido.");
+                return;
+            }
+
+            const btn = document.getElementById('btnGuardarTercero');
+            const txt = document.getElementById('textGuardarTercero');
+            btn.disabled = true;
+            txt.innerText = "Guardando...";
+
+            const payload = {
+                action: "guardarTercero",
+                nombre: nombreTerceroPendiente,
+                documento: doc
+            };
+
+            if(!navigator.onLine) {
+                let p = JSON.parse(localStorage.getItem('terceros_pendientes') || '[]');
+                p.push(payload);
+                localStorage.setItem('terceros_pendientes', JSON.stringify(p));
+                finalizarGuardadoTercero(nombreTerceroPendiente, doc);
+                btn.disabled = false;
+                txt.innerText = "Guardar Tercero";
+                return;
+            }
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                
+                if(data.status === "success") {
+                    finalizarGuardadoTercero(nombreTerceroPendiente, doc);
+                } else {
+                    mostrarModal("Error", data.message);
+                }
+            } catch(error) {
+                let p = JSON.parse(localStorage.getItem('terceros_pendientes') || '[]');
+                p.push(payload);
+                localStorage.setItem('terceros_pendientes', JSON.stringify(p));
+                finalizarGuardadoTercero(nombreTerceroPendiente, doc);
+            }
+            
+            btn.disabled = false;
+            txt.innerText = "Guardar Tercero";
+        }
+
+        function finalizarGuardadoTercero(nombre, doc) {
+            // Añadirlo a la memoria actual para que ya aparezca en futuras búsquedas
+            listaTerceros.push({nombre: nombre, documento: doc});
+            localStorage.setItem('terceros_cache', JSON.stringify(listaTerceros));
+            
+            // Llenar el formulario automáticamente
+            document.getElementById('nombre').value = nombre;
+            document.getElementById('documento').value = doc;
+            
+            cerrarModalNuevoTercero();
+            mostrarModal("¡Tercero Creado!", `Se ha agregado a ${nombre} a tu lista de contactos.`);
+        }
+
         function guardarLocalmente(formData) {
             let pendientes = JSON.parse(localStorage.getItem('gastos_pendientes') || '[]');
             pendientes.push(formData);
@@ -418,6 +499,7 @@
             mostrarModal("¡Guardado Offline!", "No hay internet. El registro se guardó en tu dispositivo y se enviará automáticamente cuando vuelvas a tener conexión.");
             
             document.getElementById('gastosForm').reset();
+            document.getElementById('documento').value = '';
             calcularTotales();
             actualizarEstadoRed();
         }
@@ -425,19 +507,20 @@
         document.getElementById('gastosForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
-            // Preparar los datos
+            // Preparar los datos (Gasto)
             const formData = {
+                action: "guardarGasto", // Avisamos a Apps Script que es un gasto
                 fecha: document.getElementById('fecha').value,
-                nombre: document.getElementById('nombre').value,
+                nombre: document.getElementById('nombre').value.toUpperCase(),
                 documento: document.getElementById('documento').value,
-                concepto: document.getElementById('concepto').value,
-                vehiculo: document.getElementById('vehiculo').value,
+                concepto: document.getElementById('concepto').value.toUpperCase(),
+                vehiculo: document.getElementById('vehiculo').value.toUpperCase(),
                 valor: document.getElementById('valor').value,
-                porcentaje_retencion: document.getElementById('porcentaje_retencion').value,
-                valor_rete: document.getElementById('valor_rete').value,
-                porcentaje_ica: document.getElementById('porcentaje_ica').value,
-                vl_ica: document.getElementById('vl_ica').value,
-                valor_neto: document.getElementById('valor_neto').value,
+                porcentaje_retencion: document.getElementById('porcentaje_retencion').value || 0,
+                valor_rete: document.getElementById('valor_rete').value || 0,
+                porcentaje_ica: document.getElementById('porcentaje_ica').value || 0,
+                vl_ica: document.getElementById('vl_ica').value || 0,
+                valor_neto: document.getElementById('valor_neto').value || 0,
                 forma_pago: document.getElementById('forma_pago').value,
                 tipo: document.getElementById('tipo').value
             };
@@ -446,19 +529,16 @@
             const btnText = document.getElementById('btnText');
             const btnLoader = document.getElementById('btnLoader');
 
-            // UI estado de carga
             btn.disabled = true;
             btnText.innerText = "Guardando...";
             btnLoader.classList.remove('hidden');
 
-            // Si NO hay internet, guardamos local inmediatamente
             if (!navigator.onLine) {
                 guardarLocalmente(formData);
                 resetButton(btn, btnText, btnLoader);
                 return;
             }
 
-            // Si HAY internet, intentamos enviar a Google
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -469,19 +549,18 @@
                 if (data.status === "success") {
                     mostrarModal("¡Guardado!", "El gasto se ha registrado correctamente en tu hoja de cálculo.");
                     document.getElementById('gastosForm').reset();
+                    document.getElementById('documento').value = '';
                     calcularTotales();
                 } else {
-                    mostrarModal("Error", "Error desde el servidor: " + data.message);
+                    mostrarModal("Error del Servidor", data.message);
                 }
                 resetButton(btn, btnText, btnLoader);
             })
             .catch(error => {
-                // Si falla la petición (por ejemplo, el internet se cayó en ese instante), guardamos local
                 console.warn("Fallo el envío por red, guardando localmente...", error);
                 guardarLocalmente(formData);
                 resetButton(btn, btnText, btnLoader);
             });
-            
         });
 
         function resetButton(btn, text, loader) {
@@ -490,7 +569,6 @@
             loader.classList.add('hidden');
         }
 
-        // Lógica del Modal Personalizado
         function mostrarModal(titulo, mensaje) {
             document.getElementById('msgTitle').innerText = titulo;
             document.getElementById('msgBody').innerText = mensaje;
