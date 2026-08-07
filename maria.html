@@ -311,43 +311,6 @@
     .floating .btn:active {
       transform:translateY(0) scale(.97);
     }
-    .audio-only-player {
-      position:fixed;
-      left:-9999px;
-      top:-9999px;
-      width:220px;
-      height:220px;
-      overflow:hidden;
-      pointer-events:none;
-      opacity:0;
-    }
-
-    #musicPlayer,
-    #musicPlayer iframe {
-      width:220px !important;
-      height:220px !important;
-      border:0;
-    }
-
-    .music-help {
-      display:none;
-      position:fixed;
-      z-index:30;
-      left:50%;
-      bottom:92px;
-      transform:translateX(-50%);
-      width:min(calc(100% - 28px),420px);
-      border:0;
-      border-radius:999px;
-      padding:13px 18px;
-      color:#fff;
-      background:linear-gradient(135deg,#7556c9,#5a3eaa);
-      font-weight:900;
-      font-size:.92rem;
-      cursor:pointer;
-      box-shadow:0 12px 28px rgba(79,47,143,.28);
-      animation:softPulse 2.4s ease-in-out infinite;
-    }
 @media (max-width:560px) {
       .page { padding-left:10px;padding-right:10px; }
       .section { border-radius:22px;padding:10px; }
@@ -370,23 +333,19 @@
   </style>
 </head>
 
-<body>
-  <main class="page">
+<body class="entry-locked">
 
-    <header class="hero">
-      <p class="eyebrow">Una invitación muy especial</p>
-      <h1>María José cumple 7</h1>
-      <p>Queremos celebrar contigo una tarde de alegría, piscina y muchos recuerdos bonitos. 💗</p>
-    </header>
-
-    <div class="audio-only-player" aria-hidden="true">
-      <div id="musicPlayer"></div>
+  <div class="entry-gate" id="entryGate" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
+    <div class="entry-card">
+      <div class="entry-icon" aria-hidden="true">🎂</div>
+      <h2 id="entryTitle">María José cumple 7</h2>
+      <p>Tenemos una invitación muy especial para ti. Entra para descubrirla con música. 💗</p>
+      <button class="enter-btn" id="enterInvitation" type="button">✨ Ver tarjeta</button>
+      <span class="entry-small">Al tocar el botón se iniciará la estación de música.</span>
     </div>
-    <button class="music-help" id="musicHelp" type="button">
-      🔊 Toca aquí para activar la música
-    </button>
-
-<section class="section" aria-labelledby="video-title">
+  </div>
+<main class="page">
+    <section class="section" aria-labelledby="video-title">
       <div class="section-title" id="video-title">🎬 Mira la invitación</div>
       <div class="video-shell">
         <div id="inviteVideo"></div>
@@ -424,8 +383,34 @@
       <p class="note">🏊‍♀️ Trae tu <strong>gorro de baño</strong> y tu <strong>toalla</strong> para disfrutar de la piscina. ¡Te esperamos!</p>
     </section>
 
+    <header class="hero">
+      <p class="eyebrow">Una invitación muy especial</p>
+      <h1>María José cumple 7</h1>
+      <p>Queremos celebrar contigo una tarde de alegría, piscina y muchos recuerdos bonitos. 💗</p>
+    </header>
+
+    <section class="section station-section" aria-labelledby="station-title">
+      <div class="section-title" id="station-title">🎵 Música de la fiesta</div>
+      <p class="station-copy">La estación seguirá acompañándote mientras recorres la invitación.</p>
+
+      <div class="station-player">
+        <iframe
+          id="partyRadio"
+          data-src="https://stream.hazteunsitio.net/embed/857a33f515ae6c81e91b6a4e43f8a7da627a173ce61109b0?skin=neon&size=xl&theme=dark&color=6c63ff&autoplay=1"
+          src="about:blank"
+          width="420"
+          height="300"
+          frameborder="0"
+          scrolling="no"
+          allow="autoplay"
+          style="border-radius:12px"
+          title="Estación de música de la invitación">
+        </iframe>
+      </div>
+    </section>
+
     <footer class="footer">Con cariño, María José 💕</footer>
-  </main>
+</main>
 
   <nav class="floating" aria-label="Acciones rápidas">
     <a class="btn btn-wa" href="https://wa.me/573127880272?text=Hola%2C%20confirmo%20mi%20asistencia%20al%20cumplea%C3%B1os%20de%20Mar%C3%ADa%20Jos%C3%A9%20%F0%9F%8E%89%F0%9F%92%97" target="_blank" rel="noopener" aria-label="Confirmar asistencia por WhatsApp">
@@ -438,80 +423,50 @@
   </nav>
 
   <script>
-    let musicPlayer = null;
+    const entryGate = document.getElementById('entryGate');
+    const enterButton = document.getElementById('enterInvitation');
+    const radioFrame = document.getElementById('partyRadio');
+
     let invitePlayer = null;
-
-    let musicReady = false;
     let inviteReady = false;
-    let startedTogether = false;
+    let hasEntered = false;
 
-    const musicHelp = document.getElementById('musicHelp');
-
-    function startBothTogether() {
-      if (!musicReady || !inviteReady || !musicPlayer || !invitePlayer) return;
+    function startInvitationVideo() {
+      if (!inviteReady || !invitePlayer) return;
 
       try {
-        // Reiniciar ambos al segundo 0 para que comiencen lo más sincronizados posible.
-        musicPlayer.seekTo(0, true);
         invitePlayer.seekTo(0, true);
-
-        // La música intenta sonar.
-        musicPlayer.unMute();
-        musicPlayer.setVolume(100);
-
-        // El video de invitación queda silenciado para evitar dos audios superpuestos
-        // y para mejorar la probabilidad de autoplay en navegadores móviles.
         invitePlayer.mute();
         invitePlayer.setVolume(0);
-
-        // Las dos órdenes se ejecutan en la misma llamada JavaScript.
-        musicPlayer.playVideo();
         invitePlayer.playVideo();
-
-        startedTogether = true;
-
-        setTimeout(function () {
-          try {
-            const musicPlaying = musicPlayer.getPlayerState() === YT.PlayerState.PLAYING;
-            const invitePlaying = invitePlayer.getPlayerState() === YT.PlayerState.PLAYING;
-
-            if (!musicPlaying || !invitePlaying) {
-              musicHelp.style.display = 'block';
-            } else {
-              musicHelp.style.display = 'none';
-            }
-          } catch (e) {}
-        }, 1200);
-
       } catch (e) {
-        musicHelp.style.display = 'block';
+        // El reproductor de YouTube puede tardar unos milisegundos más en estar listo.
       }
     }
 
-    function onYouTubeIframeAPIReady() {
-      musicPlayer = new YT.Player('musicPlayer', {
-        videoId: 'kXB-Ibr55LI',
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          playsinline: 1,
-          loop: 1,
-          playlist: 'kXB-Ibr55LI',
-          rel: 0
-        },
-        events: {
-          onReady: function () {
-            musicReady = true;
-            startBothTogether();
-          },
-          onStateChange: function (event) {
-            if (event.data === YT.PlayerState.PLAYING) {
-              musicHelp.style.display = 'none';
-            }
-          }
-        }
-      });
+    function enterInvitation() {
+      if (hasEntered) return;
+      hasEntered = true;
 
+      // La estación se carga dentro del gesto del usuario.
+      // El iframe tiene permiso explícito de autoplay.
+      radioFrame.src = radioFrame.dataset.src;
+
+      // Iniciar también el video visible de la invitación desde el comienzo, sin audio.
+      startInvitationVideo();
+
+      entryGate.classList.add('is-leaving');
+      document.body.classList.remove('entry-locked');
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+      setTimeout(function () {
+        entryGate.hidden = true;
+      }, 600);
+    }
+
+    enterButton.addEventListener('click', enterInvitation);
+
+    function onYouTubeIframeAPIReady() {
       invitePlayer = new YT.Player('inviteVideo', {
         videoId: 'jB8h1eFrdtc',
         playerVars: {
@@ -525,42 +480,12 @@
         events: {
           onReady: function () {
             inviteReady = true;
-            startBothTogether();
+            if (hasEntered) startInvitationVideo();
           }
         }
       });
     }
 
-    // Si el navegador bloquea el autoplay con sonido, el primer toque
-    // intenta arrancar de nuevo ambos videos desde el inicio.
-    function unlockAndStart() {
-      startedTogether = false;
-      startBothTogether();
-    }
-
-    document.addEventListener('pointerdown', unlockAndStart, { once:true, capture:true });
-    document.addEventListener('keydown', unlockAndStart, { once:true, capture:true });
-
-    musicHelp.addEventListener('click', function () {
-      unlockAndStart();
-    });
-
-    // Cuando el usuario vuelve a la pestaña, si alguno se detuvo,
-    // se intenta volver a iniciar ambos juntos.
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden && musicReady && inviteReady) {
-        try {
-          const musicPlaying = musicPlayer.getPlayerState() === YT.PlayerState.PLAYING;
-          const invitePlaying = invitePlayer.getPlayerState() === YT.PlayerState.PLAYING;
-
-          if (!musicPlaying || !invitePlaying) {
-            startBothTogether();
-          }
-        } catch (e) {}
-      }
-    });
-
-    // Cargar la API oficial de YouTube.
     const ytScript = document.createElement('script');
     ytScript.src = 'https://www.youtube.com/iframe_api';
     document.head.appendChild(ytScript);
