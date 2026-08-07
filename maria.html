@@ -311,6 +311,189 @@
     .floating .btn:active {
       transform:translateY(0) scale(.97);
     }
+
+    body.entry-locked {
+      overflow:hidden;
+    }
+
+    .site-content {
+      visibility:hidden;
+      opacity:0;
+      pointer-events:none;
+    }
+
+    body.invitation-open .site-content {
+      visibility:visible;
+      opacity:1;
+      pointer-events:auto;
+      transition:opacity .45s ease;
+    }
+
+    .entry-gate {
+      position:fixed !important;
+      inset:0 !important;
+      z-index:2147483647 !important;
+      display:flex !important;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255,255,255,.95) 0 7%, transparent 8%),
+        radial-gradient(circle at 88% 15%, rgba(255,255,255,.72) 0 9%, transparent 10%),
+        linear-gradient(145deg,#fff4f8 0%,#ffd7e5 48%,#f7b7d2 100%);
+      opacity:1;
+      visibility:visible;
+      pointer-events:auto;
+    }
+
+    .entry-gate[hidden] {
+      display:none !important;
+    }
+
+    .entry-gate.is-leaving {
+      opacity:0;
+      visibility:hidden;
+      pointer-events:none;
+      transition:opacity .45s ease, visibility .45s ease;
+    }
+
+    .entry-card {
+      width:min(92vw,470px);
+      padding:34px 24px 30px;
+      text-align:center;
+      border-radius:34px;
+      background:rgba(255,255,255,.86);
+      border:1px solid rgba(255,255,255,.96);
+      box-shadow:0 25px 70px rgba(118,48,82,.25);
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+      animation:entryCardIn .7s cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    .entry-icon {
+      width:86px;
+      height:86px;
+      margin:0 auto 14px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      font-size:2.6rem;
+      background:linear-gradient(145deg,#fff,#ffe4ee);
+      box-shadow:0 14px 34px rgba(191,91,134,.2);
+      animation:entryFloat 2.8s ease-in-out infinite;
+    }
+
+    .entry-card h2 {
+      margin:0;
+      color:var(--pink-4);
+      font-size:clamp(1.85rem,8vw,2.8rem);
+      line-height:1.05;
+    }
+
+    .entry-card p {
+      margin:13px auto 22px;
+      max-width:350px;
+      color:#754c64;
+      font-size:1rem;
+      line-height:1.5;
+    }
+
+    .enter-btn {
+      position:relative;
+      isolation:isolate;
+      width:100%;
+      min-height:62px;
+      border:0;
+      border-radius:22px;
+      cursor:pointer;
+      color:#fff;
+      font:inherit;
+      font-size:1.08rem;
+      font-weight:950;
+      letter-spacing:.01em;
+      background:linear-gradient(135deg,#f16b9e,#d94b86);
+      box-shadow:0 15px 32px rgba(191,69,125,.30);
+      overflow:hidden;
+      animation:entryPulse 2.2s ease-in-out infinite;
+    }
+
+    .enter-btn::after {
+      content:"";
+      position:absolute;
+      inset:-40% -70%;
+      z-index:-1;
+      transform:rotate(18deg);
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent);
+      animation:entryShine 2.8s linear infinite;
+    }
+
+    .enter-btn:active {
+      transform:scale(.98);
+    }
+
+    .entry-small {
+      display:block;
+      margin-top:12px;
+      color:#99647e;
+      font-size:.78rem;
+      font-weight:700;
+    }
+
+    .station-audio {
+      width:min(100%,520px);
+      margin:0 auto;
+      padding:18px;
+      border-radius:22px;
+      background:linear-gradient(145deg,#211a24,#33253a);
+      box-shadow:0 14px 32px rgba(59,34,55,.18);
+      text-align:center;
+    }
+
+    .station-live {
+      display:inline-block;
+      margin-bottom:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.09);
+      color:#fff;
+      font-size:.8rem;
+      font-weight:900;
+      letter-spacing:.05em;
+    }
+
+    .station-audio audio {
+      display:block;
+      width:100%;
+      margin:0 auto;
+    }
+
+    .station-status {
+      margin-top:10px;
+      color:#eaddea;
+      font-size:.82rem;
+      line-height:1.4;
+    }
+
+    @keyframes entryCardIn {
+      from { opacity:0; transform:translateY(22px) scale(.96); }
+      to { opacity:1; transform:translateY(0) scale(1); }
+    }
+
+    @keyframes entryFloat {
+      0%,100% { transform:translateY(0) rotate(-2deg); }
+      50% { transform:translateY(-8px) rotate(2deg); }
+    }
+
+    @keyframes entryPulse {
+      0%,100% { box-shadow:0 15px 32px rgba(191,69,125,.28); }
+      50% { box-shadow:0 18px 42px rgba(191,69,125,.46); }
+    }
+
+    @keyframes entryShine {
+      from { transform:translateX(-65%) rotate(18deg); }
+      to { transform:translateX(65%) rotate(18deg); }
+    }
+
 @media (max-width:560px) {
       .page { padding-left:10px;padding-right:10px; }
       .section { border-radius:22px;padding:10px; }
@@ -344,6 +527,7 @@
       <span class="entry-small">Al tocar el botón se iniciará la estación de música.</span>
     </div>
   </div>
+<div class="site-content" id="siteContent">
 <main class="page">
     <section class="section" aria-labelledby="video-title">
       <div class="section-title" id="video-title">🎬 Mira la invitación</div>
@@ -390,29 +574,30 @@
     </header>
 
     <section class="section station-section" aria-labelledby="station-title">
-      <div class="section-title" id="station-title">🎵 Música de la fiesta</div>
-      <p class="station-copy">La estación seguirá acompañándote mientras recorres la invitación.</p>
+  <div class="section-title" id="station-title">🎵 Estación en vivo</div>
+  <p class="station-copy">La música seguirá sonando mientras recorres la invitación.</p>
 
-      <div class="station-player">
-        <iframe
-          id="partyRadio"
-          data-src="https://stream.hazteunsitio.net/embed/857a33f515ae6c81e91b6a4e43f8a7da627a173ce61109b0?skin=neon&size=xl&theme=dark&color=6c63ff&autoplay=1"
-          src="about:blank"
-          width="420"
-          height="300"
-          frameborder="0"
-          scrolling="no"
-          allow="autoplay"
-          style="border-radius:12px"
-          title="Estación de música de la invitación">
-        </iframe>
-      </div>
-    </section>
+  <div class="station-audio">
+    <div class="station-live">🔴 EN VIVO</div>
+
+    <audio
+      id="partyRadio"
+      controls
+      preload="none"
+      playsinline
+      src="https://radio.hazteunsitio.net/streams/jorge_d3decd">
+      Tu navegador no puede reproducir esta estación.
+    </audio>
+
+    <div class="station-status" id="stationStatus" aria-live="polite">
+      La estación se activará al tocar “Ver tarjeta”.
+    </div>
+  </div>
+</section>
 
     <footer class="footer">Con cariño, María José 💕</footer>
 </main>
-
-  <nav class="floating" aria-label="Acciones rápidas">
+<nav class="floating" aria-label="Acciones rápidas">
     <a class="btn btn-wa" href="https://wa.me/573127880272?text=Hola%2C%20confirmo%20mi%20asistencia%20al%20cumplea%C3%B1os%20de%20Mar%C3%ADa%20Jos%C3%A9%20%F0%9F%8E%89%F0%9F%92%97" target="_blank" rel="noopener" aria-label="Confirmar asistencia por WhatsApp">
       💬 Confirmar
     </a>
@@ -421,11 +606,15 @@
     </a>
     <a class="btn btn-calendar" id="calendarBtn" href="https://calendar.google.com/calendar/r/eventedit?action=TEMPLATE&text=Cumplea%C3%B1os+de+Mar%C3%ADa+Jos%C3%A9+-+7+a%C3%B1os&dates=20260815T150000%2F20260815T160000&stz=America%2FBogota&etz=America%2FBogota&details=Cumplea%C3%B1os+de+Mar%C3%ADa+Jos%C3%A9.+Trae+tu+gorro+de+ba%C3%B1o+y+toalla+para+disfrutar+de+la+piscina.&location=Club+de+Cazadores%2C+C%C3%BAcuta%2C+Norte+de+Santander%2C+Colombia" target="_blank" rel="noopener" aria-label="Abrir evento en Google Calendar">📅 Calendario</a>
   </nav>
+</div>
+
+  
 
   <script>
     const entryGate = document.getElementById('entryGate');
     const enterButton = document.getElementById('enterInvitation');
-    const radioFrame = document.getElementById('partyRadio');
+    const radio = document.getElementById('partyRadio');
+    const stationStatus = document.getElementById('stationStatus');
 
     let invitePlayer = null;
     let inviteReady = false;
@@ -439,29 +628,41 @@
         invitePlayer.mute();
         invitePlayer.setVolume(0);
         invitePlayer.playVideo();
-      } catch (e) {
-        // El reproductor de YouTube puede tardar unos milisegundos más en estar listo.
+      } catch (e) {}
+    }
+
+    async function startRadio() {
+      try {
+        radio.volume = 1;
+        await radio.play();
+        stationStatus.textContent = '🔊 Estación reproduciéndose en vivo.';
+        return true;
+      } catch (error) {
+        stationStatus.textContent = 'Toca ▶ en el reproductor para iniciar la estación.';
+        return false;
       }
     }
 
-    function enterInvitation() {
+    async function enterInvitation() {
       if (hasEntered) return;
       hasEntered = true;
 
-      // La estación se carga dentro del gesto del usuario.
-      // El iframe tiene permiso explícito de autoplay.
-      radioFrame.src = radioFrame.dataset.src;
+      // Esta llamada ocurre directamente dentro del clic del usuario,
+      // lo que da al navegador una interacción válida para iniciar audio.
+      await startRadio();
 
-      // Iniciar también el video visible de la invitación desde el comienzo, sin audio.
       startInvitationVideo();
 
-      entryGate.classList.add('is-leaving');
+      document.body.classList.add('invitation-open');
       document.body.classList.remove('entry-locked');
+
+      entryGate.classList.add('is-leaving');
+
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 
       setTimeout(function () {
         entryGate.hidden = true;
-      }, 600);
+      }, 460);
     }
 
     enterButton.addEventListener('click', enterInvitation);
@@ -485,6 +686,18 @@
         }
       });
     }
+
+    radio.addEventListener('playing', function () {
+      stationStatus.textContent = '🔊 Estación reproduciéndose en vivo.';
+    });
+
+    radio.addEventListener('pause', function () {
+      if (hasEntered) stationStatus.textContent = '⏸ Estación pausada.';
+    });
+
+    radio.addEventListener('error', function () {
+      stationStatus.textContent = 'No se pudo conectar con la estación en este momento.';
+    });
 
     const ytScript = document.createElement('script');
     ytScript.src = 'https://www.youtube.com/iframe_api';
