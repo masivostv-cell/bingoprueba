@@ -311,55 +311,44 @@
     .floating .btn:active {
       transform:translateY(0) scale(.97);
     }
-
-
-    .music-shell {
-      width:min(100%,560px);
-      min-height:200px;
-      aspect-ratio:16/9;
-      margin:0 auto;
-      border-radius:22px;
+    .audio-only-player {
+      position:fixed;
+      left:-9999px;
+      top:-9999px;
+      width:220px;
+      height:220px;
       overflow:hidden;
-      background:#111;
-      box-shadow:0 14px 30px rgba(76,31,61,.18);
+      pointer-events:none;
+      opacity:0;
     }
 
     #musicPlayer,
     #musicPlayer iframe {
-      display:block;
-      width:100%;
-      height:100%;
-      min-height:200px;
+      width:220px !important;
+      height:220px !important;
       border:0;
     }
 
     .music-help {
       display:none;
-      width:fit-content;
-      max-width:100%;
-      margin:12px auto 2px;
+      position:fixed;
+      z-index:30;
+      left:50%;
+      bottom:92px;
+      transform:translateX(-50%);
+      width:min(calc(100% - 28px),420px);
       border:0;
       border-radius:999px;
-      padding:12px 18px;
+      padding:13px 18px;
       color:#fff;
       background:linear-gradient(135deg,#7556c9,#5a3eaa);
       font-weight:900;
       font-size:.92rem;
       cursor:pointer;
-      box-shadow:0 9px 22px rgba(79,47,143,.22);
+      box-shadow:0 12px 28px rgba(79,47,143,.28);
       animation:softPulse 2.4s ease-in-out infinite;
     }
-
-    .music-note {
-      margin:10px auto 0;
-      max-width:560px;
-      text-align:center;
-      font-size:.86rem;
-      line-height:1.45;
-      color:#7e5770;
-    }
-
-    @media (max-width:560px) {
+@media (max-width:560px) {
       .page { padding-left:10px;padding-right:10px; }
       .section { border-radius:22px;padding:10px; }
       .actions { grid-template-columns:1fr; }
@@ -390,27 +379,17 @@
       <p>Queremos celebrar contigo una tarde de alegría, piscina y muchos recuerdos bonitos. 💗</p>
     </header>
 
+    <div class="audio-only-player" aria-hidden="true">
+      <div id="musicPlayer"></div>
+    </div>
+    <button class="music-help" id="musicHelp" type="button">
+      🔊 Toca aquí para activar la música
+    </button>
 
-    <section class="section" aria-labelledby="music-title">
-      <div class="section-title" id="music-title">🎵 Música de la fiesta</div>
-      <div class="music-shell">
-        <div id="musicPlayer"></div>
-      </div>
-      <button class="music-help" id="musicHelp" type="button">🔊 Toca aquí para activar la música</button>
-      <p class="music-note">La página intentará iniciar la música automáticamente. Si tu navegador bloquea el sonido automático, bastará con tocar una vez este botón o cualquier parte de la página.</p>
-    </section>
-
-    <section class="section" aria-labelledby="video-title">
+<section class="section" aria-labelledby="video-title">
       <div class="section-title" id="video-title">🎬 Mira la invitación</div>
       <div class="video-shell">
-        <iframe
-          id="inviteVideo"
-          src="https://www.youtube.com/embed/jB8h1eFrdtc?autoplay=0&mute=1&playsinline=1&loop=1&playlist=jB8h1eFrdtc&rel=0&enablejsapi=1"
-          title="Video invitación cumpleaños de María José"
-          allow="autoplay; encrypted-media; picture-in-picture"
-          allowfullscreen
-          loading="eager">
-        </iframe>
+        <div id="inviteVideo"></div>
       </div>
     </section>
 
@@ -459,27 +438,51 @@
   </nav>
 
   <script>
-    // ---- Música: YouTube IFrame Player API ----
     let musicPlayer = null;
+    let invitePlayer = null;
+
     let musicReady = false;
+    let inviteReady = false;
+    let startedTogether = false;
+
     const musicHelp = document.getElementById('musicHelp');
 
-    function startMusic() {
-      if (!musicReady || !musicPlayer) return;
+    function startBothTogether() {
+      if (!musicReady || !inviteReady || !musicPlayer || !invitePlayer) return;
+
       try {
+        // Reiniciar ambos al segundo 0 para que comiencen lo más sincronizados posible.
+        musicPlayer.seekTo(0, true);
+        invitePlayer.seekTo(0, true);
+
+        // La música intenta sonar.
         musicPlayer.unMute();
         musicPlayer.setVolume(100);
-        musicPlayer.playVideo();
-      } catch (e) {}
-    }
 
-    function showMusicHelp() {
-      if (!musicPlayer || !musicReady) return;
-      try {
-        const state = musicPlayer.getPlayerState();
-        if (state !== YT.PlayerState.PLAYING) {
-          musicHelp.style.display = 'block';
-        }
+        // El video de invitación queda silenciado para evitar dos audios superpuestos
+        // y para mejorar la probabilidad de autoplay en navegadores móviles.
+        invitePlayer.mute();
+        invitePlayer.setVolume(0);
+
+        // Las dos órdenes se ejecutan en la misma llamada JavaScript.
+        musicPlayer.playVideo();
+        invitePlayer.playVideo();
+
+        startedTogether = true;
+
+        setTimeout(function () {
+          try {
+            const musicPlaying = musicPlayer.getPlayerState() === YT.PlayerState.PLAYING;
+            const invitePlaying = invitePlayer.getPlayerState() === YT.PlayerState.PLAYING;
+
+            if (!musicPlaying || !invitePlaying) {
+              musicHelp.style.display = 'block';
+            } else {
+              musicHelp.style.display = 'none';
+            }
+          } catch (e) {}
+        }, 1200);
+
       } catch (e) {
         musicHelp.style.display = 'block';
       }
@@ -489,8 +492,8 @@
       musicPlayer = new YT.Player('musicPlayer', {
         videoId: 'kXB-Ibr55LI',
         playerVars: {
-          autoplay: 1,
-          controls: 1,
+          autoplay: 0,
+          controls: 0,
           playsinline: 1,
           loop: 1,
           playlist: 'kXB-Ibr55LI',
@@ -499,39 +502,65 @@
         events: {
           onReady: function () {
             musicReady = true;
-            startMusic();
-
-            // Si el navegador bloquea autoplay con sonido,
-            // mostramos una alternativa de un solo toque.
-            setTimeout(showMusicHelp, 1800);
+            startBothTogether();
           },
           onStateChange: function (event) {
             if (event.data === YT.PlayerState.PLAYING) {
               musicHelp.style.display = 'none';
             }
-            if (event.data === YT.PlayerState.ENDED) {
-              startMusic();
-            }
+          }
+        }
+      });
+
+      invitePlayer = new YT.Player('inviteVideo', {
+        videoId: 'jB8h1eFrdtc',
+        playerVars: {
+          autoplay: 0,
+          controls: 1,
+          playsinline: 1,
+          loop: 1,
+          playlist: 'jB8h1eFrdtc',
+          rel: 0
+        },
+        events: {
+          onReady: function () {
+            inviteReady = true;
+            startBothTogether();
           }
         }
       });
     }
 
-    // Primer toque o tecla: desbloquea el audio si el navegador lo exige.
-    document.addEventListener('pointerdown', startMusic, { once:true, capture:true });
-    document.addEventListener('keydown', startMusic, { once:true, capture:true });
+    // Si el navegador bloquea el autoplay con sonido, el primer toque
+    // intenta arrancar de nuevo ambos videos desde el inicio.
+    function unlockAndStart() {
+      startedTogether = false;
+      startBothTogether();
+    }
+
+    document.addEventListener('pointerdown', unlockAndStart, { once:true, capture:true });
+    document.addEventListener('keydown', unlockAndStart, { once:true, capture:true });
 
     musicHelp.addEventListener('click', function () {
-      startMusic();
-      setTimeout(showMusicHelp, 500);
+      unlockAndStart();
     });
 
-    // Al regresar a la pestaña, intentar continuar la música.
+    // Cuando el usuario vuelve a la pestaña, si alguno se detuvo,
+    // se intenta volver a iniciar ambos juntos.
     document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) startMusic();
+      if (!document.hidden && musicReady && inviteReady) {
+        try {
+          const musicPlaying = musicPlayer.getPlayerState() === YT.PlayerState.PLAYING;
+          const invitePlaying = invitePlayer.getPlayerState() === YT.PlayerState.PLAYING;
+
+          if (!musicPlaying || !invitePlaying) {
+            startBothTogether();
+          }
+        } catch (e) {}
+      }
     });
 
-    // Cargar la API oficial del reproductor de YouTube.
+    // Cargar la API oficial de YouTube.
     const ytScript = document.createElement('script');
     ytScript.src = 'https://www.youtube.com/iframe_api';
     document.head.appendChild(ytScript);
