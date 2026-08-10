@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Cartera</title>
-    <!-- Cargamos Tailwind ya compilado para ultra-velocidad -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Tailwind CSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .highlight { color: #2563eb; font-weight: bold; }
+        .highlight { color: #2563eb; font-weight: bold; background-color: #dbeafe; padding: 0 2px; border-radius: 2px; }
         .search-item.active { background-color: #f3f4f6; border-left: 4px solid #3b82f6; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Candado de seguridad para íconos */
+        /* Evitar que los íconos se desconfiguren */
         svg { max-width: 24px; max-height: 24px; }
     </style>
 </head>
@@ -19,56 +19,60 @@
 
 <script>
     // ==========================================
-    // URL DE APPS SCRIPT INSERTADA CORRECTAMENTE
+    // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhxOar1IKcNhyUflqsugVh4IhxiSdW5xu9Z0GVvSBmrHA09byxbCnabpoz1fA_Mftj/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhxOar1IKcNhyUflqsugVh4IhxiSdW5xu9Z0GVvSBmrHA09byxbCnabpoz1fA_Mftj/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
 <div class="max-w-6xl mx-auto p-4 sm:p-6">
     
+    <!-- Encabezado -->
     <header class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">Gestión de Cartera</h1>
-            <p class="text-sm text-gray-500 mt-1">Búsqueda rápida y aplicación de abonos</p>
+            <p class="text-sm text-gray-500 mt-1">Búsqueda rápida y aplicación de abonos con retenciones</p>
         </div>
         <a href="javascript:void(0)" onclick="window.open(SHEET_URL, '_blank')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow flex items-center transition-colors">
-            <svg class="w-5 h-5 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             Abrir Sheet
         </a>
     </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <div class="lg:col-span-2 space-y-6">
+        <!-- Columna Izquierda (Buscador y Facturas) -->
+        <div class="lg:col-span-7 space-y-6">
             
             <!-- Panel 1: Búsqueda -->
-            <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-200 relative z-50">
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-200">
                 <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">1. Buscar Cliente</h2>
                 
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
                     </div>
-                    <input type="text" id="searchInput" autocomplete="off" class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm" placeholder="Escribe nombre, NIT o detalle/sede...">
+                    <!-- INPUT DE BÚSQUEDA -->
+                    <input type="text" id="searchInput" autocomplete="off" class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm" placeholder="Escribe nombre, NIT o sede (el orden no importa)...">
                     
                     <button id="clearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 hidden">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
-                    <!-- Dropdown de resultados -->
-                    <div id="searchResults" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-2xl max-h-60 overflow-y-auto hidden z-[100]"></div>
+                    
+                    <!-- CONTENEDOR DE RESULTADOS ABSOLUTO -->
+                    <div id="searchResults" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-2xl max-h-80 overflow-y-auto hidden"></div>
                 </div>
             </div>
 
             <!-- Panel 2: Facturas -->
             <div id="facturasPanel" class="bg-white rounded-xl shadow-sm border border-gray-200 hidden fade-in">
-                <div class="p-5 border-b bg-gray-50 rounded-t-xl flex justify-between items-center flex-wrap gap-3">
+                <div class="p-5 border-b bg-gray-50 rounded-t-xl flex justify-between items-center">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-800">2. Estado de Cuenta y Abonos</h2>
-                        <p id="clienteSeleccionadoInfo" class="text-xs text-gray-500 mt-1 font-medium"></p>
+                        <p id="clienteSeleccionadoInfo" class="text-sm text-gray-600 mt-1"></p>
                     </div>
-                    <button id="btnCopiarDeuda" onclick="copiarEstadoCuenta()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm flex items-center transition-colors">
-                        <svg class="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <button type="button" onclick="copiarDeuda()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                         Copiar Deuda
                     </button>
                 </div>
@@ -77,12 +81,12 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <input type="checkbox" id="selectAllInvoices" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" checked>
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factura</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle / Sede</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th>
                             </tr>
                         </thead>
@@ -91,92 +95,83 @@
                         <tfoot class="bg-gray-50 font-semibold">
                             <tr>
                                 <td colspan="4" class="px-4 py-4 text-right text-sm text-gray-700">Total Seleccionado:</td>
-                                <td id="totalSeleccionadoTxt" class="px-4 py-4 text-right text-lg text-blue-600 font-bold">$0</td>
+                                <td id="totalSeleccionadoTxt" class="px-4 py-4 text-right text-lg text-red-600">$0</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
             </div>
-
         </div>
 
-        <div class="space-y-6">
+        <!-- Columna Derecha (Formulario) -->
+        <div class="lg:col-span-5 space-y-6">
             
             <!-- Panel 3: Pago -->
             <div id="pagoPanel" class="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hidden fade-in sticky top-6">
-                <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">3. Registrar Pago</h2>
+                <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">3. Registrar Pago y Retenciones</h2>
                 <form id="pagoForm" class="space-y-4">
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
-                        <input type="date" id="fechaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor Recibido (Caja/Banco)</label>
-                        <div class="relative rounded-md shadow-sm">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span class="text-gray-500 sm:text-sm">$</span>
-                            </div>
-                            <input type="number" id="valorAbono" required min="1" step="any" class="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-lg font-bold text-gray-900" placeholder="0">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
+                            <input type="date" id="fechaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
+                            <select id="formaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border bg-white">
+                                <option value="Transferencia Bancolombia">Transf. Bancolombia</option>
+                                <option value="Transferencia Davivienda">Transf. Davivienda</option>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Nequi">Nequi</option>
+                                <option value="Daviplata">Daviplata</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Otro">Otro</option>
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Campos de Retenciones Inteligentes -->
-                    <div class="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                        <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Retenciones (Opcional)</h3>
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-blue-900 mb-1">Abono a Cartera (Bruto)</label>
+                            <div class="relative rounded-md shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">$</span>
+                                </div>
+                                <input type="number" id="valorAbono" required min="1" step="any" class="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-lg font-bold text-gray-900" placeholder="0">
+                            </div>
+                            <p class="text-xs text-blue-600 mt-1">Este es el total que bajará de la deuda.</p>
+                        </div>
+                    </div>
+
+                    <!-- Calculadora de Retenciones -->
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-3">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Calculadora de Descuentos</h3>
                         
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Base para cálculo</label>
-                            <div class="relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                                    <span class="text-gray-400 text-xs">$</span>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Base para Retenciones ($)</label>
+                            <input type="number" id="baseRetenciones" step="any" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border" placeholder="Base...">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">% ReteFuente</label>
+                                <div class="relative">
+                                    <input type="number" id="reteFuentePerc" step="any" class="block w-full pr-6 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border" placeholder="Ej: 2.5">
+                                    <span class="absolute inset-y-0 right-2 flex items-center text-gray-500 text-sm">%</span>
                                 </div>
-                                <input type="number" id="baseRetenciones" min="0" step="any" class="block w-full pl-6 pr-2 py-1.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-900 font-medium" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">ReteICA (x1000)</label>
+                                <div class="relative">
+                                    <input type="number" id="reteIcaPerc" step="any" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border" placeholder="Ej: 8">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <!-- ReteFuente -->
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">ReteFuente (%)</label>
-                                <div class="flex gap-1">
-                                    <input type="number" id="reteFuentePorcentaje" min="0" max="100" step="any" class="w-16 border border-gray-300 rounded-md text-xs p-1 text-center" placeholder="%">
-                                    <div class="relative rounded-md shadow-sm flex-1">
-                                        <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                                            <span class="text-gray-400 text-xs">$</span>
-                                        </div>
-                                        <input type="number" id="reteFuente" min="0" step="any" class="block w-full pl-5 pr-1 py-1 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-900" placeholder="0">
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- ReteICA -->
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">ReteICA (x1000)</label>
-                                <div class="flex gap-1">
-                                    <input type="number" id="reteIcaPorcentaje" min="0" max="100" step="any" class="w-16 border border-gray-300 rounded-md text-xs p-1 text-center" placeholder="x1000">
-                                    <div class="relative rounded-md shadow-sm flex-1">
-                                        <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                                            <span class="text-gray-400 text-xs">$</span>
-                                        </div>
-                                        <input type="number" id="reteIca" min="0" step="any" class="block w-full pl-5 pr-1 py-1 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-900" placeholder="0">
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="pt-2 border-t border-gray-200 mt-2 flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-700">Neto al Banco:</span>
+                            <span id="netoBancoTxt" class="text-lg font-bold text-green-600">$0</span>
                         </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
-                        <select id="formaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border bg-white">
-                            <option value="Transferencia Bancolombia">Transferencia Bancolombia</option>
-                            <option value="Transferencia Davivienda">Transferencia Davivienda</option>
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Nequi">Nequi</option>
-                            <option value="Daviplata">Daviplata</option>
-                            <option value="Cheque">Cheque</option>
-                            <option value="Otro">Otro</option>
-                        </select>
                     </div>
 
                     <div>
@@ -184,30 +179,29 @@
                         <textarea id="observaciones" rows="2" class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2" placeholder="Opcional..."></textarea>
                     </div>
                     
-                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow">
-                        Distribuir Pago (FIFO)
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                        Distribuir y Guardar
                     </button>
                 </form>
             </div>
 
-            <!-- Panel 4: Mensaje Generado -->
+            <!-- Panel 4: Mensaje -->
             <div id="mensajePanel" class="bg-green-50 rounded-xl shadow-sm border border-green-200 hidden fade-in">
                 <div class="p-5">
                     <h3 class="text-md font-bold text-green-800 mb-2 flex items-center">
-                        <svg class="w-5 h-5 mr-2 inline-block text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
                         Pago Distribuido
                     </h3>
                     <p class="text-xs text-green-600 mb-4 font-semibold animate-pulse">Guardando en segundo plano...</p>
                     
-                    <textarea id="textoMensaje" readonly rows="10" class="block w-full bg-white border border-green-300 rounded-md shadow-sm text-sm p-3 text-gray-800 focus:ring-green-500 focus:border-green-500 resize-none font-sans"></textarea>
+                    <textarea id="textoMensaje" readonly rows="10" class="block w-full bg-white border border-green-300 rounded-md shadow-sm text-sm p-3 text-gray-800 focus:ring-green-500 focus:border-green-500 resize-none"></textarea>
                     
                     <div class="mt-4 flex gap-2">
-                        <button onclick="copiarMensaje()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm flex items-center justify-center">
-                            <svg class="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <button onclick="copiarMensaje()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
                             Copiar
                         </button>
                         <button onclick="reiniciarUI()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition-colors text-sm">
-                            Nuevo Cliente
+                            Nuevo
                         </button>
                     </div>
                 </div>
@@ -217,556 +211,540 @@
     </div>
 </div>
 
-<!-- Indicador de Estado Flotante -->
+<!-- Indicador de Estado -->
 <div id="statusBadge" class="fixed bottom-4 right-4 bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border border-yellow-300 z-50">
-    <svg class="animate-spin h-3 w-3 inline-block" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+    <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
     Iniciando...
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Variables Globales
+        let allData = { clientes: [], cartera: [] };
+        let currentClient = null;
+        let selectedInvoices = [];
+        let currentInvoices = [];
+        let activeIndex = -1;
+        let isMessageVisible = false;
 
-    let allData = { clientes: [], cartera: [] };
-    let currentClient = null;
-    let selectedInvoices = [];
-    let currentInvoices = [];
-    let activeIndex = -1;
-    let isMessageVisible = false;
+        // Elementos DOM
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const clearSearchBtn = document.getElementById('clearSearch');
+        const statusBadge = document.getElementById('statusBadge');
+        
+        const abonoInput = document.getElementById('valorAbono');
+        const baseRetencionesInput = document.getElementById('baseRetenciones');
+        const reteFuentePercInput = document.getElementById('reteFuentePerc');
+        const reteIcaPercInput = document.getElementById('reteIcaPerc');
+        const netoBancoTxt = document.getElementById('netoBancoTxt');
 
-    const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-    const clearSearchBtn = document.getElementById('clearSearch');
-    const statusBadge = document.getElementById('statusBadge');
-    
-    // Función para mostrar mensajes "Toast" sin bloquear la pantalla
-    function showToast(msg, isSuccess = false) {
-        const notif = document.createElement('div');
-        const bgClass = isSuccess ? 'bg-green-600' : 'bg-red-500';
-        notif.className = `fixed top-6 left-1/2 transform -translate-x-1/2 ${bgClass} text-white px-6 py-3 rounded-md shadow-xl z-[200] fade-in font-medium text-sm`;
-        notif.textContent = msg;
-        document.body.appendChild(notif);
-        setTimeout(() => {
-            notif.style.transition = 'opacity 0.4s';
-            notif.style.opacity = '0';
-            setTimeout(() => notif.remove(), 400);
-        }, 3000);
-    }
-
-    function setStatus(text, bg, textColor, border, loading = false) {
-        if(!statusBadge) return;
-        statusBadge.className = `fixed bottom-4 right-4 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border transition-colors z-50 ${bg} ${textColor} ${border}`;
-        statusBadge.innerHTML = loading 
-            ? `<svg class="animate-spin h-3 w-3 inline-block" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${text}`
-            : text;
-    }
-
-    function setFechaHoy() {
-        const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
-        const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
-        document.getElementById('fechaPago').value = localISOTime;
-    }
-    setFechaHoy();
-
-    const formatCurrency = (amount) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount || 0);
-    
-    function formatDate(dateStr) {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
-        return d.toLocaleDateString('es-CO', { timeZone: 'UTC' });
-    }
-
-    function getMonthName(dateStr) {
-        if (!dateStr) return "mes no especificado";
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return "mes no especificado";
-        return d.toLocaleString('es-CO', { month: 'long', timeZone: 'UTC' }).toLowerCase();
-    }
-
-    function formatearLista(array) {
-        if (!array || array.length === 0) return "";
-        if (array.length === 1) return array[0];
-        const copia = [...array];
-        const ultimo = copia.pop();
-        return copia.join(", ") + " y " + ultimo;
-    }
-
-    const mockData = {
-        clientes: [ {nombre: "DATOS PRUEBA SAS", nit: "900000000-1"} ],
-        cartera: [ {nit: "900000000-1", factura: "FV-001", detalle: "Sede Centro", fecha: "2026-03-15", saldo: 500000} ]
-    };
-
-    function fetchData() {
-        if (isMessageVisible) return;
-
-        if(!SCRIPT_URL.includes("script.google.com") || SCRIPT_URL.includes("TU_ID_AQUI")) {
-            allData = mockData;
-            setStatus("Modo Prueba (URL no válida)", "bg-gray-100", "text-gray-800", "border-gray-300", false);
-            return;
+        // Notificaciones bonitas (Toasts)
+        window.showToast = function(message, type = 'error') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-5 right-5 px-4 py-3 rounded shadow-lg text-white z-50 fade-in ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
         }
 
-        setStatus("Actualizando...", "bg-yellow-100", "text-yellow-800", "border-yellow-300", true);
+        function setFechaHoy() {
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+            const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+            document.getElementById('fechaPago').value = localISOTime;
+        }
+        setFechaHoy();
 
-        fetch(SCRIPT_URL + '?action=getData')
-            .then(res => res.json())
-            .then(data => {
-                if(data && data.clientes) {
-                    allData = data;
-                    setStatus("Cartera actualizada ✅", "bg-green-100", "text-green-800", "border-green-300", false);
-                }
-            })
-            .catch(err => {
-                console.error("Error Fetch:", err);
-                setStatus("Error al cargar (Intenta recargar)", "bg-red-100", "text-red-800", "border-red-300", false);
-            });
-    }
-
-    fetchData();
-    setInterval(fetchData, 30000); 
-
-    // Buscador interactivo por Nombre, NIT y Detalle
-    searchInput.addEventListener('input', function(e) {
-        const term = e.target.value.toLowerCase().trim();
-        activeIndex = -1;
+        // Utilidades Formateo
+        const formatCurrency = (amount) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount || 0);
         
-        if (term.length > 0) {
-            clearSearchBtn.classList.remove('hidden');
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString('es-CO', { timeZone: 'UTC' });
+        }
+
+        function getMonthName(dateStr) {
+            if (!dateStr) return "mes no especificado";
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return "mes no especificado";
+            return d.toLocaleString('es-CO', { month: 'long', timeZone: 'UTC' }).toLowerCase();
+        }
+
+        function formatearLista(array) {
+            if (!array || array.length === 0) return "";
+            if (array.length === 1) return array[0];
+            const ultimo = array.pop();
+            return array.join(", ") + " y " + ultimo;
+        }
+
+        function setStatus(text, bg, textColor, border, loading = false) {
+            statusBadge.className = `fixed bottom-4 right-4 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border transition-colors ${bg} ${textColor} ${border} z-50`;
+            statusBadge.innerHTML = loading 
+                ? `<svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${text}`
+                : text;
+        }
+
+        // ----------------------------------------------------
+        // FETCH DATA
+        // ----------------------------------------------------
+        function fetchData() {
+            if (isMessageVisible) return;
+
+            if(!SCRIPT_URL.includes("script.google.com")) {
+                setStatus("Falta SCRIPT_URL", "bg-red-100", "text-red-800", "border-red-300", false);
+                return;
+            }
+            setStatus("Actualizando...", "bg-yellow-100", "text-yellow-800", "border-yellow-300", true);
+
+            fetch(SCRIPT_URL + '?action=getData')
+                .then(res => { if (!res.ok) throw new Error('Error red'); return res.json(); })
+                .then(data => {
+                    if(data && data.clientes) {
+                        allData = data;
+                        setStatus("Cartera actualizada ✅", "bg-green-100", "text-green-800", "border-green-300", false);
+                    } else { throw new Error('Vacío'); }
+                })
+                .catch(err => {
+                    console.error("Error Fetch:", err);
+                    setStatus("Error al cargar", "bg-red-100", "text-red-800", "border-red-300", false);
+                });
+        }
+        fetchData();
+        setInterval(fetchData, 30000); 
+
+        // ----------------------------------------------------
+        // BUSCADOR INTELIGENTE (Ignora orden y busca detalle)
+        // ----------------------------------------------------
+        searchInput.addEventListener('input', function(e) {
+            const term = e.target.value.toLowerCase().trim();
+            activeIndex = -1;
             
-            // Filtro múltiple
-            const filtered = allData.clientes.filter(c => {
-                const matchNombre = c.nombre.toLowerCase().includes(term);
-                const matchNit = c.nit.toLowerCase().includes(term);
-                const matchDetalle = allData.cartera.some(inv => 
-                    inv.nit === c.nit && inv.detalle && inv.detalle.toLowerCase().includes(term)
-                );
-                return matchNombre || matchNit || matchDetalle;
-            }).slice(0, 10); 
-            
-            renderSearchResults(filtered, term);
-        } else {
-            clearSearchBtn.classList.add('hidden');
+            if (term.length > 0) {
+                clearSearchBtn.classList.remove('hidden');
+                
+                // Dividir palabras por espacios
+                const words = term.split(/\s+/).filter(w => w.length > 0);
+                
+                // Filtrar clientes
+                const filtered = allData.clientes.filter(c => {
+                    const nombreStr = (c.nombre || "").toLowerCase();
+                    const nitStr = (c.nit || "").toLowerCase();
+                    
+                    // Extraer los detalles de la cartera de este cliente
+                    const detallesCliente = allData.cartera
+                        .filter(inv => inv.nit === c.nit && inv.detalle)
+                        .map(inv => inv.detalle.toLowerCase());
+                    
+                    // Verificar que TODAS las palabras buscadas existan
+                    return words.every(word => {
+                        return nombreStr.includes(word) || 
+                               nitStr.includes(word) || 
+                               detallesCliente.some(det => det.includes(word));
+                    });
+                }).slice(0, 10); 
+                
+                renderSearchResults(filtered, words);
+            } else {
+                clearSearchBtn.classList.add('hidden');
+                searchResults.classList.add('hidden');
+                searchResults.innerHTML = '';
+            }
+        });
+
+        // Navegación con teclado en resultados
+        searchInput.addEventListener('keydown', function(e) {
+            const items = searchResults.querySelectorAll('.search-item');
+            if (items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault(); activeIndex = (activeIndex + 1) % items.length; updateActiveItem(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault(); activeIndex = (activeIndex - 1 + items.length) % items.length; updateActiveItem(items);
+            } else if (e.key === 'Enter' && activeIndex >= 0) {
+                e.preventDefault(); items[activeIndex].click();
+            }
+        });
+
+        function updateActiveItem(items) {
+            items.forEach((item, index) => {
+                if (index === activeIndex) { item.classList.add('active'); item.scrollIntoView({ block: 'nearest' }); } 
+                else { item.classList.remove('active'); }
+            });
+        }
+
+        function renderSearchResults(results, words) {
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="p-3 text-sm text-gray-500">No se encontraron clientes o sedes.</div>';
+            } else {
+                const safeTerms = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+                const regex = new RegExp(`(${safeTerms})`, 'gi');
+                
+                const html = results.map((c) => {
+                    const nombreHighlighted = (c.nombre || "").replace(regex, '<span class="highlight">$1</span>');
+                    const nitHighlighted = (c.nit || "").replace(regex, '<span class="highlight">$1</span>');
+                    
+                    // Mostrar detalle que coincide
+                    const matchedDetalles = allData.cartera
+                        .filter(inv => inv.nit === c.nit && inv.detalle && words.some(w => inv.detalle.toLowerCase().includes(w)))
+                        .map(inv => inv.detalle);
+                    const uniqueDetalles = [...new Set(matchedDetalles)];
+                    
+                    let detalleHtml = '';
+                    if (uniqueDetalles.length > 0) {
+                        const detHighlighted = uniqueDetalles.join(", ").replace(regex, '<span class="highlight">$1</span>');
+                        detalleHtml = `<div class="text-xs text-blue-600 mt-1 font-medium flex items-center">
+                            <svg class="w-3 h-3 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            Sede/Detalle: ${detHighlighted}
+                        </div>`;
+                    }
+                    
+                    return `
+                        <div class="search-item cursor-pointer p-3 border-b hover:bg-blue-50 transition-colors" onclick="selectClient('${c.nit}', '${(c.nombre||'').replace(/'/g, "\\'")}')">
+                            <div class="font-medium text-gray-800">${nombreHighlighted}</div>
+                            <div class="text-xs text-gray-500">NIT: ${nitHighlighted}</div>
+                            ${detalleHtml}
+                        </div>
+                    `;
+                }).join('');
+                searchResults.innerHTML = html;
+            }
+            searchResults.classList.remove('hidden');
+        }
+
+        clearSearchBtn.addEventListener('click', () => { window.reiniciarUI(); });
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        // ----------------------------------------------------
+        // SELECCIÓN Y RENDERIZADO DE TABLA
+        // ----------------------------------------------------
+        window.selectClient = function(nit, nombre) {
+            currentClient = { nit, nombre };
+            searchInput.value = `${nombre} (NIT: ${nit})`;
             searchResults.classList.add('hidden');
-            searchResults.innerHTML = '';
+            
+            currentInvoices = allData.cartera
+                .filter(f => f.nit === nit)
+                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            selectedInvoices = currentInvoices.map(inv => inv.factura);
+            
+            document.getElementById('clienteSeleccionadoInfo').textContent = `${nombre} | NIT: ${nit}`;
+            renderTable();
+            
+            document.getElementById('facturasPanel').classList.remove('hidden');
+            document.getElementById('pagoPanel').classList.remove('hidden');
+            document.getElementById('mensajePanel').classList.add('hidden');
+            isMessageVisible = false;
+            
+            setTimeout(() => abonoInput.focus(), 100);
         }
-    });
 
-    searchInput.addEventListener('keydown', function(e) {
-        const items = searchResults.querySelectorAll('.search-item');
-        if (items.length === 0) return;
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            activeIndex = (activeIndex + 1) % items.length;
-            updateActiveItem(items);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            activeIndex = (activeIndex - 1 + items.length) % items.length;
-            updateActiveItem(items);
-        } else if (e.key === 'Enter' && activeIndex >= 0) {
-            e.preventDefault();
-            items[activeIndex].click();
-        }
-    });
-
-    function updateActiveItem(items) {
-        items.forEach((item, index) => {
-            if (index === activeIndex) {
-                item.classList.add('active');
-                item.scrollIntoView({ block: 'nearest' });
-            } else {
-                item.classList.remove('active');
+        function renderTable() {
+            const tbody = document.getElementById('facturasTableBody');
+            const selectAllCheckbox = document.getElementById('selectAllInvoices');
+            
+            if (currentInvoices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500 font-medium">Sin facturas pendientes.</td></tr>';
+                document.getElementById('totalSeleccionadoTxt').textContent = '$0';
+                selectAllCheckbox.checked = false;
+                calcularRetenciones();
+                return;
             }
-        });
-    }
 
-    function renderSearchResults(results, term) {
-        if (results.length === 0) {
-            searchResults.innerHTML = '<div class="p-3 text-sm text-gray-500">No se encontraron clientes o sedes.</div>';
-        } else {
-            const html = results.map((c) => {
-                const safeTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const regex = new RegExp(`(${safeTerm})`, 'gi');
-                const nombreHighlighted = c.nombre.replace(regex, '<span class="highlight">$1</span>');
-                const nitHighlighted = c.nit.replace(regex, '<span class="highlight">$1</span>');
+            let total = 0;
+            let html = '';
+            
+            currentInvoices.forEach((inv) => {
+                const isChecked = selectedInvoices.includes(inv.factura);
+                if(isChecked) total += inv.saldo;
                 
-                const matchedDetalles = allData.cartera
-                    .filter(inv => inv.nit === c.nit && inv.detalle && inv.detalle.toLowerCase().includes(term))
-                    .map(inv => inv.detalle);
-                const uniqueDetalles = [...new Set(matchedDetalles)];
-                
-                let detalleHtml = '';
-                if (uniqueDetalles.length > 0) {
-                    const detHighlighted = uniqueDetalles.join(", ").replace(regex, '<span class="highlight">$1</span>');
-                    detalleHtml = `<div class="text-xs text-blue-600 mt-1 font-medium flex items-center">
-                        <svg class="w-3 h-3 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        Coincidencia en: ${detHighlighted}
-                    </div>`;
-                }
-                
-                return `
-                    <div class="search-item cursor-pointer p-3 border-b hover:bg-blue-50 transition-colors" onclick="selectClient('${c.nit}', '${c.nombre.replace(/'/g, "\\'")}')">
-                        <div class="font-medium text-gray-800 text-sm">${nombreHighlighted}</div>
-                        <div class="text-xs text-gray-500">NIT: ${nitHighlighted}</div>
-                        ${detalleHtml}
-                    </div>
+                html += `
+                    <tr class="${isChecked ? 'bg-blue-50' : ''} hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <input type="checkbox" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+                                   value="${inv.factura}" ${isChecked ? 'checked' : ''} onchange="toggleInvoice('${inv.factura}', this.checked)">
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${inv.factura}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(inv.fecha)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 truncate max-w-xs" title="${inv.detalle}">${inv.detalle || '-'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-right">${formatCurrency(inv.saldo)}</td>
+                    </tr>
                 `;
-            }).join('');
-            searchResults.innerHTML = html;
-        }
-        searchResults.classList.remove('hidden');
-    }
-
-    clearSearchBtn.addEventListener('click', () => { window.reiniciarUI(); });
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) { searchResults.classList.add('hidden'); }
-    });
-
-    window.selectClient = function(nit, nombre) {
-        currentClient = { nit, nombre };
-        searchInput.value = `${nombre} (NIT: ${nit})`;
-        searchResults.classList.add('hidden');
-        
-        currentInvoices = allData.cartera
-            .filter(f => f.nit === nit)
-            .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-
-        selectedInvoices = currentInvoices.map(inv => inv.factura);
-        
-        document.getElementById('clienteSeleccionadoInfo').textContent = `${nombre} | NIT: ${nit}`;
-        renderTable();
-        
-        document.getElementById('facturasPanel').classList.remove('hidden');
-        document.getElementById('pagoPanel').classList.remove('hidden');
-        document.getElementById('mensajePanel').classList.add('hidden');
-        isMessageVisible = false;
-        
-        setTimeout(() => document.getElementById('valorAbono').focus(), 100);
-    }
-
-    function renderTable() {
-        const tbody = document.getElementById('facturasTableBody');
-        const selectAllCheckbox = document.getElementById('selectAllInvoices');
-        
-        if (currentInvoices.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500 font-medium text-sm">Sin facturas pendientes.</td></tr>';
-            document.getElementById('totalSeleccionadoTxt').textContent = '$0';
-            document.getElementById('baseRetenciones').value = '';
-            selectAllCheckbox.checked = false;
-            return;
-        }
-
-        let total = 0;
-        let html = '';
-        
-        currentInvoices.forEach((inv) => {
-            const isChecked = selectedInvoices.includes(inv.factura);
-            if(isChecked) total += inv.saldo;
-            
-            html += `
-                <tr class="${isChecked ? 'bg-blue-50' : ''} hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <input type="checkbox" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                               value="${inv.factura}" ${isChecked ? 'checked' : ''} onchange="toggleInvoice('${inv.factura}', this.checked)">
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">${inv.factura}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(inv.fecha)}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600 truncate max-w-xs" title="${inv.detalle}">${inv.detalle || '-'}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-right">${formatCurrency(inv.saldo)}</td>
-                </tr>
-            `;
-        });
-        
-        tbody.innerHTML = html;
-        document.getElementById('totalSeleccionadoTxt').textContent = formatCurrency(total);
-        selectAllCheckbox.checked = (selectedInvoices.length === currentInvoices.length && currentInvoices.length > 0);
-        
-        // Actualiza Base de retenciones automáticamente
-        document.getElementById('baseRetenciones').value = total;
-        calcularRetenciones();
-    }
-
-    window.toggleInvoice = function(factura, isChecked) {
-        if (isChecked) {
-            if (!selectedInvoices.includes(factura)) selectedInvoices.push(factura);
-        } else {
-            selectedInvoices = selectedInvoices.filter(f => f !== factura);
-        }
-        renderTable();
-    }
-
-    document.getElementById('selectAllInvoices').addEventListener('change', function(e) {
-        selectedInvoices = e.target.checked ? currentInvoices.map(inv => inv.factura) : [];
-        renderTable();
-    });
-
-    // Calculadora Automática de Retenciones
-    function calcularRetenciones() {
-        const base = parseFloat(document.getElementById('baseRetenciones').value) || 0;
-        
-        const pReteFuente = parseFloat(document.getElementById('reteFuentePorcentaje').value);
-        if (!isNaN(pReteFuente)) {
-            document.getElementById('reteFuente').value = Math.round(base * (pReteFuente / 100));
-        } else {
-            document.getElementById('reteFuente').value = "";
-        }
-        
-        const pReteIca = parseFloat(document.getElementById('reteIcaPorcentaje').value);
-        if (!isNaN(pReteIca)) {
-            document.getElementById('reteIca').value = Math.round(base * (pReteIca / 1000));
-        } else {
-            document.getElementById('reteIca').value = "";
-        }
-    }
-
-    document.getElementById('baseRetenciones').addEventListener('input', calcularRetenciones);
-    document.getElementById('reteFuentePorcentaje').addEventListener('input', calcularRetenciones);
-    document.getElementById('reteIcaPorcentaje').addEventListener('input', calcularRetenciones);
-
-    window.copiarEstadoCuenta = function() {
-        const btn = document.getElementById("btnCopiarDeuda");
-        if (!currentClient || currentInvoices.length === 0) {
-            showToast("Este cliente no tiene saldo pendiente.");
-            return;
-        }
-        if (selectedInvoices.length === 0) {
-            showToast("Selecciona las facturas que deseas incluir en el mensaje de cobro.");
-            return;
-        }
-
-        const facturasSeleccionadas = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
-        const totalPendiente = facturasSeleccionadas.reduce((sum, inv) => sum + inv.saldo, 0);
-        const facturasTxt = formatearLista(facturasSeleccionadas.map(inv => inv.factura));
-        
-        const detallesUnicos = [...new Set(facturasSeleccionadas.map(inv => inv.detalle).filter(d => d && d.trim() !== '' && d !== '-'))];
-        const stringDetalles = detallesUnicos.length > 0 ? ` (${formatearLista(detallesUnicos)})` : "";
-
-        const saldosPorMes = {};
-        facturasSeleccionadas.forEach(inv => {
-            if (inv.saldo > 0) {
-                const mes = getMonthName(inv.fecha);
-                saldosPorMes[mes] = (saldosPorMes[mes] || 0) + inv.saldo;
-            }
-        });
-
-        const desgloses = Object.entries(saldosPorMes).map(([mes, saldo]) => `${mes} por ${formatCurrency(saldo)}`);
-        const desgloseTxt = formatearLista(desgloses);
-
-        let msj = `Hola, un saludo cordial.\n\n`;
-        msj += `Te compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n`;
-        msj += `Presentas un saldo pendiente de ${formatCurrency(totalPendiente)}, correspondiente a las facturas ${facturasTxt}${stringDetalles}.\n\n`;
-        msj += `Este saldo se encuentra distribuido así: ${desgloseTxt}.\n\n`;
-        msj += `Quedamos muy atentos a cualquier inquietud.\n\nFirma:\nÁrea de Cartera.`;
-
-        const tempTextArea = document.createElement("textarea");
-        tempTextArea.value = msj;
-        document.body.appendChild(tempTextArea);
-        tempTextArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(tempTextArea);
-
-        if (btn) {
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<svg class="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> ¡Copiado!`;
-            btn.className = "bg-green-100 text-green-700 border border-green-300 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm flex items-center transition-colors";
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.className = "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm flex items-center transition-colors";
-            }, 2000);
-        }
-    };
-
-    document.getElementById('pagoForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        if(!currentClient) return;
-        
-        if(currentInvoices.length > 0 && selectedInvoices.length === 0) {
-            showToast("Selecciona al menos una factura. Si el pago es mayor, selecciona primero las que vas a cancelar.");
-            return;
-        }
-
-        const abonoBanco = parseFloat(document.getElementById('valorAbono').value);
-        if(isNaN(abonoBanco) || abonoBanco <= 0) return;
-
-        const reteFuente = parseFloat(document.getElementById('reteFuente').value) || 0;
-        const reteIca = parseFloat(document.getElementById('reteIca').value) || 0;
-        const abonoTotal = abonoBanco + reteFuente + reteIca;
-
-        const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
-
-        let saldoRestanteAbono = abonoTotal;
-        let abonosRealizados = [];
-        let carteraRestante = JSON.parse(JSON.stringify(currentInvoices)); 
-
-        for (let i = 0; i < facturasAProcesar.length; i++) {
-            if (saldoRestanteAbono <= 0) break;
-            
-            let inv = facturasAProcesar[i];
-            let abonado = 0;
-
-            if (saldoRestanteAbono >= inv.saldo) {
-                abonado = inv.saldo;
-                saldoRestanteAbono -= inv.saldo;
-            } else {
-                abonado = saldoRestanteAbono;
-                saldoRestanteAbono = 0;
-            }
-
-            let invEnCartera = carteraRestante.find(f => f.factura === inv.factura);
-            if(invEnCartera) invEnCartera.saldo -= abonado;
-
-            abonosRealizados.push({
-                factura: inv.factura,
-                mes: getMonthName(inv.fecha),
-                abonado: abonado,
-                detalle: inv.detalle
             });
-        }
-
-        const anticipo = saldoRestanteAbono;
-        generarYGuardar(abonoBanco, reteFuente, reteIca, abonoTotal, abonosRealizados, carteraRestante, anticipo);
-    });
-
-    function generarYGuardar(abonoBanco, reteFuente, reteIca, totalAbono, abonosRealizados, carteraRestante, anticipo) {
-        isMessageVisible = true;
-        
-        const fechaPagoVal = document.getElementById('fechaPago').value; 
-        const partesFecha = fechaPagoVal.split('-');
-        const fechaParaTexto = `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}`; 
-        
-        const formaPago = document.getElementById('formaPago').value;
-        const obs = document.getElementById('observaciones').value.trim();
-        
-        let msj = `Hola, hemos recibido un pago a nombre de *${currentClient.nombre}* por ${formatCurrency(abonoBanco)}.\n\n`;
-
-        let detalleRetencionesSheet = "";
-        if (reteFuente > 0 || reteIca > 0) {
-            msj += `Además, registramos los siguientes certificados de descuento:\n`;
-            if (reteFuente > 0) { 
-                msj += `- ReteFuente: ${formatCurrency(reteFuente)}\n`; 
-                detalleRetencionesSheet += ` | RteFte: ${formatCurrency(reteFuente)}`; 
-            }
-            if (reteIca > 0) { 
-                msj += `- ReteICA: ${formatCurrency(reteIca)}\n`; 
-                detalleRetencionesSheet += ` | RteICA: ${formatCurrency(reteIca)}`; 
-            }
-            msj += `Para un abono total aplicado a cartera de ${formatCurrency(totalAbono)}.\n\n`;
-        }
-
-        const detallesAbonos = [...new Set(abonosRealizados.map(a => a.detalle).filter(d => d && d.trim() !== '' && d !== '-'))];
-        const stringDetallesAbonos = detallesAbonos.length > 0 ? ` (${formatearLista(detallesAbonos)})` : "";
-
-        if (abonosRealizados.length > 0) {
-            const facturasTxt = formatearLista(abonosRealizados.map(a => a.factura));
-            const mesesUnicos = [...new Set(abonosRealizados.map(a => a.mes))];
-            const mesesTxt = formatearLista(mesesUnicos);
             
-            const totalAplicado = totalAbono - anticipo;
-
-            if (anticipo > 0) {
-                msj += `De este valor, aplicamos ${formatCurrency(totalAplicado)} a las facturas ${facturasTxt}${stringDetallesAbonos} correspondientes a los meses de ${mesesTxt} y ha quedado un saldo a favor (anticipo) por ${formatCurrency(anticipo)}.`;
+            tbody.innerHTML = html;
+            document.getElementById('totalSeleccionadoTxt').textContent = formatCurrency(total);
+            selectAllCheckbox.checked = (selectedInvoices.length === currentInvoices.length && currentInvoices.length > 0);
+            
+            // Auto-llenar campos de pago y base
+            if (total > 0) {
+                abonoInput.value = total;
+                baseRetencionesInput.value = total;
             } else {
-                msj += `El pago fue aplicado a las facturas ${facturasTxt}${stringDetallesAbonos} correspondientes a los meses de ${mesesTxt}.`;
+                abonoInput.value = '';
+                baseRetencionesInput.value = '';
             }
-        } else {
-            msj += `Como no se abonó a facturas de esta selección, este valor ha quedado en su totalidad como saldo a favor (anticipo).`;
+            calcularRetenciones();
         }
 
-        // Saldos restantes SOLO de las facturas SELECCIONADAS
-        const saldosPorMes = {};
-        const facturasRestantesSeleccionadas = carteraRestante.filter(inv => selectedInvoices.includes(inv.factura));
-        
-        facturasRestantesSeleccionadas.forEach(inv => {
-            if (inv.saldo > 0) {
-                const mes = getMonthName(inv.fecha);
-                saldosPorMes[mes] = (saldosPorMes[mes] || 0) + inv.saldo;
-            }
+        window.toggleInvoice = function(factura, isChecked) {
+            if (isChecked) { if (!selectedInvoices.includes(factura)) selectedInvoices.push(factura); } 
+            else { selectedInvoices = selectedInvoices.filter(f => f !== factura); }
+            renderTable();
+        }
+
+        document.getElementById('selectAllInvoices').addEventListener('change', function(e) {
+            selectedInvoices = e.target.checked ? currentInvoices.map(inv => inv.factura) : [];
+            renderTable();
         });
 
-        const totalPendiente = Object.values(saldosPorMes).reduce((a, b) => a + b, 0);
-
-        if (totalPendiente > 0) {
-            const desgloses = Object.entries(saldosPorMes).map(([mes, saldo]) => `${mes} por ${formatCurrency(saldo)}`);
-            const desgloseTxt = formatearLista(desgloses);
-            msj += `\n\nActualmente el saldo pendiente de lo consultado es de ${formatCurrency(totalPendiente)} distribuido así: ${desgloseTxt}.`;
-        } else if (facturasRestantesSeleccionadas.length > 0) {
-            msj += `\n\nCon este pago, las facturas consultadas quedan totalmente al día, muchas gracias.`;
-        } else {
-            msj += `\n\nActualmente estás al día con nosotros, muchas gracias.`;
-        }
-
-        msj += `\n\nFirma:\nÁrea de Cartera.`;
-
-        document.getElementById('textoMensaje').value = msj;
-        document.getElementById('facturasPanel').classList.add('hidden');
-        document.getElementById('pagoPanel').classList.add('hidden');
-        document.getElementById('mensajePanel').classList.remove('hidden');
-
-        // Construir nota ultra detallada para el Excel
-        let detalleFacturas = "";
-        if (abonosRealizados.length > 0) {
-            let abonosTxt = abonosRealizados.map(a => a.factura).join(", ");
-            let mesesUnicosSheet = [...new Set(abonosRealizados.map(a => a.mes))];
-            let mesesTxtSheet = formatearLista(mesesUnicosSheet);
-            let etiquetaMes = mesesUnicosSheet.length > 1 ? "Meses" : "Mes";
+        // ----------------------------------------------------
+        // CALCULADORA DE RETENCIONES
+        // ----------------------------------------------------
+        function calcularRetenciones() {
+            const abonoBruto = parseFloat(abonoInput.value) || 0;
+            const base = parseFloat(baseRetencionesInput.value) || 0;
+            const rfPerc = parseFloat(reteFuentePercInput.value) || 0;
+            const icaPerc = parseFloat(reteIcaPercInput.value) || 0;
             
-            detalleFacturas = ` a Facs: ${abonosTxt}${stringDetallesAbonos} (${etiquetaMes}: ${mesesTxtSheet})`;
+            // Cálculos
+            const rfValue = Math.round(base * (rfPerc / 100));
+            const icaValue = Math.round(base * (icaPerc / 1000));
+            const totalRetenciones = rfValue + icaValue;
+            
+            const netoBanco = abonoBruto - totalRetenciones;
+            
+            netoBancoTxt.textContent = formatCurrency(netoBanco);
+            
+            return { rfValue, icaValue, totalRetenciones, netoBanco };
         }
-        
-        let detalleAnticipo = anticipo > 0 ? ` | Anticipo a favor: ${formatCurrency(anticipo)}` : "";
-        let stringObs = obs ? ` | Obs: ${obs}` : "";
-        
-        let detalleSheet = `Abono a cartera ${formatCurrency(totalAbono)}${detalleRetencionesSheet}${detalleFacturas}${detalleAnticipo} | Fecha reg: ${fechaParaTexto} | Pago: ${formaPago}${stringObs} | JP`;
-        
-        const payload = {
-            fechaRegistro: fechaPagoVal,
-            cliente: currentClient.nombre,
-            nit: currentClient.nit,
-            detalle: detalleSheet,
-            valor: abonoBanco, // Guarda el valor líquido que entró al banco
-            formaPago: formaPago
-        };
 
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(payload)
-        }).catch(e => console.error("Error al guardar:", e));
-    }
+        [abonoInput, baseRetencionesInput, reteFuentePercInput, reteIcaPercInput].forEach(input => {
+            input.addEventListener('input', calcularRetenciones);
+        });
 
-    window.copiarMensaje = function() {
-        const text = document.getElementById('textoMensaje');
-        text.select();
-        document.execCommand('copy');
-        showToast("¡Mensaje copiado al portapapeles!", true);
-    }
+        // ----------------------------------------------------
+        // BOTÓN COPIAR DEUDA
+        // ----------------------------------------------------
+        window.copiarDeuda = function() {
+            if(!currentClient) { showToast("Selecciona un cliente primero."); return; }
+            if(selectedInvoices.length === 0) { showToast("Selecciona al menos una factura en la tabla."); return; }
+            
+            const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
+            const total = facturasAProcesar.reduce((sum, inv) => sum + inv.saldo, 0);
+            
+            const facsTxt = formatearLista(facturasAProcesar.map(f => f.factura));
+            const mesesTxt = formatearLista([...new Set(facturasAProcesar.map(f => getMonthName(f.fecha)))]);
+            
+            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\nPresentas un saldo pendiente de ${formatCurrency(total)}, correspondiente a las facturas ${facsTxt}.\n\nEste saldo se encuentra distribuido así: ${mesesTxt}.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
+            
+            // Intentar copiar al portapapeles
+            const textArea = document.createElement("textarea");
+            textArea.value = msj;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast("¡Deuda copiada al portapapeles!", "success");
+            } catch (err) {
+                showToast("Error al copiar. Intenta manualmente.");
+            }
+            textArea.remove();
+        }
 
-    window.reiniciarUI = function() {
-        searchInput.value = '';
-        document.getElementById('valorAbono').value = '';
-        document.getElementById('baseRetenciones').value = '';
-        document.getElementById('reteFuentePorcentaje').value = '';
-        document.getElementById('reteIcaPorcentaje').value = '';
-        document.getElementById('reteFuente').value = '';
-        document.getElementById('reteIca').value = '';
-        document.getElementById('observaciones').value = '';
-        setFechaHoy(); 
-        
-        document.getElementById('facturasPanel').classList.add('hidden');
-        document.getElementById('pagoPanel').classList.add('hidden');
-        document.getElementById('mensajePanel').classList.add('hidden');
-        clearSearchBtn.classList.add('hidden');
-        
-        currentClient = null;
-        selectedInvoices = [];
-        currentInvoices = [];
-        isMessageVisible = false;
-        
-        fetchData(); 
-        searchInput.focus();
-    }
+        // ----------------------------------------------------
+        // GUARDAR ABONO (FORM SUBMIT)
+        // ----------------------------------------------------
+        document.getElementById('pagoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if(!currentClient) return;
+            if(currentInvoices.length > 0 && selectedInvoices.length === 0) {
+                showToast("Debes seleccionar al menos una factura en la tabla."); return;
+            }
 
-});
+            const abonoBruto = parseFloat(abonoInput.value);
+            if(isNaN(abonoBruto) || abonoBruto <= 0) return;
+
+            // Datos de retenciones calculados
+            const retData = calcularRetenciones();
+
+            const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
+            
+            // Variable para distribuir el pago Bruto
+            let saldoRestanteAbono = abonoBruto;
+            let abonosRealizados = [];
+            let carteraRestante = JSON.parse(JSON.stringify(currentInvoices)); 
+
+            // Distribuir FIFO
+            for (let i = 0; i < facturasAProcesar.length; i++) {
+                if (saldoRestanteAbono <= 0) break;
+                
+                let inv = facturasAProcesar[i];
+                let abonado = 0;
+
+                if (saldoRestanteAbono >= inv.saldo) {
+                    abonado = inv.saldo;
+                    saldoRestanteAbono -= inv.saldo;
+                } else {
+                    abonado = saldoRestanteAbono;
+                    saldoRestanteAbono = 0;
+                }
+
+                let invEnCartera = carteraRestante.find(f => f.factura === inv.factura);
+                if(invEnCartera) invEnCartera.saldo -= abonado;
+
+                abonosRealizados.push({
+                    factura: inv.factura,
+                    mes: getMonthName(inv.fecha),
+                    abonado: abonado,
+                    detalle: inv.detalle 
+                });
+            }
+
+            const anticipo = saldoRestanteAbono;
+            generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo);
+        });
+
+        function generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo) {
+            isMessageVisible = true;
+            
+            const fechaPagoVal = document.getElementById('fechaPago').value; 
+            const partesFecha = fechaPagoVal.split('-');
+            const fechaParaTexto = `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}`; 
+            
+            const formaPago = document.getElementById('formaPago').value;
+            const obs = document.getElementById('observaciones').value.trim();
+            
+            // Construcción del Mensaje (Con retenciones si existen)
+            let msj = `Hola, hemos recibido un pago a nombre de *${currentClient.nombre}* por ${formatCurrency(retData.netoBanco)}.\n\n`;
+            
+            if (retData.totalRetenciones > 0) {
+                msj = `Hola, hemos registrado un abono a cartera a nombre de *${currentClient.nombre}* por un valor total de ${formatCurrency(abonoBruto)}.\n(Valor recibido en banco: ${formatCurrency(retData.netoBanco)} + Descuentos de retenciones: ${formatCurrency(retData.totalRetenciones)}).\n\n`;
+            }
+
+            // Detalles de sedes
+            const detallesAbonos = [...new Set(abonosRealizados.map(a => a.detalle).filter(d => d && d.trim() !== "-" && d !== ''))];
+            const stringDetallesAbonos = detallesAbonos.length > 0 ? ` (${formatearLista(detallesAbonos)})` : "";
+
+            if (abonosRealizados.length > 0) {
+                const facturasTxt = formatearLista(abonosRealizados.map(a => a.factura));
+                const mesesUnicos = [...new Set(abonosRealizados.map(a => a.mes))];
+                const mesesTxt = formatearLista(mesesUnicos);
+                
+                const totalAplicado = abonoBruto - anticipo;
+
+                if (anticipo > 0) {
+                    msj += `De este valor, aplicamos ${formatCurrency(totalAplicado)} a las facturas ${facturasTxt}${stringDetallesAbonos} correspondientes a los meses de ${mesesTxt} y ha quedado un saldo a favor (anticipo) por ${formatCurrency(anticipo)}.`;
+                } else {
+                    msj += `El pago fue aplicado en su totalidad a las facturas ${facturasTxt}${stringDetallesAbonos} correspondientes a los meses de ${mesesTxt}.`;
+                }
+            } else {
+                msj += `Como no se abonó a facturas, este valor ha quedado en su totalidad como saldo a favor (anticipo).`;
+            }
+
+            // Saldos restantes (Solo seleccionadas)
+            const saldosPorMes = {};
+            const facturasRestantesSeleccionadas = carteraRestante.filter(inv => selectedInvoices.includes(inv.factura));
+            
+            facturasRestantesSeleccionadas.forEach(inv => {
+                if (inv.saldo > 0) {
+                    const mes = getMonthName(inv.fecha);
+                    saldosPorMes[mes] = (saldosPorMes[mes] || 0) + inv.saldo;
+                }
+            });
+
+            const totalPendiente = Object.values(saldosPorMes).reduce((a, b) => a + b, 0);
+
+            if (totalPendiente > 0) {
+                const desgloses = Object.entries(saldosPorMes).map(([mes, saldo]) => `${mes} por ${formatCurrency(saldo)}`);
+                msj += `\n\nActualmente el saldo pendiente de lo consultado es de ${formatCurrency(totalPendiente)} distribuido así: ${formatearLista(desgloses)}.`;
+            } else if (facturasRestantesSeleccionadas.length > 0) {
+                msj += `\n\nCon este pago, las facturas consultadas quedan totalmente al día, muchas gracias.`;
+            } else {
+                msj += `\n\nActualmente estás al día con nosotros, muchas gracias.`;
+            }
+
+            msj += `\n\nFirma:\nÁrea de Cartera.`;
+
+            document.getElementById('textoMensaje').value = msj;
+            document.getElementById('facturasPanel').classList.add('hidden');
+            document.getElementById('pagoPanel').classList.add('hidden');
+            document.getElementById('mensajePanel').classList.remove('hidden');
+
+            // --- ARMADO DE EXCEL ---
+            let detalleFacturas = "";
+            let mesesTxtSheet = "N/A";
+            if (abonosRealizados.length > 0) {
+                let abonosTxt = abonosRealizados.map(a => a.factura).join(", ");
+                detalleFacturas = ` a Facs: ${abonosTxt}${stringDetallesAbonos}`;
+                mesesTxtSheet = formatearLista([...new Set(abonosRealizados.map(a => a.mes))]);
+            }
+            
+            let detalleAnticipo = anticipo > 0 ? ` | Anticipo a favor: ${formatCurrency(anticipo)}` : "";
+            let stringObs = obs ? ` | Obs: ${obs}` : "";
+            
+            let textoRetenciones = "";
+            if(retData.totalRetenciones > 0) {
+                textoRetenciones = ` | Retenidos: RF ${formatCurrency(retData.rfValue)}, ICA ${formatCurrency(retData.icaValue)} | Entró al banco: ${formatCurrency(retData.netoBanco)}`;
+            }
+            
+            let detalleSheet = `Abono total a deuda: ${formatCurrency(abonoBruto)}${detalleFacturas}${detalleAnticipo}${textoRetenciones} (Meses pagados: ${mesesTxtSheet}) | Fecha reg: ${fechaParaTexto} | Pago: ${formaPago}${stringObs} | JP`;
+            
+            const payload = {
+                fechaRegistro: fechaPagoVal,
+                cliente: currentClient.nombre,
+                nit: currentClient.nit,
+                detalle: detalleSheet,
+                valor: retData.netoBanco, // Se envía al Excel lo que ENTRÓ AL BANCO
+                formaPago: formaPago
+            };
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).catch(e => console.error("Error Sheet:", e));
+        }
+
+        window.copiarMensaje = function() {
+            const text = document.getElementById('textoMensaje');
+            text.select();
+            try { document.execCommand('copy'); showToast("¡Mensaje copiado al portapapeles!", "success"); } 
+            catch(e) { showToast("Error al copiar."); }
+        }
+
+        window.reiniciarUI = function() {
+            searchInput.value = '';
+            abonoInput.value = '';
+            baseRetencionesInput.value = '';
+            reteFuentePercInput.value = '';
+            reteIcaPercInput.value = '';
+            netoBancoTxt.textContent = '$0';
+            document.getElementById('observaciones').value = '';
+            setFechaHoy(); 
+            
+            document.getElementById('facturasPanel').classList.add('hidden');
+            document.getElementById('pagoPanel').classList.add('hidden');
+            document.getElementById('mensajePanel').classList.add('hidden');
+            clearSearchBtn.classList.add('hidden');
+            
+            currentClient = null;
+            selectedInvoices = [];
+            currentInvoices = [];
+            isMessageVisible = false;
+            
+            fetchData(); 
+            searchInput.focus();
+        }
+    });
 </script>
 </body>
 </html>
