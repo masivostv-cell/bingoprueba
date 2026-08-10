@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Cartera</title>
-    <!-- Tailwind CSS para los estilos -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS minificado para carga instantánea -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         .highlight { color: #2563eb; font-weight: bold; background-color: #dbeafe; padding: 0 2px; border-radius: 2px; }
         .search-item.active { background-color: #f3f4f6; border-left: 4px solid #3b82f6; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Evitar que los íconos se desconfiguren */
+        /* Seguro visual: Evitar que los íconos se vuelvan gigantes */
         svg { max-width: 24px; max-height: 24px; }
+        /* Toast para notificaciones */
+        .toast { position: fixed; top: 20px; right: 20px; z-index: 9999; padding: 12px 24px; border-radius: 8px; color: white; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; }
+        .toast.show { opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
@@ -21,7 +24,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhxOar1IKcNhyUflqsugVh4IhxiSdW5xu9Z0GVvSBmrHA09byxbCnabpoz1fA_Mftj/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFRDM94wa5pRQ2sng-u_xtuVabPMPEd0aJGqqTaGQeCrpBLtY3SDnUty1m2nlCBlg5/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -41,7 +44,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- Columna Izquierda (Buscador y Facturas) -->
+        <!-- Columna Izquierda (Buscador, Facturas y Movimientos) -->
         <div class="lg:col-span-7 space-y-6">
             
             <!-- Panel 1: Búsqueda -->
@@ -101,14 +104,34 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Panel 3: Historial de Movimientos (NUEVO) -->
+            <div id="historialPanel" class="bg-white rounded-xl shadow-sm border border-gray-200 hidden fade-in">
+                <div class="p-5 border-b bg-gray-50 rounded-t-xl">
+                    <h2 class="text-lg font-semibold text-gray-800">3. Últimos Movimientos Registrados</h2>
+                </div>
+                <div class="p-0 overflow-x-auto max-h-64 overflow-y-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Detalle del Pago en Excel</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ingresado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historialTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- JS Lo llena -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <!-- Columna Derecha (Formulario) -->
         <div class="lg:col-span-5 space-y-6">
             
-            <!-- Panel 3: Pago -->
+            <!-- Panel 4: Pago -->
             <div id="pagoPanel" class="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hidden fade-in sticky top-6">
-                <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">3. Registrar Pago y Retenciones</h2>
+                <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">4. Registrar Pago y Retenciones</h2>
                 <form id="pagoForm" class="space-y-4">
                     
                     <div class="grid grid-cols-2 gap-4">
@@ -185,7 +208,7 @@
                 </form>
             </div>
 
-            <!-- Panel 4: Mensaje -->
+            <!-- Panel 5: Mensaje -->
             <div id="mensajePanel" class="bg-green-50 rounded-xl shadow-sm border border-green-200 hidden fade-in">
                 <div class="p-5">
                     <h3 class="text-md font-bold text-green-800 mb-2 flex items-center">
@@ -221,7 +244,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         
         // Variables Globales
-        let allData = { clientes: [], cartera: [] };
+        let allData = { clientes: [], cartera: [], pagos: [] };
         let currentClient = null;
         let selectedInvoices = [];
         let currentInvoices = [];
@@ -243,10 +266,15 @@
         // Notificaciones bonitas (Toasts)
         window.showToast = function(message, type = 'error') {
             const toast = document.createElement('div');
-            toast.className = `fixed top-5 right-5 px-4 py-3 rounded shadow-lg text-white z-50 fade-in ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
+            toast.className = `toast ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
             toast.textContent = message;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3500);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         function setFechaHoy() {
@@ -305,6 +333,8 @@
                     if(data && data.clientes) {
                         allData = data;
                         setStatus("Cartera actualizada ✅", "bg-green-100", "text-green-800", "border-green-300", false);
+                        // Si hay un cliente seleccionado, actualizamos su historial invisiblemente
+                        if (currentClient && !isMessageVisible) renderHistorial(currentClient.nit);
                     } else { throw new Error('Vacío'); }
                 })
                 .catch(err => {
@@ -422,7 +452,7 @@
         });
 
         // ----------------------------------------------------
-        // SELECCIÓN Y RENDERIZADO DE TABLA
+        // SELECCIÓN Y RENDERIZADO DE TABLAS
         // ----------------------------------------------------
         window.selectClient = function(nit, nombre) {
             currentClient = { nit, nombre };
@@ -436,9 +466,12 @@
             selectedInvoices = currentInvoices.map(inv => inv.factura);
             
             document.getElementById('clienteSeleccionadoInfo').textContent = `${nombre} | NIT: ${nit}`;
+            
             renderTable();
+            renderHistorial(nit); // Llenar el nuevo panel
             
             document.getElementById('facturasPanel').classList.remove('hidden');
+            document.getElementById('historialPanel').classList.remove('hidden');
             document.getElementById('pagoPanel').classList.remove('hidden');
             document.getElementById('mensajePanel').classList.add('hidden');
             isMessageVisible = false;
@@ -494,6 +527,39 @@
             calcularRetenciones();
         }
 
+        // RENDER HISTORIAL DE PAGOS
+        function renderHistorial(nit) {
+            const tbody = document.getElementById('historialTableBody');
+            
+            if(!allData.pagos) {
+                tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-sm text-gray-500 font-medium">Actualiza Codigo.gs para poder ver el historial.</td></tr>';
+                return;
+            }
+
+            const clientPagos = allData.pagos
+                .filter(p => p.nit === nit)
+                .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                .slice(0, 10); // Mostrar los últimos 10
+
+            if (clientPagos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-sm text-gray-500">No hay pagos registrados para este cliente.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            clientPagos.forEach(p => {
+                html += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(p.fecha)}</td>
+                        <td class="px-4 py-3 text-xs text-gray-500 max-w-md">${p.detalle || '-'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-green-600 text-right">${formatCurrency(p.valor)}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+
         window.toggleInvoice = function(factura, isChecked) {
             if (isChecked) { if (!selectedInvoices.includes(factura)) selectedInvoices.push(factura); } 
             else { selectedInvoices = selectedInvoices.filter(f => f !== factura); }
@@ -545,17 +611,12 @@
             
             const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\nPresentas un saldo pendiente de ${formatCurrency(total)}, correspondiente a las facturas ${facsTxt}.\n\nEste saldo se encuentra distribuido así: ${mesesTxt}.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
             
-            // Intentar copiar al portapapeles
             const textArea = document.createElement("textarea");
             textArea.value = msj;
             document.body.appendChild(textArea);
             textArea.select();
-            try {
-                document.execCommand('copy');
-                showToast("¡Deuda copiada al portapapeles!", "success");
-            } catch (err) {
-                showToast("Error al copiar. Intenta manualmente.");
-            }
+            try { document.execCommand('copy'); showToast("¡Deuda copiada al portapapeles!", "success"); } 
+            catch (err) { showToast("Error al copiar."); }
             textArea.remove();
         }
 
@@ -573,12 +634,9 @@
             const abonoBruto = parseFloat(abonoInput.value);
             if(isNaN(abonoBruto) || abonoBruto <= 0) return;
 
-            // Datos de retenciones calculados
             const retData = calcularRetenciones();
-
             const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
             
-            // Variable para distribuir el pago Bruto
             let saldoRestanteAbono = abonoBruto;
             let abonosRealizados = [];
             let carteraRestante = JSON.parse(JSON.stringify(currentInvoices)); 
@@ -623,14 +681,13 @@
             const formaPago = document.getElementById('formaPago').value;
             const obs = document.getElementById('observaciones').value.trim();
             
-            // Construcción del Mensaje (Con retenciones si existen)
+            // Construcción del Mensaje
             let msj = `Hola, hemos recibido un pago a nombre de *${currentClient.nombre}* por ${formatCurrency(retData.netoBanco)}.\n\n`;
             
             if (retData.totalRetenciones > 0) {
                 msj = `Hola, hemos registrado un abono a cartera a nombre de *${currentClient.nombre}* por un valor total de ${formatCurrency(abonoBruto)}.\n(Valor recibido en banco: ${formatCurrency(retData.netoBanco)} + Descuentos de retenciones: ${formatCurrency(retData.totalRetenciones)}).\n\n`;
             }
 
-            // Detalles de sedes
             const detallesAbonos = [...new Set(abonosRealizados.map(a => a.detalle).filter(d => d && d.trim() !== "-" && d !== ''))];
             const stringDetallesAbonos = detallesAbonos.length > 0 ? ` (${formatearLista(detallesAbonos)})` : "";
 
@@ -676,6 +733,7 @@
 
             document.getElementById('textoMensaje').value = msj;
             document.getElementById('facturasPanel').classList.add('hidden');
+            document.getElementById('historialPanel').classList.add('hidden');
             document.getElementById('pagoPanel').classList.add('hidden');
             document.getElementById('mensajePanel').classList.remove('hidden');
 
@@ -703,7 +761,7 @@
                 cliente: currentClient.nombre,
                 nit: currentClient.nit,
                 detalle: detalleSheet,
-                valor: retData.netoBanco, // Se envía al Excel lo que ENTRÓ AL BANCO
+                valor: retData.netoBanco, 
                 formaPago: formaPago
             };
 
@@ -732,6 +790,7 @@
             setFechaHoy(); 
             
             document.getElementById('facturasPanel').classList.add('hidden');
+            document.getElementById('historialPanel').classList.add('hidden');
             document.getElementById('pagoPanel').classList.add('hidden');
             document.getElementById('mensajePanel').classList.add('hidden');
             clearSearchBtn.classList.add('hidden');
