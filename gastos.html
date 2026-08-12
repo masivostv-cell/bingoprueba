@@ -55,6 +55,18 @@
         </div>
 
         <form id="gastosForm" class="p-6 md:p-8 space-y-6">
+
+            <!-- Próximo número de recibo -->
+            <div class="bg-amber-50 border-2 border-amber-300 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <p class="text-xs font-bold tracking-wider text-amber-700 uppercase">Próximo recibo</p>
+                    <p class="text-sm text-slate-600 mt-1">Anota este número en la factura que estás registrando.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="proximoRecibo" class="text-4xl font-extrabold text-slate-900 tabular-nums">...</span>
+                    <button type="button" onclick="cargarProximoRecibo()" class="px-3 py-2 text-sm border border-amber-300 bg-white text-amber-800 rounded-lg hover:bg-amber-100 transition" title="Actualizar número">Actualizar</button>
+                </div>
+            </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Fecha -->
@@ -199,10 +211,11 @@
 
     <script>
         // TU URL DE GOOGLE APPS SCRIPT
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgQpHI_K--kXAV2hAjYTCNSjs2cePKEOnuVNzMiJyCdgN0i5ctzVW4rnOO9j4rtnA/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4jl-2NI4NTjipn-7omG5kUY8owtm0nkwFviLCvvuiZI7ob_uWqE1KNIzoxlApa6Yc/exec"; 
 
         let listaTerceros = [];
         let nombreTerceroPendiente = ""; // Guarda temporalmente el nombre que se está creando
+        let proximoReciboActual = null;
 
         // UI de Red
         const networkBadge = document.getElementById('networkBadge');
@@ -234,8 +247,14 @@
             }
         }
 
-        window.addEventListener('online', actualizarEstadoRed);
-        window.addEventListener('offline', actualizarEstadoRed);
+        window.addEventListener('online', () => {
+            actualizarEstadoRed();
+            cargarProximoRecibo();
+        });
+        window.addEventListener('offline', () => {
+            actualizarEstadoRed();
+            cargarProximoRecibo();
+        });
 
         async function sincronizarPendientes() {
             let pGastos = JSON.parse(localStorage.getItem('gastos_pendientes') || '[]');
@@ -244,6 +263,7 @@
 
             let rGastos = [], rTerceros = [];
             let subidos = 0;
+            let recibosAsignados = [];
 
             // Sincronizar Terceros primero
             for (let i = 0; i < pTerceros.length; i++) {
@@ -260,8 +280,10 @@
                 try {
                     const res = await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(pGastos[i]) });
                     const data = await res.json();
-                    if (data.status === "success") subidos++;
-                    else rGastos.push(pGastos[i]);
+                    if (data.status === "success") {
+                        subidos++;
+                        if (data.numeroRecibo !== undefined) recibosAsignados.push(data.numeroRecibo);
+                    } else rGastos.push(pGastos[i]);
                 } catch (e) { rGastos.push(pGastos[i]); }
             }
 
@@ -269,7 +291,51 @@
             localStorage.setItem('gastos_pendientes', JSON.stringify(rGastos));
             
             actualizarEstadoRed();
-            if (subidos > 0) mostrarModal("Sincronización Exitosa", `Se han subido ${subidos} registros guardados sin conexión.`);
+            cargarProximoRecibo();
+            if (subidos > 0) {
+                const detalle = recibosAsignados.length > 0
+                    ? ` Recibos asignados: ${recibosAsignados.join(', ')}.`
+                    : '';
+                mostrarModal("Sincronización Exitosa", `Se han subido ${subidos} registros guardados sin conexión.${detalle}`);
+            }
+        }
+
+        async function cargarProximoRecibo() {
+            const indicador = document.getElementById('proximoRecibo');
+
+            if (!navigator.onLine) {
+                proximoReciboActual = null;
+                indicador.innerText = "OFFLINE";
+                indicador.className = "text-2xl font-extrabold text-red-600";
+                return;
+            }
+
+            indicador.innerText = "...";
+            indicador.className = "text-4xl font-extrabold text-slate-900 tabular-nums";
+
+            try {
+                const separador = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}${separador}action=proximoRecibo&t=${Date.now()}`, {
+                    method: 'GET',
+                    redirect: 'follow',
+                    cache: 'no-store'
+                });
+                const result = await response.json();
+
+                if (result.status === "success" && result.proximoRecibo !== undefined) {
+                    proximoReciboActual = Number(result.proximoRecibo);
+                    indicador.innerText = proximoReciboActual;
+                } else {
+                    proximoReciboActual = null;
+                    indicador.innerText = "ERROR";
+                    indicador.className = "text-2xl font-extrabold text-red-600";
+                }
+            } catch (error) {
+                console.error("No se pudo consultar el próximo recibo:", error);
+                proximoReciboActual = null;
+                indicador.innerText = "ERROR";
+                indicador.className = "text-2xl font-extrabold text-red-600";
+            }
         }
 
         async function cargarTerceros() {
@@ -317,6 +383,7 @@
 
         actualizarEstadoRed();
         cargarTerceros();
+        cargarProximoRecibo();
         document.getElementById('fecha').valueAsDate = new Date();
 
         const inputValor = document.getElementById('valor');
@@ -496,7 +563,7 @@
             pendientes.push(formData);
             localStorage.setItem('gastos_pendientes', JSON.stringify(pendientes));
             
-            mostrarModal("¡Guardado Offline!", "No hay internet. El registro se guardó en tu dispositivo y se enviará automáticamente cuando vuelvas a tener conexión.");
+            mostrarModal("¡Guardado Offline!", "No hay internet. El registro quedó pendiente en este dispositivo. El número de recibo se asignará al sincronizar con Google Sheets.");
             
             document.getElementById('gastosForm').reset();
             document.getElementById('documento').value = '';
@@ -547,10 +614,25 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === "success") {
-                    mostrarModal("¡Guardado!", "El gasto se ha registrado correctamente en tu hoja de cálculo.");
+                    const numeroGuardado = data.numeroRecibo !== undefined ? data.numeroRecibo : proximoReciboActual;
+                    const mensaje = numeroGuardado !== null && numeroGuardado !== undefined
+                        ? `El gasto se registró correctamente como RECIBO N.º ${numeroGuardado}.`
+                        : "El gasto se ha registrado correctamente en tu hoja de cálculo.";
+                    mostrarModal("¡Guardado!", mensaje);
+
                     document.getElementById('gastosForm').reset();
                     document.getElementById('documento').value = '';
+                    document.getElementById('fecha').valueAsDate = new Date();
                     calcularTotales();
+
+                    if (data.proximoRecibo !== undefined) {
+                        proximoReciboActual = Number(data.proximoRecibo);
+                        const indicador = document.getElementById('proximoRecibo');
+                        indicador.innerText = proximoReciboActual;
+                        indicador.className = "text-4xl font-extrabold text-slate-900 tabular-nums";
+                    } else {
+                        cargarProximoRecibo();
+                    }
                 } else {
                     mostrarModal("Error del Servidor", data.message);
                 }
