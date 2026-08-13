@@ -25,9 +25,30 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw21QvhCIimsCEnSEkcf4RibQsHE4qtenxYiOj9wpSPPv47HiMexmSb_aV8jYsAsx7N/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyqJb7HwYLVTGiqM6xHdWqY5eidRohu9qhz-V9Sw-c6AxSEqbxXcI7onEjrtbxBU4kW/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
+
+
+<!-- Botón y menú lateral -->
+<button id="menuToggle" type="button" class="fixed top-4 left-4 z-50 bg-gray-900 hover:bg-gray-800 text-white rounded-lg shadow-lg px-3 py-2 font-bold" title="Abrir menú">☰</button>
+<aside id="sideMenu" class="fixed top-0 left-0 h-full w-72 bg-white shadow-2xl border-r border-gray-200 z-40 transform -translate-x-full transition-transform duration-200">
+    <div class="p-5 border-b flex items-center justify-between">
+        <div>
+            <div class="font-bold text-gray-900">Menú de Cartera</div>
+            <div class="text-xs text-gray-500">Reportes y conciliación</div>
+        </div>
+        <button id="menuClose" type="button" class="text-gray-500 hover:text-gray-900 text-2xl">&times;</button>
+    </div>
+    <div class="p-4 space-y-2">
+        <button type="button" onclick="window.open(SHEET_URL, '_blank')" class="w-full text-left px-4 py-3 rounded-lg bg-green-50 hover:bg-green-100 text-green-800 font-semibold">📊 Abrir Google Sheet</button>
+        <button type="button" onclick="abrirReporte('bancos')" class="w-full text-left px-4 py-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold">🏦 Descargar conciliación bancaria</button>
+        <button type="button" onclick="abrirReporte('anticipos')" class="w-full text-left px-4 py-3 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 font-semibold">💰 Descargar anticipos pendientes</button>
+    </div>
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t text-xs text-gray-500 bg-gray-50">
+        El menú recuerda si lo dejaste abierto u oculto en este equipo.
+    </div>
+</aside>
 
 <div class="max-w-6xl mx-auto p-4 sm:p-6">
     
@@ -145,13 +166,9 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
                             <select id="formaPago" required class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border bg-white">
-                                <option value="Transferencia Bancolombia">Transf. Bancolombia</option>
-                                <option value="Transferencia Davivienda">Transf. Davivienda</option>
+                                <option value="">Selecciona...</option>
+                                <option value="Banco">Banco</option>
                                 <option value="Efectivo">Efectivo</option>
-                                <option value="Nequi">Nequi</option>
-                                <option value="Daviplata">Daviplata</option>
-                                <option value="Cheque">Cheque</option>
-                                <option value="Otro">Otro</option>
                             </select>
                         </div>
                     </div>
@@ -195,9 +212,34 @@
                         </div>
 
                         <div class="pt-2 border-t border-gray-200 mt-2 flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">Neto al Banco:</span>
+                            <span id="netoRecibidoLabel" class="text-sm font-medium text-gray-700">Neto recibido:</span>
                             <span id="netoBancoTxt" class="text-lg font-bold text-green-600">$0</span>
                         </div>
+                    </div>
+
+                    <!-- Conciliación bancaria obligatoria cuando Forma de Pago = Banco -->
+                    <div id="bancoPanel" class="hidden bg-emerald-50 p-3 rounded-lg border border-emerald-200 space-y-3">
+                        <div>
+                            <h3 class="text-xs font-bold text-emerald-900 uppercase tracking-wider">Conciliar con hoja BANCOS</h3>
+                            <p class="text-xs text-emerald-800 mt-1">La app analiza los movimientos pendientes de la fecha y te deja escoger el tipo antes de buscar el valor.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-emerald-900 mb-1">Tipo de movimiento bancario</label>
+                            <select id="tipoMovimientoBanco" class="block w-full border border-emerald-300 rounded-md bg-white p-2 text-sm" disabled>
+                                <option value="">Selecciona Banco y una fecha...</option>
+                            </select>
+                            <p id="tiposBancoStatus" class="text-xs text-gray-600 mt-1">Se mostrarán únicamente los tipos encontrados ese día.</p>
+                        </div>
+
+                        <div id="bancoSeleccionadoBox" class="hidden bg-white border-2 border-emerald-400 rounded-lg p-3 text-xs"></div>
+                        <div id="bancoStatus" class="text-xs text-gray-600">Selecciona el tipo de movimiento para escoger la transacción.</div>
+
+                        <button type="button" id="btnBuscarBanco" disabled class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-2.5 rounded font-semibold text-sm">
+                            Escoger valor a relacionar
+                        </button>
+
+                        <p class="text-xs text-gray-500">La selección se hace en una ventana emergente. Primero busca coincidencias exactas del valor; si no corresponde, podrás escoger manualmente en la misma fecha y luego usar “Ver más fechas”.</p>
                     </div>
 
                     <div>
@@ -276,7 +318,7 @@
         </div>
         <div class="p-5 space-y-4">
             <p class="text-sm text-gray-700">
-                Ya existe un pago registrado con los mismos datos principales. Revisa antes de volver a ingresarlo.
+                Ya existe un ingreso con el mismo cliente/NIT, fecha y valor. Revisa antes de volver a ingresarlo.
             </p>
 
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm space-y-2">
@@ -312,6 +354,39 @@
     </div>
 </div>
 
+<!-- Modal para escoger movimiento bancario -->
+<div id="movimientoBancoModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-screen flex flex-col overflow-hidden">
+        <div class="p-5 border-b bg-emerald-50 flex items-start justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-emerald-900">Escoger valor a relacionar</h3>
+                <p id="bancoModalResumen" class="text-xs text-emerald-800 mt-1"></p>
+            </div>
+            <button type="button" id="btnCerrarBancoModal" class="text-gray-500 hover:text-gray-900 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="p-4 border-b bg-white flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+            <div>
+                <span id="bancoModoBadge" class="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold whitespace-nowrap">Coincidencias</span>
+                <span id="bancoModalStatus" class="ml-2 text-xs text-gray-600"></span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" id="btnBancoCoincidencias" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-xs font-semibold">Coincidencias</button>
+                <button type="button" id="btnBancoManual" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded text-xs font-semibold">Escoger manualmente</button>
+                <button type="button" id="btnBancoMasFechas" class="hidden bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded text-xs font-semibold">Ver más fechas</button>
+            </div>
+        </div>
+
+        <div class="p-4 overflow-y-auto flex-1">
+            <div id="bancoResultados" class="space-y-2"></div>
+        </div>
+
+        <div class="p-4 border-t bg-gray-50 text-xs text-gray-600">
+            En manual puedes usar solo una parte del movimiento. Ejemplo: de una consignación de $100.000 puedes relacionar $50.000 y dejar $50.000 disponibles para otro recibo.
+        </div>
+    </div>
+</div>
+
 <!-- Modal para ver comprobantes guardados -->
 <div id="comprobanteModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
@@ -329,6 +404,44 @@
                 <label class="block text-xs font-semibold text-gray-600 mb-1">Texto detectado (OCR)</label>
                 <textarea id="modalOcrText" readonly rows="5" class="w-full border border-gray-200 rounded p-2 text-xs bg-gray-50"></textarea>
             </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal para descargar reportes -->
+<div id="reporteModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        <div class="p-5 border-b flex items-center justify-between">
+            <div>
+                <h3 id="reporteTitulo" class="font-bold text-gray-900">Descargar reporte</h3>
+                <p class="text-xs text-gray-500 mt-1">Escoge un mes completo o un rango de días.</p>
+            </div>
+            <button type="button" onclick="cerrarReporte()" class="text-gray-500 hover:text-gray-900 text-2xl">&times;</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Periodo</label>
+                <select id="reportePeriodo" class="w-full border border-gray-300 rounded-md p-2 bg-white">
+                    <option value="mes">Mes completo</option>
+                    <option value="rango">De día a día</option>
+                </select>
+            </div>
+            <div id="reporteMesBox">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+                <input type="month" id="reporteMes" class="w-full border border-gray-300 rounded-md p-2">
+            </div>
+            <div id="reporteRangoBox" class="hidden grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                    <input type="date" id="reporteDesde" class="w-full border border-gray-300 rounded-md p-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                    <input type="date" id="reporteHasta" class="w-full border border-gray-300 rounded-md p-2">
+                </div>
+            </div>
+            <button type="button" id="btnDescargarReporte" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg">Descargar CSV para Excel</button>
         </div>
     </div>
 </div>
@@ -354,6 +467,11 @@
         let extrasByRecibo = {};
         let isSavingPayment = false;
         let resolverDuplicado = null;
+        let bancoSeleccionado = null;
+        let bancoMovimientosActuales = [];
+        let bancoModo = 'similar';
+        let bancoBusquedaTimer = null;
+        let reporteTipoActual = 'bancos';
 
         // Elementos DOM
         const searchInput = document.getElementById('searchInput');
@@ -376,6 +494,24 @@
         const btnPegarPortapapeles = document.getElementById('btnPegarPortapapeles');
         const btnReprocesarOCR = document.getElementById('btnReprocesarOCR');
         const btnQuitarComprobante = document.getElementById('btnQuitarComprobante');
+        const formaPagoInput = document.getElementById('formaPago');
+        const fechaPagoInput = document.getElementById('fechaPago');
+        const bancoPanel = document.getElementById('bancoPanel');
+        const bancoStatus = document.getElementById('bancoStatus');
+        const bancoResultados = document.getElementById('bancoResultados');
+        const bancoSeleccionadoBox = document.getElementById('bancoSeleccionadoBox');
+        const bancoModoBadge = document.getElementById('bancoModoBadge');
+        const btnBuscarBanco = document.getElementById('btnBuscarBanco');
+        const btnBancoCoincidencias = document.getElementById('btnBancoCoincidencias');
+        const btnBancoManual = document.getElementById('btnBancoManual');
+        const btnBancoMasFechas = document.getElementById('btnBancoMasFechas');
+        const tipoMovimientoBanco = document.getElementById('tipoMovimientoBanco');
+        const tiposBancoStatus = document.getElementById('tiposBancoStatus');
+        const movimientoBancoModal = document.getElementById('movimientoBancoModal');
+        const bancoModalResumen = document.getElementById('bancoModalResumen');
+        const bancoModalStatus = document.getElementById('bancoModalStatus');
+        const btnCerrarBancoModal = document.getElementById('btnCerrarBancoModal');
+        const netoRecibidoLabel = document.getElementById('netoRecibidoLabel');
 
         // Notificaciones bonitas (Toasts)
         window.showToast = function(message, type = 'error') {
@@ -569,6 +705,377 @@
         document.getElementById('comprobanteModal').addEventListener('click', function(e) { if (e.target === this) cerrarComprobante(); });
 
         // ----------------------------------------------------
+        // MENÚ LATERAL + REPORTES
+        // ----------------------------------------------------
+        const sideMenu = document.getElementById('sideMenu');
+        const menuToggle = document.getElementById('menuToggle');
+        const menuClose = document.getElementById('menuClose');
+
+        function setMenuOpen(open) {
+            sideMenu.classList.toggle('-translate-x-full', !open);
+            try { localStorage.setItem('cartera_menu_abierto', open ? '1' : '0'); } catch(e) {}
+        }
+        menuToggle.addEventListener('click', () => setMenuOpen(true));
+        menuClose.addEventListener('click', () => setMenuOpen(false));
+        try { if (localStorage.getItem('cartera_menu_abierto') === '1') setMenuOpen(true); } catch(e) {}
+
+        function hoyIsoLocal() {
+            const d = new Date();
+            const tz = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - tz).toISOString().slice(0,10);
+        }
+        const hoyReporte = hoyIsoLocal();
+        document.getElementById('reporteMes').value = hoyReporte.slice(0,7);
+        document.getElementById('reporteDesde').value = hoyReporte;
+        document.getElementById('reporteHasta').value = hoyReporte;
+
+        document.getElementById('reportePeriodo').addEventListener('change', function() {
+            const esMes = this.value === 'mes';
+            document.getElementById('reporteMesBox').classList.toggle('hidden', !esMes);
+            document.getElementById('reporteRangoBox').classList.toggle('hidden', esMes);
+        });
+
+        window.abrirReporte = function(tipo) {
+            reporteTipoActual = tipo;
+            document.getElementById('reporteTitulo').textContent = tipo === 'bancos'
+                ? 'Descargar conciliación bancaria'
+                : 'Descargar anticipos pendientes';
+            const modal = document.getElementById('reporteModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setMenuOpen(false);
+        }
+        window.cerrarReporte = function() {
+            const modal = document.getElementById('reporteModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        document.getElementById('reporteModal').addEventListener('click', function(e) {
+            if (e.target === this) cerrarReporte();
+        });
+
+        function rangoReporteSeleccionado() {
+            const modo = document.getElementById('reportePeriodo').value;
+            if (modo === 'mes') {
+                const mes = document.getElementById('reporteMes').value;
+                if (!mes) throw new Error('Selecciona el mes.');
+                const [y,m] = mes.split('-').map(Number);
+                const ultimo = new Date(y, m, 0).getDate();
+                return { desde: `${mes}-01`, hasta: `${mes}-${String(ultimo).padStart(2,'0')}` };
+            }
+            const desde = document.getElementById('reporteDesde').value;
+            const hasta = document.getElementById('reporteHasta').value;
+            if (!desde || !hasta) throw new Error('Selecciona las dos fechas.');
+            if (desde > hasta) throw new Error('La fecha Desde no puede ser posterior a Hasta.');
+            return { desde, hasta };
+        }
+
+        function csvSeguro(valor) {
+            const s = String(valor == null ? '' : valor).replace(/"/g, '""');
+            return `"${s}"`;
+        }
+        function descargarCsv(nombre, encabezados, filas) {
+            const lineas = [encabezados.map(csvSeguro).join(';')];
+            filas.forEach(f => lineas.push(f.map(csvSeguro).join(';')));
+            const blob = new Blob(['\ufeff' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = nombre;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('btnDescargarReporte').addEventListener('click', async function() {
+            try {
+                const { desde, hasta } = rangoReporteSeleccionado();
+                const action = reporteTipoActual === 'bancos' ? 'getReporteBancos' : 'getReporteAnticipos';
+                this.disabled = true; this.textContent = 'Preparando...';
+                const res = await fetch(`${SCRIPT_URL}?action=${action}&desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`);
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'No se pudo generar el reporte.');
+
+                if (reporteTipoActual === 'bancos') {
+                    const filas = (data.filas || []).map(x => [
+                        x.fecha, x.descripcion, x.referencia, x.valorBanco,
+                        x.terceroRelacionado, x.valorRelacionado, x.saldoPendiente, x.estado
+                    ]);
+                    descargarCsv(
+                        `conciliacion_bancos_${desde}_${hasta}.csv`,
+                        ['Fecha Banco','Descripción Banco','Referencia Banco','Valor Banco','Tercero relacionado','Valor relacionado','Saldo pendiente','Estado'],
+                        filas
+                    );
+                } else {
+                    const detalle = data.filas || [];
+                    const totalPorCliente = {};
+                    detalle.forEach(x => {
+                        const clave = String(x.nit || x.cliente || '').trim().toLowerCase();
+                        totalPorCliente[clave] = (totalPorCliente[clave] || 0) + (Number(x.saldoPendiente) || 0);
+                    });
+                    detalle.sort((a,b) => String(a.cliente || '').localeCompare(String(b.cliente || ''), 'es'));
+                    const filas = detalle.map(x => {
+                        const clave = String(x.nit || x.cliente || '').trim().toLowerCase();
+                        return [
+                            x.recibo, x.fecha, x.cliente, x.nit, x.valorAnticipo,
+                            x.valorCruzado, x.saldoPendiente, totalPorCliente[clave] || 0,
+                            x.estado, x.formaPago, x.observaciones
+                        ];
+                    });
+                    descargarCsv(
+                        `anticipos_pendientes_${desde}_${hasta}.csv`,
+                        ['ID Recibo','Fecha','Cliente','NIT','Valor anticipo','Valor cruzado','Saldo pendiente','Total pendiente cliente','Estado','Forma de pago','Observaciones'],
+                        filas
+                    );
+                }
+                cerrarReporte();
+                showToast('Reporte descargado para abrir en Excel.', 'success');
+            } catch (err) {
+                showToast(err.message || 'No se pudo descargar el reporte.');
+            } finally {
+                this.disabled = false; this.textContent = 'Descargar CSV para Excel';
+            }
+        });
+
+        // ----------------------------------------------------
+        // BANCOS: BÚSQUEDA Y SELECCIÓN DE MOVIMIENTO
+        // ----------------------------------------------------
+        function esPagoBanco() { return formaPagoInput.value === 'Banco'; }
+
+        function nombreTipoBanco(id) {
+            const mapa = {
+                llave: 'Llave',
+                consignacion: 'Consignación',
+                nequi: 'Nequi',
+                transferencia: 'Transferencia',
+                otros: 'Otros'
+            };
+            return mapa[id] || id || 'Sin tipo';
+        }
+
+        function limpiarSeleccionBanco() {
+            bancoSeleccionado = null;
+            bancoSeleccionadoBox.classList.add('hidden');
+            bancoSeleccionadoBox.innerHTML = '';
+        }
+
+        function cerrarBancoModal() {
+            movimientoBancoModal.classList.add('hidden');
+            movimientoBancoModal.classList.remove('flex');
+        }
+
+        function abrirBancoModal() {
+            movimientoBancoModal.classList.remove('hidden');
+            movimientoBancoModal.classList.add('flex');
+        }
+
+        function actualizarBotonMasFechas() {
+            btnBancoMasFechas.classList.toggle('hidden', bancoModo !== 'manual');
+        }
+
+        async function cargarTiposBanco() {
+            if (!esPagoBanco()) return;
+            const fecha = fechaPagoInput.value;
+            limpiarSeleccionBanco();
+            tipoMovimientoBanco.innerHTML = '<option value="">Analizando movimientos...</option>';
+            tipoMovimientoBanco.disabled = true;
+            btnBuscarBanco.disabled = true;
+            bancoStatus.textContent = 'Analizando los tipos de movimiento de la fecha seleccionada...';
+            tiposBancoStatus.textContent = 'Consultando BANCOS...';
+
+            if (!fecha) {
+                tipoMovimientoBanco.innerHTML = '<option value="">Selecciona una fecha...</option>';
+                tiposBancoStatus.textContent = 'Primero debes indicar la fecha del pago.';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=getTiposBanco&fecha=${encodeURIComponent(fecha)}`);
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'No fue posible analizar BANCOS.');
+                const tipos = data.tipos || [];
+                if (!tipos.length) {
+                    tipoMovimientoBanco.innerHTML = '<option value="">Sin movimientos pendientes ese día</option>';
+                    tiposBancoStatus.textContent = 'No hay movimientos bancarios con saldo disponible para esa fecha.';
+                    bancoStatus.textContent = 'No hay movimientos disponibles en BANCOS para la fecha seleccionada.';
+                    return;
+                }
+                tipoMovimientoBanco.innerHTML = '<option value="">Selecciona el tipo...</option>' + tipos.map(t =>
+                    `<option value="${t.id}">${t.nombre} (${t.cantidad})</option>`
+                ).join('');
+                tipoMovimientoBanco.disabled = false;
+                tiposBancoStatus.textContent = `Encontré ${data.total || tipos.reduce((s,t)=>s+t.cantidad,0)} movimiento(s) pendiente(s) distribuidos por tipo.`;
+                bancoStatus.textContent = 'Escoge el tipo de movimiento; después podrás seleccionar el valor en la ventana emergente.';
+            } catch (err) {
+                tipoMovimientoBanco.innerHTML = '<option value="">Error consultando BANCOS</option>';
+                tiposBancoStatus.textContent = err.message || 'Error consultando BANCOS.';
+                bancoStatus.textContent = 'No fue posible analizar los movimientos bancarios.';
+            }
+        }
+
+        function programarBusquedaBanco() {
+            if (!esPagoBanco()) return;
+            limpiarSeleccionBanco();
+            bancoResultados.innerHTML = '';
+            const tipo = tipoMovimientoBanco.value;
+            btnBuscarBanco.disabled = !tipo;
+            bancoStatus.textContent = tipo
+                ? `Tipo seleccionado: ${nombreTipoBanco(tipo)}. Pulsa “Escoger valor a relacionar”.`
+                : 'Selecciona el tipo de movimiento para escoger la transacción.';
+        }
+
+        async function buscarMovimientosBanco(modo = 'similar', abrirModal = true) {
+            if (!esPagoBanco()) return;
+            const fecha = fechaPagoInput.value;
+            const tipo = tipoMovimientoBanco.value;
+            const ret = calcularRetenciones();
+            const valor = ret.netoBanco;
+
+            if (!tipo) {
+                showToast('Primero selecciona el tipo de movimiento bancario.');
+                return;
+            }
+            if (!fecha || valor <= 0) {
+                showToast('Define la fecha y el valor del pago antes de buscar en BANCOS.');
+                return;
+            }
+
+            bancoModo = modo;
+            limpiarSeleccionBanco();
+            actualizarBotonMasFechas();
+            const esManualFecha = modo === 'manual';
+            const esManualTodas = modo === 'manual_all';
+            bancoModoBadge.textContent = esManualTodas ? 'Todas las fechas' : (esManualFecha ? 'Manual · misma fecha' : 'Coincidencias');
+            bancoModoBadge.className = (esManualFecha || esManualTodas)
+                ? 'text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold whitespace-nowrap'
+                : 'text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold whitespace-nowrap';
+
+            bancoModalResumen.textContent = `${formatDate(fecha)} · ${nombreTipoBanco(tipo)} · valor del recibo ${formatCurrency(valor)}`;
+            bancoModalStatus.textContent = esManualTodas
+                ? 'Buscando movimientos pendientes de todas las fechas...'
+                : (esManualFecha ? 'Buscando movimientos pendientes de esta fecha...' : 'Buscando coincidencias exactas...');
+            bancoResultados.innerHTML = '<div class="text-center text-sm text-gray-500 py-8">Consultando movimientos...</div>';
+            if (abrirModal) abrirBancoModal();
+
+            try {
+                const url = `${SCRIPT_URL}?action=getBancos&fecha=${encodeURIComponent(fecha)}&valor=${encodeURIComponent(valor)}&modo=${encodeURIComponent(modo)}&tipo=${encodeURIComponent(tipo)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'No fue posible consultar BANCOS.');
+                bancoMovimientosActuales = data.movimientos || [];
+                renderMovimientosBanco();
+            } catch (err) {
+                bancoMovimientosActuales = [];
+                bancoModalStatus.textContent = err.message || 'Error consultando BANCOS.';
+                bancoResultados.innerHTML = '<div class="text-center text-sm text-red-600 py-8">No fue posible cargar los movimientos.</div>';
+            }
+        }
+
+        function renderMovimientosBanco() {
+            if (bancoMovimientosActuales.length === 0) {
+                if (bancoModo === 'manual') {
+                    bancoModalStatus.textContent = 'No hay movimientos pendientes de este tipo en esta fecha. Puedes usar “Ver más fechas”.';
+                } else if (bancoModo === 'manual_all') {
+                    bancoModalStatus.textContent = 'No hay movimientos pendientes de este tipo en BANCOS.';
+                } else {
+                    bancoModalStatus.textContent = 'No encontré una coincidencia exacta. Usa “Escoger manualmente” si el depósito tiene un valor diferente o se divide entre varios recibos.';
+                }
+                bancoResultados.innerHTML = '<div class="bg-gray-50 border border-gray-200 rounded-lg p-5 text-center text-sm text-gray-600">Sin movimientos para mostrar con este filtro.</div>';
+                return;
+            }
+
+            bancoModalStatus.textContent = bancoModo === 'manual'
+                ? `${bancoMovimientosActuales.length} movimiento(s) pendiente(s) de esta fecha.`
+                : (bancoModo === 'manual_all'
+                    ? `${bancoMovimientosActuales.length} movimiento(s) pendiente(s) de este tipo entre todas las fechas.`
+                    : `${bancoMovimientosActuales.length} coincidencia(s) exacta(s). Escoge una.`);
+
+            bancoResultados.innerHTML = bancoMovimientosActuales.map((m, idx) => {
+                const parcial = m.valorRelacionado > 0.5;
+                return `
+                    <button type="button" onclick="seleccionarMovimientoBanco(${idx})" class="w-full text-left bg-white hover:bg-emerald-50 border border-gray-200 hover:border-emerald-400 rounded-lg p-4 transition-colors">
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                    <span class="text-xs font-semibold text-gray-500">${formatDate(m.fecha)}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">${nombreTipoBanco(m.tipo)}</span>
+                                    ${parcial ? '<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">PARCIAL</span>' : ''}
+                                </div>
+                                <div class="font-semibold text-gray-900 break-words">${m.descripcion || 'Sin descripción'}</div>
+                                <div class="text-xs text-gray-500 mt-1">Referencia: ${m.referencia || '-'}</div>
+                                ${m.terceroRelacionado ? `<div class="text-xs text-purple-700 mt-1">Relacionado: ${m.terceroRelacionado}</div>` : ''}
+                            </div>
+                            <div class="sm:text-right shrink-0">
+                                <div class="font-bold text-gray-900">Banco: ${formatCurrency(m.valorBanco)}</div>
+                                <div class="text-xs text-gray-500">Ya relacionado: ${formatCurrency(m.valorRelacionado)}</div>
+                                <div class="text-sm font-bold text-emerald-700">Disponible: ${formatCurrency(m.disponible)}</div>
+                            </div>
+                        </div>
+                    </button>`;
+            }).join('');
+        }
+
+        window.seleccionarMovimientoBanco = function(indice) {
+            const m = bancoMovimientosActuales[indice];
+            if (!m) return;
+            const valorRecibo = calcularRetenciones().netoBanco;
+            if (valorRecibo - m.disponible > 0.5) {
+                showToast(`Ese movimiento solo tiene ${formatCurrency(m.disponible)} disponibles.`);
+                return;
+            }
+            bancoSeleccionado = { ...m, modo: bancoModo, tipo: tipoMovimientoBanco.value };
+            bancoSeleccionadoBox.innerHTML = `
+                <div class="font-bold text-emerald-900 mb-2">✓ Movimiento bancario seleccionado</div>
+                <div><b>Tipo:</b> ${nombreTipoBanco(m.tipo)}</div>
+                <div><b>Fecha:</b> ${formatDate(m.fecha)}</div>
+                <div><b>Descripción:</b> ${m.descripcion || '-'}</div>
+                <div><b>Referencia:</b> ${m.referencia || '-'}</div>
+                <div><b>Valor banco:</b> ${formatCurrency(m.valorBanco)}</div>
+                <div><b>Disponible antes de este recibo:</b> ${formatCurrency(m.disponible)}</div>
+                <div class="mt-1 font-bold text-blue-700"><b>Valor que se relacionará:</b> ${formatCurrency(valorRecibo)}</div>`;
+            bancoSeleccionadoBox.classList.remove('hidden');
+            bancoStatus.textContent = 'Movimiento seleccionado. Ya puedes guardar el recibo o cambiar la selección.';
+            btnBuscarBanco.textContent = 'Cambiar valor a relacionar';
+            cerrarBancoModal();
+        }
+
+        function actualizarVisibilidadBanco() {
+            const banco = esPagoBanco();
+            bancoPanel.classList.toggle('hidden', !banco);
+            netoRecibidoLabel.textContent = banco ? 'Neto al Banco:' : 'Neto recibido:';
+            limpiarSeleccionBanco();
+            bancoResultados.innerHTML = '';
+            btnBuscarBanco.textContent = 'Escoger valor a relacionar';
+            if (banco) {
+                cargarTiposBanco();
+            } else {
+                tipoMovimientoBanco.innerHTML = '<option value="">Selecciona Banco y una fecha...</option>';
+                tipoMovimientoBanco.disabled = true;
+                btnBuscarBanco.disabled = true;
+            }
+        }
+
+        formaPagoInput.addEventListener('change', actualizarVisibilidadBanco);
+        fechaPagoInput.addEventListener('change', () => {
+            if (esPagoBanco()) cargarTiposBanco();
+        });
+        tipoMovimientoBanco.addEventListener('change', function() {
+            limpiarSeleccionBanco();
+            btnBuscarBanco.textContent = 'Escoger valor a relacionar';
+            btnBuscarBanco.disabled = !this.value;
+            if (this.value) {
+                bancoStatus.textContent = `Tipo seleccionado: ${nombreTipoBanco(this.value)}. Abriendo movimientos compatibles...`;
+                buscarMovimientosBanco('similar', true);
+            } else {
+                bancoStatus.textContent = 'Selecciona el tipo de movimiento para escoger la transacción.';
+            }
+        });
+        btnBuscarBanco.addEventListener('click', () => buscarMovimientosBanco('similar', true));
+        btnBancoCoincidencias.addEventListener('click', () => buscarMovimientosBanco('similar', false));
+        btnBancoManual.addEventListener('click', () => buscarMovimientosBanco('manual', false));
+        btnBancoMasFechas.addEventListener('click', () => buscarMovimientosBanco('manual_all', false));
+        btnCerrarBancoModal.addEventListener('click', cerrarBancoModal);
+        movimientoBancoModal.addEventListener('click', function(e) { if (e.target === this) cerrarBancoModal(); });
+
+        // ----------------------------------------------------
         // FETCH DATA
         // ----------------------------------------------------
         function fetchData() {
@@ -742,6 +1249,7 @@
                 document.getElementById('totalSeleccionadoTxt').textContent = '$0';
                 selectAllCheckbox.checked = false;
                 calcularRetenciones();
+                programarBusquedaBanco();
                 return;
             }
 
@@ -779,6 +1287,7 @@
                 baseRetencionesInput.value = '';
             }
             calcularRetenciones();
+            programarBusquedaBanco();
         }
 
         // RENDER HISTORIAL DE PAGOS
@@ -849,7 +1358,10 @@
         }
 
         [abonoInput, baseRetencionesInput, reteFuentePercInput, reteIcaPercInput].forEach(input => {
-            input.addEventListener('input', calcularRetenciones);
+            input.addEventListener('input', function() {
+                calcularRetenciones();
+                programarBusquedaBanco();
+            });
         });
 
         // ----------------------------------------------------
@@ -889,11 +1401,33 @@
 
         function fechaComparable(valor) {
             if (!valor) return '';
-            try {
-                return formatDate(valor);
-            } catch (e) {
-                return String(valor);
+
+            // Normalizamos SIEMPRE a YYYY-MM-DD para que una fecha que venga
+            // de Sheets como 13/08/2026 coincida con el input HTML 2026-08-13.
+            if (valor instanceof Date && !isNaN(valor.getTime())) {
+                const y = valor.getFullYear();
+                const m = String(valor.getMonth() + 1).padStart(2, '0');
+                const d = String(valor.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
             }
+
+            const s = String(valor).trim();
+            let m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+            if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+
+            m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (m) return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+
+            // Último intento para fechas serializadas por JSON/Sheets.
+            const d = new Date(s);
+            if (!isNaN(d.getTime())) {
+                const y = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${y}-${mm}-${dd}`;
+            }
+
+            return s;
         }
 
         function extraerFormaPagoDelDetalle(detalle) {
@@ -930,14 +1464,10 @@
                     const mismaFecha = fechaComparable(p.fecha) === fechaObjetivo;
                     const mismoValor = Math.abs((Number(p.valor) || 0) - valorObjetivo) < 0.5;
 
-                    if (!(mismoNit && mismaFecha && mismoValor)) return false;
-
-                    const formaAnterior = extraerFormaPagoDelDetalle(p.detalle);
-                    if (formaAnterior && formaPago) {
-                        return formaAnterior.toLowerCase() === String(formaPago).toLowerCase();
-                    }
-
-                    return true;
+                    // El bloqueo principal NO depende de la forma de pago.
+                    // Así también detectamos pagos viejos que antes estaban guardados
+                    // como "Transferencia Bancolombia" y hoy se registran como "Banco".
+                    return mismoNit && mismaFecha && mismoValor;
                 }).map(p => ({
                     origen: 'historial',
                     fecha: p.fecha,
@@ -958,10 +1488,9 @@
                     const mismoNit = local.nit === nitObjetivo;
                     const mismaFecha = fechaComparable(local.fecha) === fechaObjetivo;
                     const mismoValor = Math.abs((Number(local.valor) || 0) - valorObjetivo) < 0.5;
-                    const mismaForma = !local.formaPago || !formaPago ||
-                        String(local.formaPago).toLowerCase() === String(formaPago).toLowerCase();
-
-                    if (mismoNit && mismaFecha && mismoValor && mismaForma) {
+                    // La huella local también bloquea por persona + fecha + valor,
+                    // aunque la etiqueta de la forma de pago haya cambiado.
+                    if (mismoNit && mismaFecha && mismoValor) {
                         const yaExiste = encontrados.some(x =>
                             (x.recibo && local.recibo && x.recibo === local.recibo) ||
                             (
@@ -1068,8 +1597,31 @@
             const fechaPagoValDuplicado = document.getElementById('fechaPago').value;
             const formaPagoValDuplicado = document.getElementById('formaPago').value;
 
+            if (!formaPagoValDuplicado) {
+                showToast('Debes indicar si el pago fue Banco o Efectivo.');
+                return;
+            }
+            if (formaPagoValDuplicado === 'Banco') {
+                if (!tipoMovimientoBanco.value) {
+                    showToast('Para pagos por Banco debes escoger primero el tipo de movimiento.');
+                    bancoPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+                if (!bancoSeleccionado) {
+                    showToast('Para pagos por Banco debes escoger la transacción antes de guardar.');
+                    bancoPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+                if (retData.netoBanco - bancoSeleccionado.disponible > 0.5) {
+                    showToast('La transacción escogida ya no tiene saldo suficiente. Actualiza la búsqueda.');
+                    programarBusquedaBanco();
+                    return;
+                }
+            }
+
             // Bloquea doble clic y dos envíos simultáneos.
             isSavingPayment = true;
+            let permitirDuplicadoServidor = false;
 
             const duplicados = buscarDuplicadosPago(
                 fechaPagoValDuplicado,
@@ -1092,6 +1644,7 @@
                     showToast("Registro cancelado para evitar un posible duplicado.");
                     return;
                 }
+                permitirDuplicadoServidor = true;
             }
 
             const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
@@ -1127,10 +1680,10 @@
             }
 
             const anticipo = saldoRestanteAbono;
-            generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo);
+            generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo, permitirDuplicadoServidor);
         });
 
-        function generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo) {
+        async function generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo, permitirDuplicadoServidor) {
             isMessageVisible = true;
             
             const fechaPagoVal = document.getElementById('fechaPago').value; 
@@ -1215,18 +1768,29 @@
                 textoRetenciones = ` | Retenidos: RF ${formatCurrency(retData.rfValue)}, ICA ${formatCurrency(retData.icaValue)} | Entró al banco: ${formatCurrency(retData.netoBanco)}`;
             }
             
-            let detalleSheet = `Abono total a deuda: ${formatCurrency(abonoBruto)}${detalleFacturas}${detalleAnticipo}${textoRetenciones} (Meses pagados: ${mesesTxtSheet}) | Fecha reg: ${fechaParaTexto} | Pago: ${formaPago}${stringObs} | Recibo: ${reciboId} | JP`;
+            let detalleBanco = '';
+            if (formaPago === 'Banco' && bancoSeleccionado) {
+                detalleBanco = ` | Tipo Banco: ${nombreTipoBanco(bancoSeleccionado.tipo)} | Banco fila: ${bancoSeleccionado.fila} | Ref Banco: ${bancoSeleccionado.referencia || '-'} | Movimiento Banco: ${formatCurrency(bancoSeleccionado.valorBanco)}`;
+            }
+            let detalleSheet = `Abono total a deuda: ${formatCurrency(abonoBruto)}${detalleFacturas}${detalleAnticipo}${textoRetenciones} (Meses pagados: ${mesesTxtSheet}) | Fecha reg: ${fechaParaTexto} | Pago: ${formaPago}${detalleBanco}${stringObs} | Recibo: ${reciboId} | JP`;
             
-            // Conserva tu POST actual para registrar el pago.
+            // Primero se guarda el pago NORMAL. Solo si fue exitoso se guarda
+            // comprobante/anticipo. Así no queda un anticipo huérfano si PAGOS falla.
             const payload = {
                 fechaRegistro: fechaPagoVal,
                 cliente: currentClient.nombre,
                 nit: currentClient.nit,
                 detalle: detalleSheet,
                 valor: retData.netoBanco,
-                formaPago: formaPago
+                formaPago: formaPago,
+                recibo: reciboId,
+                permitirDuplicado: !!permitirDuplicadoServidor,
+                bancoFila: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.fila : '',
+                bancoReferencia: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.referencia : '',
+                bancoModo: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.modo : '',
+                bancoTipo: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.tipo : ''
             };
-            // Segundo registro: comprobante/OCR y, si existe, ANTICIPO.
+
             const payloadExtra = {
                 action: 'guardarExtraCartera',
                 recibo: reciboId,
@@ -1241,45 +1805,102 @@
                 comprobanteBase64: comprobanteDataUrl || '',
                 comprobanteTexto: comprobanteTextoFinal || ''
             };
-            Promise.allSettled([
-                fetch(SCRIPT_URL, {
+
+            try {
+                let resPago = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
-                }),
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payloadExtra)
-                })
-            ]).then(results => {
-                const fallos = results.filter(r => r.status === 'rejected');
+                });
+                let dataPago = await resPago.json();
 
-                if (fallos.length) {
-                    showToast('El pago se procesó, pero revisa la conexión con Apps Script.');
-                } else {
-                    guardarHuellaPagoLocal({
-                        nit: currentClient.nit,
+                // Segunda barrera: si otro equipo registró el pago después del
+                // último refresco, Apps Script lo detecta. En vez de dejar pasar
+                // el duplicado, mostramos el mismo aviso y exigimos confirmación.
+                if (dataPago.status === 'duplicate') {
+                    const dupServidor = dataPago.duplicate || {};
+                    const continuarServidor = await confirmarPagoDuplicado([{
+                        origen: 'servidor',
+                        fecha: dupServidor.fecha || fechaPagoVal,
+                        nit: dupServidor.nit || currentClient.nit,
+                        valor: Number(dupServidor.valor) || retData.netoBanco,
+                        detalle: dupServidor.detalle || dataPago.message || '',
+                        recibo: dupServidor.recibo || '',
+                        formaPago: dupServidor.formaPago || formaPago
+                    }], {
                         cliente: currentClient.nombre,
+                        nit: currentClient.nit,
                         fecha: fechaPagoVal,
                         valor: retData.netoBanco,
-                        formaPago: formaPago,
-                        recibo: reciboId
+                        formaPago: formaPago
                     });
 
-                    showToast(
-                        anticipo > 0
-                            ? 'Pago guardado y anticipo enviado a ANTICIPOS.'
-                            : 'Pago y comprobante guardados.',
-                        'success'
-                    );
+                    if (!continuarServidor) {
+                        throw new Error('Registro cancelado: este ingreso ya aparece registrado.');
+                    }
+
+                    payload.permitirDuplicado = true;
+                    resPago = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    dataPago = await resPago.json();
                 }
-            }).catch(e => {
+
+                if (dataPago.status !== 'success') {
+                    throw new Error(dataPago.message || 'No fue posible guardar el pago.');
+                }
+
+                const necesitaExtra = anticipo > 0 || !!comprobanteDataUrl || !!comprobanteTextoFinal;
+                let extraOk = true;
+                if (necesitaExtra) {
+                    try {
+                        const resExtra = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify(payloadExtra)
+                        });
+                        const dataExtra = await resExtra.json();
+                        extraOk = dataExtra.ok !== false && dataExtra.status !== 'error';
+                    } catch (eExtra) {
+                        extraOk = false;
+                        console.error('Error extra:', eExtra);
+                    }
+                }
+
+                guardarHuellaPagoLocal({
+                    nit: currentClient.nit,
+                    cliente: currentClient.nombre,
+                    fecha: fechaPagoVal,
+                    valor: retData.netoBanco,
+                    formaPago: formaPago,
+                    recibo: reciboId
+                });
+
+                if (!extraOk) {
+                    showToast('El pago quedó guardado, pero revisa el comprobante/anticipo en Apps Script.');
+                } else {
+                    let mensajeExito = formaPago === 'Banco'
+                        ? 'Pago guardado y banco conciliado.'
+                        : 'Pago guardado.';
+                    if (anticipo > 0) mensajeExito += ' Anticipo registrado.';
+                    if (comprobanteDataUrl || comprobanteTextoFinal) mensajeExito += ' Comprobante guardado.';
+                    showToast(mensajeExito, 'success');
+                }
+            } catch (e) {
                 console.error('Error Sheet:', e);
-                showToast('Ocurrió un error al guardar el pago.');
-            }).finally(() => {
+                // Si falló el pago real, no dejamos visible el mensaje de éxito.
+                isMessageVisible = false;
+                document.getElementById('mensajePanel').classList.add('hidden');
+                document.getElementById('facturasPanel').classList.remove('hidden');
+                document.getElementById('historialPanel').classList.remove('hidden');
+                document.getElementById('pagoPanel').classList.remove('hidden');
+                showToast(e.message || 'Ocurrió un error al guardar el pago.');
+                if (formaPago === 'Banco') programarBusquedaBanco();
+            } finally {
                 isSavingPayment = false;
-            });
+            }
         }
 
         window.copiarMensaje = function() {
@@ -1298,6 +1919,18 @@
             netoBancoTxt.textContent = '$0';
             document.getElementById('observaciones').value = '';
             limpiarComprobante();
+            limpiarSeleccionBanco();
+            bancoMovimientosActuales = [];
+            bancoResultados.innerHTML = '';
+            bancoStatus.textContent = 'Selecciona el tipo de movimiento para escoger la transacción.';
+            bancoPanel.classList.add('hidden');
+            formaPagoInput.value = '';
+            netoRecibidoLabel.textContent = 'Neto recibido:';
+            tipoMovimientoBanco.innerHTML = '<option value="">Selecciona Banco y una fecha...</option>';
+            tipoMovimientoBanco.disabled = true;
+            btnBuscarBanco.disabled = true;
+            btnBuscarBanco.textContent = 'Escoger valor a relacionar';
+            cerrarBancoModal();
             extrasByRecibo = {};
             setFechaHoy(); 
             
