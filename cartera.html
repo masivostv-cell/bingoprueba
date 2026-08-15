@@ -24,7 +24,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7_bLRyeEQ-Yk-XMlnGsfTtdnjkqSZncobwweAW8VyHH1HZzU-PKr_CA3CnhVvmefe/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzn4xdSuuNR7bR28Arkzp1bX4Hhb5KA2HkiOubLPGGekJdIiybY7hCkXYllVVruHp2F/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -1960,12 +1960,12 @@
 
             let msj = '';
             if (abonosRealizados.length > 0) {
-                msj = `Abona fact. ${facturasTxtSimple} y el saldo es ${formatCurrency(totalPendiente)}${mesesMensaje ? ` de ${mesesMensaje}` : ''}.`;
+                msj = `${clientePago.nombre}: abona fact. ${facturasTxtSimple}. Saldo: ${formatCurrency(totalPendiente)}${mesesMensaje ? ` de ${mesesMensaje}` : ''}.`;
                 if (anticipo > 0) msj += ` Anticipo a favor: ${formatCurrency(anticipo)}.`;
                 msj += `
 Att. Cartera.`;
             } else {
-                msj = `Anticipo registrado por ${formatCurrency(anticipo || abonoBruto)}.
+                msj = `${clientePago.nombre}: anticipo registrado por ${formatCurrency(anticipo || abonoBruto)}.
 Att. Cartera.`;
             }
 
@@ -1981,7 +1981,17 @@ Att. Cartera.`;
             let detalleSheet = '';
             if (abonosRealizados.length > 0) {
                 const mesesDetalle = formatearLista([...mesesPagados]);
-                detalleSheet = `paga mes${mesesPagados.length > 1 ? 'es' : ''} de ${mesesDetalle} ${fechaParaTexto} ${medioDetalle} JP`;
+                const detallePorFactura = abonosRealizados
+                    .map(a => {
+                        const det = String(a.detalle || '').trim();
+                        return det && det !== '-' ? `${a.factura}: ${det}` : `${a.factura}`;
+                    })
+                    .filter(Boolean)
+                    .join('; ');
+
+                detalleSheet = `paga mes${mesesPagados.length > 1 ? 'es' : ''} de ${mesesDetalle}`;
+                if (detallePorFactura) detalleSheet += ` | ${detallePorFactura}`;
+                detalleSheet += ` | ${fechaParaTexto} ${medioDetalle} JP`;
             } else {
                 detalleSheet = `anticipo ${fechaParaTexto} ${medioDetalle} JP`;
             }
