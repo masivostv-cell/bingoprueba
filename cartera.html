@@ -6,7 +6,6 @@
     <title>Gestión de Cartera</title>
     <!-- Tailwind CSS minificado para carga instantánea -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         .highlight { color: #2563eb; font-weight: bold; background-color: #dbeafe; padding: 0 2px; border-radius: 2px; }
         .search-item.active { background-color: #f3f4f6; border-left: 4px solid #3b82f6; }
@@ -25,7 +24,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyqJb7HwYLVTGiqM6xHdWqY5eidRohu9qhz-V9Sw-c6AxSEqbxXcI7onEjrtbxBU4kW/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7_bLRyeEQ-Yk-XMlnGsfTtdnjkqSZncobwweAW8VyHH1HZzU-PKr_CA3CnhVvmefe/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -247,12 +246,12 @@
                         <textarea id="observaciones" rows="2" class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2" placeholder="Opcional..."></textarea>
                     </div>
 
-                    <!-- Comprobante pegado desde el portapapeles -->
+                    <!-- Comprobante pegado desde el portapapeles: se guarda como Base64 en el mismo recibo -->
                     <div class="bg-purple-50 p-3 rounded-lg border border-purple-200 space-y-3">
                         <div class="flex items-center justify-between gap-2">
                             <div>
                                 <h3 class="text-xs font-bold text-purple-800 uppercase tracking-wider">Comprobante del pago</h3>
-                                <p class="text-xs text-purple-700 mt-1">Haz clic en el recuadro y pega la imagen con Ctrl+V. No necesitas subir archivos.</p>
+                                <p class="text-xs text-purple-700 mt-1">Pega la imagen con Ctrl+V. Se comprime y se guarda como Base64 en la misma fila del recibo en PAGOS.</p>
                             </div>
                             <button type="button" id="btnPegarPortapapeles" class="shrink-0 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-xs font-medium">Pegar</button>
                         </div>
@@ -260,14 +259,9 @@
                             <span id="pasteHint" class="text-sm text-gray-500">📋 Haz clic aquí y presiona <b>Ctrl + V</b></span>
                             <img id="comprobantePreview" class="hidden max-h-48 max-w-full rounded shadow-sm" alt="Vista previa del comprobante">
                         </div>
-                        <div id="ocrStatus" class="hidden text-xs font-medium text-purple-700"></div>
-                        <div id="ocrPanel" class="hidden">
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Texto detectado en el comprobante</label>
-                            <textarea id="comprobanteTexto" rows="4" class="block w-full border border-purple-200 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 text-xs p-2" placeholder="El OCR aparecerá aquí y puedes corregirlo antes de guardar."></textarea>
-                        </div>
-                        <div id="comprobanteActions" class="hidden flex gap-2">
-                            <button type="button" id="btnReprocesarOCR" class="flex-1 bg-white border border-purple-300 hover:bg-purple-100 text-purple-700 px-3 py-2 rounded text-xs font-medium">Volver a leer texto</button>
-                            <button type="button" id="btnQuitarComprobante" class="flex-1 bg-white border border-red-300 hover:bg-red-50 text-red-700 px-3 py-2 rounded text-xs font-medium">Quitar comprobante</button>
+                        <div id="comprobanteStatus" class="hidden text-xs font-medium text-purple-700"></div>
+                        <div id="comprobanteActions" class="hidden">
+                            <button type="button" id="btnQuitarComprobante" class="w-full bg-white border border-red-300 hover:bg-red-50 text-red-700 px-3 py-2 rounded text-xs font-medium">Quitar imagen</button>
                         </div>
                     </div>
                     
@@ -370,10 +364,22 @@
                 <span id="bancoModoBadge" class="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold whitespace-nowrap">Coincidencias</span>
                 <span id="bancoModalStatus" class="ml-2 text-xs text-gray-600"></span>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
                 <button type="button" id="btnBancoCoincidencias" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-xs font-semibold">Coincidencias</button>
                 <button type="button" id="btnBancoManual" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded text-xs font-semibold">Escoger manualmente</button>
+                <button type="button" id="btnBancoDividir" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-semibold">Dividir consignación</button>
                 <button type="button" id="btnBancoMasFechas" class="hidden bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded text-xs font-semibold">Ver más fechas</button>
+            </div>
+        </div>
+
+        <div id="divisionBancoPanel" class="hidden p-4 border-b bg-blue-50">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-blue-900 mb-1">Valor total de la consignación</label>
+                    <input type="number" id="valorConsignacionGeneral" min="1" step="any" class="w-full border border-blue-300 rounded-md p-2 text-sm bg-white" placeholder="Ej: 100000">
+                    <p id="divisionBancoAyuda" class="text-xs text-blue-800 mt-1">Escribe el valor completo que aparece en BANCOS. Al recibo actual solo se aplicará su valor y el resto quedará disponible.</p>
+                </div>
+                <button type="button" id="btnBuscarConsignacionDivision" class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded text-sm font-semibold">Buscar consignación</button>
             </div>
         </div>
 
@@ -400,10 +406,6 @@
         <div class="p-4 space-y-4">
             <div id="modalComprobanteLoading" class="text-center text-sm text-gray-500 py-8">Cargando comprobante...</div>
             <img id="modalComprobanteImg" class="hidden max-w-full mx-auto rounded-lg shadow" alt="Comprobante guardado">
-            <div id="modalOcrContainer" class="hidden">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Texto detectado (OCR)</label>
-                <textarea id="modalOcrText" readonly rows="5" class="w-full border border-gray-200 rounded p-2 text-xs bg-gray-50"></textarea>
-            </div>
         </div>
     </div>
 </div>
@@ -463,7 +465,6 @@
         let activeIndex = -1;
         let isMessageVisible = false;
         let comprobanteDataUrl = "";
-        let ocrWorker = null;
         let extrasByRecibo = {};
         let isSavingPayment = false;
         let resolverDuplicado = null;
@@ -471,6 +472,14 @@
         let bancoMovimientosActuales = [];
         let bancoModo = 'similar';
         let bancoBusquedaTimer = null;
+        let bancoValorGeneralDivision = 0;
+        let bancoSnapshotDia = { fecha: '', ts: 0, movimientos: [] };
+        let bancoSnapshotTodas = { ts: 0, movimientos: [] };
+        const BANCO_CACHE_MS = 120000; // referencia de frescura; nunca bloquea si ya hay caché
+        const BANCO_CACHE_MAX_STALE_MS = 15 * 60 * 1000;
+        const BANCO_REVALIDATE_MS = 20000;
+        const bancoRevalidandoDias = new Set();
+        let bancoRevalidandoTodas = false;
         let reporteTipoActual = 'bancos';
 
         // Elementos DOM
@@ -487,12 +496,9 @@
         const pasteZone = document.getElementById('pasteZone');
         const pasteHint = document.getElementById('pasteHint');
         const comprobantePreview = document.getElementById('comprobantePreview');
-        const comprobanteTextoInput = document.getElementById('comprobanteTexto');
-        const ocrStatus = document.getElementById('ocrStatus');
-        const ocrPanel = document.getElementById('ocrPanel');
+        const comprobanteStatus = document.getElementById('comprobanteStatus');
         const comprobanteActions = document.getElementById('comprobanteActions');
         const btnPegarPortapapeles = document.getElementById('btnPegarPortapapeles');
-        const btnReprocesarOCR = document.getElementById('btnReprocesarOCR');
         const btnQuitarComprobante = document.getElementById('btnQuitarComprobante');
         const formaPagoInput = document.getElementById('formaPago');
         const fechaPagoInput = document.getElementById('fechaPago');
@@ -504,7 +510,12 @@
         const btnBuscarBanco = document.getElementById('btnBuscarBanco');
         const btnBancoCoincidencias = document.getElementById('btnBancoCoincidencias');
         const btnBancoManual = document.getElementById('btnBancoManual');
+        const btnBancoDividir = document.getElementById('btnBancoDividir');
         const btnBancoMasFechas = document.getElementById('btnBancoMasFechas');
+        const divisionBancoPanel = document.getElementById('divisionBancoPanel');
+        const valorConsignacionGeneral = document.getElementById('valorConsignacionGeneral');
+        const divisionBancoAyuda = document.getElementById('divisionBancoAyuda');
+        const btnBuscarConsignacionDivision = document.getElementById('btnBuscarConsignacionDivision');
         const tipoMovimientoBanco = document.getElementById('tipoMovimientoBanco');
         const tiposBancoStatus = document.getElementById('tiposBancoStatus');
         const movimientoBancoModal = document.getElementById('movimientoBancoModal');
@@ -567,7 +578,7 @@
 
 
         // ----------------------------------------------------
-        // COMPROBANTE DESDE PORTAPAPELES + OCR
+        // COMPROBANTE DESDE PORTAPAPELES -> BASE64 EN PAGOS
         // ----------------------------------------------------
         function generarIdRecibo() {
             const ahora = new Date();
@@ -579,8 +590,11 @@
             const m = String(detalle || '').match(/Recibo:\s*(REC-[A-Z0-9-]+)/i);
             return m ? m[1].toUpperCase() : '';
         }
-        async function comprimirImagen(blob) {
-            const dataUrl = await new Promise((resolve, reject) => {
+
+        // Google Sheets admite hasta 50.000 caracteres por celda.
+        // Dejamos margen y comprimimos la imagen hasta <= 46.000 caracteres.
+        async function comprimirImagenParaSheet(blob) {
+            const original = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = reject;
@@ -590,250 +604,234 @@
                 const i = new Image();
                 i.onload = () => resolve(i);
                 i.onerror = reject;
-                i.src = dataUrl;
+                i.src = original;
             });
-            const MAX = 1600;
-            let width = img.width, height = img.height;
-            if (Math.max(width, height) > MAX) {
-                const ratio = MAX / Math.max(width, height);
-                width = Math.round(width * ratio);
-                height = Math.round(height * ratio);
+
+            const LIMITE = 46000;
+            let maxDimension = Math.min(1200, Math.max(img.width, img.height));
+            let quality = 0.78;
+            let ultimo = '';
+
+            for (let intento = 0; intento < 14; intento++) {
+                const ratio = Math.min(1, maxDimension / Math.max(img.width, img.height));
+                const width = Math.max(1, Math.round(img.width * ratio));
+                const height = Math.max(1, Math.round(img.height * ratio));
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+                ultimo = canvas.toDataURL('image/jpeg', quality);
+                if (ultimo.length <= LIMITE) return ultimo;
+
+                if (quality > 0.45) quality -= 0.08;
+                else {
+                    maxDimension = Math.max(480, Math.round(maxDimension * 0.82));
+                    quality = 0.68;
+                }
             }
-            const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-            return canvas.toDataURL('image/jpeg', 0.82);
+
+            if (ultimo && ultimo.length <= 49000) return ultimo;
+            throw new Error('La imagen no pudo comprimirse lo suficiente para guardarla dentro del recibo.');
         }
+
         async function procesarBlobComprobante(blob) {
-            if (!blob || !blob.type.startsWith('image/')) { showToast('El portapapeles no contiene una imagen.'); return; }
-            try {
-                ocrStatus.classList.remove('hidden'); ocrStatus.textContent = 'Preparando imagen...';
-                comprobanteDataUrl = await comprimirImagen(blob);
-                comprobantePreview.src = comprobanteDataUrl;
-                comprobantePreview.classList.remove('hidden'); pasteHint.classList.add('hidden');
-                ocrPanel.classList.remove('hidden'); comprobanteActions.classList.remove('hidden');
-                await ejecutarOCR();
-            } catch (err) {
-                console.error(err); ocrStatus.textContent = 'No fue posible procesar la imagen.';
-                showToast('No fue posible procesar la imagen del comprobante.');
-            }
-        }
-        async function ejecutarOCR() {
-            if (!comprobanteDataUrl) return;
-            if (typeof Tesseract === 'undefined') {
-                ocrStatus.classList.remove('hidden');
-                ocrStatus.textContent = 'OCR no disponible. La imagen sí se podrá guardar.';
+            if (!blob || !blob.type.startsWith('image/')) {
+                showToast('El portapapeles no contiene una imagen.');
                 return;
             }
             try {
-                btnReprocesarOCR.disabled = true;
-                ocrStatus.classList.remove('hidden'); ocrStatus.textContent = 'Leyendo texto del comprobante...';
-                if (!ocrWorker) {
-                    ocrWorker = await Tesseract.createWorker('spa', 1, {
-                        logger: m => {
-                            if (m && typeof m.progress === 'number') {
-                                ocrStatus.textContent = `Leyendo texto del comprobante... ${Math.round(m.progress * 100)}%`;
-                            }
-                        }
-                    });
-                }
-                const resultado = await ocrWorker.recognize(comprobanteDataUrl);
-                comprobanteTextoInput.value = (resultado?.data?.text || '').trim();
-                ocrStatus.textContent = comprobanteTextoInput.value ? 'Texto detectado. Puedes corregirlo si hace falta.' : 'No se detectó texto claro, pero la imagen se guardará.';
+                comprobanteStatus.classList.remove('hidden');
+                comprobanteStatus.textContent = 'Preparando imagen...';
+                comprobanteDataUrl = await comprimirImagenParaSheet(blob);
+                comprobantePreview.src = comprobanteDataUrl;
+                comprobantePreview.classList.remove('hidden');
+                pasteHint.classList.add('hidden');
+                comprobanteActions.classList.remove('hidden');
+                const kb = Math.round(comprobanteDataUrl.length * 0.75 / 1024);
+                comprobanteStatus.textContent = `Imagen lista para guardar en el recibo (${kb} KB aprox.).`;
             } catch (err) {
-                console.error('OCR:', err);
-                ocrStatus.textContent = 'No se pudo leer el texto, pero la imagen se guardará.';
-            } finally { btnReprocesarOCR.disabled = false; }
+                console.error(err);
+                comprobanteStatus.textContent = 'No fue posible preparar la imagen.';
+                showToast(err.message || 'No fue posible procesar la imagen del comprobante.');
+            }
         }
+
         function limpiarComprobante() {
-            comprobanteDataUrl = ''; comprobanteTextoInput.value = '';
-            comprobantePreview.removeAttribute('src'); comprobantePreview.classList.add('hidden');
-            pasteHint.classList.remove('hidden'); ocrStatus.classList.add('hidden');
-            ocrPanel.classList.add('hidden'); comprobanteActions.classList.add('hidden');
+            comprobanteDataUrl = '';
+            comprobantePreview.removeAttribute('src');
+            comprobantePreview.classList.add('hidden');
+            pasteHint.classList.remove('hidden');
+            comprobanteStatus.classList.add('hidden');
+            comprobanteStatus.textContent = '';
+            comprobanteActions.classList.add('hidden');
         }
+
         pasteZone.addEventListener('paste', function(e) {
             const itemImagen = Array.from(e.clipboardData?.items || []).find(item => item.type && item.type.startsWith('image/'));
-            if (!itemImagen) { showToast('Pega una imagen del comprobante desde el portapapeles.'); return; }
-            e.preventDefault(); procesarBlobComprobante(itemImagen.getAsFile());
+            if (!itemImagen) {
+                showToast('Pega una imagen del comprobante desde el portapapeles.');
+                return;
+            }
+            e.preventDefault();
+            procesarBlobComprobante(itemImagen.getAsFile());
         });
+
         btnPegarPortapapeles.addEventListener('click', async function() {
             try {
-                if (!navigator.clipboard || !navigator.clipboard.read) { pasteZone.focus(); showToast('Haz clic en el recuadro y usa Ctrl+V.'); return; }
+                if (!navigator.clipboard || !navigator.clipboard.read) {
+                    pasteZone.focus();
+                    showToast('Haz clic en el recuadro y usa Ctrl+V.');
+                    return;
+                }
                 const items = await navigator.clipboard.read();
                 for (const item of items) {
                     const tipo = item.types.find(t => t.startsWith('image/'));
-                    if (tipo) { await procesarBlobComprobante(await item.getType(tipo)); return; }
+                    if (tipo) {
+                        await procesarBlobComprobante(await item.getType(tipo));
+                        return;
+                    }
                 }
                 showToast('El portapapeles no contiene una imagen.');
-            } catch (err) { pasteZone.focus(); showToast('El navegador bloqueó el botón. Usa Ctrl+V dentro del recuadro.'); }
+            } catch (err) {
+                pasteZone.focus();
+                showToast('El navegador bloqueó el botón. Usa Ctrl+V dentro del recuadro.');
+            }
         });
-        btnReprocesarOCR.addEventListener('click', ejecutarOCR);
         btnQuitarComprobante.addEventListener('click', limpiarComprobante);
+
+        // Compatibilidad: consulta soportes viejos guardados en COMPROBANTES_CARTERA.
         async function cargarExtras(nit) {
             extrasByRecibo = {};
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getExtras&nit=${encodeURIComponent(nit)}`);
                 if (!res.ok) return;
                 const data = await res.json();
-                (data.comprobantes || []).forEach(x => { if (x.recibo) extrasByRecibo[String(x.recibo).toUpperCase()] = x; });
+                (data.comprobantes || []).forEach(x => {
+                    if (x.recibo) extrasByRecibo[String(x.recibo).toUpperCase()] = x;
+                });
                 if (currentClient && currentClient.nit === nit) renderHistorial(nit);
-            } catch (err) { console.warn('Extras no disponibles:', err); }
+            } catch (err) {
+                console.warn('Extras anteriores no disponibles:', err);
+            }
         }
+
         window.verComprobante = async function(recibo) {
             if (!recibo) return;
             const modal = document.getElementById('comprobanteModal');
             const loading = document.getElementById('modalComprobanteLoading');
             const img = document.getElementById('modalComprobanteImg');
-            const ocrContainer = document.getElementById('modalOcrContainer');
-            const ocrText = document.getElementById('modalOcrText');
             document.getElementById('modalReciboId').textContent = recibo;
-            loading.textContent = 'Cargando comprobante...'; loading.classList.remove('hidden');
-            img.classList.add('hidden'); img.removeAttribute('src'); ocrContainer.classList.add('hidden'); ocrText.value = '';
-            modal.classList.remove('hidden'); modal.classList.add('flex');
+            loading.textContent = 'Cargando comprobante...';
+            loading.classList.remove('hidden');
+            img.classList.add('hidden');
+            img.removeAttribute('src');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getComprobante&recibo=${encodeURIComponent(recibo)}`);
                 const data = await res.json();
                 if (!data.ok || !data.imagenBase64) throw new Error(data.message || 'Sin imagen');
-                img.src = data.imagenBase64; img.classList.remove('hidden'); loading.classList.add('hidden');
-                if (data.ocrTexto) { ocrText.value = data.ocrTexto; ocrContainer.classList.remove('hidden'); }
-            } catch (err) { loading.textContent = 'No fue posible cargar la imagen de este comprobante.'; }
+                img.src = data.imagenBase64;
+                img.classList.remove('hidden');
+                loading.classList.add('hidden');
+            } catch (err) {
+                loading.textContent = 'No fue posible cargar la imagen de este comprobante.';
+            }
         }
         window.cerrarComprobante = function() {
             const modal = document.getElementById('comprobanteModal');
-            modal.classList.add('hidden'); modal.classList.remove('flex');
-        }
-        document.getElementById('comprobanteModal').addEventListener('click', function(e) { if (e.target === this) cerrarComprobante(); });
-
-        // ----------------------------------------------------
-        // MENÚ LATERAL + REPORTES
-        // ----------------------------------------------------
-        const sideMenu = document.getElementById('sideMenu');
-        const menuToggle = document.getElementById('menuToggle');
-        const menuClose = document.getElementById('menuClose');
-
-        function setMenuOpen(open) {
-            sideMenu.classList.toggle('-translate-x-full', !open);
-            try { localStorage.setItem('cartera_menu_abierto', open ? '1' : '0'); } catch(e) {}
-        }
-        menuToggle.addEventListener('click', () => setMenuOpen(true));
-        menuClose.addEventListener('click', () => setMenuOpen(false));
-        try { if (localStorage.getItem('cartera_menu_abierto') === '1') setMenuOpen(true); } catch(e) {}
-
-        function hoyIsoLocal() {
-            const d = new Date();
-            const tz = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - tz).toISOString().slice(0,10);
-        }
-        const hoyReporte = hoyIsoLocal();
-        document.getElementById('reporteMes').value = hoyReporte.slice(0,7);
-        document.getElementById('reporteDesde').value = hoyReporte;
-        document.getElementById('reporteHasta').value = hoyReporte;
-
-        document.getElementById('reportePeriodo').addEventListener('change', function() {
-            const esMes = this.value === 'mes';
-            document.getElementById('reporteMesBox').classList.toggle('hidden', !esMes);
-            document.getElementById('reporteRangoBox').classList.toggle('hidden', esMes);
-        });
-
-        window.abrirReporte = function(tipo) {
-            reporteTipoActual = tipo;
-            document.getElementById('reporteTitulo').textContent = tipo === 'bancos'
-                ? 'Descargar conciliación bancaria'
-                : 'Descargar anticipos pendientes';
-            const modal = document.getElementById('reporteModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setMenuOpen(false);
-        }
-        window.cerrarReporte = function() {
-            const modal = document.getElementById('reporteModal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
-        document.getElementById('reporteModal').addEventListener('click', function(e) {
-            if (e.target === this) cerrarReporte();
+        document.getElementById('comprobanteModal').addEventListener('click', function(e) {
+            if (e.target === this) cerrarComprobante();
         });
 
-        function rangoReporteSeleccionado() {
-            const modo = document.getElementById('reportePeriodo').value;
-            if (modo === 'mes') {
-                const mes = document.getElementById('reporteMes').value;
-                if (!mes) throw new Error('Selecciona el mes.');
-                const [y,m] = mes.split('-').map(Number);
-                const ultimo = new Date(y, m, 0).getDate();
-                return { desde: `${mes}-01`, hasta: `${mes}-${String(ultimo).padStart(2,'0')}` };
-            }
-            const desde = document.getElementById('reporteDesde').value;
-            const hasta = document.getElementById('reporteHasta').value;
-            if (!desde || !hasta) throw new Error('Selecciona las dos fechas.');
-            if (desde > hasta) throw new Error('La fecha Desde no puede ser posterior a Hasta.');
-            return { desde, hasta };
-        }
+        // ----------------------------------------------------
+        // CACHÉ LOCAL DE CARTERA / TERCEROS
+        // Permite abrir y buscar inmediatamente mientras el servidor
+        // actualiza silenciosamente la información real.
+        // IMPORTANTE: aquí NUNCA se guardan imágenes Base64.
+        // ----------------------------------------------------
+        const CARTERA_LOCAL_CACHE_KEY = 'cartera_datos_sin_imagenes_v1';
 
-        function csvSeguro(valor) {
-            const s = String(valor == null ? '' : valor).replace(/"/g, '""');
-            return `"${s}"`;
-        }
-        function descargarCsv(nombre, encabezados, filas) {
-            const lineas = [encabezados.map(csvSeguro).join(';')];
-            filas.forEach(f => lineas.push(f.map(csvSeguro).join(';')));
-            const blob = new Blob(['\ufeff' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = nombre;
-            document.body.appendChild(a); a.click(); a.remove();
-            URL.revokeObjectURL(url);
-        }
-
-        document.getElementById('btnDescargarReporte').addEventListener('click', async function() {
+        function guardarCacheLocalCartera(data) {
             try {
-                const { desde, hasta } = rangoReporteSeleccionado();
-                const action = reporteTipoActual === 'bancos' ? 'getReporteBancos' : 'getReporteAnticipos';
-                this.disabled = true; this.textContent = 'Preparando...';
-                const res = await fetch(`${SCRIPT_URL}?action=${action}&desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`);
-                const data = await res.json();
-                if (!data.ok) throw new Error(data.message || 'No se pudo generar el reporte.');
-
-                if (reporteTipoActual === 'bancos') {
-                    const filas = (data.filas || []).map(x => [
-                        x.fecha, x.descripcion, x.referencia, x.valorBanco,
-                        x.terceroRelacionado, x.valorRelacionado, x.saldoPendiente, x.estado
-                    ]);
-                    descargarCsv(
-                        `conciliacion_bancos_${desde}_${hasta}.csv`,
-                        ['Fecha Banco','Descripción Banco','Referencia Banco','Valor Banco','Tercero relacionado','Valor relacionado','Saldo pendiente','Estado'],
-                        filas
-                    );
-                } else {
-                    const detalle = data.filas || [];
-                    const totalPorCliente = {};
-                    detalle.forEach(x => {
-                        const clave = String(x.nit || x.cliente || '').trim().toLowerCase();
-                        totalPorCliente[clave] = (totalPorCliente[clave] || 0) + (Number(x.saldoPendiente) || 0);
-                    });
-                    detalle.sort((a,b) => String(a.cliente || '').localeCompare(String(b.cliente || ''), 'es'));
-                    const filas = detalle.map(x => {
-                        const clave = String(x.nit || x.cliente || '').trim().toLowerCase();
-                        return [
-                            x.recibo, x.fecha, x.cliente, x.nit, x.valorAnticipo,
-                            x.valorCruzado, x.saldoPendiente, totalPorCliente[clave] || 0,
-                            x.estado, x.formaPago, x.observaciones
-                        ];
-                    });
-                    descargarCsv(
-                        `anticipos_pendientes_${desde}_${hasta}.csv`,
-                        ['ID Recibo','Fecha','Cliente','NIT','Valor anticipo','Valor cruzado','Saldo pendiente','Total pendiente cliente','Estado','Forma de pago','Observaciones'],
-                        filas
-                    );
-                }
-                cerrarReporte();
-                showToast('Reporte descargado para abrir en Excel.', 'success');
+                if (!data || !Array.isArray(data.clientes)) return;
+                const liviano = {
+                    clientes: Array.isArray(data.clientes) ? data.clientes : [],
+                    cartera: Array.isArray(data.cartera) ? data.cartera : [],
+                    pagos: Array.isArray(data.pagos) ? data.pagos : [],
+                    guardadoEn: Date.now()
+                };
+                localStorage.setItem(CARTERA_LOCAL_CACHE_KEY, JSON.stringify(liviano));
             } catch (err) {
-                showToast(err.message || 'No se pudo descargar el reporte.');
-            } finally {
-                this.disabled = false; this.textContent = 'Descargar CSV para Excel';
+                // Si el navegador no permite localStorage o se llena,
+                // la aplicación sigue funcionando normalmente.
+                console.warn('No se pudo guardar el caché local de cartera:', err);
             }
-        });
+        }
+
+        function cargarCacheLocalCartera() {
+            try {
+                const raw = localStorage.getItem(CARTERA_LOCAL_CACHE_KEY);
+                if (!raw) return null;
+                const data = JSON.parse(raw);
+                if (!data || !Array.isArray(data.clientes)) return null;
+                return {
+                    clientes: data.clientes || [],
+                    cartera: data.cartera || [],
+                    pagos: data.pagos || []
+                };
+            } catch (err) {
+                console.warn('No se pudo leer el caché local de cartera:', err);
+                return null;
+            }
+        }
+
+        const cacheInicialCartera = cargarCacheLocalCartera();
+        if (cacheInicialCartera) {
+            allData = cacheInicialCartera;
+        }
+
+        // ----------------------------------------------------
+        // FETCH DATA
+        // ----------------------------------------------------
+        function fetchData() {
+            if (isMessageVisible) return;
+
+            if(!SCRIPT_URL.includes("script.google.com")) {
+                setStatus("Falta SCRIPT_URL", "bg-red-100", "text-red-800", "border-red-300", false);
+                return;
+            }
+            setStatus("Actualizando...", "bg-yellow-100", "text-yellow-800", "border-yellow-300", true);
+
+            fetch(SCRIPT_URL + '?action=getData')
+                .then(res => { if (!res.ok) throw new Error('Error red'); return res.json(); })
+                .then(data => {
+                    if (data && data.status === 'error') {
+                        throw new Error(data.message || 'Apps Script devolvió un error');
+                    }
+                    if(data && Array.isArray(data.clientes)) {
+                        allData = data;
+                        guardarCacheLocalCartera(data);
+                        setStatus("Cartera actualizada ✅", "bg-green-100", "text-green-800", "border-green-300", false);
+                        statusBadge.removeAttribute('title');
+                        // Si hay un cliente seleccionado, actualizamos su historial invisiblemente
+                        if (currentClient && !isMessageVisible) renderHistorial(currentClient.nit);
+                    } else { throw new Error('La respuesta no contiene la estructura esperada.'); }
+                })
+                .catch(err => {
+                    console.error("Error Fetch:", err);
+                    setStatus("Error al cargar", "bg-red-100", "text-red-800", "border-red-300", false);
+                    statusBadge.title = err && err.message ? err.message : 'Error desconocido';
+                });
+        }
+        fetchData();
+        setInterval(fetchData, 30000);
 
         // ----------------------------------------------------
         // BANCOS: BÚSQUEDA Y SELECCIÓN DE MOVIMIENTO
@@ -868,7 +866,206 @@
         }
 
         function actualizarBotonMasFechas() {
-            btnBancoMasFechas.classList.toggle('hidden', bancoModo !== 'manual');
+            const permiteMas = ['manual', 'divide'].includes(bancoModo);
+            btnBancoMasFechas.classList.toggle('hidden', !permiteMas);
+        }
+
+        function claveCacheBancoDia(fecha) {
+            return `cartera_bancos_dia_${fecha}`;
+        }
+
+        function leerCacheBancoSesion(clave) {
+            try {
+                const x = JSON.parse(sessionStorage.getItem(clave) || 'null');
+                if (!x || !x.ts || !Array.isArray(x.movimientos)) return null;
+                // Stale-while-revalidate: aceptamos una copia algo antigua para no hacer esperar.
+                // Detrás se comprueba inmediatamente contra Google Sheets.
+                if (Date.now() - x.ts > BANCO_CACHE_MAX_STALE_MS) return null;
+                return x;
+            } catch (_) { return null; }
+        }
+
+        function guardarCacheBancoSesion(clave, movimientos) {
+            try { sessionStorage.setItem(clave, JSON.stringify({ ts: Date.now(), movimientos })); } catch (_) {}
+        }
+
+        function firmaMovimientosBanco(movimientos) {
+            return JSON.stringify((movimientos || []).map(m => [
+                Number(m.fila) || 0,
+                String(m.fecha || ''),
+                String(m.descripcion || ''),
+                String(m.tipo || ''),
+                String(m.referencia || ''),
+                Number(m.valorBanco) || 0,
+                String(m.terceroRelacionado || ''),
+                Number(m.valorRelacionado) || 0,
+                Number(m.disponible) || 0
+            ]));
+        }
+
+        function limpiarCacheBanco() {
+            bancoSnapshotDia = { fecha: '', ts: 0, movimientos: [] };
+            bancoSnapshotTodas = { ts: 0, movimientos: [] };
+            try {
+                Object.keys(sessionStorage).forEach(k => {
+                    if (k.startsWith('cartera_bancos_')) sessionStorage.removeItem(k);
+                });
+            } catch (_) {}
+        }
+
+        function actualizarTiposBancoSilencioso(fecha, movimientos) {
+            if (!esPagoBanco() || fechaPagoInput.value !== fecha) return;
+
+            const seleccionadoAntes = tipoMovimientoBanco.value;
+            const conteos = {};
+            (movimientos || []).forEach(m => {
+                conteos[m.tipo || 'otros'] = (conteos[m.tipo || 'otros'] || 0) + 1;
+            });
+            const orden = ['llave','consignacion','nequi','transferencia','otros'];
+            const tipos = orden.filter(id => conteos[id]);
+
+            if (!tipos.length) {
+                tipoMovimientoBanco.innerHTML = '<option value="">Sin movimientos pendientes ese día</option>';
+                tipoMovimientoBanco.disabled = true;
+                btnBuscarBanco.disabled = true;
+                if (bancoSeleccionado) bancoSeleccionado = { ...bancoSeleccionado, disponible: 0, _desactualizado: true };
+                return;
+            }
+
+            tipoMovimientoBanco.innerHTML = '<option value="">Selecciona el tipo...</option>' + tipos.map(id =>
+                `<option value="${id}">${nombreTipoBanco(id)} (${conteos[id]})</option>`
+            ).join('');
+            tipoMovimientoBanco.disabled = false;
+
+            if (seleccionadoAntes && tipos.includes(seleccionadoAntes)) {
+                tipoMovimientoBanco.value = seleccionadoAntes;
+                btnBuscarBanco.disabled = false;
+            } else {
+                tipoMovimientoBanco.value = '';
+                btnBuscarBanco.disabled = true;
+            }
+
+            // Si había un movimiento escogido, actualizamos internamente su saldo sin mostrar avisos.
+            if (bancoSeleccionado) {
+                const actualizado = (movimientos || []).find(m =>
+                    Number(m.fila) === Number(bancoSeleccionado.fila) &&
+                    String(m.referencia || '') === String(bancoSeleccionado.referencia || '')
+                );
+                bancoSeleccionado = actualizado
+                    ? { ...bancoSeleccionado, ...actualizado, _desactualizado: false }
+                    : { ...bancoSeleccionado, disponible: 0, _desactualizado: true };
+            }
+        }
+
+        async function consultarBancoDiaDirecto(fecha, fresh = false) {
+            const url = `${SCRIPT_URL}?action=getBancos&fecha=${encodeURIComponent(fecha)}&valor=0&modo=manual&tipo=&fresh=${fresh ? '1' : '0'}&_=${Date.now()}`;
+            const res = await fetch(url, { cache: 'no-store' });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.message || 'No fue posible consultar BANCOS.');
+            return data.movimientos || [];
+        }
+
+        async function consultarBancoTodasDirecto(fresh = false) {
+            const url = `${SCRIPT_URL}?action=getBancos&fecha=&valor=0&modo=manual_all&tipo=&fresh=${fresh ? '1' : '0'}&_=${Date.now()}`;
+            const res = await fetch(url, { cache: 'no-store' });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.message || 'No fue posible consultar BANCOS.');
+            return data.movimientos || [];
+        }
+
+        async function revalidarBancoDiaSilencioso(fecha) {
+            if (!fecha || bancoRevalidandoDias.has(fecha)) return;
+            bancoRevalidandoDias.add(fecha);
+            try {
+                const nuevos = await consultarBancoDiaDirecto(fecha, true);
+                const actuales = bancoSnapshotDia.fecha === fecha
+                    ? bancoSnapshotDia.movimientos
+                    : (leerCacheBancoSesion(claveCacheBancoDia(fecha))?.movimientos || []);
+                const cambio = firmaMovimientosBanco(actuales) !== firmaMovimientosBanco(nuevos);
+
+                bancoSnapshotDia = { fecha, ts: Date.now(), movimientos: nuevos };
+                guardarCacheBancoSesion(claveCacheBancoDia(fecha), nuevos);
+
+                if (cambio) actualizarTiposBancoSilencioso(fecha, nuevos);
+            } catch (err) {
+                // La revalidación es deliberadamente silenciosa: se conserva el caché anterior.
+                console.debug('Revalidación bancaria silenciosa:', err);
+            } finally {
+                bancoRevalidandoDias.delete(fecha);
+            }
+        }
+
+        async function revalidarBancoTodasSilencioso() {
+            if (bancoRevalidandoTodas) return;
+            bancoRevalidandoTodas = true;
+            try {
+                const nuevos = await consultarBancoTodasDirecto(true);
+                bancoSnapshotTodas = { ts: Date.now(), movimientos: nuevos };
+                guardarCacheBancoSesion('cartera_bancos_todas', nuevos);
+            } catch (err) {
+                console.debug('Revalidación bancaria global silenciosa:', err);
+            } finally {
+                bancoRevalidandoTodas = false;
+            }
+        }
+
+        async function obtenerSnapshotBancoDia(fecha, forzar = false) {
+            if (!fecha) return [];
+
+            if (forzar) {
+                const movimientos = await consultarBancoDiaDirecto(fecha, true);
+                bancoSnapshotDia = { fecha, ts: Date.now(), movimientos };
+                guardarCacheBancoSesion(claveCacheBancoDia(fecha), movimientos);
+                return movimientos;
+            }
+
+            // Si ya hay memoria, responde al instante y revisa Sheets detrás.
+            if (bancoSnapshotDia.fecha === fecha && bancoSnapshotDia.ts) {
+                revalidarBancoDiaSilencioso(fecha);
+                return bancoSnapshotDia.movimientos;
+            }
+
+            // Si hay sessionStorage, responde al instante aunque ya no esté "fresco".
+            const clave = claveCacheBancoDia(fecha);
+            const cache = leerCacheBancoSesion(clave);
+            if (cache) {
+                bancoSnapshotDia = { fecha, ts: cache.ts, movimientos: cache.movimientos };
+                revalidarBancoDiaSilencioso(fecha);
+                return cache.movimientos;
+            }
+
+            // Solo la primera vez, sin ningún caché, esperamos a Google Sheets.
+            const movimientos = await consultarBancoDiaDirecto(fecha, false);
+            bancoSnapshotDia = { fecha, ts: Date.now(), movimientos };
+            guardarCacheBancoSesion(clave, movimientos);
+            return movimientos;
+        }
+
+        async function obtenerSnapshotBancoTodas(forzar = false) {
+            if (forzar) {
+                const movimientos = await consultarBancoTodasDirecto(true);
+                bancoSnapshotTodas = { ts: Date.now(), movimientos };
+                guardarCacheBancoSesion('cartera_bancos_todas', movimientos);
+                return movimientos;
+            }
+
+            if (bancoSnapshotTodas.ts) {
+                revalidarBancoTodasSilencioso();
+                return bancoSnapshotTodas.movimientos;
+            }
+
+            const clave = 'cartera_bancos_todas';
+            const cache = leerCacheBancoSesion(clave);
+            if (cache) {
+                bancoSnapshotTodas = { ts: cache.ts, movimientos: cache.movimientos };
+                revalidarBancoTodasSilencioso();
+                return cache.movimientos;
+            }
+
+            const movimientos = await consultarBancoTodasDirecto(false);
+            bancoSnapshotTodas = { ts: Date.now(), movimientos };
+            guardarCacheBancoSesion(clave, movimientos);
+            return movimientos;
         }
 
         async function cargarTiposBanco() {
@@ -878,7 +1075,7 @@
             tipoMovimientoBanco.innerHTML = '<option value="">Analizando movimientos...</option>';
             tipoMovimientoBanco.disabled = true;
             btnBuscarBanco.disabled = true;
-            bancoStatus.textContent = 'Analizando los tipos de movimiento de la fecha seleccionada...';
+            bancoStatus.textContent = 'Cargando los movimientos pendientes de la fecha...';
             tiposBancoStatus.textContent = 'Consultando BANCOS...';
 
             if (!fecha) {
@@ -888,10 +1085,11 @@
             }
 
             try {
-                const res = await fetch(`${SCRIPT_URL}?action=getTiposBanco&fecha=${encodeURIComponent(fecha)}`);
-                const data = await res.json();
-                if (!data.ok) throw new Error(data.message || 'No fue posible analizar BANCOS.');
-                const tipos = data.tipos || [];
+                const movimientos = await obtenerSnapshotBancoDia(fecha);
+                const conteos = {};
+                movimientos.forEach(m => { conteos[m.tipo || 'otros'] = (conteos[m.tipo || 'otros'] || 0) + 1; });
+                const orden = ['llave','consignacion','nequi','transferencia','otros'];
+                const tipos = orden.filter(id => conteos[id]).map(id => ({ id, nombre: nombreTipoBanco(id), cantidad: conteos[id] }));
                 if (!tipos.length) {
                     tipoMovimientoBanco.innerHTML = '<option value="">Sin movimientos pendientes ese día</option>';
                     tiposBancoStatus.textContent = 'No hay movimientos bancarios con saldo disponible para esa fecha.';
@@ -902,8 +1100,8 @@
                     `<option value="${t.id}">${t.nombre} (${t.cantidad})</option>`
                 ).join('');
                 tipoMovimientoBanco.disabled = false;
-                tiposBancoStatus.textContent = `Encontré ${data.total || tipos.reduce((s,t)=>s+t.cantidad,0)} movimiento(s) pendiente(s) distribuidos por tipo.`;
-                bancoStatus.textContent = 'Escoge el tipo de movimiento; después podrás seleccionar el valor en la ventana emergente.';
+                tiposBancoStatus.textContent = `Encontré ${movimientos.length} movimiento(s) pendiente(s). La app seguirá verificando cambios en segundo plano.`;
+                bancoStatus.textContent = 'Escoge el tipo de movimiento; después selecciona la transacción.';
             } catch (err) {
                 tipoMovimientoBanco.innerHTML = '<option value="">Error consultando BANCOS</option>';
                 tiposBancoStatus.textContent = err.message || 'Error consultando BANCOS.';
@@ -922,6 +1120,22 @@
                 : 'Selecciona el tipo de movimiento para escoger la transacción.';
         }
 
+        function filtrarMovimientosBanco(base, modo, tipo, valorRecibo, valorGeneral) {
+            let movimientos = (base || []).filter(m => !tipo || m.tipo === tipo);
+            if (modo === 'similar') {
+                movimientos = movimientos.filter(m => Math.abs((Number(m.disponible)||0) - valorRecibo) < 0.5);
+            } else if (modo === 'divide' || modo === 'divide_all') {
+                movimientos = movimientos.filter(m => Math.abs((Number(m.valorBanco)||0) - valorGeneral) < 0.5);
+            }
+            movimientos.sort((a,b) => {
+                const da = Math.abs((Number(a.disponible)||0) - valorRecibo);
+                const db = Math.abs((Number(b.disponible)||0) - valorRecibo);
+                if (da !== db) return da - db;
+                return (b.fila||0) - (a.fila||0);
+            });
+            return movimientos;
+        }
+
         async function buscarMovimientosBanco(modo = 'similar', abrirModal = true) {
             if (!esPagoBanco()) return;
             const fecha = fechaPagoInput.value;
@@ -929,38 +1143,35 @@
             const ret = calcularRetenciones();
             const valor = ret.netoBanco;
 
-            if (!tipo) {
-                showToast('Primero selecciona el tipo de movimiento bancario.');
-                return;
-            }
-            if (!fecha || valor <= 0) {
-                showToast('Define la fecha y el valor del pago antes de buscar en BANCOS.');
+            if (!tipo) { showToast('Primero selecciona el tipo de movimiento bancario.'); return; }
+            if (!fecha || valor <= 0) { showToast('Define la fecha y el valor del pago antes de buscar en BANCOS.'); return; }
+
+            if ((modo === 'divide' || modo === 'divide_all') && bancoValorGeneralDivision <= 0) {
+                showToast('Escribe primero el valor total de la consignación.');
+                valorConsignacionGeneral.focus();
                 return;
             }
 
             bancoModo = modo;
             limpiarSeleccionBanco();
             actualizarBotonMasFechas();
-            const esManualFecha = modo === 'manual';
-            const esManualTodas = modo === 'manual_all';
-            bancoModoBadge.textContent = esManualTodas ? 'Todas las fechas' : (esManualFecha ? 'Manual · misma fecha' : 'Coincidencias');
-            bancoModoBadge.className = (esManualFecha || esManualTodas)
-                ? 'text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold whitespace-nowrap'
-                : 'text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold whitespace-nowrap';
+            divisionBancoPanel.classList.toggle('hidden', !(modo === 'divide' || modo === 'divide_all'));
+            const esManual = modo === 'manual' || modo === 'manual_all';
+            const esDivision = modo === 'divide' || modo === 'divide_all';
+            const todas = modo === 'manual_all' || modo === 'divide_all';
+            bancoModoBadge.textContent = esDivision ? (todas ? 'Dividir · todas las fechas' : 'Dividir consignación') : (esManual ? (todas ? 'Manual · todas las fechas' : 'Manual · misma fecha') : 'Coincidencias');
+            bancoModoBadge.className = esDivision
+                ? 'text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 font-semibold whitespace-nowrap'
+                : (esManual ? 'text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold whitespace-nowrap' : 'text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold whitespace-nowrap');
 
-            bancoModalResumen.textContent = `${formatDate(fecha)} · ${nombreTipoBanco(tipo)} · valor del recibo ${formatCurrency(valor)}`;
-            bancoModalStatus.textContent = esManualTodas
-                ? 'Buscando movimientos pendientes de todas las fechas...'
-                : (esManualFecha ? 'Buscando movimientos pendientes de esta fecha...' : 'Buscando coincidencias exactas...');
-            bancoResultados.innerHTML = '<div class="text-center text-sm text-gray-500 py-8">Consultando movimientos...</div>';
+            bancoModalResumen.textContent = `${formatDate(fecha)} · ${nombreTipoBanco(tipo)} · valor del recibo ${formatCurrency(valor)}` + (esDivision ? ` · consignación general ${formatCurrency(bancoValorGeneralDivision)}` : '');
+            bancoModalStatus.textContent = 'Filtrando movimientos...';
+            bancoResultados.innerHTML = '<div class="text-center text-sm text-gray-500 py-8">Cargando movimientos...</div>';
             if (abrirModal) abrirBancoModal();
 
             try {
-                const url = `${SCRIPT_URL}?action=getBancos&fecha=${encodeURIComponent(fecha)}&valor=${encodeURIComponent(valor)}&modo=${encodeURIComponent(modo)}&tipo=${encodeURIComponent(tipo)}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                if (!data.ok) throw new Error(data.message || 'No fue posible consultar BANCOS.');
-                bancoMovimientosActuales = data.movimientos || [];
+                const base = todas ? await obtenerSnapshotBancoTodas() : await obtenerSnapshotBancoDia(fecha);
+                bancoMovimientosActuales = filtrarMovimientosBanco(base, modo, tipo, valor, bancoValorGeneralDivision);
                 renderMovimientosBanco();
             } catch (err) {
                 bancoMovimientosActuales = [];
@@ -975,19 +1186,18 @@
                     bancoModalStatus.textContent = 'No hay movimientos pendientes de este tipo en esta fecha. Puedes usar “Ver más fechas”.';
                 } else if (bancoModo === 'manual_all') {
                     bancoModalStatus.textContent = 'No hay movimientos pendientes de este tipo en BANCOS.';
+                } else if (bancoModo === 'divide' || bancoModo === 'divide_all') {
+                    bancoModalStatus.textContent = bancoModo === 'divide'
+                        ? 'No encontré esa consignación en esta fecha. Revisa el valor o usa “Ver más fechas”.'
+                        : 'No encontré una consignación pendiente con ese valor.';
                 } else {
-                    bancoModalStatus.textContent = 'No encontré una coincidencia exacta. Usa “Escoger manualmente” si el depósito tiene un valor diferente o se divide entre varios recibos.';
+                    bancoModalStatus.textContent = 'No encontré coincidencia exacta. Puedes usar “Escoger manualmente” o “Dividir consignación”.';
                 }
                 bancoResultados.innerHTML = '<div class="bg-gray-50 border border-gray-200 rounded-lg p-5 text-center text-sm text-gray-600">Sin movimientos para mostrar con este filtro.</div>';
                 return;
             }
 
-            bancoModalStatus.textContent = bancoModo === 'manual'
-                ? `${bancoMovimientosActuales.length} movimiento(s) pendiente(s) de esta fecha.`
-                : (bancoModo === 'manual_all'
-                    ? `${bancoMovimientosActuales.length} movimiento(s) pendiente(s) de este tipo entre todas las fechas.`
-                    : `${bancoMovimientosActuales.length} coincidencia(s) exacta(s). Escoge una.`);
-
+            bancoModalStatus.textContent = `${bancoMovimientosActuales.length} movimiento(s) disponible(s).`;
             bancoResultados.innerHTML = bancoMovimientosActuales.map((m, idx) => {
                 const parcial = m.valorRelacionado > 0.5;
                 return `
@@ -1021,7 +1231,8 @@
                 showToast(`Ese movimiento solo tiene ${formatCurrency(m.disponible)} disponibles.`);
                 return;
             }
-            bancoSeleccionado = { ...m, modo: bancoModo, tipo: tipoMovimientoBanco.value };
+            bancoSeleccionado = { ...m, modo: bancoModo, tipo: tipoMovimientoBanco.value, valorGeneralDivision: bancoValorGeneralDivision || 0 };
+            const saldoDespues = Math.max(0, m.disponible - valorRecibo);
             bancoSeleccionadoBox.innerHTML = `
                 <div class="font-bold text-emerald-900 mb-2">✓ Movimiento bancario seleccionado</div>
                 <div><b>Tipo:</b> ${nombreTipoBanco(m.tipo)}</div>
@@ -1029,10 +1240,11 @@
                 <div><b>Descripción:</b> ${m.descripcion || '-'}</div>
                 <div><b>Referencia:</b> ${m.referencia || '-'}</div>
                 <div><b>Valor banco:</b> ${formatCurrency(m.valorBanco)}</div>
-                <div><b>Disponible antes de este recibo:</b> ${formatCurrency(m.disponible)}</div>
-                <div class="mt-1 font-bold text-blue-700"><b>Valor que se relacionará:</b> ${formatCurrency(valorRecibo)}</div>`;
+                <div><b>Disponible antes:</b> ${formatCurrency(m.disponible)}</div>
+                <div class="mt-1 font-bold text-blue-700"><b>Se relacionará:</b> ${formatCurrency(valorRecibo)}</div>
+                <div class="mt-1 font-bold ${saldoDespues > 0.5 ? 'text-amber-700' : 'text-emerald-700'}"><b>Saldo que quedará:</b> ${formatCurrency(saldoDespues)}</div>`;
             bancoSeleccionadoBox.classList.remove('hidden');
-            bancoStatus.textContent = 'Movimiento seleccionado. Ya puedes guardar el recibo o cambiar la selección.';
+            bancoStatus.textContent = 'Movimiento seleccionado. Ya puedes guardar el recibo.';
             btnBuscarBanco.textContent = 'Cambiar valor a relacionar';
             cerrarBancoModal();
         }
@@ -1055,10 +1267,16 @@
 
         formaPagoInput.addEventListener('change', actualizarVisibilidadBanco);
         fechaPagoInput.addEventListener('change', () => {
+            bancoValorGeneralDivision = 0;
+            valorConsignacionGeneral.value = '';
+            divisionBancoPanel.classList.add('hidden');
             if (esPagoBanco()) cargarTiposBanco();
         });
         tipoMovimientoBanco.addEventListener('change', function() {
             limpiarSeleccionBanco();
+            bancoValorGeneralDivision = 0;
+            valorConsignacionGeneral.value = '';
+            divisionBancoPanel.classList.add('hidden');
             btnBuscarBanco.textContent = 'Escoger valor a relacionar';
             btnBuscarBanco.disabled = !this.value;
             if (this.value) {
@@ -1069,41 +1287,48 @@
             }
         });
         btnBuscarBanco.addEventListener('click', () => buscarMovimientosBanco('similar', true));
-        btnBancoCoincidencias.addEventListener('click', () => buscarMovimientosBanco('similar', false));
-        btnBancoManual.addEventListener('click', () => buscarMovimientosBanco('manual', false));
-        btnBancoMasFechas.addEventListener('click', () => buscarMovimientosBanco('manual_all', false));
+        btnBancoCoincidencias.addEventListener('click', () => {
+            divisionBancoPanel.classList.add('hidden');
+            buscarMovimientosBanco('similar', false);
+        });
+        btnBancoManual.addEventListener('click', () => {
+            divisionBancoPanel.classList.add('hidden');
+            buscarMovimientosBanco('manual', false);
+        });
+        btnBancoDividir.addEventListener('click', () => {
+            bancoModo = 'divide';
+            divisionBancoPanel.classList.remove('hidden');
+            actualizarBotonMasFechas();
+            bancoModoBadge.textContent = 'Dividir consignación';
+            bancoModoBadge.className = 'text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 font-semibold whitespace-nowrap';
+            bancoModalStatus.textContent = 'Escribe el valor total de la consignación y pulsa “Buscar consignación”.';
+            bancoResultados.innerHTML = '';
+            valorConsignacionGeneral.focus();
+        });
+        btnBuscarConsignacionDivision.addEventListener('click', () => {
+            bancoValorGeneralDivision = Number(valorConsignacionGeneral.value) || 0;
+            if (bancoValorGeneralDivision <= 0) { showToast('Escribe el valor total de la consignación.'); return; }
+            const valorRecibo = calcularRetenciones().netoBanco;
+            divisionBancoAyuda.textContent = `Se buscará una consignación por ${formatCurrency(bancoValorGeneralDivision)} y a este recibo se aplicarán ${formatCurrency(valorRecibo)}. El saldo restante seguirá disponible.`;
+            buscarMovimientosBanco('divide', false);
+        });
+        btnBancoMasFechas.addEventListener('click', () => {
+            if (bancoModo === 'divide') buscarMovimientosBanco('divide_all', false);
+            else buscarMovimientosBanco('manual_all', false);
+        });
         btnCerrarBancoModal.addEventListener('click', cerrarBancoModal);
         movimientoBancoModal.addEventListener('click', function(e) { if (e.target === this) cerrarBancoModal(); });
 
-        // ----------------------------------------------------
-        // FETCH DATA
-        // ----------------------------------------------------
-        function fetchData() {
-            if (isMessageVisible) return;
 
-            if(!SCRIPT_URL.includes("script.google.com")) {
-                setStatus("Falta SCRIPT_URL", "bg-red-100", "text-red-800", "border-red-300", false);
-                return;
+        // BANCOS se revalida aparte y en silencio. No muestra loaders, toasts ni recarga la UI.
+        setInterval(() => {
+            if (!esPagoBanco()) return;
+            const fecha = fechaPagoInput.value;
+            if (fecha) revalidarBancoDiaSilencioso(fecha);
+            if ((bancoModo === 'manual_all' || bancoModo === 'divide_all') && !movimientoBancoModal.classList.contains('hidden')) {
+                revalidarBancoTodasSilencioso();
             }
-            setStatus("Actualizando...", "bg-yellow-100", "text-yellow-800", "border-yellow-300", true);
-
-            fetch(SCRIPT_URL + '?action=getData')
-                .then(res => { if (!res.ok) throw new Error('Error red'); return res.json(); })
-                .then(data => {
-                    if(data && data.clientes) {
-                        allData = data;
-                        setStatus("Cartera actualizada ✅", "bg-green-100", "text-green-800", "border-green-300", false);
-                        // Si hay un cliente seleccionado, actualizamos su historial invisiblemente
-                        if (currentClient && !isMessageVisible) renderHistorial(currentClient.nit);
-                    } else { throw new Error('Vacío'); }
-                })
-                .catch(err => {
-                    console.error("Error Fetch:", err);
-                    setStatus("Error al cargar", "bg-red-100", "text-red-800", "border-red-300", false);
-                });
-        }
-        fetchData();
-        setInterval(fetchData, 30000); 
+        }, BANCO_REVALIDATE_MS);
 
         // ----------------------------------------------------
         // BUSCADOR INTELIGENTE (Ignora orden y busca detalle)
@@ -1309,9 +1534,9 @@
             clientPagos.forEach(p => {
                 const recibo = p.recibo || extraerReciboDelDetalle(p.detalle);
                 const extra = recibo ? extrasByRecibo[String(recibo).toUpperCase()] : null;
-                const tieneImagen = !!(extra && extra.tieneImagen);
+                const tieneImagen = !!p.tieneImagen || !!(extra && extra.tieneImagen);
                 const botonComprobante = tieneImagen
-                    ? `<button type="button" onclick="verComprobante('${recibo}')" class="bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded text-xs font-semibold whitespace-nowrap">Ver imagen</button>`
+                    ? `<button type="button" onclick="verComprobante('${recibo}')" class="inline-flex items-center justify-center bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full" title="Ver comprobante" aria-label="Ver comprobante"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>`
                     : `<span class="text-xs text-gray-400">—</span>`;
                 html += `
                     <tr class="hover:bg-gray-50">
@@ -1585,13 +1810,28 @@
                 return;
             }
 
-            if(!currentClient) return;
-            if(currentInvoices.length > 0 && selectedInvoices.length === 0) {
-                showToast("Debes seleccionar al menos una factura en la tabla."); return;
+            if(!currentClient) {
+                showToast('Selecciona nuevamente el cliente antes de guardar.');
+                return;
+            }
+
+            // Tomamos una copia estable del cliente para todo el proceso de guardado.
+            // Así, aunque la interfaz se actualice o el cliente global cambie mientras
+            // esperamos una respuesta del servidor, nunca intentamos leer .nit de null.
+            const clientePago = {
+                nit: String(currentClient.nit || ''),
+                nombre: String(currentClient.nombre || '')
+            };
+            if (!clientePago.nit) {
+                showToast('El cliente seleccionado no tiene NIT válido. Selecciónalo nuevamente.');
+                return;
             }
 
             const abonoBruto = parseFloat(abonoInput.value);
-            if(isNaN(abonoBruto) || abonoBruto <= 0) return;
+            if(isNaN(abonoBruto) || abonoBruto <= 0) {
+                showToast('Ingresa un valor de abono mayor que cero.');
+                return;
+            }
 
             const retData = calcularRetenciones();
             const fechaPagoValDuplicado = document.getElementById('fechaPago').value;
@@ -1625,15 +1865,15 @@
 
             const duplicados = buscarDuplicadosPago(
                 fechaPagoValDuplicado,
-                currentClient.nit,
+                clientePago.nit,
                 retData.netoBanco,
                 formaPagoValDuplicado
             );
 
             if (duplicados.length > 0) {
                 const continuar = await confirmarPagoDuplicado(duplicados, {
-                    cliente: currentClient.nombre,
-                    nit: currentClient.nit,
+                    cliente: clientePago.nombre,
+                    nit: clientePago.nit,
                     fecha: fechaPagoValDuplicado,
                     valor: retData.netoBanco,
                     formaPago: formaPagoValDuplicado
@@ -1680,10 +1920,15 @@
             }
 
             const anticipo = saldoRestanteAbono;
-            generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo, permitirDuplicadoServidor);
+            await generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo, permitirDuplicadoServidor, clientePago);
         });
 
-        async function generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo, permitirDuplicadoServidor) {
+        async function generarYGuardar(abonoBruto, retData, abonosRealizados, carteraRestante, anticipo, permitirDuplicadoServidor, clientePago) {
+            if (!clientePago || !clientePago.nit) {
+                isSavingPayment = false;
+                showToast('Se perdió la selección del cliente. Selecciónalo nuevamente y vuelve a guardar.');
+                return;
+            }
             isMessageVisible = true;
             
             const fechaPagoVal = document.getElementById('fechaPago').value; 
@@ -1693,57 +1938,36 @@
             const formaPago = document.getElementById('formaPago').value;
             const obs = document.getElementById('observaciones').value.trim();
             const reciboId = generarIdRecibo();
-            const comprobanteTextoFinal = comprobanteTextoInput.value.trim();
             
-            // Construcción del Mensaje
-            let msj = `Hola, hemos recibido un pago a nombre de *${currentClient.nombre}* por ${formatCurrency(retData.netoBanco)}.\n\n`;
-            
-            if (retData.totalRetenciones > 0) {
-                msj = `Hola, hemos registrado un abono a cartera a nombre de *${currentClient.nombre}* por un valor total de ${formatCurrency(abonoBruto)}.\n(Valor recibido en banco: ${formatCurrency(retData.netoBanco)} + Descuentos de retenciones: ${formatCurrency(retData.totalRetenciones)}).\n\n`;
-            }
+            // Mensaje corto para WhatsApp + detalle corto para PAGOS
+            const facturasTxtSimple = abonosRealizados.length
+                ? abonosRealizados.map(a => a.factura).join(', ')
+                : '';
+            const mesesPagados = [...new Set(abonosRealizados.map(a => a.mes).filter(Boolean))];
 
-            const detallesAbonos = [...new Set(abonosRealizados.map(a => a.detalle).filter(d => d && d.trim() !== "-" && d !== ''))];
-            const stringDetallesAbonos = detallesAbonos.length > 0 ? ` (${formatearLista(detallesAbonos)})` : "";
-
-            if (abonosRealizados.length > 0) {
-                const facturasTxt = formatearLista(abonosRealizados.map(a => a.factura));
-                const mesesUnicos = [...new Set(abonosRealizados.map(a => a.mes))];
-                const mesesTxt = formatearLista(mesesUnicos);
-                
-                const totalAplicado = abonoBruto - anticipo;
-
-                if (anticipo > 0) {
-                    msj += `De este valor, aplicamos ${formatCurrency(totalAplicado)} a las facturas ${facturasTxt}${stringDetallesAbonos} correspondientes a los meses de ${mesesTxt} y ha quedado un saldo a favor (anticipo) por ${formatCurrency(anticipo)}.`;
-                } else {
-                    msj += `El pago fue aplicado en su totalidad a las facturas ${facturasTxt}${stringDetallesAbonos} correspondientes a los meses de ${mesesTxt}.`;
-                }
-            } else {
-                msj += `Como no se abonó a facturas, este valor ha quedado en su totalidad como saldo a favor (anticipo).`;
-            }
-
-            // Saldos restantes (Solo seleccionadas)
+            // Saldos restantes únicamente de las facturas que fueron seleccionadas.
             const saldosPorMes = {};
             const facturasRestantesSeleccionadas = carteraRestante.filter(inv => selectedInvoices.includes(inv.factura));
-            
             facturasRestantesSeleccionadas.forEach(inv => {
                 if (inv.saldo > 0) {
                     const mes = getMonthName(inv.fecha);
                     saldosPorMes[mes] = (saldosPorMes[mes] || 0) + inv.saldo;
                 }
             });
-
             const totalPendiente = Object.values(saldosPorMes).reduce((a, b) => a + b, 0);
+            const mesesSaldo = Object.keys(saldosPorMes);
+            const mesesMensaje = mesesSaldo.length ? formatearLista([...mesesSaldo]) : (mesesPagados.length ? formatearLista([...mesesPagados]) : '');
 
-            if (totalPendiente > 0) {
-                const desgloses = Object.entries(saldosPorMes).map(([mes, saldo]) => `${mes} por ${formatCurrency(saldo)}`);
-                msj += `\n\nActualmente el saldo pendiente de lo consultado es de ${formatCurrency(totalPendiente)} distribuido así: ${formatearLista(desgloses)}.`;
-            } else if (facturasRestantesSeleccionadas.length > 0) {
-                msj += `\n\nCon este pago, las facturas consultadas quedan totalmente al día, muchas gracias.`;
+            let msj = '';
+            if (abonosRealizados.length > 0) {
+                msj = `Abona fact. ${facturasTxtSimple} y el saldo es ${formatCurrency(totalPendiente)}${mesesMensaje ? ` de ${mesesMensaje}` : ''}.`;
+                if (anticipo > 0) msj += ` Anticipo a favor: ${formatCurrency(anticipo)}.`;
+                msj += `
+Att. Cartera.`;
             } else {
-                msj += `\n\nActualmente estás al día con nosotros, muchas gracias.`;
+                msj = `Anticipo registrado por ${formatCurrency(anticipo || abonoBruto)}.
+Att. Cartera.`;
             }
-
-            msj += `\n\nFirma:\nÁrea de Cartera.`;
 
             document.getElementById('textoMensaje').value = msj;
             document.getElementById('facturasPanel').classList.add('hidden');
@@ -1751,59 +1975,48 @@
             document.getElementById('pagoPanel').classList.add('hidden');
             document.getElementById('mensajePanel').classList.remove('hidden');
 
-            // --- ARMADO DE EXCEL ---
-            let detalleFacturas = "";
-            let mesesTxtSheet = "N/A";
+            const medioDetalle = formaPago === 'Banco' && tipoMovimientoBanco.value
+                ? nombreTipoBanco(tipoMovimientoBanco.value).toLowerCase()
+                : 'efectivo';
+            let detalleSheet = '';
             if (abonosRealizados.length > 0) {
-                let abonosTxt = abonosRealizados.map(a => a.factura).join(", ");
-                detalleFacturas = ` a Facs: ${abonosTxt}${stringDetallesAbonos}`;
-                mesesTxtSheet = formatearLista([...new Set(abonosRealizados.map(a => a.mes))]);
+                const mesesDetalle = formatearLista([...mesesPagados]);
+                detalleSheet = `paga mes${mesesPagados.length > 1 ? 'es' : ''} de ${mesesDetalle} ${fechaParaTexto} ${medioDetalle} JP`;
+            } else {
+                detalleSheet = `anticipo ${fechaParaTexto} ${medioDetalle} JP`;
             }
-            
-            let detalleAnticipo = anticipo > 0 ? ` | Anticipo a favor: ${formatCurrency(anticipo)}` : "";
-            let stringObs = obs ? ` | Obs: ${obs}` : "";
-            
-            let textoRetenciones = "";
-            if(retData.totalRetenciones > 0) {
-                textoRetenciones = ` | Retenidos: RF ${formatCurrency(retData.rfValue)}, ICA ${formatCurrency(retData.icaValue)} | Entró al banco: ${formatCurrency(retData.netoBanco)}`;
-            }
-            
-            let detalleBanco = '';
-            if (formaPago === 'Banco' && bancoSeleccionado) {
-                detalleBanco = ` | Tipo Banco: ${nombreTipoBanco(bancoSeleccionado.tipo)} | Banco fila: ${bancoSeleccionado.fila} | Ref Banco: ${bancoSeleccionado.referencia || '-'} | Movimiento Banco: ${formatCurrency(bancoSeleccionado.valorBanco)}`;
-            }
-            let detalleSheet = `Abono total a deuda: ${formatCurrency(abonoBruto)}${detalleFacturas}${detalleAnticipo}${textoRetenciones} (Meses pagados: ${mesesTxtSheet}) | Fecha reg: ${fechaParaTexto} | Pago: ${formaPago}${detalleBanco}${stringObs} | Recibo: ${reciboId} | JP`;
-            
+            if (obs) detalleSheet += ` (obs. ${obs})`;
+
             // Primero se guarda el pago NORMAL. Solo si fue exitoso se guarda
             // comprobante/anticipo. Así no queda un anticipo huérfano si PAGOS falla.
             const payload = {
                 fechaRegistro: fechaPagoVal,
-                cliente: currentClient.nombre,
-                nit: currentClient.nit,
+                cliente: clientePago.nombre,
+                nit: clientePago.nit,
                 detalle: detalleSheet,
                 valor: retData.netoBanco,
                 formaPago: formaPago,
                 recibo: reciboId,
+                comprobanteBase64: comprobanteDataUrl || '',
                 permitirDuplicado: !!permitirDuplicadoServidor,
                 bancoFila: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.fila : '',
                 bancoReferencia: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.referencia : '',
                 bancoModo: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.modo : '',
-                bancoTipo: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.tipo : ''
+                bancoTipo: formaPago === 'Banco' && bancoSeleccionado ? bancoSeleccionado.tipo : '',
+                bancoValorGeneral: formaPago === 'Banco' && bancoSeleccionado ? (bancoSeleccionado.valorGeneralDivision || 0) : 0
             };
 
             const payloadExtra = {
                 action: 'guardarExtraCartera',
                 recibo: reciboId,
                 fechaRegistro: fechaPagoVal,
-                cliente: currentClient.nombre,
-                nit: currentClient.nit,
+                cliente: clientePago.nombre,
+                nit: clientePago.nit,
                 valorAbonoBruto: abonoBruto,
                 valorBanco: retData.netoBanco,
                 formaPago: formaPago,
                 anticipo: anticipo,
-                observaciones: obs,
-                comprobanteBase64: comprobanteDataUrl || '',
-                comprobanteTexto: comprobanteTextoFinal || ''
+                observaciones: obs
             };
 
             try {
@@ -1822,14 +2035,14 @@
                     const continuarServidor = await confirmarPagoDuplicado([{
                         origen: 'servidor',
                         fecha: dupServidor.fecha || fechaPagoVal,
-                        nit: dupServidor.nit || currentClient.nit,
+                        nit: dupServidor.nit || clientePago.nit,
                         valor: Number(dupServidor.valor) || retData.netoBanco,
                         detalle: dupServidor.detalle || dataPago.message || '',
                         recibo: dupServidor.recibo || '',
                         formaPago: dupServidor.formaPago || formaPago
                     }], {
-                        cliente: currentClient.nombre,
-                        nit: currentClient.nit,
+                        cliente: clientePago.nombre,
+                        nit: clientePago.nit,
                         fecha: fechaPagoVal,
                         valor: retData.netoBanco,
                         formaPago: formaPago
@@ -1852,7 +2065,7 @@
                     throw new Error(dataPago.message || 'No fue posible guardar el pago.');
                 }
 
-                const necesitaExtra = anticipo > 0 || !!comprobanteDataUrl || !!comprobanteTextoFinal;
+                const necesitaExtra = anticipo > 0;
                 let extraOk = true;
                 if (necesitaExtra) {
                     try {
@@ -1869,9 +2082,11 @@
                     }
                 }
 
+                if (formaPago === 'Banco') limpiarCacheBanco();
+
                 guardarHuellaPagoLocal({
-                    nit: currentClient.nit,
-                    cliente: currentClient.nombre,
+                    nit: clientePago.nit,
+                    cliente: clientePago.nombre,
                     fecha: fechaPagoVal,
                     valor: retData.netoBanco,
                     formaPago: formaPago,
@@ -1885,7 +2100,7 @@
                         ? 'Pago guardado y banco conciliado.'
                         : 'Pago guardado.';
                     if (anticipo > 0) mensajeExito += ' Anticipo registrado.';
-                    if (comprobanteDataUrl || comprobanteTextoFinal) mensajeExito += ' Comprobante guardado.';
+                    if (comprobanteDataUrl) mensajeExito += ' Comprobante guardado en el recibo.';
                     showToast(mensajeExito, 'success');
                 }
             } catch (e) {
@@ -1930,6 +2145,9 @@
             tipoMovimientoBanco.disabled = true;
             btnBuscarBanco.disabled = true;
             btnBuscarBanco.textContent = 'Escoger valor a relacionar';
+            bancoValorGeneralDivision = 0;
+            valorConsignacionGeneral.value = '';
+            divisionBancoPanel.classList.add('hidden');
             cerrarBancoModal();
             extrasByRecibo = {};
             setFechaHoy(); 
