@@ -1992,7 +1992,7 @@
             const facsTxt = formatearLista(facturasAProcesar.map(f => f.factura));
             const mesesTxt = formatearLista([...new Set(facturasAProcesar.map(f => getMonthName(f.fecha)))]);
             
-            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\nPresentas un saldo pendiente de ${formatCurrency(total)}, correspondiente a las facturas ${facsTxt}.\n\nEste saldo se encuentra distribuido así: ${mesesTxt}.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
+            const msj = `Hola,\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\nPresentas un saldo pendiente de ${formatCurrency(total)}, correspondiente a las facturas ${facsTxt}.\n\nEste saldo se encuentra distribuido así: ${mesesTxt}.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
             
             const textArea = document.createElement("textarea");
             textArea.value = msj;
