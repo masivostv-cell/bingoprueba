@@ -24,7 +24,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzFfb2bxkiy2Or-Zms85m0ng52Q2kzWgX1Ag9-q7bWVaiAiEp8crzNMwG-a8MNIXeQH/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBUb_-e3wEQFIBvR0TrgJcMSL-fsVYoinMYtcJU8GzXRXEjeBD4oFrPRPGgEll3Bvt/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -97,7 +97,7 @@
                             <p id="clienteSeleccionadoInfo" class="text-sm text-gray-600 mt-1"></p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <button type="button" id="btnAgregarFacturaManual" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center">
+                            <button type="button" id="btnAgregarFacturaManual" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center">
                                 <span class="mr-1">＋</span> Última factura
                             </button>
                             <button type="button" onclick="copiarDeuda()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center">
@@ -110,9 +110,9 @@
                     <div class="mt-4 bg-white border border-gray-200 rounded-lg p-3">
                         <div class="flex flex-col sm:flex-row sm:items-end gap-3">
                             <div class="flex-1">
-                                <label for="telefonoTercero" class="block text-xs font-semibold text-gray-600 mb-1">Teléfono del tercero (columna F) <span class="text-red-600">*</span></label>
-                                <input type="tel" id="telefonoTercero" autocomplete="tel" required class="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Ej. 3001234567">
-                                <p id="telefonoTerceroAyuda" class="text-xs text-gray-500 mt-1">Obligatorio para guardar. Al distribuir el pago se actualizará automáticamente en TERCEROS.</p>
+                                <label for="telefonoTercero" class="block text-xs font-semibold text-gray-600 mb-1">Teléfono del tercero (columna F) <span class="text-gray-400 font-normal">(opcional)</span></label>
+                                <input type="tel" id="telefonoTercero" autocomplete="tel" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Ej. 3001234567">
+                                <p id="telefonoTerceroAyuda" class="text-xs text-gray-500 mt-1">Opcional. Si escribes un número válido, se actualizará automáticamente en TERCEROS al guardar el pago.</p>
                             </div>
                             <button type="button" id="btnActualizarTercero" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 text-white px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap">
                                 Actualizar tercero
@@ -320,8 +320,8 @@
 
 <!-- Modal para agregar última factura manual -->
 <div id="facturaManualModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-        <div class="p-5 border-b bg-amber-50 rounded-t-xl flex justify-between items-start gap-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-y-auto" style="max-height: 92vh;">
+        <div class="p-5 border-b bg-yellow-50 rounded-t-xl flex justify-between items-start gap-4">
             <div>
                 <h3 class="text-lg font-bold text-amber-900">Agregar última factura a CARTERA</h3>
                 <p id="facturaManualCliente" class="text-xs text-amber-800 mt-1"></p>
@@ -340,9 +340,9 @@
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Sede / detalle *</label>
-                <input type="text" id="facturaManualDetalle" required class="w-full border border-gray-300 rounded-md p-2" placeholder="Ej. COND WH / Sede Centro">
-                <p class="text-xs text-gray-500 mt-1">Se guardará en la columna E de CARTERA.</p>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Sede / detalle <span class="font-normal text-gray-400">(opcional)</span></label>
+                <input type="text" id="facturaManualDetalle" class="w-full border border-gray-300 rounded-md p-2" placeholder="Ej. COND WH / Sede Centro">
+                <p class="text-xs text-gray-500 mt-1">Si lo dejas vacío, la factura se guardará sin detalle en la columna E de CARTERA.</p>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1">Saldo de la factura *</label>
@@ -352,9 +352,13 @@
             <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
                 La factura se agregará al final de la hoja CARTERA y quedará seleccionada inmediatamente para que puedas usar <b>Copiar Deuda</b>.
             </div>
-            <div class="flex gap-2">
-                <button type="button" id="btnCancelarFacturaManual" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2.5 px-4 rounded-lg">Cancelar</button>
-                <button type="submit" id="btnGuardarFacturaManual" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 px-4 rounded-lg">Guardar factura</button>
+            <div class="pt-4 space-y-2 sticky bottom-0 bg-white border-t border-gray-200 mt-4" style="padding-bottom: 4px;">
+                <button type="submit" id="btnGuardarFacturaManual"
+                        class="w-full font-bold py-3 px-4 rounded-lg shadow-lg text-base"
+                        style="background-color:#d97706 !important;color:#ffffff !important;border:2px solid #b45309 !important;min-height:52px;display:block;">
+                    💾 GUARDAR FACTURA EN CARTERA
+                </button>
+                <button type="button" id="btnCancelarFacturaManual" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 px-4 rounded-lg">Cancelar</button>
             </div>
         </form>
     </div>
@@ -538,8 +542,7 @@
         let bancoSnapshotDia = { fecha: '', ts: 0, movimientos: [] };
         let bancoSnapshotTodas = { ts: 0, movimientos: [] };
         const BANCO_CACHE_MS = 120000; // referencia de frescura; nunca bloquea si ya hay caché
-        const BANCO_CACHE_MAX_STALE_MS = 15 * 60 * 1000;
-        const BANCO_REVALIDATE_MS = 20000;
+        const BANCO_CACHE_MAX_STALE_MS = 24 * 60 * 60 * 1000; // conserva hasta 24 h para poder consultar aun con internet inestable
         const bancoRevalidandoDias = new Set();
         let bancoRevalidandoTodas = false;
         let reporteTipoActual = 'bancos';
@@ -874,41 +877,71 @@
         }
 
         // ----------------------------------------------------
-        // FETCH DATA
+        // DATOS RÁPIDOS: CACHÉ PRIMERO, UNA SOLA ACTUALIZACIÓN AL ABRIR
+        // Después no hay refrescos periódicos. Al guardar un pago se
+        // revisan CARTERA/PAGOS/TERCEROS y BANCOS silenciosamente.
         // ----------------------------------------------------
-        function fetchData() {
-            if (isMessageVisible) return;
+        async function fetchConTimeout(url, options = {}, timeoutMs = 7000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                return await fetch(url, { ...options, signal: controller.signal });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
 
+        async function refrescarDatosServidorSilencioso() {
+            if (!SCRIPT_URL.includes("script.google.com")) return false;
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+            try {
+                const res = await fetchConTimeout(`${SCRIPT_URL}?action=getData&_=${Date.now()}`, { cache: 'no-store' }, 6500);
+                if (!res.ok) return false;
+                const data = await res.json();
+                if (!data || data.status === 'error' || !Array.isArray(data.clientes)) return false;
+                allData = data;
+                guardarCacheLocalCartera(data);
+                return true;
+            } catch (err) {
+                // Deliberadamente silencioso: si no hay internet se conserva el último caché.
+                console.debug('Actualización silenciosa de cartera:', err);
+                return false;
+            }
+        }
+
+        async function inicializarDatos() {
             if(!SCRIPT_URL.includes("script.google.com")) {
                 setStatus("Falta SCRIPT_URL", "bg-red-100", "text-red-800", "border-red-300", false);
                 return;
             }
-            setStatus("Actualizando...", "bg-yellow-100", "text-yellow-800", "border-yellow-300", true);
 
-            fetch(SCRIPT_URL + '?action=getData')
-                .then(res => { if (!res.ok) throw new Error('Error red'); return res.json(); })
-                .then(data => {
-                    if (data && data.status === 'error') {
-                        throw new Error(data.message || 'Apps Script devolvió un error');
-                    }
-                    if(data && Array.isArray(data.clientes)) {
-                        allData = data;
-                        guardarCacheLocalCartera(data);
-                        setStatus("Cartera actualizada ✅", "bg-green-100", "text-green-800", "border-green-300", false);
-                        statusBadge.removeAttribute('title');
-                        // Si hay un cliente seleccionado, actualizamos su historial invisiblemente
-                        if (currentClient && !isMessageVisible) renderHistorial(currentClient.nit);
-                    } else { throw new Error('La respuesta no contiene la estructura esperada.'); }
-                })
-                .catch(err => {
-                    console.error("Error Fetch:", err);
-                    setStatus("Error al cargar", "bg-red-100", "text-red-800", "border-red-300", false);
-                    statusBadge.title = err && err.message ? err.message : 'Error desconocido';
-                });
+            // Si ya hay caché, la aplicación queda usable de inmediato.
+            if (cacheInicialCartera && Array.isArray(cacheInicialCartera.clientes)) {
+                setStatus("Datos listos ✅", "bg-green-100", "text-green-800", "border-green-300", false);
+                // Una sola actualización al abrir, sin bloquear ni cambiar la pantalla.
+                refrescarDatosServidorSilencioso();
+                return;
+            }
+
+            // Solo la primera vez, cuando no existe ningún caché, esperamos al servidor.
+            setStatus("Cargando datos...", "bg-yellow-100", "text-yellow-800", "border-yellow-300", true);
+            try {
+                const res = await fetchConTimeout(`${SCRIPT_URL}?action=getData&_=${Date.now()}`, { cache: 'no-store' }, 12000);
+                if (!res.ok) throw new Error('Error de red');
+                const data = await res.json();
+                if (data && data.status === 'error') throw new Error(data.message || 'Apps Script devolvió un error');
+                if (!data || !Array.isArray(data.clientes)) throw new Error('La respuesta no contiene la estructura esperada.');
+                allData = data;
+                guardarCacheLocalCartera(data);
+                setStatus("Datos listos ✅", "bg-green-100", "text-green-800", "border-green-300", false);
+            } catch (err) {
+                console.error('Carga inicial:', err);
+                setStatus("Sin conexión / sin caché", "bg-red-100", "text-red-800", "border-red-300", false);
+                statusBadge.title = err && err.message ? err.message : 'No fue posible cargar los datos.';
+            }
         }
-        fetchData();
-        setInterval(fetchData, 30000);
 
+        inicializarDatos();
 
         // ----------------------------------------------------
         // MENÚ LATERAL + REPORTES
@@ -1105,17 +1138,19 @@
 
         function leerCacheBancoSesion(clave) {
             try {
-                const x = JSON.parse(sessionStorage.getItem(clave) || 'null');
+                const x = JSON.parse(localStorage.getItem(clave) || sessionStorage.getItem(clave) || 'null');
                 if (!x || !x.ts || !Array.isArray(x.movimientos)) return null;
-                // Stale-while-revalidate: aceptamos una copia algo antigua para no hacer esperar.
-                // Detrás se comprueba inmediatamente contra Google Sheets.
-                if (Date.now() - x.ts > BANCO_CACHE_MAX_STALE_MS) return null;
+                // Conservamos una copia amplia para poder consultar aun si Internet falla.
+                // Si está demasiado antigua y SÍ hay conexión, se obliga una lectura nueva.
+                // Si no hay conexión, es preferible mostrar el último caché disponible.
+                const demasiadoAntigua = Date.now() - x.ts > BANCO_CACHE_MAX_STALE_MS;
+                if (demasiadoAntigua && !(typeof navigator !== 'undefined' && navigator.onLine === false)) return null;
                 return x;
             } catch (_) { return null; }
         }
 
         function guardarCacheBancoSesion(clave, movimientos) {
-            try { sessionStorage.setItem(clave, JSON.stringify({ ts: Date.now(), movimientos })); } catch (_) {}
+            try { localStorage.setItem(clave, JSON.stringify({ ts: Date.now(), movimientos })); } catch (_) { try { sessionStorage.setItem(clave, JSON.stringify({ ts: Date.now(), movimientos })); } catch(__) {} }
         }
 
         function firmaMovimientosBanco(movimientos) {
@@ -1138,6 +1173,9 @@
             try {
                 Object.keys(sessionStorage).forEach(k => {
                     if (k.startsWith('cartera_bancos_')) sessionStorage.removeItem(k);
+                });
+                Object.keys(localStorage).forEach(k => {
+                    if (k.startsWith('cartera_bancos_')) localStorage.removeItem(k);
                 });
             } catch (_) {}
         }
@@ -1248,18 +1286,16 @@
                 return movimientos;
             }
 
-            // Si ya hay memoria, responde al instante y revisa Sheets detrás.
+            // Si ya hay memoria, responde al instante sin consultar nuevamente.
             if (bancoSnapshotDia.fecha === fecha && bancoSnapshotDia.ts) {
-                revalidarBancoDiaSilencioso(fecha);
                 return bancoSnapshotDia.movimientos;
             }
 
-            // Si hay sessionStorage, responde al instante aunque ya no esté "fresco".
+            // Si hay caché local, responde al instante. Se revalida únicamente al guardar.
             const clave = claveCacheBancoDia(fecha);
             const cache = leerCacheBancoSesion(clave);
             if (cache) {
                 bancoSnapshotDia = { fecha, ts: cache.ts, movimientos: cache.movimientos };
-                revalidarBancoDiaSilencioso(fecha);
                 return cache.movimientos;
             }
 
@@ -1279,7 +1315,6 @@
             }
 
             if (bancoSnapshotTodas.ts) {
-                revalidarBancoTodasSilencioso();
                 return bancoSnapshotTodas.movimientos;
             }
 
@@ -1287,7 +1322,6 @@
             const cache = leerCacheBancoSesion(clave);
             if (cache) {
                 bancoSnapshotTodas = { ts: cache.ts, movimientos: cache.movimientos };
-                revalidarBancoTodasSilencioso();
                 return cache.movimientos;
             }
 
@@ -1295,6 +1329,46 @@
             bancoSnapshotTodas = { ts: Date.now(), movimientos };
             guardarCacheBancoSesion(clave, movimientos);
             return movimientos;
+        }
+
+        function actualizarBancoCacheLocalTrasPago(fecha, fila, valorAplicado, cliente) {
+            const filaNum = Number(fila) || 0;
+            const valor = Number(valorAplicado) || 0;
+            if (!filaNum || valor <= 0) return;
+
+            const aplicar = (movimientos) => (movimientos || []).map(m => {
+                if (Number(m.fila) !== filaNum) return m;
+                const valorRelacionado = (Number(m.valorRelacionado) || 0) + valor;
+                const valorBanco = Number(m.valorBanco) || 0;
+                const disponible = Math.max(0, valorBanco - valorRelacionado);
+                const nombres = String(m.terceroRelacionado || '').split('|').map(x => x.trim()).filter(Boolean);
+                if (cliente && !nombres.includes(cliente)) nombres.push(cliente);
+                return { ...m, valorRelacionado, disponible, terceroRelacionado: nombres.join(' | ') };
+            }).filter(m => (Number(m.disponible) || 0) > 0.5);
+
+            if (bancoSnapshotDia.fecha === fecha && bancoSnapshotDia.ts) {
+                bancoSnapshotDia.movimientos = aplicar(bancoSnapshotDia.movimientos);
+                bancoSnapshotDia.ts = Date.now();
+                guardarCacheBancoSesion(claveCacheBancoDia(fecha), bancoSnapshotDia.movimientos);
+            } else {
+                const cacheDia = leerCacheBancoSesion(claveCacheBancoDia(fecha));
+                if (cacheDia) guardarCacheBancoSesion(claveCacheBancoDia(fecha), aplicar(cacheDia.movimientos));
+            }
+
+            if (bancoSnapshotTodas.ts) {
+                bancoSnapshotTodas.movimientos = aplicar(bancoSnapshotTodas.movimientos);
+                bancoSnapshotTodas.ts = Date.now();
+                guardarCacheBancoSesion('cartera_bancos_todas', bancoSnapshotTodas.movimientos);
+            } else {
+                const cacheTodas = leerCacheBancoSesion('cartera_bancos_todas');
+                if (cacheTodas) guardarCacheBancoSesion('cartera_bancos_todas', aplicar(cacheTodas.movimientos));
+            }
+        }
+
+        function revalidarDespuesDeGuardarSilencioso(fecha) {
+            // No se espera el resultado: el usuario puede seguir trabajando.
+            refrescarDatosServidorSilencioso();
+            if (fecha) revalidarBancoDiaSilencioso(fecha);
         }
 
         async function cargarTiposBanco() {
@@ -1549,15 +1623,8 @@
         movimientoBancoModal.addEventListener('click', function(e) { if (e.target === this) cerrarBancoModal(); });
 
 
-        // BANCOS se revalida aparte y en silencio. No muestra loaders, toasts ni recarga la UI.
-        setInterval(() => {
-            if (!esPagoBanco()) return;
-            const fecha = fechaPagoInput.value;
-            if (fecha) revalidarBancoDiaSilencioso(fecha);
-            if ((bancoModo === 'manual_all' || bancoModo === 'divide_all') && !movimientoBancoModal.classList.contains('hidden')) {
-                revalidarBancoTodasSilencioso();
-            }
-        }, BANCO_REVALIDATE_MS);
+        // BANCOS no se consulta periódicamente. Se usa el caché y se revalida silenciosamente al guardar.
+
 
         // ----------------------------------------------------
         // BUSCADOR INTELIGENTE (Ignora orden y busca detalle)
@@ -1688,10 +1755,10 @@
             telefonoTerceroInput.value = currentClient.telefono || '';
             telefonoTerceroAyuda.textContent = currentClient.telefono
                 ? 'Teléfono encontrado. Si lo corriges, se actualizará automáticamente al guardar el pago.'
-                : 'Teléfono obligatorio. Escríbelo antes de distribuir el pago; se guardará en TERCEROS!F.';
+                : 'Teléfono opcional. Puedes dejarlo vacío; si lo registras, se guardará en TERCEROS!F al guardar el pago.';
             telefonoTerceroAyuda.className = currentClient.telefono
                 ? 'text-xs text-green-600 mt-1'
-                : 'text-xs text-amber-700 mt-1 font-medium';
+                : 'text-xs text-gray-500 mt-1';
             actualizarEstadoBotonTercero();
             
             renderTable();
@@ -1727,7 +1794,7 @@
             const telefono = String(telefonoTerceroInput.value || '').trim();
             const digitos = telefono.replace(/\D/g, '');
             if (!telefono || digitos.length < 7) {
-                showToast('El teléfono es obligatorio y debe tener al menos 7 dígitos.');
+                showToast('Para actualizar el teléfono, escribe un número válido de al menos 7 dígitos.');
                 telefonoTerceroInput.focus();
                 return;
             }
@@ -1803,8 +1870,8 @@
             const fecha = String(facturaManualFecha.value || '').trim();
             const detalle = String(facturaManualDetalle.value || '').trim();
             const saldo = Number(facturaManualSaldo.value) || 0;
-            if (!factura || !fecha || !detalle || saldo <= 0) {
-                showToast('Completa factura, fecha, sede/detalle y saldo.');
+            if (!factura || !fecha || saldo <= 0) {
+                showToast('Completa número de factura, fecha y saldo. El detalle es opcional.');
                 return;
             }
 
@@ -1992,7 +2059,7 @@
             const facsTxt = formatearLista(facturasAProcesar.map(f => f.factura));
             const mesesTxt = formatearLista([...new Set(facturasAProcesar.map(f => getMonthName(f.fecha)))]);
             
-            const msj = `Hola,\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\nPresentas un saldo pendiente de ${formatCurrency(total)}, correspondiente a las facturas ${facsTxt}.\n\nEste saldo se encuentra distribuido así: ${mesesTxt}.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
+            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\nPresentas un saldo pendiente de ${formatCurrency(total)}, correspondiente a las facturas ${facsTxt}.\n\nEste saldo se encuentra distribuido así: ${mesesTxt}.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
             
             const textArea = document.createElement("textarea");
             textArea.value = msj;
@@ -2217,17 +2284,12 @@
                 return;
             }
 
+            // El teléfono es opcional. Si hay un número válido, se envía para
+            // actualizar TERCEROS!F; si está vacío o incompleto, el pago continúa
+            // normalmente y el teléfono existente no se modifica.
             const telefonoPago = telefonoTerceroValido();
-            if (!telefonoPago) {
-                showToast('El número de teléfono es obligatorio para distribuir y guardar el pago.');
-                telefonoTerceroInput.classList.add('border-red-500', 'ring-1', 'ring-red-400');
-                telefonoTerceroAyuda.textContent = 'Debes registrar un teléfono válido de mínimo 7 dígitos antes de guardar.';
-                telefonoTerceroAyuda.className = 'text-xs text-red-600 mt-1 font-semibold';
-                telefonoTerceroInput.focus();
-                return;
-            }
             telefonoTerceroInput.classList.remove('border-red-500', 'ring-1', 'ring-red-400');
-            clientePago.telefono = telefonoPago;
+            clientePago.telefono = telefonoPago || '';
 
             const abonoBruto = parseFloat(abonoInput.value);
             if(isNaN(abonoBruto) || abonoBruto <= 0) {
@@ -2341,34 +2403,42 @@
             const obs = document.getElementById('observaciones').value.trim();
             const reciboId = generarIdRecibo();
             
-            // Mensaje corto para WhatsApp + detalle corto para PAGOS
-            const facturasTxtSimple = abonosRealizados.length
-                ? abonosRealizados.map(a => a.factura).join(', ')
-                : '';
+            // Mensaje de WhatsApp: específico por factura, sede/detalle, valor abonado y saldo.
             const mesesPagados = [...new Set(abonosRealizados.map(a => a.mes).filter(Boolean))];
-
-            // Saldos restantes únicamente de las facturas que fueron seleccionadas.
-            const saldosPorMes = {};
-            const facturasRestantesSeleccionadas = carteraRestante.filter(inv => selectedInvoices.includes(inv.factura));
-            facturasRestantesSeleccionadas.forEach(inv => {
-                if (inv.saldo > 0) {
-                    const mes = getMonthName(inv.fecha);
-                    saldosPorMes[mes] = (saldosPorMes[mes] || 0) + inv.saldo;
-                }
-            });
-            const totalPendiente = Object.values(saldosPorMes).reduce((a, b) => a + b, 0);
-            const mesesSaldo = Object.keys(saldosPorMes);
-            const mesesMensaje = mesesSaldo.length ? formatearLista([...mesesSaldo]) : (mesesPagados.length ? formatearLista([...mesesPagados]) : '');
-
             let msj = '';
             if (abonosRealizados.length > 0) {
-                msj = `${clientePago.nombre}: abona fact. ${facturasTxtSimple}. Saldo: ${formatCurrency(totalPendiente)}${mesesMensaje ? ` de ${mesesMensaje}` : ''}.`;
-                if (anticipo > 0) msj += ` Anticipo a favor: ${formatCurrency(anticipo)}.`;
-                msj += `
-Att. Cartera.`;
+                const lineasFacturas = abonosRealizados.map(a => {
+                    const restante = carteraRestante.find(f => String(f.factura) === String(a.factura));
+                    const saldoFactura = Math.max(0, Number(restante ? restante.saldo : 0) || 0);
+                    const detalleFactura = String(a.detalle || '').trim();
+                    let linea = `• Factura ${a.factura}`;
+                    if (detalleFactura && detalleFactura !== '-') linea += ` | ${detalleFactura}`;
+                    linea += ` | Abono ${formatCurrency(a.abonado)}`;
+                    linea += saldoFactura > 0.5
+                        ? ` | Saldo pendiente ${formatCurrency(saldoFactura)}`
+                        : ' | Queda pagada';
+                    return linea;
+                });
+
+                msj = `${clientePago.nombre}\nAbono registrado:\n${lineasFacturas.join('\n')}`;
+
+                const abonadasSet = new Set(abonosRealizados.map(a => String(a.factura)));
+                const pendientesSinAbono = carteraRestante
+                    .filter(f => selectedInvoices.includes(f.factura) && (Number(f.saldo) || 0) > 0.5 && !abonadasSet.has(String(f.factura)))
+                    .map(f => {
+                        const det = String(f.detalle || '').trim();
+                        let linea = `• Factura ${f.factura}`;
+                        if (det && det !== '-') linea += ` | ${det}`;
+                        linea += ` | Saldo pendiente ${formatCurrency(f.saldo)}`;
+                        return linea;
+                    });
+                if (pendientesSinAbono.length) {
+                    msj += `\nPendientes sin abono en este pago:\n${pendientesSinAbono.join('\n')}`;
+                }
+                if (anticipo > 0) msj += `\nSaldo a favor: ${formatCurrency(anticipo)}`;
+                msj += `\nAtt. Cartera.`;
             } else {
-                msj = `${clientePago.nombre}: anticipo registrado por ${formatCurrency(anticipo || abonoBruto)}.
-Att. Cartera.`;
+                msj = `${clientePago.nombre}\nAnticipo registrado por ${formatCurrency(anticipo || abonoBruto)}.\nAtt. Cartera.`;
             }
 
             document.getElementById('textoMensaje').value = msj;
@@ -2495,17 +2565,30 @@ Att. Cartera.`;
                     }
                 }
 
-                if (formaPago === 'Banco') limpiarCacheBanco();
-
-                // El servidor ya actualizó TERCEROS!F como parte del mismo guardado.
-                if (currentClient && String(currentClient.nit || '') === String(clientePago.nit || '')) {
-                    currentClient.telefono = clientePago.telefono || '';
+                if (formaPago === 'Banco' && bancoSeleccionado) {
+                    actualizarBancoCacheLocalTrasPago(
+                        fechaPagoVal,
+                        bancoSeleccionado.fila,
+                        retData.netoBanco,
+                        clientePago.nombre
+                    );
                 }
-                const terceroActualizado = (allData.clientes || []).find(c => String(c.nit || '') === String(clientePago.nit || ''));
-                if (terceroActualizado) terceroActualizado.telefono = clientePago.telefono || '';
-                guardarCacheLocalCartera(allData);
-                telefonoTerceroAyuda.textContent = 'Teléfono actualizado automáticamente en TERCEROS al guardar el pago.';
-                telefonoTerceroAyuda.className = 'text-xs text-green-600 mt-1 font-medium';
+
+                // Si se envió un teléfono válido, el servidor lo actualizó en TERCEROS!F.
+                // Si se dejó vacío, no tocamos el teléfono existente ni el caché local.
+                if (clientePago.telefono) {
+                    if (currentClient && String(currentClient.nit || '') === String(clientePago.nit || '')) {
+                        currentClient.telefono = clientePago.telefono;
+                    }
+                    const terceroActualizado = (allData.clientes || []).find(c => String(c.nit || '') === String(clientePago.nit || ''));
+                    if (terceroActualizado) terceroActualizado.telefono = clientePago.telefono;
+                    guardarCacheLocalCartera(allData);
+                    telefonoTerceroAyuda.textContent = 'Teléfono actualizado automáticamente en TERCEROS al guardar el pago.';
+                    telefonoTerceroAyuda.className = 'text-xs text-green-600 mt-1 font-medium';
+                } else {
+                    telefonoTerceroAyuda.textContent = 'Teléfono opcional. El pago se guardó sin modificar TERCEROS!F.';
+                    telefonoTerceroAyuda.className = 'text-xs text-gray-500 mt-1';
+                }
 
                 guardarHuellaPagoLocal({
                     nit: clientePago.nit,
@@ -2526,6 +2609,10 @@ Att. Cartera.`;
                     if (comprobanteDataUrl) mensajeExito += ' Comprobante guardado en el recibo.';
                     showToast(mensajeExito, 'success');
                 }
+
+                // Revisión en segundo plano SOLO al guardar. No bloquea, no muestra
+                // cargadores y si falla Internet conserva el caché actual.
+                revalidarDespuesDeGuardarSilencioso(fechaPagoVal);
             } catch (e) {
                 console.error('Error Sheet:', e);
                 // Si falló el pago real, no dejamos visible el mensaje de éxito.
@@ -2557,7 +2644,7 @@ Att. Cartera.`;
             netoBancoTxt.textContent = '$0';
             document.getElementById('observaciones').value = '';
             telefonoTerceroInput.value = '';
-            telefonoTerceroAyuda.textContent = 'Obligatorio para guardar. Al distribuir el pago se actualizará automáticamente en TERCEROS.';
+            telefonoTerceroAyuda.textContent = 'Opcional. Si escribes un número válido, se actualizará automáticamente en TERCEROS al guardar el pago.';
             telefonoTerceroAyuda.className = 'text-xs text-gray-500 mt-1';
             btnActualizarTercero.disabled = true;
             cerrarFacturaManual();
@@ -2592,7 +2679,7 @@ Att. Cartera.`;
             isMessageVisible = false;
             isSavingPayment = false;
             
-            fetchData(); 
+            // No consultamos Internet al iniciar un nuevo recibo; seguimos con el caché actual.
             searchInput.focus();
         }
     });
