@@ -2403,43 +2403,96 @@
             const obs = document.getElementById('observaciones').value.trim();
             const reciboId = generarIdRecibo();
             
-            // Mensaje de WhatsApp: específico por factura, sede/detalle, valor abonado y saldo.
+            // Mensaje de WhatsApp: formato corto y claro para el cliente.
             const mesesPagados = [...new Set(abonosRealizados.map(a => a.mes).filter(Boolean))];
-            let msj = '';
+
+            function normalizarTextoComparacion(valor) {
+                return String(valor || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+
+            // Si el nombre trae establecimiento después de un guion y ese establecimiento
+            // ya aparece en el detalle de una factura, arriba dejamos solamente el nombre.
+            function limpiarNombreParaWhatsApp(nombreCompleto, detalles) {
+                const nombre = String(nombreCompleto || '').trim();
+                if (!nombre) return '';
+
+                const partes = nombre.split(/\s+(?:-|–|—|\|)\s+/).map(x => x.trim()).filter(Boolean);
+                if (partes.length < 2) return nombre;
+
+                const detallesNorm = (detalles || [])
+                    .map(normalizarTextoComparacion)
+                    .filter(Boolean);
+
+                // Probamos desde el último segmento hacia atrás para conservar el nombre personal.
+                for (let i = 1; i < partes.length; i++) {
+                    const posibleEstablecimiento = partes.slice(i).join(' ');
+                    const establecimientoNorm = normalizarTextoComparacion(posibleEstablecimiento);
+                    if (!establecimientoNorm) continue;
+
+                    const apareceEnDetalle = detallesNorm.some(det =>
+                        det === establecimientoNorm ||
+                        det.includes(establecimientoNorm) ||
+                        establecimientoNorm.includes(det)
+                    );
+
+                    if (apareceEnDetalle) {
+                        return partes.slice(0, i).join(' - ');
+                    }
+                }
+
+                return nombre;
+            }
+
+            const detallesParaNombre = [
+                ...abonosRealizados.map(a => a.detalle),
+                ...carteraRestante.map(f => f.detalle)
+            ];
+            const nombreWhatsApp = limpiarNombreParaWhatsApp(clientePago.nombre, detallesParaNombre);
+
+            const pendientesDespuesPago = carteraRestante
+                .filter(f => (Number(f.saldo) || 0) > 0.5)
+                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            const totalPendienteWhatsApp = pendientesDespuesPago
+                .reduce((suma, f) => suma + (Number(f.saldo) || 0), 0);
+
+            let lineasPagos = [];
             if (abonosRealizados.length > 0) {
-                const lineasFacturas = abonosRealizados.map(a => {
-                    const restante = carteraRestante.find(f => String(f.factura) === String(a.factura));
-                    const saldoFactura = Math.max(0, Number(restante ? restante.saldo : 0) || 0);
+                lineasPagos = abonosRealizados.map(a => {
+                    const mes = String(a.mes || '').toUpperCase();
                     const detalleFactura = String(a.detalle || '').trim();
-                    let linea = `• Factura ${a.factura}`;
-                    if (detalleFactura && detalleFactura !== '-') linea += ` | ${detalleFactura}`;
-                    linea += ` | Abono ${formatCurrency(a.abonado)}`;
-                    linea += saldoFactura > 0.5
-                        ? ` | Saldo pendiente ${formatCurrency(saldoFactura)}`
-                        : ' | Queda pagada';
+                    let linea = `* ${formatCurrency(a.abonado)} MES DE ${mes} / Factura ${a.factura}`;
+                    if (detalleFactura && detalleFactura !== '-') {
+                        linea += ` (${detalleFactura})`;
+                    }
                     return linea;
                 });
-
-                msj = `${clientePago.nombre}\nAbono registrado:\n${lineasFacturas.join('\n')}`;
-
-                const abonadasSet = new Set(abonosRealizados.map(a => String(a.factura)));
-                const pendientesSinAbono = carteraRestante
-                    .filter(f => selectedInvoices.includes(f.factura) && (Number(f.saldo) || 0) > 0.5 && !abonadasSet.has(String(f.factura)))
-                    .map(f => {
-                        const det = String(f.detalle || '').trim();
-                        let linea = `• Factura ${f.factura}`;
-                        if (det && det !== '-') linea += ` | ${det}`;
-                        linea += ` | Saldo pendiente ${formatCurrency(f.saldo)}`;
-                        return linea;
-                    });
-                if (pendientesSinAbono.length) {
-                    msj += `\nPendientes sin abono en este pago:\n${pendientesSinAbono.join('\n')}`;
-                }
-                if (anticipo > 0) msj += `\nSaldo a favor: ${formatCurrency(anticipo)}`;
-                msj += `\nAtt. Cartera.`;
             } else {
-                msj = `${clientePago.nombre}\nAnticipo registrado por ${formatCurrency(anticipo || abonoBruto)}.\nAtt. Cartera.`;
+                lineasPagos = [`* ${formatCurrency(anticipo || abonoBruto)} ANTICIPO`];
             }
+
+            const lineasPendientes = pendientesDespuesPago.map(f => {
+                const mes = getMonthName(f.fecha);
+                return `Factura ${f.factura} mes ${mes} valor ${formatCurrency(f.saldo)}`;
+            });
+
+            let msj = `Hola, Buen día! ${nombreWhatsApp}\n\n`;
+            msj += `Pagos recibidos:\n${lineasPagos.join('\n')}\n\n`;
+            msj += `Saldo pendiente:\n`;
+            msj += lineasPendientes.length > 0
+                ? lineasPendientes.join('\n')
+                : 'Sin saldo pendiente.';
+            msj += `\n\nTotal pendiente: ${formatCurrency(totalPendienteWhatsApp)}`;
+            if (anticipo > 0) {
+                msj += `\nSaldo a favor: ${formatCurrency(anticipo)}`;
+            }
+            msj += `\nAtt: Cartera`;
 
             document.getElementById('textoMensaje').value = msj;
             document.getElementById('facturasPanel').classList.add('hidden');
