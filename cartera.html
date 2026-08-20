@@ -6,7 +6,7 @@
     <title>Gestión de Cartera</title>
     <!-- Tailwind CSS minificado para carga instantánea -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
+    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=rKUHjo0MRiBMh5i1JbCykabLwpFb0WhuiXZm6NCmYnzwEldS2ohq3G3KIjor3m4nzKvmNlT-ijqApQedlFdW7mpVi0wmLnmNQ1FjGSL1slmQT4nBV-XM8QsNNb-1O-wBbEjs-ujkk5ZL5ZmNq8rv6xVDWNGXYJ6GaIl-sfpF59KVayi63HIRWD52hiqlnysFIsSDrb6U1392xa_Fhb1enQ-ZZ0hGc1c22NJEswpZW1W9t3KbSdn6xYnYdqCSn0eaXKueif4Vlu9ghMxusMsk2_3W5TV1txVIBF6zS8WOBCrRKy2nVkxI6IpnqtiY2xapfhItu0geIo8Sd2oCGeTufw" charset="UTF-8"></script><style>
         .highlight { color: #2563eb; font-weight: bold; background-color: #dbeafe; padding: 0 2px; border-radius: 2px; }
         .search-item.active { background-color: #f3f4f6; border-left: 4px solid #3b82f6; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
@@ -250,6 +250,11 @@
                             </select>
                             <p id="tiposBancoStatus" class="text-xs text-gray-600 mt-1">Se mostrarán únicamente los tipos encontrados ese día.</p>
                         </div>
+
+                        <button type="button" id="btnForzarCacheBanco" class="w-full bg-white hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-400 px-3 py-2.5 rounded font-bold text-sm flex items-center justify-center gap-2">
+                            <span aria-hidden="true">🔄</span> Actualizar BANCOS ahora
+                        </button>
+                        <p id="bancoCacheManualStatus" class="text-xs text-gray-500 -mt-1">Úsalo si acabas de agregar o modificar movimientos en la hoja BANCOS y todavía no aparecen.</p>
 
                         <div id="bancoSeleccionadoBox" class="hidden bg-white border-2 border-emerald-400 rounded-lg p-3 text-xs"></div>
                         <div id="bancoStatus" class="text-xs text-gray-600">Selecciona el tipo de movimiento para escoger la transacción.</div>
@@ -573,6 +578,8 @@
         const bancoSeleccionadoBox = document.getElementById('bancoSeleccionadoBox');
         const bancoModoBadge = document.getElementById('bancoModoBadge');
         const btnBuscarBanco = document.getElementById('btnBuscarBanco');
+        const btnForzarCacheBanco = document.getElementById('btnForzarCacheBanco');
+        const bancoCacheManualStatus = document.getElementById('bancoCacheManualStatus');
         const btnBancoCoincidencias = document.getElementById('btnBancoCoincidencias');
         const btnBancoManual = document.getElementById('btnBancoManual');
         const btnBancoDividir = document.getElementById('btnBancoDividir');
@@ -1276,6 +1283,74 @@
             }
         }
 
+        async function forzarActualizacionBancoManual() {
+            if (!esPagoBanco()) {
+                showToast('Selecciona Banco como forma de pago para actualizar sus movimientos.');
+                return;
+            }
+
+            const fecha = fechaPagoInput.value;
+            if (!fecha) {
+                showToast('Selecciona primero la fecha del pago.');
+                fechaPagoInput.focus();
+                return;
+            }
+
+            if (!btnForzarCacheBanco) return;
+            const textoOriginal = btnForzarCacheBanco.innerHTML;
+            btnForzarCacheBanco.disabled = true;
+            btnForzarCacheBanco.innerHTML = '<span class="animate-spin inline-block">↻</span> Leyendo BANCOS real...';
+            if (bancoCacheManualStatus) bancoCacheManualStatus.textContent = 'Ignorando caché y consultando directamente la hoja BANCOS...';
+
+            try {
+                // Borrar solamente los cachés bancarios del navegador.
+                const claveDia = claveCacheBancoDia(fecha);
+                try {
+                    localStorage.removeItem(claveDia);
+                    sessionStorage.removeItem(claveDia);
+                    localStorage.removeItem('cartera_bancos_todas');
+                    sessionStorage.removeItem('cartera_bancos_todas');
+                } catch (_) {}
+
+                bancoSnapshotDia = { fecha: '', ts: 0, movimientos: [] };
+                bancoSnapshotTodas = { ts: 0, movimientos: [] };
+
+                // fresh=true también obliga a Apps Script a saltarse CacheService.
+                const movimientos = await obtenerSnapshotBancoDia(fecha, true);
+
+                // Si había una transacción seleccionada, se descarta para evitar
+                // guardar contra un saldo que pudo cambiar durante la actualización.
+                limpiarSeleccionBanco();
+                actualizarTiposBancoSilencioso(fecha, movimientos);
+
+                const total = movimientos.length;
+                if (bancoCacheManualStatus) {
+                    bancoCacheManualStatus.textContent = `Actualizado ahora: ${total} movimiento(s) pendiente(s) para ${formatDate(fecha)}.`;
+                }
+                tiposBancoStatus.textContent = total
+                    ? `Caché actualizado manualmente: ${total} movimiento(s) pendiente(s) encontrados.`
+                    : 'Caché actualizado manualmente: no hay movimientos pendientes en esa fecha.';
+                bancoStatus.textContent = total
+                    ? 'BANCOS está actualizado. Escoge nuevamente el tipo y la transacción.'
+                    : 'BANCOS está actualizado y no hay movimientos disponibles en esa fecha.';
+
+                // Las demás fechas se renuevan detrás, sin hacer esperar al usuario.
+                revalidarBancoTodasSilencioso();
+                showToast('BANCOS actualizado desde la hoja real.', 'success');
+            } catch (err) {
+                console.error('Actualización manual de BANCOS:', err);
+                if (bancoCacheManualStatus) bancoCacheManualStatus.textContent = 'No se pudo actualizar. Se conserva el último caché disponible.';
+                showToast(err.message || 'No fue posible actualizar BANCOS. Revisa la conexión.');
+            } finally {
+                btnForzarCacheBanco.disabled = false;
+                btnForzarCacheBanco.innerHTML = textoOriginal;
+            }
+        }
+
+        if (btnForzarCacheBanco) {
+            btnForzarCacheBanco.addEventListener('click', forzarActualizacionBancoManual);
+        }
+
         async function obtenerSnapshotBancoDia(fecha, forzar = false) {
             if (!fecha) return [];
 
@@ -1403,7 +1478,7 @@
                     `<option value="${t.id}">${t.nombre} (${t.cantidad})</option>`
                 ).join('');
                 tipoMovimientoBanco.disabled = false;
-                tiposBancoStatus.textContent = `Encontré ${movimientos.length} movimiento(s) pendiente(s). La app seguirá verificando cambios en segundo plano.`;
+                tiposBancoStatus.textContent = `Encontré ${movimientos.length} movimiento(s) pendiente(s). Si acabas de modificar BANCOS y no lo ves, pulsa “Actualizar BANCOS ahora”.`;
                 bancoStatus.textContent = 'Escoge el tipo de movimiento; después selecciona la transacción.';
             } catch (err) {
                 tipoMovimientoBanco.innerHTML = '<option value="">Error consultando BANCOS</option>';
