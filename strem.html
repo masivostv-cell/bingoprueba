@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Receptor Cámaras OBS</title>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<style>
+
+body{
+    margin:0;
+    background:#000;
+    overflow:hidden;
+}
+
+#videos{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:5px;
+    width:100vw;
+    height:100vh;
+}
+
+video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    background:#111;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="videos"></div>
+
+
+<script>
+
+const params=new URLSearchParams(window.location.search);
+
+const sala=params.get("sala") || "demo";
+
+const videos=document.getElementById("videos");
+
+
+let peer=new Peer(sala);
+
+
+
+peer.on("open",id=>{
+
+console.log("Receptor listo:",id);
+
+});
+
+
+
+peer.on("call",call=>{
+
+
+call.answer();
+
+
+
+call.on("stream",stream=>{
+
+
+let video=document.createElement("video");
+
+video.autoplay=true;
+video.playsInline=true;
+
+video.srcObject=stream;
+
+
+videos.appendChild(video);
+
+
+});
+
+
+});
+
+
+</script>
+
+</body>
+</html>
