@@ -201,8 +201,8 @@
             min-width: 150px;
             min-height: 100px;
             touch-action: none;
-            background: rgba(255,255,255,0.55);
-            backdrop-filter: blur(2px);
+            background: transparent;   /* [AJUSTE] sin fondo blanco translucido */
+            backdrop-filter: none;
         }
         .figuras-flotantes:hover { border: 3px dashed #facc15; background: rgba(0,0,0,0.12); }
         .figuras-flotantes strong { user-select: none; }
@@ -303,7 +303,7 @@
             position: relative;
             z-index: 2;
         }
-        .vista-clasica .bola-historial { width: 75px; height: 75px; min-width: 75px; min-height: 75px; font-size: 35px; background: white; color: #111; border: 4px solid #333; margin-top: -20px; box-shadow: 0 5px 10px rgba(0,0,0,0.5); position: relative; }
+        .vista-clasica .bola-historial { width: 64px; height: 64px; min-width: 64px; min-height: 64px; font-size: 30px; background: white; color: #111; border: 4px solid #333; margin-top: -28px   /* [AJUSTE] 64px con 28 de solape = columna de 172px, cabe en la balota de 176px */; box-shadow: 0 5px 10px rgba(0,0,0,0.5); position: relative; }
         .vista-clasica .bola-historial:nth-child(1) { z-index: 4; transform: translateX(-18px); }
         .vista-clasica .bola-historial:nth-child(2) { z-index: 3; transform: translateX(18px); }
         .vista-clasica .bola-historial:nth-child(3) { z-index: 2; transform: translateX(-12px); }
@@ -341,7 +341,7 @@
         #pantalla-principal:not(.vista-clasica) #main-letra { font-size: 64px !important; font-weight: 900 !important; line-height: 1 !important; margin-top: 4px !important; }
         #pantalla-principal:not(.vista-clasica) #main-numero { font-size: 98px !important; font-weight: 900 !important; line-height: 0.90 !important; }
         #pantalla-principal:not(.vista-clasica) #historial-4 { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 0 !important; margin-top: 0 !important; margin-left: -8px !important; z-index: 2 !important; }
-        #pantalla-principal:not(.vista-clasica) #historial-4 .bola-historial { width: 64px !important; height: 64px !important; min-width: 64px !important; min-height: 64px !important; font-size: 34px !important; line-height: 1 !important; margin-top: -17px !important; position: relative !important; box-shadow: 0 5px 10px rgba(0,0,0,0.45) !important; }
+        #pantalla-principal:not(.vista-clasica) #historial-4 .bola-historial { width: 64px !important; height: 64px !important; min-width: 64px !important; min-height: 64px !important; font-size: 34px !important; line-height: 1 !important; margin-top: -28px !important   /* [AJUSTE] mas solape: la columna del historial cabia 205px y la balota mide 195, por eso se montaba en el tablero */; position: relative !important; box-shadow: 0 5px 10px rgba(0,0,0,0.45) !important; }
         #pantalla-principal:not(.vista-clasica) #historial-4 .bola-historial:nth-child(1) { margin-top: 0 !important; z-index: 4 !important; transform: translateX(-14px) !important; }
         #pantalla-principal:not(.vista-clasica) #historial-4 .bola-historial:nth-child(2) { z-index: 3 !important; transform: translateX(14px) !important; }
         #pantalla-principal:not(.vista-clasica) #historial-4 .bola-historial:nth-child(3) { z-index: 2 !important; transform: translateX(-10px) !important; }
@@ -362,6 +362,25 @@
         }
 
         @keyframes pulso { from { transform: scale(1); } to { transform: scale(1.05); } }
+
+        /* [NUEVO] Elementos que el operador puede reubicar arrastrando */
+        .jmp-movible { cursor: move; }
+        .jmp-movible:hover { outline: 2px dashed rgba(250,204,21,0.85); outline-offset: 3px; }
+
+        /* [NUEVO] Sin recuadro blanco detras de la balota ni del contador */
+        html body #bloque-balotas,
+        html body #contador-balotas,
+        html body #pantalla-principal #bloque-balotas,
+        html body #pantalla-principal #contador-balotas,
+        html body #pantalla-principal.vista-clasica #bloque-balotas,
+        html body #pantalla-principal.vista-clasica #contador-balotas {
+            background: transparent !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            border: none !important;
+            backdrop-filter: none !important;
+        }
     </style>
 </head>
 <body>
@@ -405,7 +424,7 @@
                     <small id="nombre-figura" style="display:none;">---</small>
                 </div>
 
-                <div style="display:flex; flex-direction:column; align-items:center;">
+                <div id="bloque-balotas" style="display:flex; flex-direction:column; align-items:center;">
                     <div class="balota-grande">
                         <span id="main-letra" style="font-size: 2.5vh; font-weight: bold;">-</span>
                         <span id="main-numero" class="numero-balota">--</span>
@@ -2985,9 +3004,12 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
             if(mainLetra) mainLetra.innerText = (u<=15?'B':u<=30?'I':u<=45?'N':u<=60?'G':'O');
             if(balotaGrande) {
                 const colorPrincipal = getColorPorNumero(u);
-                balotaGrande.style.setProperty('background', 'white', 'important');
-                balotaGrande.style.setProperty('color', '#111', 'important');
-                balotaGrande.style.setProperty('border-color', colorPrincipal, 'important');
+                // [NUEVO] La balota va con SU color, plano y bien definido, no en blanco.
+                balotaGrande.style.setProperty('background', colorPrincipal, 'important');
+                balotaGrande.style.setProperty('background-image', 'none', 'important');
+                balotaGrande.style.setProperty('color', '#ffffff', 'important');
+                balotaGrande.style.setProperty('--b75-ball-color', colorPrincipal);
+                balotaGrande.style.setProperty('border-color', '#ffffff', 'important');   // anillo blanco para que resalte el color
                 balotaGrande.style.setProperty('border-width', '8px', 'important');
                 balotaGrande.style.setProperty('border-style', 'solid', 'important');
                 balotaGrande.style.setProperty('box-shadow', `0 10px 25px ${colorPrincipal}aa`, 'important');
@@ -3043,53 +3065,8 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         if(contMultiples) {
             contMultiples.innerHTML = '';
             const figs = Array.isArray(db.config.figurasMultiples) && db.config.figurasMultiples.length ? db.config.figurasMultiples : [{ nombre: db.config.nombre || '---', patron: db.config.figura || new Array(25).fill(false), activa: true }];
-            figs.forEach((fig, index) => {
-                const isActive = fig.activa !== false;
-                const colDiv = document.createElement('div');
-                colDiv.style.display = 'flex';
-                colDiv.style.flexDirection = 'column';
-                colDiv.style.alignItems = 'center';
-                colDiv.style.opacity = isActive ? '1' : '0.4';
-                colDiv.style.transition = 'opacity 0.3s';
-                const checkContainer = document.createElement('div');
-                checkContainer.style.marginBottom = '1px';
-                checkContainer.style.height = '16px';
-                checkContainer.style.display = 'flex';
-                checkContainer.style.alignItems = 'center';
-                checkContainer.style.justifyContent = 'center';
-                checkContainer.innerHTML = `<label style="cursor:pointer; display:flex; flex-direction:row; align-items:center; justify-content:center; gap:2px; font-size:7px; font-weight:900; line-height:1; color:${isActive ? '#22c55e' : '#dc3545'};"><input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleFiguraActivaGlobal(${index}, this.checked)" style="width:10px; height:10px; cursor:pointer; margin:0; padding:0; accent-color:${isActive ? '#22c55e' : '#dc3545'};"><span style="font-size:7px;">${isActive ? 'ACTIVA' : 'PAGADA'}</span></label>`;
-                const gridFig = document.createElement('div');
-                gridFig.style.display = 'grid';
-                gridFig.style.gridTemplateColumns = 'repeat(5, 1fr)';
-                gridFig.style.gap = '2px';
-                gridFig.style.width = '75px';
-                gridFig.style.background = '#333';
-                gridFig.style.padding = '3px';
-                gridFig.style.borderRadius = '5px';
-                gridFig.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
-                fig.patron.forEach(m => {
-                    const c = document.createElement('div');
-                    c.style.width = '100%';
-                    c.style.aspectRatio = '1/1';
-                    c.style.background = m ? (isActive ? '#ffeb3b' : '#888') : '#555';
-                    gridFig.appendChild(c);
-                });
-                const lbl = document.createElement('small');
-                lbl.innerText = fig.nombre;
-                lbl.style.fontWeight = 'bold';
-                lbl.style.color = '#334155';
-                lbl.style.fontSize = '13px';
-                lbl.style.marginTop = '6px';
-                lbl.style.whiteSpace = 'nowrap';
-                lbl.style.overflow = 'hidden';
-                lbl.style.textOverflow = 'ellipsis';
-                lbl.style.maxWidth = '85px';
-                if(!isActive) lbl.style.textDecoration = 'line-through';
-                colDiv.appendChild(checkContainer);
-                colDiv.appendChild(gridFig);
-                colDiv.appendChild(lbl);
-                contMultiples.appendChild(colDiv);
-            });
+            // [NUEVO] Los cartones los dibuja una sola funcion compartida.
+            if(typeof window.b75_pintarCartones === "function") window.b75_pintarCartones(contMultiples, figs);
         }
         detectarGanadoresPatch();
     };
@@ -3249,6 +3226,282 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 })();
 </script>
 
+<script id="jmp-personalizacion-figuras-balota">
+    // ==========================================================
+    // [NUEVO] DIBUJO DE LOS CARTONES DE FIGURAS - UNICA IMPLEMENTACION
+    // Este archivo pintaba las figuras en DOS sitios distintos (renderizar y
+    // pintarPanelFiguras) con codigo duplicado. Ahora ambos llaman aqui, asi
+    // que no pueden volver a quedar diferentes entre si.
+    // Marco de color por figura + cabecera BINGO + nombre dentro del marco.
+    // El tamano se adapta al cuadro (antes eran 75px fijos).
+    // ==========================================================
+    window.b75_pintarCartones = function(cont, figs) {
+        if(!cont || !Array.isArray(figs) || !figs.length) return;
+        cont.innerHTML = '';
+
+        const zonaFigurasBox = document.getElementById('zona-figuras');
+        const cantidadFiguras = Math.max(1, figs.length);
+        const gapFiguras = 8;
+        const anchoDisponible = Math.max(140, (zonaFigurasBox ? zonaFigurasBox.clientWidth : 420) - 20);
+        const altoDisponible = Math.max(90, (zonaFigurasBox ? zonaFigurasBox.clientHeight : 170) - 18);
+        const anchoPorFigura = Math.floor((anchoDisponible - (gapFiguras * (cantidadFiguras - 1))) / cantidadFiguras);
+        // El carton lleva cabecera BINGO + rejilla + pie: ocupa ~1.4 veces su ancho.
+        const anchoMaxPorAltura = Math.floor((altoDisponible - 34) / 1.4);
+        // [AJUSTE] Este archivo ya trae su propia manija (la amarilla, v5) que calcula
+        // --fig-scale-v5 a partir del tamano del cuadro. Si esa escala existe, manda ella,
+        // asi el carton y sus letras crecen juntos al estirar con la manija de siempre.
+        const escalaV5 = parseFloat(getComputedStyle(zonaFigurasBox || document.documentElement).getPropertyValue("--fig-scale-v5"));
+        const anchoFigura = (escalaV5 > 0)
+            ? Math.round(75 * escalaV5)
+            : Math.max(48, Math.min(320, anchoPorFigura, anchoMaxPorAltura));
+        const fuenteEstado = Math.max(6, Math.min(26, Math.floor(anchoFigura * 0.14)));
+        const fuenteNombre = Math.max(7, Math.min(26, Math.floor(anchoFigura * 0.13)));
+        const coloresFiguras = ['#1565d8', '#d32f2f', '#2e7d32', '#6a1b9a', '#ef6c00'];
+
+        cont.style.display = 'flex';
+        cont.style.flexDirection = 'row';
+        cont.style.flexWrap = 'nowrap';
+        cont.style.alignItems = 'flex-start';
+        cont.style.justifyContent = 'flex-start';
+        cont.style.gap = gapFiguras + 'px';
+        cont.style.maxWidth = '100%';
+
+        figs.forEach(function(fig, index) {
+            const isActive = fig.activa !== false;
+            const colorFig = coloresFiguras[index % coloresFiguras.length];
+            const grosorMarco = Math.max(2, Math.round(anchoFigura / 30));
+            const radioMarco = Math.max(4, Math.round(anchoFigura / 18));
+            const sepCeldas = Math.max(1, Math.round(anchoFigura / 55));
+
+            const colDiv = document.createElement('div');
+            colDiv.style.display = 'flex';
+            colDiv.style.flexDirection = 'column';
+            colDiv.style.alignItems = 'center';
+            colDiv.style.justifyContent = 'flex-start';
+            colDiv.style.flex = '1 1 0';
+            colDiv.style.minWidth = '0';
+            colDiv.style.maxWidth = anchoFigura + 'px';
+            colDiv.style.opacity = isActive ? '1' : '0.4';
+            colDiv.style.transition = 'opacity 0.3s';
+
+            const checkContainer = document.createElement('div');
+            checkContainer.style.marginBottom = '2px';
+            checkContainer.style.minHeight = Math.max(12, fuenteEstado + 5) + 'px';
+            checkContainer.style.display = 'flex';
+            checkContainer.style.alignItems = 'center';
+            checkContainer.style.justifyContent = 'center';
+            checkContainer.style.width = '100%';
+            checkContainer.innerHTML = '<label style="cursor:pointer; display:flex; flex-direction:row; align-items:center; justify-content:center; gap:2px; font-size:' + fuenteEstado + 'px; font-weight:bold; color:' + colorFig + ';">'
+                + '<input type="checkbox" ' + (isActive ? 'checked' : '') + ' onchange="toggleFiguraActivaGlobal(' + index + ', this.checked)" style="width:' + Math.max(8, fuenteEstado + 2) + 'px; height:' + Math.max(8, fuenteEstado + 2) + 'px; margin:0; cursor:pointer;">'
+                + '<span style="font-size:' + fuenteEstado + 'px;">' + (isActive ? 'ACTIVA' : 'PAGADA') + '</span>'
+                + '</label>';
+
+            // MARCO ESTILO CARTON DE BINGO
+            const marco = document.createElement('div');
+            marco.style.width = anchoFigura + 'px';
+            marco.style.maxWidth = '100%';
+            marco.style.background = isActive ? colorFig : '#7b8794';
+            marco.style.padding = grosorMarco + 'px';
+            marco.style.borderRadius = radioMarco + 'px';
+            marco.style.boxShadow = '0 3px 8px rgba(0,0,0,0.35)';
+            marco.style.boxSizing = 'border-box';
+
+            const cabecera = document.createElement('div');
+            cabecera.style.display = 'grid';
+            cabecera.style.gridTemplateColumns = 'repeat(5, 1fr)';
+            cabecera.style.color = '#ffffff';
+            cabecera.style.fontWeight = '900';
+            cabecera.style.textAlign = 'center';
+            cabecera.style.fontSize = Math.max(7, Math.round(anchoFigura * 0.16)) + 'px';
+            cabecera.style.lineHeight = '1.15';
+            cabecera.style.padding = '0 0 ' + sepCeldas + 'px 0';
+            ['B','I','N','G','O'].forEach(function(letra){
+                const sp = document.createElement('span');
+                sp.innerText = letra;
+                cabecera.appendChild(sp);
+            });
+
+            const gridFig = document.createElement('div');
+            gridFig.style.display = 'grid';
+            gridFig.style.gridTemplateColumns = 'repeat(5, 1fr)';
+            gridFig.style.gap = sepCeldas + 'px';
+            gridFig.style.background = '#ffffff';
+            gridFig.style.padding = sepCeldas + 'px';
+            gridFig.style.width = '100%';
+            gridFig.style.boxSizing = 'border-box';
+            gridFig.style.borderRadius = Math.max(2, Math.round(radioMarco / 2)) + 'px';
+
+            (fig.patron || []).forEach(function(m){
+                const c = document.createElement('div');
+                c.style.width = '100%';
+                c.style.aspectRatio = '1/1';
+                c.style.boxSizing = 'border-box';
+                const relleno = isActive ? colorFig : '#9ca3af';
+                c.style.background = m ? relleno : '#ffffff';
+                c.style.border = '1px solid ' + (m ? relleno : 'rgba(0,0,0,0.30)');
+                gridFig.appendChild(c);
+            });
+
+            const pie = document.createElement('div');
+            pie.innerText = fig.nombre;
+            pie.style.color = '#ffffff';
+            pie.style.fontWeight = 'bold';
+            pie.style.fontSize = fuenteNombre + 'px';
+            pie.style.textAlign = 'center';
+            pie.style.lineHeight = '1.25';
+            pie.style.padding = sepCeldas + 'px 2px 0 2px';
+            pie.style.width = '100%';
+            pie.style.boxSizing = 'border-box';
+            pie.style.whiteSpace = 'nowrap';
+            pie.style.overflow = 'hidden';
+            pie.style.textOverflow = 'ellipsis';
+            if(!isActive) pie.style.textDecoration = 'line-through';
+
+            marco.appendChild(cabecera);
+            marco.appendChild(gridFig);
+            marco.appendChild(pie);
+            colDiv.appendChild(checkContainer);
+            colDiv.appendChild(marco);
+            cont.appendChild(colDiv);
+        });
+    };
+
+    // [LIMPIEZA] Aqui iba una manija propia para agrandar las figuras, pero este
+    // archivo YA trae la suya (la amarilla, "figura-resize-handle-v5"). Poner dos
+    // manijas en la misma esquina era pisarse; se conserva la original.
+
+    // ==========================================================
+    // [NUEVO] MOVER LIBREMENTE LA BALOTA Y EL CONTADOR (0/75)
+    // Se arrastran con el mouse o el dedo y la posicion queda guardada.
+    // Doble clic encima = vuelve a su sitio automatico.
+    // Se guarda una posicion por vista: clasica y pantalla completa
+    // tienen distribuciones distintas y no deben compartir coordenadas.
+    // ==========================================================
+    let b75ArrastrandoMovible = false;
+
+    const B75_PROPS_LIBRE = ['position','left','top','right','bottom','margin','transform',
+                             'grid-column','grid-row','align-self','justify-self','z-index'];
+
+    function b75_claveVista(base) {
+        const p = document.getElementById('pantalla-principal');
+        return base + ((p && p.classList.contains('vista-clasica')) ? '_clasica' : '_normal');
+    }
+
+    // Se posiciona DENTRO del tablero (absolute), no pegado a la ventana (fixed),
+    // para que se quede en su sitio del tablero al hacer scroll.
+    function b75_contenedorPos(el) {
+        let p = el.parentElement;
+        while(p && p !== document.body) {
+            if(getComputedStyle(p).position !== 'static') return p;
+            p = p.parentElement;
+        }
+        return document.getElementById('pantalla-principal') || document.body;
+    }
+
+    function b75_fijarLibre(el, left, top) {
+        el.classList.add('jmp-movible-libre');
+        el.style.setProperty('position', 'absolute', 'important');
+        el.style.setProperty('left', Math.round(left) + 'px', 'important');
+        el.style.setProperty('top', Math.round(top) + 'px', 'important');
+        el.style.setProperty('right', 'auto', 'important');
+        el.style.setProperty('bottom', 'auto', 'important');
+        el.style.setProperty('margin', '0', 'important');
+        el.style.setProperty('transform', 'none', 'important');
+        el.style.setProperty('grid-column', 'auto', 'important');
+        el.style.setProperty('grid-row', 'auto', 'important');
+        el.style.setProperty('align-self', 'auto', 'important');
+        el.style.setProperty('justify-self', 'auto', 'important');
+        el.style.setProperty('z-index', '99991', 'important');
+    }
+
+    function b75_soltarLibre(el) {
+        el.classList.remove('jmp-movible-libre');
+        B75_PROPS_LIBRE.forEach(function(p){ el.style.removeProperty(p); });
+    }
+
+    function b75_aplicarPosicionGuardada(el, base) {
+        if(!el || b75ArrastrandoMovible) return;
+        let d = null;
+        try { d = JSON.parse(localStorage.getItem(b75_claveVista(base)) || 'null'); } catch(e) {}
+        if(d && Number.isFinite(d.left) && Number.isFinite(d.top)) {
+            b75_fijarLibre(el, d.left, d.top);
+        } else if(el.classList.contains('jmp-movible-libre')) {
+            b75_soltarLibre(el);
+        }
+    }
+
+    function b75_restaurarPosicionesMovibles() {
+        b75_aplicarPosicionGuardada(document.getElementById('bloque-balotas'), 'jmp_b75_pos_balotas');
+        b75_aplicarPosicionGuardada(document.getElementById('contador-balotas'), 'jmp_b75_pos_contador');
+    }
+
+    function b75_hacerMovible(el, base) {
+        if(!el || el.dataset.jmpMovible === '1') return;
+        el.dataset.jmpMovible = '1';
+        el.classList.add('jmp-movible');
+
+        el.addEventListener('pointerdown', function(ev) {
+            const tag = (ev.target && ev.target.tagName || '').toUpperCase();
+            if(['INPUT','LABEL','BUTTON','SELECT','TEXTAREA'].includes(tag)) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const cont = b75_contenedorPos(el);
+            const cr = cont.getBoundingClientRect();
+            const r = el.getBoundingClientRect();
+            b75ArrastrandoMovible = true;
+            b75_fijarLibre(el, r.left - cr.left + (cont.scrollLeft || 0), r.top - cr.top + (cont.scrollTop || 0));
+            const dx = ev.clientX - r.left;
+            const dy = ev.clientY - r.top;
+
+            function mover(e) {
+                e.preventDefault();
+                const c = cont.getBoundingClientRect();
+                const left = Math.max(0, e.clientX - dx - c.left + (cont.scrollLeft || 0));
+                const top = Math.max(0, e.clientY - dy - c.top + (cont.scrollTop || 0));
+                el.style.setProperty('left', Math.round(left) + 'px', 'important');
+                el.style.setProperty('top', Math.round(top) + 'px', 'important');
+            }
+            function soltar() {
+                document.removeEventListener('pointermove', mover, true);
+                document.removeEventListener('pointerup', soltar, true);
+                document.removeEventListener('pointercancel', soltar, true);
+                b75ArrastrandoMovible = false;
+                try {
+                    localStorage.setItem(b75_claveVista(base), JSON.stringify({
+                        left: parseInt(el.style.left, 10) || 0,
+                        top: parseInt(el.style.top, 10) || 0
+                    }));
+                } catch(e) {}
+            }
+            document.addEventListener('pointermove', mover, true);
+            document.addEventListener('pointerup', soltar, true);
+            document.addEventListener('pointercancel', soltar, true);
+        }, true);
+
+        el.addEventListener('dblclick', function(ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            b75_soltarLibre(el);
+            try { localStorage.removeItem(b75_claveVista(base)); } catch(e) {}
+        }, true);
+    }
+
+    // Instalacion: se engancha cuando el documento ya existe.
+    function b75_instalarPersonalizacion() {
+        // (el redimensionado de figuras lo maneja la manija amarilla original v5)
+        b75_hacerMovible(document.getElementById('bloque-balotas'), 'jmp_b75_pos_balotas');
+        b75_hacerMovible(document.getElementById('contador-balotas'), 'jmp_b75_pos_contador');
+        b75_restaurarPosicionesMovibles();
+    }
+
+    if(document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', b75_instalarPersonalizacion);
+    } else {
+        b75_instalarPersonalizacion();
+    }
+</script>
+
 
 <script>
 // =====================================================
@@ -3404,9 +3657,11 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 
         if(balotaGrande) {
             const color = colorNumeroFiltroV16(ultima);
-            balotaGrande.style.setProperty('background', 'white', 'important');
-            balotaGrande.style.setProperty('color', '#111', 'important');
-            balotaGrande.style.setProperty('border-color', color, 'important');
+            // [NUEVO] Balota con SU color, plano; antes iba blanca.
+            balotaGrande.style.setProperty('background', color, 'important');
+            balotaGrande.style.setProperty('background-image', 'none', 'important');
+            balotaGrande.style.setProperty('color', '#ffffff', 'important');
+            balotaGrande.style.setProperty('border-color', '#ffffff', 'important');
             balotaGrande.style.setProperty('border-width', '8px', 'important');
             balotaGrande.style.setProperty('border-style', 'solid', 'important');
             balotaGrande.style.setProperty('box-shadow', `0 10px 25px ${color}aa`, 'important');
@@ -3669,9 +3924,9 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         height: calc(10px * var(--fig-scale-v5, 1)) !important;
     }
     #zona-figuras #figuras-multiples-container > div > div:nth-child(2) {
-        width: calc(75px * var(--fig-scale-v5, 1)) !important;
-        gap: calc(2px * var(--fig-scale-v5, 1)) !important;
-        padding: calc(3px * var(--fig-scale-v5, 1)) !important;
+    /* [AJUSTE] El ancho lo sigue mandando la escala v5 (la manija amarilla),
+       pero el relleno y la separacion ya no: eso lo maneja el carton. */
+    width: calc(75px * var(--fig-scale-v5, 1)) !important;
     }
     #zona-figuras #figuras-multiples-container > div > small {
         font-size: calc(13px * var(--fig-scale-v5, 1)) !important;
@@ -3758,7 +4013,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         if(!el) return;
         const baseW = 280;
         const baseH = 180;
-        const escala = limitarV5(Math.min(el.offsetWidth / baseW, el.offsetHeight / baseH), 0.70, 2.35);
+        const escala = limitarV5(Math.min(el.offsetWidth / baseW, el.offsetHeight / baseH), 0.70, 5.00)   /* [AJUSTE] tope subido de 2.35 a 5 para poder agrandar de verdad */;
         el.style.setProperty('--fig-scale-v5', escala.toFixed(2));
     }
 
@@ -4727,57 +4982,9 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         const cont = document.getElementById('figuras-multiples-container');
         if(!db || !cont) return;
         const figuras = normalizarFiguras(db);
-        cont.innerHTML = '';
-        figuras.forEach((fig, index) => {
-            const activa = fig.activa !== false;
-            const item = document.createElement('div');
-            item.style.display = 'flex';
-            item.style.flexDirection = 'column';
-            item.style.alignItems = 'center';
-            item.style.opacity = activa ? '1' : '0.4';
-
-            const check = document.createElement('div');
-            check.style.marginBottom = '1px';
-            check.style.height = '16px';
-            check.style.display = 'flex';
-            check.style.alignItems = 'center';
-            check.style.justifyContent = 'center';
-            check.innerHTML = `<label style="cursor:pointer; display:flex; align-items:center; gap:2px; font-size:7px; font-weight:900; color:${activa ? '#22c55e' : '#dc3545'};"><input type="checkbox" ${activa ? 'checked' : ''} onchange="toggleFiguraActivaGlobal(${index}, this.checked)" style="width:10px; height:10px; margin:0; accent-color:${activa ? '#22c55e' : '#dc3545'};"><span>${activa ? 'ACTIVA' : 'PAGADA'}</span></label>`;
-
-            const grid = document.createElement('div');
-            grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = 'repeat(5,1fr)';
-            grid.style.gap = '2px';
-            grid.style.width = '75px';
-            grid.style.background = '#333';
-            grid.style.padding = '3px';
-            grid.style.borderRadius = '5px';
-            grid.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
-            fig.patron.forEach(m => {
-                const c = document.createElement('div');
-                c.style.width = '100%';
-                c.style.aspectRatio = '1/1';
-                c.style.background = m ? (activa ? '#ffeb3b' : '#888') : '#555';
-                grid.appendChild(c);
-            });
-
-            const nombre = document.createElement('small');
-            nombre.textContent = fig.nombre;
-            nombre.style.fontWeight = 'bold';
-            nombre.style.color = '#334155';
-            nombre.style.fontSize = '13px';
-            nombre.style.marginTop = '6px';
-            nombre.style.whiteSpace = 'nowrap';
-            nombre.style.overflow = 'hidden';
-            nombre.style.textOverflow = 'ellipsis';
-            nombre.style.maxWidth = '85px';
-            if(!activa) nombre.style.textDecoration = 'line-through';
-
-            item.appendChild(check);
-            item.appendChild(grid);
-            item.appendChild(nombre);
-            cont.appendChild(item);
-        });
+        // [NUEVO] Antes aqui habia una copia del dibujo de figuras (75px, rejilla oscura)
+        // que pisaba el diseno de cartones. Ahora usa la misma funcion compartida.
+        if(typeof window.b75_pintarCartones === "function") window.b75_pintarCartones(cont, figuras);
 
         const n = document.getElementById('nombre-figura');
         if(n) n.innerText = db.config && db.config.nombre ? db.config.nombre : '---';
@@ -4878,7 +5085,7 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
         el.style.setProperty('box-shadow', 'none', 'important');
         el.style.setProperty('border-color', 'transparent', 'important');
 
-        const escala = clamp(Math.min(width / 280, height / 180), 0.70, 2.35);
+        const escala = clamp(Math.min(width / 280, height / 180), 0.70, 5.00)   /* [AJUSTE] tope subido a 5 */;
         el.style.setProperty('--fig-scale-v5', escala.toFixed(2));
     }
 
@@ -5136,9 +5343,11 @@ window.cerrarComunicacionJugadores = async (avisarFirebase = true) => {
 
         if(balotaGrande) {
             const c = colorDeNumero(ultima);
-            balotaGrande.style.setProperty('background', 'white', 'important');
-            balotaGrande.style.setProperty('color', '#111', 'important');
-            balotaGrande.style.setProperty('border-color', c, 'important');
+            // [NUEVO] Balota con SU color, plano; antes iba blanca.
+            balotaGrande.style.setProperty('background', c, 'important');
+            balotaGrande.style.setProperty('background-image', 'none', 'important');
+            balotaGrande.style.setProperty('color', '#ffffff', 'important');
+            balotaGrande.style.setProperty('border-color', '#ffffff', 'important');
             balotaGrande.style.setProperty('border-width', '8px', 'important');
             balotaGrande.style.setProperty('border-style', 'solid', 'important');
             balotaGrande.style.setProperty('box-shadow', '0 10px 25px ' + c + 'aa', 'important');
