@@ -331,6 +331,12 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
         <input id="cliente" readonly placeholder="Cliente">
         <input id="ruta" readonly placeholder="Ruta">
         <br>
+        <label class="etiqueta">Fecha de la recolección</label>
+        <span class="ayuda">Por defecto hoy. Cámbiela si registra una recolección de otro día.</span>
+        <br>
+        <input type="date" id="manFecha" title="Fecha de la recolección">
+        <button type="button" class="btn-mini" onclick="fechaManifiestoHoy()">Hoy</button>
+        <br>
         <input id="manifiesto" placeholder="Número manifiesto (obligatorio)">
         <select id="movil" title="Móvil (obligatorio)">
           <option value="">Móvil (obligatorio)</option>
@@ -548,7 +554,7 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbz7fuq8sJ3vZMVHsaYEvJqBiI45mmtprjWyXhST8KjObMqcuyKrN0Mu1AVDyG1QEadT/exec";
+const API = "https://script.google.com/macros/s/AKfycbwrHpFGSQoXPGq5qxhSHv-qmpSBuZqQ-DUBumNRJFFwPSxVbiVo0ftXkhgVFmoUsovu/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -1064,8 +1070,8 @@ function sumar(){
   $("total").textContent = suma.toFixed(2);
 }
 
-// El móvil NO se limpia: en una misma ruta se repite y así el operario
-// no tiene que volver a escogerlo en cada manifiesto.
+// Ni el móvil ni la fecha se limpian: en una misma jornada se repiten y
+// así el operario no tiene que volver a ponerlos en cada manifiesto.
 function limpiarManifiesto(){
   $("cliente").value = "";
   $("ruta").value = "";
@@ -1077,6 +1083,10 @@ function limpiarManifiesto(){
   $("total").textContent = "0.00";
 }
 
+function fechaManifiestoHoy(){
+  $("manFecha").value = fechaISO(new Date());
+}
+
 function marcarFalta(id, falta){
   const el = $(id);
   if(el) el.classList.toggle("falta", !!falta);
@@ -1085,15 +1095,19 @@ function marcarFalta(id, falta){
 function guardar(){
 
   const movil = $("movil").value;
+  const fecha = $("manFecha").value;
 
   marcarFalta("movil", !movil);
+  marcarFalta("manFecha", !fecha);
 
   if(!$("cliente").value){ alert("Seleccione un cliente"); return; }
   if(!$("manifiesto").value.trim()){ alert("Ingrese el número de manifiesto"); return; }
   if(!movil){ alert("Seleccione el móvil"); $("movil").focus(); return; }
+  if(!fecha){ alert("Indique la fecha de la recolección"); $("manFecha").focus(); return; }
 
   const datos = {
     accion:"guardarManifiesto",
+    fecha:fecha,
     cliente:$("cliente").value,
     ruta:$("ruta").value,
     manifiesto:$("manifiesto").value.trim(),
@@ -1297,7 +1311,7 @@ function mostrarHistorial(datos){
                  onclick="event.stopPropagation()"
                  onchange="alternarManifiesto(this, event)">
         </td>
-        <td${clase}>${esc(x.fecha)}${x.hora ? " " + esc(x.hora) : ""}</td>
+        <td${clase}>${esc(x.fecha)}</td>
         <td class="cliente">${esc(x.cliente)}</td>
         <td>${esc(x.ruta)}</td>
         <td class="num">${esc(x.movil)}</td>
@@ -2108,6 +2122,7 @@ document.addEventListener("keydown", e => {
 
 $("movil").addEventListener("change", () => marcarFalta("movil", !$("movil").value));
 
+fechaManifiestoHoy();
 mostrar("nuevo");
 cargarClientes(false);
 cargarMoviles();
