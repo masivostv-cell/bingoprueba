@@ -122,6 +122,12 @@ input[type="date"]{width:170px;}
 .item:hover{background:#e0f2fe;}
 .item.vacio{cursor:default;color:#64748b;}
 .item.vacio:hover{background:#fff;}
+.item-dato{color:#475569;font-size:13px;}
+.item-ruta{
+  display:inline-block;background:#e0f2fe;color:#075985;
+  border-radius:20px;padding:1px 9px;font-size:12px;
+  font-weight:600;margin-left:6px;white-space:nowrap;
+}
 
 /* ---------- Tablas ---------- */
 .tabla-scroll{overflow-x:auto;margin-top:20px;}
@@ -137,6 +143,31 @@ tbody tr:nth-child(even){background:#f8fafc;}
 
 .total{font-size:25px;color:var(--azul);font-weight:bold;}
 
+/* ---------- Historial: tabla ancha y navegable ---------- */
+#histBuscar{width:100%;max-width:520px;}
+
+.tabla-historial{min-width:1500px;}
+.tabla-historial td,.tabla-historial th{padding:7px 8px;font-size:13px;white-space:nowrap;}
+.tabla-historial td.num{text-align:right;}
+.tabla-historial th.col-check,
+.tabla-historial td.col-check{width:38px;text-align:center;padding:4px;}
+.tabla-historial td.col-check input,
+.tabla-historial th.col-check input{width:auto;margin:0;cursor:pointer;transform:scale(1.2);}
+.tabla-historial td.obs{white-space:normal;min-width:180px;}
+/* El cliente es lo más largo: se le deja sitio pero sin desbordar. */
+.tabla-historial td.cliente{white-space:normal;min-width:260px;}
+
+/* La cabecera se queda fija al desplazar el listado. */
+.tabla-historial thead th{position:sticky;top:0;z-index:2;}
+
+/* Fila bajo el cursor: para no perder el renglón al leer 15 columnas. */
+.tabla-historial tbody tr:hover td{background:#fef9c3;}
+
+/* Fila marcada con un clic: se queda coloreada mientras se verifica. */
+.tabla-historial tbody tr.marcada td{background:#bfdbfe;font-weight:600;}
+.tabla-historial tbody tr.marcada:hover td{background:#a5cbfb;}
+.tabla-historial tbody tr{cursor:pointer;}
+
 /* Fecha que la hoja no guardó como fecha real (error de digitación) */
 td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:help;}
 
@@ -150,6 +181,28 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 }
 .selector-cabecera{display:flex;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--borde);background:#f8fafc;}
 .selector-cabecera input{flex:1;width:auto;margin:0;}
+.selector-opcion{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-bottom:1px solid var(--borde);
+  background:#f1f9f8;font-size:13px;color:var(--verde-oscuro);
+  font-weight:600;cursor:pointer;
+}
+.selector-opcion input{width:auto;margin:0;}
+
+/* Etiqueta de ruta dentro de cada cliente del selector */
+.ruta{
+  display:inline-block;background:#e0f2fe;color:#075985;
+  border-radius:20px;padding:1px 9px;font-size:12px;
+  font-weight:600;margin-left:4px;white-space:nowrap;
+}
+
+/* Casilla de ruta del historial */
+.opcion-ruta{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-left:10px;font-size:13px;color:var(--verde-oscuro);
+  font-weight:600;cursor:pointer;
+}
+.opcion-ruta input{width:auto;margin:0;}
 .selector-lista{max-height:320px;overflow:auto;}
 .selector-pie{padding:8px 12px;border-top:1px solid var(--borde);background:#f8fafc;font-size:13px;color:var(--verde-oscuro);font-weight:600;}
 
@@ -339,21 +392,35 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
         <select id="histMovil" title="Filtrar por móvil">
           <option value="">Todos los móviles</option>
         </select>
+        <br>
+        <input id="histBuscar" placeholder="Buscar cliente, manifiesto, ruta..."
+               autocomplete="off" oninput="filtrarHistorial()">
+        <label class="opcion-ruta">
+          <input type="checkbox" id="histPorRuta" checked onchange="filtrarHistorial()">
+          Incluir las demás sedes de la misma ruta
+        </label>
 
         <br>
         <button type="button" id="btnHistorial" class="btn-pro btn-consultar" onclick="cargarHistorial()">📋 Consultar manifiestos</button>
         <button type="button" class="btn-pro btn-guardar" onclick="filtrarHistorial()">🔎 Filtrar</button>
         <button type="button" class="btn-pro btn-neutro"  onclick="limpiarFiltroHistorial()">↩️ Quitar filtros</button>
         <button type="button" class="btn-pro btn-neutro"  onclick="exportarExcel()">📥 Exportar Excel</button>
+        <button type="button" class="btn-pro btn-guardar" onclick="certificarDesdeHistorial()">🧾 Certificar estos manifiestos</button>
 
         <p id="estadoHistorial" class="estado"></p>
 
         <div class="tabla-scroll">
-          <table id="tablaHistorialCompleta">
+          <table id="tablaHistorialCompleta" class="tabla-historial">
             <thead>
               <tr>
-                <th>Fecha</th><th>Cliente</th><th>Móvil</th><th>Manifiesto</th>
-                <th>Bolsas</th><th>Total KG</th><th>Observaciones</th>
+                <th class="col-check" title="Marcar para certificar">
+                  <input type="checkbox" id="histTodos" onchange="marcarTodosHistorial(this.checked)">
+                </th>
+                <th>Fecha</th><th>Cliente</th><th>Ruta</th><th>Móvil</th>
+                <th>Manifiesto</th><th>Bolsas</th>
+                <th>Biosanit.</th><th>Cortopunz.</th><th>Anatomop.</th>
+                <th>Farmacéut.</th><th>Líquido</th><th>Medicam.</th><th>Otros</th>
+                <th>Total KG</th><th>Observaciones</th>
               </tr>
             </thead>
             <tbody id="tablaHistorial"></tbody>
@@ -397,11 +464,15 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
         <!-- Selector de clientes con búsqueda y casillas -->
         <div id="certSelector" class="selector" hidden>
           <div class="selector-cabecera">
-            <input id="certBuscar" placeholder="Buscar cliente..." autocomplete="off"
+            <input id="certBuscar" placeholder="Buscar cliente o ruta..." autocomplete="off"
                    oninput="pintarClientesCertificado()">
             <button type="button" class="btn-mini" onclick="marcarTodosCert(true)">Todos</button>
             <button type="button" class="btn-mini" onclick="marcarTodosCert(false)">Ninguno</button>
           </div>
+          <label class="selector-opcion">
+            <input type="checkbox" id="certPorRuta" checked>
+            Al marcar un cliente, marcar también las demás sedes de su ruta
+          </label>
           <div id="certLista" class="selector-lista"></div>
           <div class="selector-pie">
             <span id="certResumen">0 clientes seleccionados</span>
@@ -487,6 +558,9 @@ const CAMPOS_CANTIDAD = [
 let clientes = [];
 let moviles = [];
 let indiceClientes = [];
+let indiceNombres = [];      // clientes normalizados para emparejar con el manifiesto
+let rutaPorCliente = {};     // cache: texto del manifiesto -> ruta
+let manifiestosElegidos = {}; // número de manifiesto -> marcado con la casilla
 let resultadosBusqueda = [];
 let historialDatos = [];
 let historialVisible = [];
@@ -731,6 +805,27 @@ function crearIndiceClientes(){
     ].join(" ")),
     datos: c
   }));
+
+  crearIndiceNombres();
+}
+
+/**
+ * Índice para emparejar el texto del manifiesto con la ficha del cliente.
+ * Se normaliza una sola vez y se ordena de nombre más largo a más corto,
+ * de modo que la primera coincidencia sea siempre la más específica.
+ * Sin esto, resolver la ruta de 1400 manifiestos sería lentísimo.
+ */
+function crearIndiceNombres(){
+  indiceNombres = clientes
+    .filter(c => c.nombre)
+    .map(c => ({
+      norm: normalizar(c.nombre).replace(/[^a-z0-9]+/g," ").trim(),
+      ficha: c
+    }))
+    .filter(x => x.norm.length > 3)
+    .sort((a, b) => b.norm.length - a.norm.length);
+
+  rutaPorCliente = {};   // el cache de rutas queda obsoleto
 }
 
 function actualizarEstadoClientes(texto, fecha){
@@ -769,11 +864,13 @@ function buscarCliente(){
     return;
   }
 
+  // Se muestra la dirección porque es lo que distingue una sede de otra
+  // cuando varios clientes comparten nombre.
   lista.innerHTML = resultadosBusqueda.map((c, i) => `
     <div class="item" onclick="seleccionar(${i})">
       <b>${esc(c.nombre)}</b><br>
-      Código: ${esc(c.codigo)}<br>
-      Ruta: ${esc(c.ruta)}
+      <span class="item-dato">${esc(c.direccion) || "Sin dirección registrada"}</span>
+      ${c.ruta ? `<span class="item-ruta">Ruta ${esc(c.ruta)}</span>` : ""}
     </div>`).join("");
   lista.classList.add("abierta");
 }
@@ -1053,7 +1150,7 @@ function pedir(url){
 
 function cargarHistorial(){
   const cuerpo = $("tablaHistorial");
-  cuerpo.innerHTML = '<tr><td colspan="7">Cargando...</td></tr>';
+  cuerpo.innerHTML = '<tr><td colspan="15">Cargando...</td></tr>';
   ocupado("btnHistorial","Consultando...");
   mensaje("estadoHistorial","");
 
@@ -1069,7 +1166,7 @@ function cargarHistorial(){
     .catch(error => {
       console.error("Historial:", error);
       ocupado("btnHistorial", null);
-      cuerpo.innerHTML = '<tr><td colspan="7">Error cargando información</td></tr>';
+      cuerpo.innerHTML = '<tr><td colspan="15">Error cargando información</td></tr>';
       mensaje("estadoHistorial",
         "No se pudo consultar el servidor: " + (error.message || error), true);
     });
@@ -1081,14 +1178,50 @@ function filtrarHistorial(){
   const kilos  = Number($("histKilos").value) || 0;
   const movil  = $("histMovil").value;
 
-  const resultado = historialDatos.filter(x => {
+  // Cada palabra debe aparecer en algún campo del manifiesto, así se puede
+  // escribir "vihonco 90152" y llegar directo al registro.
+  const palabras = normalizar($("histBuscar").value).split(" ").filter(Boolean);
+
+  // Filtros que no dependen del texto buscado
+  const pasaFiltros = x => {
     const peso  = Number(x.total) || 0;
     const fecha = fechaComparable(x.fecha);
-    return peso >= kilos &&
-           (!inicio || fecha >= inicio) &&
-           (!fin    || fecha <= fin) &&
-           (!movil  || String(x.movil) === movil);
-  });
+    if(peso < kilos) return false;
+    if(inicio && fecha < inicio) return false;
+    if(fin    && fecha > fin)    return false;
+    if(movil  && String(x.movil) !== movil) return false;
+    return true;
+  };
+
+  const coincideTexto = x => {
+    if(!palabras.length) return true;
+    const texto = normalizar([x.cliente, x.manifiesto, x.ruta, x.movil,
+                              x.fecha, x.observaciones,
+                              rutaDeManifiesto(x)].join(" "));
+    return palabras.every(p => texto.includes(p));
+  };
+
+  let resultado = historialDatos.filter(x => pasaFiltros(x) && coincideTexto(x));
+
+  // Un cliente suele tener varias sedes en la misma ruta. Si se busca una,
+  // se traen las demás para poder revisarlas juntas.
+  if(palabras.length && $("histPorRuta").checked){
+
+    const rutas = {};
+    resultado.forEach(x => {
+      const r = rutaDeManifiesto(x);
+      if(r) rutas[r] = true;
+    });
+
+    if(Object.keys(rutas).length){
+      resultado = historialDatos.filter(x => {
+        if(!pasaFiltros(x)) return false;
+        if(coincideTexto(x)) return true;
+        const r = rutaDeManifiesto(x);
+        return !!(r && rutas[r]);
+      });
+    }
+  }
 
   mostrarHistorial(resultado);
 }
@@ -1098,11 +1231,47 @@ function limpiarFiltroHistorial(){
   $("histFin").value = "";
   $("histKilos").value = "0";
   $("histMovil").value = "";
+  $("histBuscar").value = "";
   mostrarHistorial(historialDatos);
 }
 
 function fechaValida(valor){
   return /^\d{4}-\d{2}-\d{2}$/.test(String(valor || ""));
+}
+
+// Un clic en la fila la deja marcada; otro clic la suelta. Sirve para no
+// perder el renglón que se está verificando contra la planilla física.
+// (Es distinto de la casilla, que elige qué se certifica.)
+function marcarFilaHistorial(fila){
+  const yaEstaba = fila.classList.contains("marcada");
+  const cuerpo = $("tablaHistorial");
+  cuerpo.querySelectorAll("tr.marcada").forEach(t => t.classList.remove("marcada"));
+  if(!yaEstaba) fila.classList.add("marcada");
+}
+
+/* ----- casillas para elegir qué se certifica ----- */
+
+// Se identifica cada manifiesto por su número, que es único en la hoja.
+function claveManifiesto(x){
+  return String(x.manifiesto || "").trim();
+}
+
+function alternarManifiesto(casilla, evento){
+  if(evento) evento.stopPropagation();   // no dispara el marcado de fila
+  manifiestosElegidos[casilla.value] = casilla.checked;
+  actualizarResumenHistorial();
+}
+
+function marcarTodosHistorial(valor){
+  historialVisible.forEach(x => { manifiestosElegidos[claveManifiesto(x)] = valor; });
+  $("tablaHistorial").querySelectorAll("input.check-man")
+    .forEach(c => { c.checked = valor; });
+  actualizarResumenHistorial();
+}
+
+// Manifiestos marcados que además están a la vista.
+function manifiestosSeleccionados(){
+  return historialVisible.filter(x => manifiestosElegidos[claveManifiesto(x)]);
 }
 
 function mostrarHistorial(datos){
@@ -1111,31 +1280,65 @@ function mostrarHistorial(datos){
   let malas = 0;
 
   if(historialVisible.length === 0){
-    cuerpo.innerHTML = '<tr><td colspan="7">Sin registros</td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="16">Sin registros</td></tr>';
   }else{
     cuerpo.innerHTML = historialVisible.map(x => {
       const buena = fechaValida(x.fecha);
       if(!buena) malas++;
-      const clase = buena ? "" : ' class="fecha-mala" title="La celda Fecha de la hoja DATOS no es una fecha real. Corríjala para que entre en los filtros por fecha."';
+      const clase = buena
+        ? ' class="num"'
+        : ' class="num fecha-mala" title="La celda Fecha de la hoja DATOS no es una fecha real. Corríjala para que entre en los filtros por fecha."';
+      const clave = claveManifiesto(x);
       return `
-      <tr>
+      <tr onclick="marcarFilaHistorial(this)">
+        <td class="col-check">
+          <input type="checkbox" class="check-man" value="${esc(clave)}"
+                 ${manifiestosElegidos[clave] ? "checked" : ""}
+                 onclick="event.stopPropagation()"
+                 onchange="alternarManifiesto(this, event)">
+        </td>
         <td${clase}>${esc(x.fecha)}${x.hora ? " " + esc(x.hora) : ""}</td>
-        <td>${esc(x.cliente)}</td>
-        <td>${esc(x.movil)}</td>
-        <td>${esc(x.manifiesto)}</td>
-        <td>${esc(x.bolsas)}</td>
-        <td>${dosDecimales(x.total)}</td>
-        <td>${esc(x.observaciones)}</td>
+        <td class="cliente">${esc(x.cliente)}</td>
+        <td>${esc(x.ruta)}</td>
+        <td class="num">${esc(x.movil)}</td>
+        <td class="num">${esc(x.manifiesto)}</td>
+        <td class="num">${esc(x.bolsas)}</td>
+        <td class="num">${dosDecimales(x.biosanitarios)}</td>
+        <td class="num">${dosDecimales(x.cortopunzantes)}</td>
+        <td class="num">${dosDecimales(x.anatomopatologicos)}</td>
+        <td class="num">${dosDecimales(x.farmaceuticos)}</td>
+        <td class="num">${dosDecimales(x.liquido)}</td>
+        <td class="num">${dosDecimales(x.medicamentos)}</td>
+        <td class="num">${dosDecimales(x.otros)}</td>
+        <td class="num">${dosDecimales(x.total)}</td>
+        <td class="obs">${esc(x.observaciones)}</td>
       </tr>`;
     }).join("");
   }
 
-  const kilos  = historialVisible.reduce((s, x) => s + (Number(x.total)  || 0), 0);
-  const bolsas = historialVisible.reduce((s, x) => s + (Number(x.bolsas) || 0), 0);
+  $("histTodos").checked = false;
+  actualizarResumenHistorial(malas);
+}
+
+/**
+ * Línea de estado del historial. Si hay manifiestos marcados con la casilla,
+ * muestra sus cifras, porque son los que se van a certificar.
+ */
+function actualizarResumenHistorial(malas){
+
+  const elegidos = manifiestosSeleccionados();
+  const base = elegidos.length ? elegidos : historialVisible;
+
+  const kilos  = base.reduce((s, x) => s + (Number(x.total)  || 0), 0);
+  const bolsas = base.reduce((s, x) => s + (Number(x.bolsas) || 0), 0);
 
   let texto = "Mostrando " + historialVisible.length +
-              " de " + historialDatos.length + " manifiestos" +
-              "  |  " + kilos.toFixed(2) + " KG  |  " + bolsas + " bolsas.";
+              " de " + historialDatos.length + " manifiestos.";
+
+  texto += elegidos.length
+    ? "  ✅ " + elegidos.length + " marcados: " + kilos.toFixed(2) + " KG, " + bolsas + " bolsas."
+    : "  " + kilos.toFixed(2) + " KG  |  " + bolsas + " bolsas.";
+
   if(malas > 0){
     texto += "  ⚠️ " + malas + " con la fecha mal digitada en la hoja (en rojo).";
   }
@@ -1185,31 +1388,54 @@ function describirTipoCert(){
 /**
  * El campo "cliente" del manifiesto trae el nombre con la dirección pegada
  * ("ONCOFEM IPS SAS  CALLE 15 No. 0-77"), mientras la hoja CLIENTES los
- * guarda por separado. Se busca coincidencia exacta y, si no, el nombre de
- * cliente más largo que sea prefijo del texto del manifiesto.
+ * guarda por separado. El índice está ordenado de nombre más largo a más
+ * corto, así que la primera coincidencia es la más específica.
  */
 function emparejarCliente(textoManifiesto){
   const objetivo = normalizar(textoManifiesto).replace(/[^a-z0-9]+/g," ").trim();
+  if(!objetivo) return null;
 
-  let mejor = null;
-  let largoMejor = 0;
-
-  for(let i = 0; i < clientes.length; i++){
-    const c = clientes[i];
-    if(!c.nombre) continue;
-
-    const nombre = normalizar(c.nombre).replace(/[^a-z0-9]+/g," ").trim();
-    if(nombre.length <= 3) continue;
-
-    if(nombre === objetivo) return c;
-
-    if(objetivo.indexOf(nombre + " ") === 0 && nombre.length > largoMejor){
-      mejor = c;
-      largoMejor = nombre.length;
-    }
+  for(let i = 0; i < indiceNombres.length; i++){
+    const x = indiceNombres[i];
+    if(objetivo === x.norm || objetivo.indexOf(x.norm + " ") === 0) return x.ficha;
   }
 
-  return mejor;
+  return null;
+}
+
+/**
+ * Solo un NÚMERO de ruta sirve para agrupar. La columna RUTA de la hoja
+ * CLIENTES tiene en algunos casos direcciones escritas por error
+ * ("CALLE 2N NRO. 9E - 61"); si se aceptaran, agruparían clientes que no
+ * comparten recorrido.
+ */
+function rutaValida(valor){
+  const r = String(valor === null || valor === undefined ? "" : valor).trim();
+  return /^\d{1,3}$/.test(r) ? r : "";
+}
+
+// Ruta que trae la ficha del cliente en la hoja CLIENTES (con cache, porque
+// se consulta fila a fila).
+function rutaFichaCliente(nombreEnManifiesto){
+  const clave = String(nombreEnManifiesto || "").trim();
+  if(!clave) return "";
+
+  if(rutaPorCliente[clave] === undefined){
+    const ficha = emparejarCliente(clave);
+    rutaPorCliente[clave] = ficha ? rutaValida(ficha.ruta) : "";
+  }
+
+  return rutaPorCliente[clave];
+}
+
+/**
+ * Ruta de un manifiesto. Manda la de la propia hoja DATOS; solo cuando
+ * viene vacía se recurre a la ficha del cliente. Se comprobó contra los
+ * datos reales: de 179 manifiestos con ruta propia, 178 coinciden con la
+ * de CLIENTES, y el único que discrepa lo tiene bien en DATOS.
+ */
+function rutaDeManifiesto(manifiesto){
+  return rutaValida(manifiesto.ruta) || rutaFichaCliente(manifiesto.cliente);
 }
 
 function cargarClientesCertificado(){
@@ -1277,6 +1503,8 @@ function agruparClientesCertificado(){
         nombre: nombre,
         codigo: ficha ? (ficha.codigo || "") : "",
         direccion: ficha ? (ficha.direccion || "") : "",
+        // Se completa abajo con la ruta de los propios manifiestos.
+        ruta: "",
         manifiestos: [],
         total: 0
       };
@@ -1284,6 +1512,9 @@ function agruparClientesCertificado(){
 
     porCliente[nombre].manifiestos.push(m);
     porCliente[nombre].total += Number(m.total) || 0;
+    // La ruta manda desde el propio manifiesto; solo si ninguno la trae
+    // se recurre a la ficha del cliente.
+    if(!porCliente[nombre].ruta) porCliente[nombre].ruta = rutaDeManifiesto(m);
   });
 
   certClientes = Object.keys(porCliente)
@@ -1296,33 +1527,64 @@ function agruparClientesCertificado(){
   certClientes.forEach(c => { certMarcados[c.nombre] = !!previas[c.nombre]; });
 }
 
+// Cuántos clientes comparten cada ruta, para avisar en la interfaz.
+function companerosDeRuta(ruta){
+  if(!ruta) return [];
+  return certClientes.filter(c => c.ruta === ruta);
+}
+
 function pintarClientesCertificado(){
 
   const texto = normalizar($("certBuscar").value);
   const lista = $("certLista");
 
   const visibles = texto
-    ? certClientes.filter(c => normalizar(c.nombre).includes(texto))
+    ? certClientes.filter(c => normalizar(c.nombre + " " + c.ruta).includes(texto))
     : certClientes;
 
   if(visibles.length === 0){
     lista.innerHTML = '<div class="opcion">Sin coincidencias</div>';
   }else{
-    lista.innerHTML = visibles.map(c => `
+    lista.innerHTML = visibles.map(c => {
+      const enRuta = companerosDeRuta(c.ruta).length;
+      const etiquetaRuta = c.ruta
+        ? `<span class="ruta" title="${enRuta} cliente(s) de esta ruta">Ruta ${esc(c.ruta)}</span>`
+        : "";
+      return `
       <label class="opcion">
         <input type="checkbox" value="${esc(c.nombre)}"
                ${certMarcados[c.nombre] ? "checked" : ""}
                onchange="marcarCliente(this)">
-        <span>${esc(c.nombre)}${c.codigo ? " <b>(" + esc(c.codigo) + ")</b>" : ""}</span>
+        <span>${esc(c.nombre)}${c.codigo ? " <b>(" + esc(c.codigo) + ")</b>" : ""} ${etiquetaRuta}</span>
         <span class="cifras">${c.manifiestos.length} man. · ${dosDecimales(c.total)} KG</span>
-      </label>`).join("");
+      </label>`;
+    }).join("");
   }
 
   actualizarResumenCert();
 }
 
+/**
+ * Al marcar un cliente se marcan también las demás sedes de su misma ruta,
+ * que es como se atienden en terreno. Al DESMARCAR se quita solo ese, para
+ * poder dejar fuera una sede puntual sin perder el resto.
+ */
 function marcarCliente(casilla){
-  certMarcados[casilla.value] = casilla.checked;
+
+  const nombre = casilla.value;
+  certMarcados[nombre] = casilla.checked;
+
+  if(casilla.checked && $("certPorRuta").checked){
+    const ficha = certClientes.find(c => c.nombre === nombre);
+    const companeros = ficha ? companerosDeRuta(ficha.ruta) : [];
+
+    if(companeros.length > 1){
+      companeros.forEach(c => { certMarcados[c.nombre] = true; });
+      pintarClientesCertificado();
+      return;
+    }
+  }
+
   actualizarResumenCert();
 }
 
@@ -1523,6 +1785,63 @@ function hojaMensual(listaClientes, inicio, fin, fecha){
       <p class="gran-total">TOTAL DE KILOS RESIDUOS: ${dosDecimales(suma.total)} Kilogramos</p>
       ${pieHoja()}
     </div>`;
+}
+
+/* ----- puente desde el historial ----- */
+
+// Fechas mínima y máxima de un grupo de manifiestos, ignorando las que
+// están mal digitadas en la hoja (no comparan bien como texto).
+function rangoDeFechas(manifiestos){
+  let menor = "", mayor = "";
+
+  manifiestos.forEach(m => {
+    const f = fechaComparable(m.fecha);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(f)) return;
+    if(!menor || f < menor) menor = f;
+    if(!mayor || f > mayor) mayor = f;
+  });
+
+  return { inicio: menor, fin: mayor };
+}
+
+/**
+ * Lleva a Certificados los manifiestos marcados con la casilla y, si no hay
+ * ninguno marcado, todos los que se están viendo. Evita repetir la búsqueda
+ * después de haber verificado la información.
+ */
+function certificarDesdeHistorial(){
+
+  if(historialVisible.length === 0){
+    mensaje("estadoHistorial","No hay manifiestos en pantalla para certificar", true);
+    return;
+  }
+
+  const marcados = manifiestosSeleccionados();
+  const origen   = marcados.length ? marcados : historialVisible;
+
+  // Se reutiliza lo ya verificado en vez de volver a consultar el servidor.
+  certManifiestos = origen.slice();
+  agruparClientesCertificado();
+  certClientes.forEach(c => { certMarcados[c.nombre] = true; });
+
+  mostrar("certificados");
+
+  const rango = rangoDeFechas(certManifiestos);
+  if(rango.inicio) $("certInicio").value = rango.inicio;
+  if(rango.fin)    $("certFin").value    = rango.fin;
+
+  $("certSelector").hidden = false;
+  $("certBuscar").value = "";
+  pintarClientesCertificado();
+
+  const cuantos = certClientes.length;
+
+  mensaje("estadoCert",
+    "Traído del historial: " + certManifiestos.length + " manifiestos de " +
+    cuantos + (cuantos === 1 ? " cliente" : " clientes") +
+    ", ya seleccionados. Revise el tipo y la fecha de expedición y genere.");
+
+  mensaje("estadoCertGenerar","");
 }
 
 /**
