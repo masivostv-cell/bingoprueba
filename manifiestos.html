@@ -283,6 +283,108 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   .hoja tr{page-break-inside:avoid;}
 }
 
+
+
+/* Tabla de manifiestos del módulo de destinación */
+.tabla-man-dest{min-width:1150px;}
+.tabla-man-dest td,.tabla-man-dest th{padding:6px 8px;font-size:12.5px;white-space:nowrap;}
+.tabla-man-dest td.num{text-align:right;}
+.tabla-man-dest td.cliente{white-space:normal;min-width:230px;max-width:320px;}
+.tabla-man-dest th.col-check,
+.tabla-man-dest td.col-check{width:36px;text-align:center;padding:4px;}
+.tabla-man-dest td.col-check input{width:auto;margin:0;cursor:pointer;transform:scale(1.15);}
+.tabla-man-dest thead th{position:sticky;top:0;z-index:2;}
+.tabla-man-dest tbody tr:hover td{background:#fef9c3;}
+.tabla-man-dest tbody tr.elegido td{background:#dcfce7;}
+.tabla-man-dest tbody tr.elegido:hover td{background:#bbf7d0;}
+#destManCard .tabla-scroll{max-height:340px;overflow:auto;margin-top:0;}
+
+/* Elección del modo de certificado */
+.opcion-modo{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:8px 10px;margin:4px 5px;font-size:14px;cursor:pointer;
+  border:1px solid var(--borde);border-radius:8px;max-width:700px;background:#fff;
+}
+.opcion-modo:hover{background:#e9fbf8;}
+.opcion-modo input{width:auto;margin:2px 0 0;flex-shrink:0;}
+/* ---------- Certificados de destinación ---------- */
+.prefijo-crg{font-weight:700;color:var(--verde-oscuro);font-size:15px;}
+
+.aviso-editable{
+  background:#fffbeb;border-left:4px solid #f59e0b;
+  padding:10px 14px;border-radius:6px;font-size:14px;line-height:1.5;
+}
+
+.vista-previa{
+  margin-top:18px;background:#e2e8f0;padding:18px;border-radius:10px;
+  max-height:70vh;overflow:auto;
+}
+
+/* Cada certificado se ve como una hoja de papel */
+.destino{
+  background:#fff;color:#000;width:190mm;margin:0 auto 22px;
+  padding:10mm 14mm;font-family:Arial,Helvetica,sans-serif;font-size:11pt;
+  box-shadow:0 3px 12px rgba(0,0,0,.18);
+}
+.destino .membrete{width:100%;display:block;margin-bottom:6px;}
+.destino .consecutivo{text-align:right;font-weight:bold;font-size:11pt;margin:0 0 10px;}
+.destino .titulo-dest{
+  text-align:center;font-weight:bold;font-size:12pt;
+  margin:0 0 14px;line-height:1.35;
+}
+.destino .parrafo{text-align:justify;line-height:1.55;margin:0 0 14px;}
+.destino .mes{
+  text-align:center;font-weight:bold;font-size:11pt;
+  margin:14px 0 4px;text-transform:uppercase;
+}
+
+.destino table{width:100%;border-collapse:collapse;margin-bottom:8px;}
+.destino th,.destino td{
+  border:1px solid #000;padding:3px 5px;font-size:9pt;text-align:center;
+}
+.destino th{background:#f1f5f9;font-weight:bold;}
+.destino td.cant{text-align:right;}
+.destino tr.total-dest td{font-weight:bold;background:#f8fafc;}
+
+/* Lo que se puede editar se marca en amarillo suave */
+.destino [contenteditable="true"]{outline:none;}
+.destino [contenteditable="true"]:hover{background:#fef9c3;}
+.destino [contenteditable="true"]:focus{background:#fde68a;outline:1px solid #f59e0b;}
+.destino .falta-dato{background:#fee2e2;color:var(--rojo-logo);font-weight:bold;}
+
+.destino .borrar-fila{
+  border:0;background:none;cursor:pointer;color:var(--rojo-logo);
+  font-size:13px;padding:0 4px;
+}
+.destino .borrar-fila:hover{background:#fee2e2;border-radius:4px;}
+
+.destino .legal{font-size:8pt;line-height:1.45;text-align:justify;margin-top:12px;}
+.destino .legal b{display:block;margin-top:6px;}
+.destino .expide{margin:14px 0 0;line-height:1.5;}
+.destino .firma-dest{margin-top:18px;}
+.destino .firma-dest img{height:58px;display:block;}
+.destino .firma-dest .nombre{font-weight:bold;margin-top:2px;}
+.destino .pie-dest{
+  margin-top:14px;border-top:2px solid var(--rojo-logo);padding-top:5px;
+  text-align:center;font-size:7.5pt;color:#1d4ed8;line-height:1.5;
+}
+
+@media print{
+  body.imprimiendo-destino .layout{display:none!important;}
+  body.imprimiendo-destino #destVista{
+    display:block!important;background:#fff;padding:0;margin:0;
+    max-height:none;overflow:visible;
+  }
+  body.imprimiendo-destino .destino{
+    width:auto;margin:0;box-shadow:none;padding:0;
+    page-break-after:always;
+  }
+  body.imprimiendo-destino .destino:last-child{page-break-after:auto;}
+  body.imprimiendo-destino .borrar-fila{display:none;}
+body.imprimiendo-destino .no-imprimir{display:none;}
+  body.imprimiendo-destino .destino tr{page-break-inside:avoid;}
+  body.imprimiendo-destino .destino thead{display:table-header-group;}
+}
 /* ---------- Modales ---------- */
 .modal{
   display:none;position:fixed;inset:0;
@@ -309,6 +411,7 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
     <button type="button" data-seccion="clientes"  onclick="mostrar('clientes')">👥 Clientes</button>
     <button type="button" data-seccion="historial" onclick="mostrar('historial')">📚 Historial de manifiestos</button>
     <button type="button" data-seccion="certificados" onclick="mostrar('certificados')">🧾 Certificados</button>
+    <button type="button" data-seccion="destinacion" onclick="mostrar('destinacion')">📜 Certificados de destinación</button>
     <button type="button" data-seccion="reportes"  onclick="mostrar('reportes')">📊 Reportes</button>
   </nav>
 
@@ -394,7 +497,8 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 
         <input type="date"   id="histInicio" title="Fecha inicial">
         <input type="date"   id="histFin"    title="Fecha final">
-        <input type="number" step="0.01" min="0" id="histKilos" value="0" placeholder="Peso mínimo KG" title="Peso mínimo KG">
+        <input type="number" step="0.01" min="0" id="histKilos" value="0" placeholder="Peso mínimo KG" title="Peso mínimo KG: solo se aplica a clientes PEQUEÑOS">
+        <span class="ayuda">El peso mínimo solo filtra clientes PEQUEÑOS.</span>
         <select id="histMovil" title="Filtrar por móvil">
           <option value="">Todos los móviles</option>
         </select>
@@ -493,6 +597,123 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
       </div>
     </section>
 
+    <!-- ================= CERTIFICADOS DE DESTINACIÓN ================= -->
+    <section id="destinacion" class="seccion">
+      <div class="card">
+        <h2>Certificados de destinación</h2>
+        <p>Certificado de recolección, tratamiento y disposición final de residuos patógenos.</p>
+
+        <label class="etiqueta">Rango de fechas</label>
+        <span class="ayuda">De qué manifiestos se saca la información.</span>
+        <br>
+        <input type="date" id="destInicio" title="Fecha inicial">
+        <input type="date" id="destFin"    title="Fecha final">
+        <button type="button" id="btnDestCargar" class="btn-pro btn-consultar"
+                onclick="cargarClientesDestinacion()">🔍 Buscar clientes del rango</button>
+
+        <br>
+        <label class="etiqueta">Fecha de expedición</label>
+        <span class="ayuda">«Este certificado se expide a los … días del mes de …».</span>
+        <br>
+        <input type="date" id="destFecha" title="Fecha con la que sale el certificado">
+        <button type="button" class="btn-mini" onclick="fechaDestinacionHoy()">Hoy</button>
+
+        <br>
+        <label class="etiqueta">Consecutivo</label>
+        <span id="destConsecutivoAyuda" class="ayuda">Número del primer certificado; si genera varios, va aumentando.</span>
+        <br>
+        <span class="prefijo-crg">CRG-</span>
+        <input type="number" step="1" min="1" id="destConsecutivo" style="width:120px" title="Número consecutivo">
+        <span class="prefijo-crg">-<span id="destAnio">2026</span></span>
+        <button type="button" class="btn-mini" onclick="pedirConsecutivo()">🔄 Traer de la hoja</button>
+
+        <p id="estadoDest" class="estado"></p>
+
+        <!-- Paso 1: marcar los clientes -->
+        <div id="destSelector" class="selector" hidden>
+          <div class="selector-cabecera">
+            <input id="destBuscar" placeholder="Buscar cliente o ruta..." autocomplete="off"
+                   oninput="pintarClientesDestinacion()">
+            <button type="button" class="btn-mini" onclick="marcarTodosDest(true)">Todos</button>
+            <button type="button" class="btn-mini" onclick="marcarTodosDest(false)">Ninguno</button>
+          </div>
+          <label class="selector-opcion">
+            <input type="checkbox" id="destPorRuta" checked>
+            Al marcar un cliente, marcar también las demás sedes de su ruta
+          </label>
+          <div id="destLista" class="selector-lista"></div>
+          <div class="selector-pie">
+            <span id="destResumenCli">0 clientes seleccionados</span>
+          </div>
+        </div>
+
+        <!-- Paso 2: afinar por manifiesto -->
+        <div id="destManCard" class="selector" hidden>
+          <div class="selector-cabecera">
+            <b>Manifiestos de los clientes marcados</b>
+            <button type="button" class="btn-mini" onclick="marcarTodosManDest(true)">Todos</button>
+            <button type="button" class="btn-mini" onclick="marcarTodosManDest(false)">Ninguno</button>
+          </div>
+          <div class="tabla-scroll">
+            <table class="tabla-man-dest">
+              <thead>
+                <tr>
+                  <th class="col-check"></th>
+                  <th>Cliente</th><th>Ruta</th><th>Fecha</th><th>Manifiesto</th><th>Móvil</th>
+                  <th>Biosanit.</th><th>Cortopunz.</th><th>Anatomop.</th>
+                  <th>Farmac.</th><th>Líquido</th><th>Medicam.</th><th>Otros</th>
+                  <th>Total KG</th>
+                </tr>
+              </thead>
+              <tbody id="destTablaMan"></tbody>
+            </table>
+          </div>
+          <div class="selector-pie">
+            <span id="destResumen">0 manifiestos seleccionados</span>
+          </div>
+        </div>
+
+        <div id="destModoCard" hidden>
+          <label class="etiqueta">¿Cómo quiere los certificados?</label>
+          <br>
+          <label class="opcion-modo">
+            <input type="radio" name="destModo" value="juntos" checked>
+            <span><b>Un solo certificado</b> con todos los manifiestos marcados
+                  <span class="ayuda">(uno por cliente, si marcó de varios)</span></span>
+          </label>
+          <label class="opcion-modo">
+            <input type="radio" name="destModo" value="separados">
+            <span><b>Un certificado por cada manifiesto</b>
+                  <span class="ayuda">(consecutivo distinto para cada uno)</span></span>
+          </label>
+        </div>
+
+        <br>
+        <button type="button" id="btnDestGenerar" class="btn-pro btn-consultar"
+                onclick="generarDestinacion()">👁️ Generar vista previa</button>
+
+        <p id="estadoDestGenerar" class="estado"></p>
+      </div>
+
+      <!-- Vista previa editable -->
+      <div id="destCard" class="card" hidden>
+        <h2>Vista previa</h2>
+        <p class="aviso-editable">
+          ✏️ <b>Todo el documento es editable.</b> Haga clic sobre cualquier texto para
+          corregirlo — el NIT, las cantidades, el tratamiento o el tipo de residuo —
+          y borre con 🗑️ las filas que no correspondan. Lo que quede en pantalla es
+          exactamente lo que se exporta.
+        </p>
+        <button type="button" class="btn-pro btn-guardar"   onclick="exportarDestinacionPDF()">🖨️ PDF</button>
+        <button type="button" class="btn-pro btn-neutro"    onclick="exportarDestinacionExcel()">📥 Excel</button>
+        <button type="button" class="btn-pro btn-neutro"    onclick="exportarDestinacionWord()">📝 Word</button>
+        <button type="button" class="btn-pro btn-consultar" onclick="recalcularTotalesDest()">🔢 Recalcular totales</button>
+        <p id="estadoDestExport" class="estado"></p>
+
+        <div id="destVista" class="vista-previa"></div>
+      </div>
+    </section>
+
     <!-- ================= REPORTES ================= -->
     <section id="reportes" class="seccion">
       <div class="card">
@@ -565,7 +786,8 @@ let clientes = [];
 let moviles = [];
 let indiceClientes = [];
 let indiceNombres = [];      // clientes normalizados para emparejar con el manifiesto
-let rutaPorCliente = {};     // cache: texto del manifiesto -> ruta
+let rutaPorCliente = {};      // cache: texto del manifiesto -> ruta
+let tipoPorCliente = {};      // cache: texto del manifiesto -> tipo de cliente
 let manifiestosElegidos = {}; // número de manifiesto -> marcado con la casilla
 let resultadosBusqueda = [];
 let historialDatos = [];
@@ -673,6 +895,9 @@ function mostrar(id){
   if(id === "certificados"){
     describirTipoCert();
     prepararFechasCertificado();
+  }
+  if(id === "destinacion"){
+    prepararDestinacion();
   }
 }
 
@@ -831,7 +1056,8 @@ function crearIndiceNombres(){
     .filter(x => x.norm.length > 3)
     .sort((a, b) => b.norm.length - a.norm.length);
 
-  rutaPorCliente = {};   // el cache de rutas queda obsoleto
+  rutaPorCliente = {};   // los caches quedan obsoletos
+  tipoPorCliente = {};
 }
 
 function actualizarEstadoClientes(texto, fecha){
@@ -1195,17 +1421,23 @@ function filtrarHistorial(){
   // Cada palabra debe aparecer en algún campo del manifiesto, así se puede
   // escribir "vihonco 90152" y llegar directo al registro.
   const palabras = normalizar($("histBuscar").value).split(" ").filter(Boolean);
-
   // Filtros que no dependen del texto buscado
   const pasaFiltros = x => {
-    const peso  = Number(x.total) || 0;
     const fecha = fechaComparable(x.fecha);
-    if(peso < kilos) return false;
+
+    // El peso mínimo solo se aplica a los clientes PEQUEÑOS: en los GRANDES
+    // y en IMSALUD un peso alto es lo normal y ensuciaría el resultado.
+    if(kilos > 0){
+      if(!esClientePequeno(x.cliente)) return false;
+      if((Number(x.total) || 0) < kilos) return false;
+    }
+
     if(inicio && fecha < inicio) return false;
     if(fin    && fecha > fin)    return false;
     if(movil  && String(x.movil) !== movil) return false;
     return true;
   };
+
 
   const coincideTexto = x => {
     if(!palabras.length) return true;
@@ -1360,6 +1592,824 @@ function actualizarResumenHistorial(malas){
   mensaje("estadoHistorial", texto, malas > 0);
 }
 
+
+/* ================= CERTIFICADOS DE DESTINACIÓN ================= */
+
+/**
+ * Tratamiento y corriente de cada residuo, tomados de PLANTILLA.xlsx.
+ * MEDICAMENTOS VENCIDOS y OTROS no venían en la plantilla: se incluyen para
+ * que el total del certificado cuadre con el del manifiesto. Si no aplican,
+ * se borran en la vista previa antes de exportar.
+ */
+const TRATAMIENTOS = [
+  { clave:"biosanitarios",      tipo:"BIOSANITARIOS",         tratamiento:"AUTOCLAVE",    corriente:"Y1.2 - A4020.2" },
+  { clave:"cortopunzantes",     tipo:"CORTOPUNZANTES",        tratamiento:"INCINERACIÓN", corriente:"Y1.3 - A4020.3" },
+  { clave:"anatomopatologicos", tipo:"ANATOMOPATOLOGICOS",    tratamiento:"INCINERACIÓN", corriente:"Y1.1 - A4020.1" },
+  { clave:"farmaceuticos",      tipo:"FARMACOS",              tratamiento:"INCINERACIÓN", corriente:"Y3 - N/A" },
+  { clave:"medicamentos",       tipo:"MEDICAMENTOS VENCIDOS", tratamiento:"INCINERACIÓN", corriente:"Y3 - N/A" },
+  { clave:"liquido",            tipo:"LIQUIDO REVELADOR",     tratamiento:"DISPOSICIÓN DE LIQUIDOS CON NEUTRALIZACIÓN", corriente:"Y16 - A4140" },
+  { clave:"otros",              tipo:"OTROS",                 tratamiento:"INCINERACIÓN", corriente:"" }
+];
+
+const NIT_LASPATH   = "900.619.794-2";
+const TRANSPORTADOR = "LATINOAMERICA SOLUCIONES PATÓGENAS S.A.S. E.S.P.";
+
+const PIE_DESTINO =
+  "AV. 4 No. 11-17 Ofic. 707 Edificio Benhur Brr Centro, Tel. 572 17 70 Cel. 312 545 94 96<br>" +
+  "Cúcuta - Colombia.<br>" +
+  "secretaria@laspath.com.co&nbsp;&nbsp;Laspath2012@hotmail.com&nbsp;&nbsp;" +
+  "cartera@laspath.com.co&nbsp;&nbsp;facturacionelectronica@laspath.com.co";
+
+// Texto legal fijo, tal como está en la plantilla de Word.
+const LICENCIAS = [
+  ["", "El material que se certifica fue tratado de acuerdo con las licencias ambientales aprobadas para TECNOLOGIAS AMBIENTALES DE COLOMBIA DE BOGOTA S.A E.S.P."],
+  ["VEOLIACOLOMBIA S.A.S E.S.P",
+   "Resolución No. 0976 del 21 de diciembre del 2000 y modificada por la Resolución No. 0450 del 24 de agosto del año 2006, expedida por la Corporación Autónoma Regional CORPONOR, para el funcionamiento y operación del Centro de Inteligencia de Gestión Ecológica Guayabal en Cúcuta (Norte de Santander) para los siguientes procesos: Celda de Seguridad, Biorremediación, tratamiento térmico."],
+  ["VEOLIA SERVICIOS INDUSTRIALES COLOMBIA S.A.S E.S.P 805.001.538-5",
+   "Resolución No. 462 de 2009, cedida mediante Resolución No. 945 de 2010, y modificada con las Resoluciones No. 759 de 2010, 760 de 2013, 389 de 2014, 244 de 2015, 505 de 2015, 256 de 2016, 534 de 2016, 889 de 2016, 972 de 2016, 468 de 2017, 182 de 2020 y 610 de 2024, otorgadas por la Corporación Autónoma Regional del Atlántico para el funcionamiento y operación del Parque Tecnológico Ambiental del Caribe (ahora Centro Inteligente de Gestión Ecológica del Caribe - CIGEC), en Galapa (Atlántico), para los siguientes procesos: Celda de seguridad, Blending e Incineración de Residuos Peligrosos."],
+  ["TECNIAMSA BOGOTA Nit. 900.229.776-6",
+   "Resolución No. 2469 de 2009, modificada mediante las Resoluciones No. 445 de 2013, 2176 de 2018, y DGEN 20237000107 de 2023, otorgadas por la Corporación Autónoma Regional de Cundinamarca para el funcionamiento y Operación de la Planta de Tratamiento Térmico del Centro de Inteligencia de Gestión Ecológica de la Sabana, en Mosquera (Cundinamarca) para los siguientes procesos: Incineración y Autoclave. Decreto 1076 del 2015 Clasificación título 6 SAOs. Resolución DJA No. 50257001130 de 22 DIC. 2025 Por la cual se modifica una licencia ambiental y se adoptan otras determinaciones."]
+];
+
+let destManifiestos = [];
+let destClientes    = [];
+let destManElegidos  = {};   // número de manifiesto -> marcado
+let destMarcados = {};       // cliente -> marcado con la casilla
+
+function fechaDestinacionHoy(){
+  $("destFecha").value = fechaISO(new Date());
+  $("destAnio").textContent = $("destFecha").value.slice(0, 4);
+}
+
+function prepararDestinacion(){
+  if(!$("destFecha").value) fechaDestinacionHoy();
+  $("destAnio").textContent = $("destFecha").value.slice(0, 4);
+
+  if(!$("destInicio").value && !$("destFin").value){
+    const hoy = new Date();
+    $("destInicio").value = fechaISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+    $("destFin").value    = fechaISO(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
+  }
+
+  if(!$("destConsecutivo").value) pedirConsecutivo();
+}
+
+/**
+ * Pide el siguiente consecutivo a la hoja de cálculo. Si el Apps Script aún
+ * no tiene esa acción (despliegue anterior), lo avisa y deja escribirlo a
+ * mano en vez de bloquear la generación.
+ */
+function pedirConsecutivo(){
+
+  const ayuda = $("destConsecutivoAyuda");
+  ayuda.textContent = "Consultando la hoja...";
+
+  pedir(API + "?accion=consecutivo")
+    .then(r => {
+      if(!r || typeof r.siguiente === "undefined") throw new Error("sin soporte");
+      $("destConsecutivo").value = r.siguiente;
+      ayuda.textContent = "Siguiente según la hoja. Si genera varios, va aumentando.";
+    })
+    .catch(() => {
+      ayuda.textContent = "La hoja aún no lleva el consecutivo: escríbalo a mano.";
+    });
+}
+
+/* ----- selección de clientes ----- */
+
+function cargarClientesDestinacion(){
+
+  const inicio = $("destInicio").value;
+  const fin    = $("destFin").value;
+
+  if(!inicio || !fin){
+    mensaje("estadoDest","Indique la fecha inicial y la final", true);
+    return;
+  }
+  if(inicio > fin){
+    mensaje("estadoDest","La fecha inicial es posterior a la final", true);
+    return;
+  }
+
+  ocupado("btnDestCargar","Buscando...");
+  mensaje("estadoDest","Consultando manifiestos del rango...");
+  $("destSelector").hidden = true;
+
+  pedir(API + "?accion=excesos&kilos=0" +
+        "&inicio=" + encodeURIComponent(inicio) +
+        "&fin="    + encodeURIComponent(fin))
+    .then(datos => {
+      if(datos && datos.estado === "error"){
+        throw new Error(datos.mensaje || "El script reportó un error");
+      }
+      if(!Array.isArray(datos)) throw new Error("Respuesta inesperada del servidor");
+
+      destManifiestos = datos;
+      agruparClientesDestinacion();
+      ocupado("btnDestCargar", null);
+
+      if(destClientes.length === 0){
+        mensaje("estadoDest","No hay manifiestos en ese rango de fechas", true);
+        return;
+      }
+
+      $("destSelector").hidden = false;
+      $("destBuscar").value = "";
+      pintarClientesDestinacion();
+
+      mensaje("estadoDest",
+        destManifiestos.length + " manifiestos de " + destClientes.length + " clientes.");
+    })
+    .catch(error => {
+      console.error("Destinación:", error);
+      ocupado("btnDestCargar", null);
+      mensaje("estadoDest","No se pudo consultar: " + (error.message || error), true);
+    });
+}
+
+function agruparClientesDestinacion(){
+
+  const porCliente = {};
+
+  destManifiestos.forEach(m => {
+    const nombre = String(m.cliente || "").trim();
+    if(!nombre) return;
+
+    if(!porCliente[nombre]){
+      const ficha = emparejarCliente(nombre);
+      porCliente[nombre] = {
+        nombre: nombre,
+        nit: ficha ? String(ficha.nit || "").trim() : "",
+        direccion: ficha ? (ficha.direccion || "") : "",
+        ruta: "",
+        manifiestos: [],
+        total: 0
+      };
+    }
+
+    porCliente[nombre].manifiestos.push(m);
+    porCliente[nombre].total += Number(m.total) || 0;
+    if(!porCliente[nombre].ruta) porCliente[nombre].ruta = rutaDeManifiesto(m);
+  });
+
+  destClientes = Object.keys(porCliente)
+    .map(k => porCliente[k])
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+  // Una consulta nueva invalida lo que estuviera marcado antes.
+  destManElegidos  = {};
+  destMarcados     = {};
+  $("destManCard").hidden = true;
+  $("destModoCard").hidden = true;
+}
+
+function companerosDeRutaDest(ruta){
+  if(!ruta) return [];
+  return destClientes.filter(c => c.ruta === ruta);
+}
+
+/* ----- paso 1: marcar clientes (con agrupación por ruta) ----- */
+
+function pintarClientesDestinacion(){
+
+  const texto = normalizar($("destBuscar").value);
+  const lista = $("destLista");
+
+  const visibles = texto
+    ? destClientes.filter(c => normalizar(c.nombre + " " + c.ruta).includes(texto))
+    : destClientes;
+
+  if(visibles.length === 0){
+    lista.innerHTML = '<div class="opcion">Sin coincidencias</div>';
+  }else{
+    lista.innerHTML = visibles.map(c => {
+      const enRuta = companerosDeRutaDest(c.ruta).length;
+      const etiquetaRuta = c.ruta
+        ? `<span class="ruta" title="${enRuta} cliente(s) de esta ruta">Ruta ${esc(c.ruta)}</span>`
+        : "";
+      return `
+      <label class="opcion">
+        <input type="checkbox" value="${esc(c.nombre)}"
+               ${destMarcados[c.nombre] ? "checked" : ""}
+               onchange="marcarClienteDest(this)">
+        <span>${esc(c.nombre)} ${etiquetaRuta}</span>
+        <span class="cifras">${c.manifiestos.length} man. · ${dosDecimales(c.total)} KG</span>
+      </label>`;
+    }).join("");
+  }
+
+  const marcados = clientesDestSeleccionados();
+  $("destResumenCli").textContent =
+    marcados.length + " de " + destClientes.length + " clientes seleccionados";
+}
+
+/**
+ * Al marcar un cliente se marcan también las demás sedes de su ruta y todos
+ * sus manifiestos. Al DESMARCAR se quita solo ese cliente, para poder dejar
+ * fuera una sede puntual sin perder el resto.
+ */
+function marcarClienteDest(casilla){
+
+  const nombre = casilla.value;
+  destMarcados[nombre] = casilla.checked;
+
+  let afectados = [nombre];
+
+  if(casilla.checked && $("destPorRuta").checked){
+    const ficha = destClientes.find(c => c.nombre === nombre);
+    const companeros = ficha ? companerosDeRutaDest(ficha.ruta) : [];
+    if(companeros.length > 1){
+      companeros.forEach(c => { destMarcados[c.nombre] = true; });
+      afectados = companeros.map(c => c.nombre);
+    }
+  }
+
+  // Marcar un cliente trae sus manifiestos; desmarcarlo se los lleva.
+  afectados.forEach(n => {
+    const c = destClientes.find(x => x.nombre === n);
+    if(c) c.manifiestos.forEach(m => { destManElegidos[claveManDest(m)] = casilla.checked; });
+  });
+
+  pintarClientesDestinacion();
+  pintarManifiestosDest();
+}
+
+function marcarTodosDest(valor){
+  const texto = normalizar($("destBuscar").value);
+  destClientes.forEach(c => {
+    if(texto && !normalizar(c.nombre + " " + c.ruta).includes(texto)) return;
+    destMarcados[c.nombre] = valor;
+    c.manifiestos.forEach(m => { destManElegidos[claveManDest(m)] = valor; });
+  });
+  pintarClientesDestinacion();
+  pintarManifiestosDest();
+}
+
+function clientesDestSeleccionados(){
+  return destClientes.filter(c => destMarcados[c.nombre]);
+}
+
+/* ----- paso 2: afinar por manifiesto ----- */
+
+function claveManDest(m){
+  return String(m.manifiesto || "").trim();
+}
+
+// Manifiestos de todos los clientes marcados, ordenados por cliente y fecha.
+function manifiestosVisiblesDest(){
+  const lista = [];
+  clientesDestSeleccionados().forEach(c => {
+    c.manifiestos
+      .slice()
+      .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)))
+      .forEach(m => lista.push({ manifiesto:m, cliente:c }));
+  });
+  return lista;
+}
+
+function pintarManifiestosDest(){
+
+  const lista = manifiestosVisiblesDest();
+  const hayClientes = lista.length > 0;
+
+  $("destManCard").hidden = !hayClientes;
+  $("destModoCard").hidden = !hayClientes;
+
+  $("destTablaMan").innerHTML = lista.map(fila => {
+    const m = fila.manifiesto;
+    const clave = claveManDest(m);
+    return `
+      <tr class="${destManElegidos[clave] ? "elegido" : ""}">
+        <td class="col-check">
+          <input type="checkbox" value="${esc(clave)}"
+                 ${destManElegidos[clave] ? "checked" : ""}
+                 onchange="alternarManDest(this)">
+        </td>
+        <td class="cliente">${esc(fila.cliente.nombre)}</td>
+        <td class="num">${esc(fila.cliente.ruta)}</td>
+        <td>${esc(m.fecha)}</td>
+        <td class="num">${esc(m.manifiesto)}</td>
+        <td class="num">${esc(m.movil)}</td>
+        <td class="num">${dosDecimales(m.biosanitarios)}</td>
+        <td class="num">${dosDecimales(m.cortopunzantes)}</td>
+        <td class="num">${dosDecimales(m.anatomopatologicos)}</td>
+        <td class="num">${dosDecimales(m.farmaceuticos)}</td>
+        <td class="num">${dosDecimales(m.liquido)}</td>
+        <td class="num">${dosDecimales(m.medicamentos)}</td>
+        <td class="num">${dosDecimales(m.otros)}</td>
+        <td class="num"><b>${dosDecimales(m.total)}</b></td>
+      </tr>`;
+  }).join("");
+
+  actualizarResumenDest();
+}
+
+function alternarManDest(casilla){
+  destManElegidos[casilla.value] = casilla.checked;
+  casilla.closest("tr").classList.toggle("elegido", casilla.checked);
+  actualizarResumenDest();
+}
+
+// Marca o desmarca los manifiestos que están a la vista.
+function marcarTodosManDest(valor){
+  manifiestosVisiblesDest().forEach(f => {
+    destManElegidos[claveManDest(f.manifiesto)] = valor;
+  });
+  pintarManifiestosDest();
+}
+
+// Solo cuentan los manifiestos marcados de clientes que siguen marcados.
+function manifiestosDestSeleccionados(){
+  return manifiestosVisiblesDest()
+    .filter(f => destManElegidos[claveManDest(f.manifiesto)])
+    .map(f => f.manifiesto);
+}
+
+function actualizarResumenDest(){
+
+  const elegidos = manifiestosDestSeleccionados();
+  const kilos    = elegidos.reduce((s, m) => s + (Number(m.total) || 0), 0);
+  const clientes = new Set(elegidos.map(m => String(m.cliente || "").trim())).size;
+
+  $("destResumen").textContent = elegidos.length === 0
+    ? "0 manifiestos seleccionados"
+    : elegidos.length + " manifiestos de " + clientes +
+      (clientes === 1 ? " cliente" : " clientes") + "  ·  " + dosDecimales(kilos) + " KG";
+}
+
+/* ----- armado del certificado ----- */
+
+function fechaDiaMes(iso){
+  const p = String(iso || "").split("-");
+  if(p.length !== 3) return "";
+  return Number(p[2]) + " de " + MESES[Number(p[1]) - 1] + " de " + p[0];
+}
+
+// "del primero (01) al (31) de julio de 2026" cuando el rango cae dentro de
+// un mes; si abarca varios, "del 01 de enero al 31 de julio de 2026".
+function periodoDestino(inicio, fin){
+  const a = String(inicio).split("-");
+  const b = String(fin).split("-");
+
+  if(a[0] === b[0] && a[1] === b[1]){
+    return "del primero (" + a[2] + ") al (" + b[2] + ") de " +
+           MESES[Number(a[1]) - 1] + " de " + a[0];
+  }
+  return "del " + fechaDiaMes(inicio) + " al " + fechaDiaMes(fin);
+}
+
+function fechaCorta(iso){
+  const p = String(iso || "").split("-");
+  return p.length === 3 ? Number(p[2]) + "/" + p[1] + "/" + p[0] : String(iso || "");
+}
+
+/**
+ * Filas del certificado: por cada manifiesto, una fila por cada residuo con
+ * cantidad. La fecha y el número solo se escriben en la primera fila del
+ * grupo, igual que en la plantilla de Word.
+ */
+function filasDestino(manifiestos){
+
+  const filas = [];
+
+  manifiestos
+    .slice()
+    .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)))
+    .forEach(m => {
+      let primera = true;
+
+      TRATAMIENTOS.forEach(t => {
+        const cantidad = Number(m[t.clave]) || 0;
+        if(cantidad <= 0) return;
+
+        filas.push({
+          fecha: primera ? fechaCorta(m.fecha) : "",
+          manifiesto: primera ? String(m.manifiesto || "") : "",
+          tratamiento: t.tratamiento,
+          tipo: t.tipo,
+          corriente: t.corriente,
+          cantidad: cantidad
+        });
+
+        primera = false;
+      });
+    });
+
+  return filas;
+}
+
+// Agrupa las filas por mes para poner el encabezado ENERO, FEBRERO...
+function porMeses(manifiestos){
+
+  const grupos = {};
+
+  manifiestos.forEach(m => {
+    const f = fechaComparable(m.fecha);
+    const clave = /^\d{4}-\d{2}/.test(f) ? f.slice(0, 7) : "sin-fecha";
+    if(!grupos[clave]) grupos[clave] = [];
+    grupos[clave].push(m);
+  });
+
+  return Object.keys(grupos).sort().map(clave => ({
+    clave: clave,
+    titulo: clave === "sin-fecha"
+      ? "SIN FECHA"
+      : MESES[Number(clave.slice(5, 7)) - 1].toUpperCase() + " " + clave.slice(0, 4),
+    manifiestos: grupos[clave]
+  }));
+}
+
+function editable(texto, clase){
+  return `<span contenteditable="true"${clase ? ' class="' + clase + '"' : ""}>${esc(texto)}</span>`;
+}
+
+function tablaDestino(manifiestos){
+
+  const filas = filasDestino(manifiestos);
+
+  const cuerpo = filas.map(f => `
+    <tr>
+      <td>${editable(f.fecha)}</td>
+      <td>${editable(f.manifiesto)}</td>
+      <td>${editable(f.tratamiento)}</td>
+      <td>${editable(f.tipo)}</td>
+      <td>${editable(f.corriente)}</td>
+      <td class="cant valor">${editable(dosDecimales(f.cantidad))}</td>
+      <td>KG</td>
+      <td class="no-imprimir"><button type="button" class="borrar-fila"
+          onclick="borrarFilaDestino(this)" title="Quitar esta fila">🗑️</button></td>
+    </tr>`).join("");
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>FECHA</th><th>MANIFIESTO</th><th>TRATAMIENTO</th>
+          <th>TIPO DE RESIDUO</th><th>CORRIENTE Y - A</th>
+          <th>CANTIDAD</th><th>KG</th><th class="no-imprimir"></th>
+        </tr>
+      </thead>
+      <tbody>${cuerpo}</tbody>
+    </table>`;
+}
+
+function hojaDestino(cliente, consecutivo, inicio, fin, fechaExpedicion){
+
+  const anio  = String(fechaExpedicion || "").slice(0, 4);
+  const meses = porMeses(cliente.manifiestos);
+
+  // El encabezado de mes solo aparece si el certificado abarca más de uno.
+  const bloques = meses.map(g =>
+    (meses.length > 1 ? `<p class="mes">${esc(g.titulo)}</p>` : "") +
+    tablaDestino(g.manifiestos)
+  ).join("");
+
+  const nit = cliente.nit
+    ? editable(cliente.nit)
+    : `<span contenteditable="true" class="falta-dato">ESCRIBA EL NIT</span>`;
+
+  const direccion = cliente.direccion
+    ? editable(cliente.direccion)
+    : `<span contenteditable="true" class="falta-dato">ESCRIBA LA DIRECCIÓN</span>`;
+
+  const legal = LICENCIAS.map(l =>
+    (l[0] ? "<b>" + esc(l[0]) + "</b>" : "") + "<p>" + esc(l[1]) + "</p>"
+  ).join("");
+
+  return `
+  <div class="destino" data-cliente="${esc(cliente.nombre)}">
+    <img class="membrete" src="${IMG_LOGO}" alt="">
+    <p class="consecutivo">CRG-${editable(String(consecutivo))}-${esc(anio)}</p>
+
+    <p class="titulo-dest">CERTIFICADO DE RECOLECCIÓN, TRATAMIENTO Y DISPOSICIÓN
+       FINAL DE RESIDUOS PATOGENOS</p>
+
+    <p class="parrafo">LASPATH S.A.S E.S.P identificado con NIT ${NIT_LASPATH},
+       certifica que <b>${editable(cliente.nombre)}</b>, con Nit ${nit},
+       ubicado en ${direccion}, entregó para Tratamiento y Disposición Final
+       los Residuos Peligrosos, Hospitalarios y Similares entre el periodo
+       comprendido ${editable(periodoDestino(inicio, fin))}, los siguientes residuos:</p>
+
+    ${bloques}
+
+    <table class="tabla-total-dest">
+      <tr class="total-dest">
+        <td style="width:60%">TOTAL RESIDUOS</td>
+        <td class="cant total-valor">${dosDecimales(cliente.total)}</td>
+        <td style="width:10%">KG</td>
+      </tr>
+    </table>
+
+    <div class="legal">
+      <b>NOMBRE DE LA EMPRESA QUE REALIZÓ EL TRANSPORTE: ${TRANSPORTADOR}</b>
+      ${legal}
+      <p>Cualquier información adicional relacionada con este certificado, se
+         encuentra disponible para consulta en las instalaciones de
+         LATINOAMERICA SOLUCIONES PATOGENAS S.A.S E.S.P.</p>
+    </div>
+
+    <p class="expide">Este certificado se expide a los
+       ${editable(fechaDiaMes(fechaExpedicion))}.</p>
+
+    <div class="firma-dest">
+      <img src="${IMG_FIRMA}" alt="">
+      <div class="nombre">${FIRMANTE}</div>
+      <div>Representante legal</div>
+      <div>LATINOAMERICA SOLUCIONES PATOGENAS SAS ESP</div>
+    </div>
+
+    <div class="pie-dest">${PIE_DESTINO}</div>
+  </div>`;
+}
+
+function borrarFilaDestino(boton){
+  const fila = boton.closest("tr");
+  const hoja = boton.closest(".destino");
+  fila.remove();
+  recalcularHoja(hoja);
+}
+
+// Vuelve a sumar las cantidades que quedan en pantalla. Se usa tras borrar
+// una fila o corregir una cifra a mano.
+function recalcularHoja(hoja){
+  if(!hoja) return;
+
+  let suma = 0;
+  hoja.querySelectorAll("td.valor").forEach(td => {
+    suma += Number(String(td.textContent).replace(",", ".")) || 0;
+  });
+
+  const total = hoja.querySelector(".total-valor");
+  if(total) total.textContent = dosDecimales(suma);
+}
+
+function recalcularTotalesDest(){
+  const hojas = $("destVista").querySelectorAll(".destino");
+  hojas.forEach(recalcularHoja);
+  mensaje("estadoDestExport",
+    "Totales recalculados en " + hojas.length + (hojas.length === 1 ? " certificado." : " certificados."));
+}
+
+/**
+ * Arma los certificados con los manifiestos marcados.
+ *  - modo "juntos"   : un certificado por cliente, con todos sus manifiestos.
+ *  - modo "separados": un certificado por cada manifiesto marcado.
+ */
+function generarDestinacion(){
+
+  const elegidos = manifiestosDestSeleccionados();
+
+  if(destClientes.length === 0){
+    mensaje("estadoDestGenerar","Primero busque los clientes del rango", true);
+    return;
+  }
+  if(elegidos.length === 0){
+    mensaje("estadoDestGenerar","Marque al menos un manifiesto", true);
+    return;
+  }
+
+  const consecutivo = Number($("destConsecutivo").value) || 0;
+  const fecha  = $("destFecha").value;
+
+  if(!fecha){
+    mensaje("estadoDestGenerar","Indique la fecha de expedición", true);
+    return;
+  }
+  if(!consecutivo){
+    mensaje("estadoDestGenerar","Indique el número consecutivo", true);
+    return;
+  }
+
+  const modo = (document.querySelector('input[name="destModo"]:checked') || {}).value || "juntos";
+
+  // Cada certificado es un grupo: cliente + los manifiestos que lo componen.
+  const grupos = [];
+
+  if(modo === "separados"){
+    elegidos.forEach(m => grupos.push(grupoDestino(m.cliente, [m])));
+  }else{
+    const porCliente = {};
+    elegidos.forEach(m => {
+      const nombre = String(m.cliente || "").trim();
+      if(!porCliente[nombre]) porCliente[nombre] = [];
+      porCliente[nombre].push(m);
+    });
+    Object.keys(porCliente)
+      .sort((a, b) => a.localeCompare(b, "es"))
+      .forEach(nombre => grupos.push(grupoDestino(nombre, porCliente[nombre])));
+  }
+
+  // El periodo de cada certificado sale de sus propios manifiestos, no del
+  // rango de búsqueda: así el texto dice exactamente lo que se certifica.
+  $("destVista").innerHTML = grupos.map((g, i) => {
+    const r = rangoDeFechas(g.manifiestos);
+    return hojaDestino(g, consecutivo + i, r.inicio, r.fin, fecha);
+  }).join("");
+
+  $("destCard").hidden = false;
+
+  const sinNit = grupos.filter(g => !g.nit).length;
+
+  let aviso = grupos.length + (grupos.length === 1 ? " certificado generado" : " certificados generados") +
+              " (CRG-" + consecutivo + " a CRG-" + (consecutivo + grupos.length - 1) + ")" +
+              " con " + elegidos.length + " manifiesto(s).";
+  if(sinNit) aviso += "  ⚠️ " + sinNit + " sin NIT: escríbalo en el recuadro rojo.";
+
+  mensaje("estadoDestGenerar", aviso, sinNit > 0);
+  mensaje("estadoDestExport","");
+
+  $("destCard").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+// Datos del cliente (NIT y dirección) más los manifiestos del certificado.
+function grupoDestino(nombreCliente, manifiestos){
+
+  const nombre = String(nombreCliente || "").trim();
+  const ficha  = destClientes.find(c => c.nombre === nombre);
+
+  return {
+    nombre: nombre,
+    nit: ficha ? ficha.nit : "",
+    direccion: ficha ? ficha.direccion : "",
+    manifiestos: manifiestos,
+    total: manifiestos.reduce((s, m) => s + (Number(m.total) || 0), 0)
+  };
+}
+
+/* ----- exportar: PDF, Excel y Word ----- */
+
+function hojasDestino(){
+  return Array.from($("destVista").querySelectorAll(".destino"));
+}
+
+function hayCertificados(){
+  if(hojasDestino().length) return true;
+  mensaje("estadoDestExport","Genere primero la vista previa", true);
+  return false;
+}
+
+function nombreArchivoDest(){
+  const hojas = hojasDestino();
+  const primero = hojas[0].querySelector(".consecutivo");
+  const base = primero ? primero.textContent.trim().replace(/\s+/g, "") : "Certificados";
+  return hojas.length === 1
+    ? base + " " + hojas[0].dataset.cliente.slice(0, 40)
+    : "Certificados de destinacion (" + hojas.length + ")";
+}
+
+function exportarDestinacionPDF(){
+  if(!hayCertificados()) return;
+
+  const tituloOriginal = document.title;
+  document.title = nombreArchivoDest();
+  document.body.classList.add("imprimiendo-destino");
+
+  window.addEventListener("afterprint", function restaurar(){
+    document.body.classList.remove("imprimiendo-destino");
+    document.title = tituloOriginal;
+    window.removeEventListener("afterprint", restaurar);
+  });
+
+  mensaje("estadoDestExport",
+    "En el diálogo de impresión elija «Guardar como PDF». " +
+    "Desmarque «Encabezados y pies de página».");
+
+  setTimeout(() => window.print(), 150);
+}
+
+/**
+ * Lee lo que hay en pantalla (ya editado) y arma el Excel. Una hoja por
+ * certificado, con la misma estructura que el documento.
+ */
+function exportarDestinacionExcel(){
+  if(!hayCertificados()) return;
+
+  if(typeof XLSX === "undefined"){
+    mensaje("estadoDestExport",
+      "No se pudo cargar la librería de Excel. Revise la conexión y recargue. " +
+      "El PDF sí funciona sin conexión.", true);
+    return;
+  }
+
+  const libro  = XLSX.utils.book_new();
+  const usados = {};
+
+  hojasDestino().forEach(hoja => {
+
+    const filas = [];
+    const texto = sel => {
+      const e = hoja.querySelector(sel);
+      return e ? e.textContent.replace(/\s+/g, " ").trim() : "";
+    };
+
+    filas.push([texto(".consecutivo")]);
+    filas.push([]);
+    filas.push(["CERTIFICADO DE RECOLECCIÓN, TRATAMIENTO Y DISPOSICIÓN FINAL DE RESIDUOS PATOGENOS"]);
+    filas.push([]);
+    filas.push([texto(".parrafo")]);
+    filas.push([]);
+
+    // Cada tabla de residuos, con su encabezado de mes si lo tiene
+    hoja.querySelectorAll("p.mes, table").forEach(el => {
+
+      if(el.tagName === "P"){
+        filas.push([]);
+        filas.push([el.textContent.trim()]);
+        return;
+      }
+      if(el.classList.contains("tabla-total-dest")) return;
+
+      el.querySelectorAll("tr").forEach(tr => {
+        const celdas = Array.from(tr.children)
+          .filter(td => !td.classList.contains("no-imprimir"))
+          .map(td => td.textContent.replace(/\s+/g, " ").trim());
+
+        // La cantidad va como número para poder sumar en Excel
+        if(celdas.length >= 6 && tr.parentElement.tagName === "TBODY"){
+          const n = Number(celdas[5].replace(",", "."));
+          if(!isNaN(n)) celdas[5] = n;
+        }
+        filas.push(celdas);
+      });
+    });
+
+    const totalTxt = texto(".total-valor");
+    filas.push([]);
+    filas.push(["", "", "", "", "TOTAL RESIDUOS", Number(totalTxt.replace(",", ".")) || 0, "KG"]);
+    filas.push([]);
+    filas.push([texto(".expide")]);
+    filas.push([]);
+    filas.push([FIRMANTE]);
+    filas.push(["Representante legal"]);
+
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    ws["!cols"] = [{wch:12},{wch:14},{wch:22},{wch:26},{wch:18},{wch:12},{wch:6}];
+
+    Object.keys(ws).forEach(ref => {
+      if(ref[0] === "!") return;
+      if(ws[ref] && ws[ref].t === "n") ws[ref].z = "0.00";
+    });
+
+    XLSX.utils.book_append_sheet(libro, ws, nombreHoja(hoja.dataset.cliente, usados));
+  });
+
+  XLSX.writeFile(libro, nombreArchivoDest() + ".xlsx");
+  mensaje("estadoDestExport","Excel generado con " + hojasDestino().length + " hoja(s).");
+}
+
+/**
+ * Word abre sin problema un HTML con la cabecera de Office, así que se
+ * exporta el documento tal cual está en pantalla. Queda editable en Word.
+ */
+function exportarDestinacionWord(){
+  if(!hayCertificados()) return;
+
+  const estilos = `
+    <style>
+      @page { size: A4; margin: 1.2cm 1.4cm; }
+      body { font-family: Arial, sans-serif; font-size: 11pt; }
+      .destino { page-break-after: always; }
+      .destino:last-child { page-break-after: auto; }
+      .membrete { width: 100%; }
+      .consecutivo { text-align: right; font-weight: bold; }
+      .titulo-dest { text-align: center; font-weight: bold; font-size: 12pt; }
+      .parrafo { text-align: justify; }
+      .mes { text-align: center; font-weight: bold; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #000; padding: 3px 5px; font-size: 9pt; text-align: center; }
+      th { background: #f1f5f9; }
+      td.cant { text-align: right; }
+      tr.total-dest td { font-weight: bold; }
+      .legal { font-size: 8pt; text-align: justify; }
+      .pie-dest { text-align: center; font-size: 8pt; color: #1d4ed8;
+                  border-top: 2px solid #d92525; padding-top: 4px; }
+    </style>`;
+
+  // Se clona para poder quitar los botones sin tocar la vista previa.
+  const copia = document.createElement("div");
+  copia.innerHTML = $("destVista").innerHTML;
+  copia.querySelectorAll(".no-imprimir").forEach(e => e.remove());
+  copia.querySelectorAll("[contenteditable]").forEach(e => e.removeAttribute("contenteditable"));
+
+  const html =
+    '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+    'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
+    'xmlns="http://www.w3.org/TR/REC-html40">' +
+    '<head><meta charset="utf-8">' + estilos + '</head>' +
+    '<body>' + copia.innerHTML + '</body></html>';
+
+  const blob = new Blob(["﻿", html], { type:"application/msword" });
+  const enlace = document.createElement("a");
+  enlace.href = URL.createObjectURL(blob);
+  enlace.download = nombreArchivoDest() + ".doc";
+  document.body.appendChild(enlace);
+  enlace.click();
+  document.body.removeChild(enlace);
+  setTimeout(() => URL.revokeObjectURL(enlace.href), 2000);
+
+  mensaje("estadoDestExport",
+    "Word generado. Se abre en Word y queda editable; guárdelo como .docx si lo necesita.");
+}
 /* ================= CERTIFICADOS ================= */
 
 /* Imágenes del membrete tomadas de las plantillas originales.
@@ -1440,6 +2490,30 @@ function rutaFichaCliente(nombreEnManifiesto){
   }
 
   return rutaPorCliente[clave];
+}
+
+/**
+ * Tipo de cliente según la hoja CLIENTES: PEQUEÑOS, GRANDES o IMSALUD.
+ * Se usa para que el filtro de peso mínimo solo mire a los pequeños, que es
+ * donde un peso alto es señal de algo raro. Con cache, se consulta fila a fila.
+ */
+function tipoDeCliente(nombreEnManifiesto){
+  const clave = String(nombreEnManifiesto || "").trim();
+  if(!clave) return "";
+
+  if(tipoPorCliente[clave] === undefined){
+    const ficha = emparejarCliente(clave);
+    tipoPorCliente[clave] = ficha ? normalizar(ficha.tipo || "") : "";
+  }
+
+  return tipoPorCliente[clave];
+}
+
+function esClientePequeno(nombreEnManifiesto){
+  const t = tipoDeCliente(nombreEnManifiesto);
+  // Si la ficha no dice el tipo, se trata como pequeño: es la gran mayoría
+  // (1523 de 1627) y así no se pierden registros por un dato faltante.
+  return t === "" || t.indexOf("pequen") === 0 || t.indexOf("peque") === 0;
 }
 
 /**
@@ -2098,7 +3172,16 @@ function generarCertificadosExcel(){
     "Excel generado con " + hojas + (hojas === 1 ? " hoja." : " hojas."));
 }
 
+/**
+ * Exporta el historial a Excel.
+ *
+ * NO se usa table_to_book: al leer la tabla del HTML, la librería reconoce
+ * "2026-08-26" como fecha, la convierte a un instante y lo pasa a número de
+ * serie asumiendo UTC. En Bogotá (UTC-5) eso restaba un día. Aquí se arma la
+ * hoja a mano: la fecha va como TEXTO y las cantidades como números.
+ */
 function exportarExcel(){
+
   if(historialVisible.length === 0){
     alert("No hay registros para exportar");
     return;
@@ -2107,7 +3190,53 @@ function exportarExcel(){
     alert("No se pudo cargar la librería de Excel. Revise la conexión a internet.");
     return;
   }
-  const libro = XLSX.utils.table_to_book($("tablaHistorialCompleta"), { sheet:"Historial" });
+
+  const encabezado = [
+    "Fecha","Cliente","Ruta","Móvil","Manifiesto","Bolsas",
+    "Biosanitarios","Cortopunzantes","Anatomopatológicos","Farmacéuticos",
+    "Líquido","Medicamentos","Otros","Total KG","Observaciones"
+  ];
+
+  const filas = historialVisible.map(x => [
+    String(x.fecha || ""),          // texto: no lo toca la conversión de fechas
+    String(x.cliente || ""),
+    String(x.ruta || ""),
+    String(x.movil || ""),
+    String(x.manifiesto || ""),
+    Number(x.bolsas) || 0,
+    redondear(x.biosanitarios),
+    redondear(x.cortopunzantes),
+    redondear(x.anatomopatologicos),
+    redondear(x.farmaceuticos),
+    redondear(x.liquido),
+    redondear(x.medicamentos),
+    redondear(x.otros),
+    redondear(x.total),
+    String(x.observaciones || "")
+  ]);
+
+  const totales = ["", "", "", "", "", historialVisible.reduce((s, x) => s + (Number(x.bolsas) || 0), 0)];
+  ["biosanitarios","cortopunzantes","anatomopatologicos","farmaceuticos",
+   "liquido","medicamentos","otros","total"].forEach(k => {
+    totales.push(redondear(historialVisible.reduce((s, x) => s + (Number(x[k]) || 0), 0)));
+  });
+  totales.push("");
+  totales[0] = "TOTALES";
+
+  const hoja = XLSX.utils.aoa_to_sheet([encabezado].concat(filas, [[]], [totales]));
+
+  hoja["!cols"] = [
+    {wch:12},{wch:46},{wch:7},{wch:7},{wch:12},{wch:8},
+    {wch:14},{wch:14},{wch:18},{wch:14},{wch:12},{wch:14},{wch:10},{wch:12},{wch:30}
+  ];
+
+  Object.keys(hoja).forEach(ref => {
+    if(ref[0] === "!") return;
+    if(hoja[ref] && hoja[ref].t === "n") hoja[ref].z = "0.00";
+  });
+
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja, "Historial");
   XLSX.writeFile(libro, "Historial_manifiestos.xlsx");
 }
 
@@ -2122,6 +3251,12 @@ document.addEventListener("keydown", e => {
 
 $("movil").addEventListener("change", () => marcarFalta("movil", !$("movil").value));
 
+
+// Al corregir una cantidad a mano, el total del certificado se actualiza solo.
+$("destVista").addEventListener("input", e => {
+  const celda = e.target.closest("td.valor");
+  if(celda) recalcularHoja(celda.closest(".destino"));
+});
 fechaManifiestoHoy();
 mostrar("nuevo");
 cargarClientes(false);
