@@ -255,6 +255,10 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 .hoja .titulo{text-align:center;font-weight:bold;font-size:12pt;margin:10px 0 2px;}
 .hoja .subtitulo{text-align:center;font-weight:bold;font-size:11pt;margin:0 0 12px;}
 
+/* Destinatario del informe: "Señores / U.B.A. ..." */
+.hoja .destinatario{
+  margin:0 0 12px;font-size:10.5pt;line-height:1.45;
+}
 .hoja .datos-cliente{margin-bottom:10px;font-size:10pt;line-height:1.6;}
 .hoja .datos-cliente b{display:inline-block;min-width:70px;}
 
@@ -339,6 +343,12 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   margin:0 0 14px;line-height:1.35;
 }
 .destino .parrafo{text-align:justify;line-height:1.55;margin:0 0 14px;}
+/* Nombre de la U.B.A. antes de su cuadro (red IMSALUD) */
+.destino .uba{
+  text-align:center;font-weight:bold;font-size:11.5pt;
+  margin:16px 0 4px;text-transform:uppercase;
+  border-bottom:1.5px solid #000;padding-bottom:3px;
+}
 .destino .mes{
   text-align:center;font-weight:bold;font-size:11pt;
   margin:14px 0 4px;text-transform:uppercase;
@@ -820,6 +830,7 @@ let indiceNombres = [];      // clientes normalizados para emparejar con el mani
 let rutaPorCliente = {};      // cache: texto del manifiesto -> ruta
 let tipoPorCliente = {};      // cache: texto del manifiesto -> tipo de cliente
 let tarifaPorCliente = {};    // cache: texto del manifiesto -> tarifa
+let ubaPorRuta = null;        // mapa ruta -> U.B.A. (se arma una sola vez)
 let manifiestosElegidos = {}; // número de manifiesto -> marcado con la casilla
 let resultadosBusqueda = [];
 let historialDatos = [];
@@ -1091,6 +1102,7 @@ function crearIndiceNombres(){
   rutaPorCliente = {};   // los caches quedan obsoletos
   tipoPorCliente = {};
   tarifaPorCliente = {};
+  ubaPorRuta = null;
 }
 
 function actualizarEstadoClientes(texto, fecha){
@@ -2078,6 +2090,67 @@ function filasDestino(manifiestos){
   return filas;
 }
 
+
+/* ----- U.B.A. de la red IMSALUD ----- */
+
+/**
+ * Mapa ruta -> nombre de la U.B.A.
+ *
+ * La red IMSALUD tiene una U.B.A. por ruta y varias I.P.S. colgando de ella
+ * (ruta 6 = U.B.A. AGUA CLARA, con San Faustino, Palmarito, Guaramito...).
+ * En la hoja no hay una columna que lo diga, así que se deduce: dentro de
+ * cada ruta, el cliente cuyo nombre empieza por "U.B.A." es la unidad de la
+ * que dependen las demás.
+ */
+function mapaUbaPorRuta(){
+
+  if(ubaPorRuta) return ubaPorRuta;
+
+  ubaPorRuta = {};
+
+  clientes.forEach(c => {
+    const nombre = String(c.nombre || "").trim();
+    if(!/^U\.?\s*B\.?\s*A\.?\b/i.test(nombre)) return;
+
+    const ruta = rutaValida(c.ruta);
+    if(ruta && !ubaPorRuta[ruta]) ubaPorRuta[ruta] = nombre;
+  });
+
+  return ubaPorRuta;
+}
+
+/**
+ * U.B.A. a la que pertenece el cliente de un manifiesto, o "" si no aplica.
+ * Solo vale para la red IMSALUD: en una misma ruta también hay clientes
+ * particulares (VIHONCO, OPTIKA'S en la ruta 6) que no dependen de la U.B.A.
+ * y no deben llevar su encabezado.
+ */
+function ubaDeManifiesto(m){
+  if(tipoDeCliente(m.cliente) !== "imsalud") return "";
+
+  const ruta = rutaDeManifiesto(m);
+  if(!ruta) return "";
+
+  return mapaUbaPorRuta()[ruta] || "";
+}
+/**
+ * Agrupa los manifiestos por U.B.A. Los clientes que no pertenecen a
+ * ninguna quedan en un solo grupo sin encabezado, que es el caso normal.
+ */
+function porUba(manifiestos){
+
+  const grupos = {};
+
+  manifiestos.forEach(m => {
+    const uba = ubaDeManifiesto(m);
+    if(!grupos[uba]) grupos[uba] = [];
+    grupos[uba].push(m);
+  });
+
+  return Object.keys(grupos)
+    .sort()
+    .map(uba => ({ uba: uba, manifiestos: grupos[uba] }));
+}
 // Agrupa las filas por mes para poner el encabezado ENERO, FEBRERO...
 function porMeses(manifiestos){
 
@@ -2168,14 +2241,23 @@ function tablaDestino(manifiestos){
 
 function hojaDestino(cliente, consecutivo, inicio, fin, fechaExpedicion){
 
-  const anio  = String(fechaExpedicion || "").slice(0, 4);
-  const meses = porMeses(cliente.manifiestos);
+  const anio = String(fechaExpedicion || "").slice(0, 4);
 
-  // El encabezado de mes solo aparece si el certificado abarca más de uno.
-  const bloques = meses.map(g =>
-    (meses.length > 1 ? `<p class="mes">${esc(g.titulo)}</p>` : "") +
-    tablaDestino(g.manifiestos)
-  ).join("");
+  // Primero se separa por U.B.A. (solo afecta a la red IMSALUD) y dentro de
+  // cada una por mes. El encabezado de mes solo sale si hay más de uno.
+  const bloques = porUba(cliente.manifiestos).map(gu => {
+
+    const meses = porMeses(gu.manifiestos);
+
+    const tablas = meses.map(g =>
+      (meses.length > 1 ? `<p class="mes">${esc(g.titulo)}</p>` : "") +
+      tablaDestino(g.manifiestos)
+    ).join("");
+
+    // El nombre de la U.B.A. va antes del cuadro: varias rutas dependen de
+    // ella y hay que poder distinguir a cuál corresponde cada tabla.
+    return (gu.uba ? `<p class="uba">${editable(gu.uba)}</p>` : "") + tablas;
+  }).join("");
 
   // Cada dato va dentro de un fragmento con su ✕: si el cliente no tiene NIT
   // o dirección se puede escribir a mano, o quitar la frase completa y que
@@ -2561,9 +2643,9 @@ function exportarDestinacionExcel(){
     filas.push([]);
     filas.push([texto(".parrafo")]);
     filas.push([]);
-
+    // Cada tabla de residuos, con su encabezado de U.B.A. o de mes si lo tiene
     // Cada tabla de residuos, con su encabezado de mes si lo tiene
-    hoja.querySelectorAll("p.mes, table").forEach(el => {
+    hoja.querySelectorAll("p.uba, p.mes, table").forEach(el => {
 
       if(el.tagName === "P"){
         filas.push([]);
@@ -3035,6 +3117,7 @@ function hojaUnitaria(cliente, inicio, fin, fecha){
       <p class="titulo">INFORME RECOLECCION DE RESIDUOS</p>
       <p class="subtitulo">${periodoTexto(inicio, fin)}</p>
 
+      ${destinatarioHoja([cliente])}
       <div class="datos-cliente">
         <b>CÓDIGO</b> ${esc(cliente.codigo || "—")}<br>
         <b>CLIENTE</b> ${esc(cliente.nombre)}<br>
@@ -3068,6 +3151,36 @@ function hojaUnitaria(cliente, inicio, fin, fecha){
     </div>`;
 }
 
+/**
+ * U.B.A. presentes en un grupo de clientes, sin repetir. Sirve para poner
+ * el destinatario del informe: varias I.P.S. de una misma ruta se certifican
+ * juntas y el documento va dirigido a su U.B.A.
+ */
+function ubasDeClientes(listaClientes){
+
+  const vistos = {};
+
+  listaClientes.forEach(c => {
+    c.manifiestos.forEach(m => {
+      const u = ubaDeManifiesto(m);
+      if(u) vistos[u] = true;
+    });
+  });
+
+  return Object.keys(vistos).sort();
+}
+
+// Bloque "Señores / U.B.A. ..." que encabeza el informe. Si los clientes no
+// pertenecen a ninguna U.B.A. no se pone nada.
+function destinatarioHoja(listaClientes){
+
+  const ubas = ubasDeClientes(listaClientes);
+  if(ubas.length === 0) return "";
+
+  return `<p class="destinatario">Señores<br>` +
+         ubas.map(u => `<b>${esc(u)}</b>`).join("<br>") + `</p>`;
+}
+
 function hojaMensual(listaClientes, inicio, fin, fecha){
 
   const suma = sumarResiduos(
@@ -3090,6 +3203,7 @@ function hojaMensual(listaClientes, inicio, fin, fecha){
       ${encabezadoHoja(fecha)}
       <p class="titulo">INFORME RECOLECCION DE RESIDUOS</p>
       <p class="subtitulo">${periodoTexto(inicio, fin)}</p>
+      ${destinatarioHoja(listaClientes)}
 
       <table>
         <thead>
@@ -3286,14 +3400,19 @@ function formatearDecimales(hoja){
   });
 }
 
-function cabeceraExcel(inicio, fin, fecha){
+function cabeceraExcel(inicio, fin, fecha, listaClientes){
+
+  const ubas = listaClientes ? ubasDeClientes(listaClientes) : [];
+
   return [
     [CIUDAD + ", " + fechaLarga(fecha)],
     [],
     ["INFORME RECOLECCION DE RESIDUOS"],
     [periodoTexto(inicio, fin)],
     []
-  ];
+  ].concat(
+    ubas.length ? [["Señores"]].concat(ubas.map(u => [u]), [[]]) : []
+  );
 }
 
 function pieExcel(total){
@@ -3323,7 +3442,7 @@ function hojaExcelUnitaria(cliente, inicio, fin, fecha){
       .concat(COLUMNAS_RESIDUOS.map(c => redondear(m[c.clave])))
       .concat([redondear(m.total)]));
 
-  const datos = cabeceraExcel(inicio, fin, fecha)
+  const datos = cabeceraExcel(inicio, fin, fecha, [cliente])
     .concat([
       ["CÓDIGO", cliente.codigo || ""],
       ["CLIENTE", cliente.nombre],
@@ -3359,7 +3478,7 @@ function hojaExcelMensual(listaClientes, inicio, fin, fecha){
       .concat([redondear(s.total)]);
   });
 
-  const datos = cabeceraExcel(inicio, fin, fecha)
+  const datos = cabeceraExcel(inicio, fin, fecha, listaClientes)
     .concat([["ITEM", "CLIENTE"].concat(titulos).concat(["Totales"])])
     .concat(filas)
     .concat([
