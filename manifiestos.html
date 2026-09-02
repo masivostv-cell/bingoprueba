@@ -153,6 +153,12 @@ tbody tr:nth-child(even){background:#f8fafc;}
 .tabla-historial td.col-check{width:38px;text-align:center;padding:4px;}
 .tabla-historial td.col-check input,
 .tabla-historial th.col-check input{width:auto;margin:0;cursor:pointer;transform:scale(1.2);}
+/* Total que supera los kilos incluidos en la tarifa del cliente */
+.tabla-historial td.excedido{
+  background:#fee2e2;color:var(--rojo-logo);font-weight:700;cursor:help;
+}
+.tabla-historial tbody tr:hover td.excedido{background:#fecaca;}
+.tabla-historial td.tarifa{white-space:nowrap;font-size:12px;color:#475569;}
 .tabla-historial td.obs{white-space:normal;min-width:180px;}
 /* El cliente es lo más largo: se le deja sitio pero sin desbordar. */
 .tabla-historial td.cliente{white-space:normal;min-width:260px;}
@@ -344,6 +350,7 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 }
 .destino th{background:#f1f5f9;font-weight:bold;}
 .destino td.cant{text-align:right;}
+.destino td.obs-dest{text-align:left;font-size:8pt;max-width:170px;white-space:normal;}
 .destino tr.total-dest td{font-weight:bold;background:#f8fafc;}
 
 /* Lo que se puede editar se marca en amarillo suave */
@@ -352,6 +359,13 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 .destino [contenteditable="true"]:focus{background:#fde68a;outline:1px solid #f59e0b;}
 .destino .falta-dato{background:#fee2e2;color:var(--rojo-logo);font-weight:bold;}
 
+/* Trozos de frase quitables (NIT, dirección) */
+.destino .frag-dato{white-space:normal;}
+.destino .quitar-frag{
+  border:0;background:none;cursor:pointer;color:var(--rojo-logo);
+  font-size:11px;padding:0 2px;vertical-align:super;opacity:.55;
+}
+.destino .quitar-frag:hover{opacity:1;background:#fee2e2;border-radius:3px;}
 .destino .borrar-fila{
   border:0;background:none;cursor:pointer;color:var(--rojo-logo);
   font-size:13px;padding:0 4px;
@@ -369,23 +383,26 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   text-align:center;font-size:7.5pt;color:#1d4ed8;line-height:1.5;
 }
 
+/* En pantalla el contenedor de impresión no se ve; solo existe al imprimir. */
+#areaDestino{display:none;}
+
 @media print{
-  body.imprimiendo-destino .layout{display:none!important;}
-  body.imprimiendo-destino #destVista{
+  /* La vista previa vive dentro de .layout, que la impresión oculta entera.
+     Por eso al imprimir se vuelca una copia limpia en #areaDestino, que está
+     fuera del layout, y se imprime esa. */
+  body.imprimiendo-destino #areaCertificados{display:none!important;}
+  body.imprimiendo-destino #areaDestino{
     display:block!important;background:#fff;padding:0;margin:0;
-    max-height:none;overflow:visible;
   }
-  body.imprimiendo-destino .destino{
+  body.imprimiendo-destino #areaDestino .destino{
     width:auto;margin:0;box-shadow:none;padding:0;
     page-break-after:always;
   }
-  body.imprimiendo-destino .destino:last-child{page-break-after:auto;}
-  body.imprimiendo-destino .borrar-fila{display:none;}
-body.imprimiendo-destino .no-imprimir{display:none;}
-  body.imprimiendo-destino .destino tr{page-break-inside:avoid;}
-  body.imprimiendo-destino .destino thead{display:table-header-group;}
+  body.imprimiendo-destino #areaDestino .destino:last-child{page-break-after:auto;}
+  body.imprimiendo-destino #areaDestino .no-imprimir{display:none!important;}
+  body.imprimiendo-destino #areaDestino tr{page-break-inside:avoid;}
+  body.imprimiendo-destino #areaDestino thead{display:table-header-group;}
 }
-/* ---------- Modales ---------- */
 .modal{
   display:none;position:fixed;inset:0;
   background:rgba(0,0,0,.45);z-index:2000;
@@ -509,6 +526,10 @@ body.imprimiendo-destino .no-imprimir{display:none;}
           <input type="checkbox" id="histPorRuta" checked onchange="filtrarHistorial()">
           Incluir las demás sedes de la misma ruta
         </label>
+        <label class="opcion-ruta">
+          <input type="checkbox" id="histSoloExcedidos" onchange="filtrarHistorial()">
+          Solo los que superan su tarifa
+        </label>
 
         <br>
         <button type="button" id="btnHistorial" class="btn-pro btn-consultar" onclick="cargarHistorial()">📋 Consultar manifiestos</button>
@@ -530,7 +551,8 @@ body.imprimiendo-destino .no-imprimir{display:none;}
                 <th>Manifiesto</th><th>Bolsas</th>
                 <th>Biosanit.</th><th>Cortopunz.</th><th>Anatomop.</th>
                 <th>Farmacéut.</th><th>Líquido</th><th>Medicam.</th><th>Otros</th>
-                <th>Total KG</th><th>Observaciones</th>
+                <th>Total KG</th><th title="Kilos incluidos en la tarifa">Límite</th>
+                <th>Tarifa</th><th>Observaciones</th>
               </tr>
             </thead>
             <tbody id="tablaHistorial"></tbody>
@@ -675,6 +697,11 @@ body.imprimiendo-destino .no-imprimir{display:none;}
 
         <div id="destModoCard" hidden>
           <label class="etiqueta">¿Cómo quiere los certificados?</label>
+          <label class="opcion-modo">
+            <input type="checkbox" id="destOmitir">
+            <span><b>Omitir NIT y dirección</b> cuando el cliente no los tenga
+                  <span class="ayuda">(si no, sale un recuadro rojo para escribirlos)</span></span>
+          </label>
           <br>
           <label class="opcion-modo">
             <input type="radio" name="destModo" value="juntos" checked>
@@ -727,6 +754,10 @@ body.imprimiendo-destino .no-imprimir{display:none;}
 
 <!-- ================= HOJAS DE CERTIFICADO (solo para imprimir) ================= -->
 <div id="areaCertificados"></div>
+
+<!-- Certificados de destinación listos para imprimir: va FUERA de .layout,
+     porque al imprimir se oculta todo el layout. -->
+<div id="areaDestino"></div>
 
 <!-- ================= MODAL CLIENTE ================= -->
 <div id="modalCliente" class="modal">
@@ -788,6 +819,7 @@ let indiceClientes = [];
 let indiceNombres = [];      // clientes normalizados para emparejar con el manifiesto
 let rutaPorCliente = {};      // cache: texto del manifiesto -> ruta
 let tipoPorCliente = {};      // cache: texto del manifiesto -> tipo de cliente
+let tarifaPorCliente = {};    // cache: texto del manifiesto -> tarifa
 let manifiestosElegidos = {}; // número de manifiesto -> marcado con la casilla
 let resultadosBusqueda = [];
 let historialDatos = [];
@@ -1058,6 +1090,7 @@ function crearIndiceNombres(){
 
   rutaPorCliente = {};   // los caches quedan obsoletos
   tipoPorCliente = {};
+  tarifaPorCliente = {};
 }
 
 function actualizarEstadoClientes(texto, fecha){
@@ -1135,15 +1168,18 @@ function renderizarTablaClientes(lista){
     return;
   }
 
+  // Se identifica cada cliente por su POSICIÓN en la lista, no por el código:
+  // 1560 de 1627 clientes lo tienen vacío y buscar por código abría siempre
+  // el primero de esos.
   cuerpo.innerHTML = lista.map(c => {
-    const codigo = esc(c.codigo);
+    const i = clientes.indexOf(c);
     return `<tr>
-      <td>${codigo}</td>
+      <td>${esc(c.codigo)}</td>
       <td>${esc(c.nombre)}</td>
       <td>${esc(c.ruta)}</td>
       <td class="acciones">
-        <button type="button" title="Editar" onclick="editarCliente('${codigo}')">✏️</button>
-        <button type="button" title="Observaciones" onclick="verObservaciones('${codigo}')">📌</button>
+        <button type="button" title="Editar" onclick="editarCliente(${i})">✏️</button>
+        <button type="button" title="Observaciones" onclick="verObservaciones(${i})">📌</button>
       </td>
     </tr>`;
   }).join("");
@@ -1173,8 +1209,8 @@ function nuevoCliente(){
   $("modalCliente").classList.add("mostrar");
 }
 
-function editarCliente(codigo){
-  const c = clientes.find(x => String(x.codigo) === String(codigo));
+function editarCliente(indice){
+  const c = clientes[indice];
   if(!c) return;
 
   limpiarFormularioCliente();
@@ -1190,6 +1226,14 @@ function editarCliente(codigo){
   $("cliContacto").value   = c.contacto    || "";
   $("cliCorreo").value     = c.correo      || "";
   $("cliObservacion").value= c.observaciones || "";
+
+  // Sin código la hoja no puede localizar la fila para actualizarla, así que
+  // se avisa antes de que el usuario llene el formulario en balde.
+  mensaje("estadoFormCliente",
+    c.codigo ? "" : "Este cliente no tiene código. Asígnele uno para poder guardarlo.",
+    !c.codigo);
+
+  marcarFalta("cliCodigo", !c.codigo);
 
   $("modalCliente").classList.add("mostrar");
 }
@@ -1240,25 +1284,42 @@ function guardarCliente(){
 
 /* ---------------- observaciones ---------------- */
 
-function verObservaciones(codigo){
-  const c = clientes.find(x => String(x.codigo) === String(codigo));
+/**
+ * Clave con la que se guardan las observaciones en la hoja. Si el cliente
+ * tiene código se usa ese; si no, su nombre. Lo importante es que guardar y
+ * consultar usen siempre la misma, para que no se pierdan.
+ */
+function claveObservacion(c){
+  return String((c && (c.codigo || c.nombre)) || "").trim();
+}
+
+function verObservaciones(indice){
+  const c = clientes[indice];
   if(!c) return;
 
-  clienteObservacionActual = codigo;
-  $("clienteObservacionTitulo").textContent = "Cliente: " + (c.nombre || codigo);
+  const clave = claveObservacion(c);
+  if(!clave){
+    alert("Este cliente no tiene código ni nombre: no se le pueden asociar observaciones");
+    return;
+  }
+
+  clienteObservacionActual = clave;
+  $("clienteObservacionTitulo").textContent =
+    "Cliente: " + (c.nombre || clave) + (c.codigo ? "  (código " + c.codigo + ")" : "");
   $("listaObservaciones").textContent = "Cargando observaciones...";
   $("modalObservaciones").classList.add("mostrar");
 
-  fetch(API + "?accion=observaciones&codigo=" + encodeURIComponent(codigo))
-    .then(r => r.json())
+  pedir(API + "?accion=observaciones&codigo=" + encodeURIComponent(clave))
     .then(lista => {
-      $("listaObservaciones").innerHTML = (lista && lista.length)
+      if(!Array.isArray(lista)) throw new Error("Respuesta inesperada del servidor");
+      $("listaObservaciones").innerHTML = lista.length
         ? lista.map(o => "📌 " + esc(o.fecha) + " - " + esc(o.texto)).join("<br>")
         : "No hay observaciones registradas";
     })
     .catch(error => {
       console.error(error);
-      $("listaObservaciones").textContent = "Error cargando observaciones";
+      $("listaObservaciones").textContent =
+        "Error cargando observaciones: " + (error.message || error);
     });
 }
 
@@ -1276,7 +1337,9 @@ function guardarObservacion(){
   enviar(datos)
     .then(() => {
       $("nuevaObservacion").value = "";
-      verObservaciones(clienteObservacionActual);
+      // Se vuelve a abrir buscando por la clave, no por la posición.
+      const i = clientes.findIndex(x => claveObservacion(x) === clienteObservacionActual);
+      if(i >= 0) verObservaciones(i);
     })
     .catch(error => {
       console.error("Error guardando observación", error);
@@ -1417,6 +1480,7 @@ function filtrarHistorial(){
   const fin    = $("histFin").value;
   const kilos  = Number($("histKilos").value) || 0;
   const movil  = $("histMovil").value;
+  const soloExcedidos = $("histSoloExcedidos").checked;
 
   // Cada palabra debe aparecer en algún campo del manifiesto, así se puede
   // escribir "vihonco 90152" y llegar directo al registro.
@@ -1435,6 +1499,10 @@ function filtrarHistorial(){
     if(inicio && fecha < inicio) return false;
     if(fin    && fecha > fin)    return false;
     if(movil  && String(x.movil) !== movil) return false;
+
+    // Solo los manifiestos que superan los kilos incluidos en su tarifa.
+    if(soloExcedidos && !superaTarifa(x)) return false;
+
     return true;
   };
 
@@ -1526,7 +1594,7 @@ function mostrarHistorial(datos){
   let malas = 0;
 
   if(historialVisible.length === 0){
-    cuerpo.innerHTML = '<tr><td colspan="16">Sin registros</td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="18">Sin registros</td></tr>';
   }else{
     cuerpo.innerHTML = historialVisible.map(x => {
       const buena = fechaValida(x.fecha);
@@ -1535,6 +1603,9 @@ function mostrarHistorial(datos){
         ? ' class="num"'
         : ' class="num fecha-mala" title="La celda Fecha de la hoja DATOS no es una fecha real. Corríjala para que entre en los filtros por fecha."';
       const clave = claveManifiesto(x);
+      const tarifa = tarifaDeCliente(x.cliente);
+      const limite = limiteDeTarifa(tarifa);
+      const excede = limite > 0 && (Number(x.total) || 0) > limite;
       return `
       <tr onclick="marcarFilaHistorial(this)">
         <td class="col-check">
@@ -1556,7 +1627,9 @@ function mostrarHistorial(datos){
         <td class="num">${dosDecimales(x.liquido)}</td>
         <td class="num">${dosDecimales(x.medicamentos)}</td>
         <td class="num">${dosDecimales(x.otros)}</td>
-        <td class="num">${dosDecimales(x.total)}</td>
+        <td class="num${excede ? " excedido" : ""}"${excede ? ' title="Supera los ' + limite + ' KG incluidos en la tarifa"' : ""}>${dosDecimales(x.total)}</td>
+        <td class="num">${limite ? limite : "—"}</td>
+        <td class="tarifa">${esc(tarifa)}</td>
         <td class="obs">${esc(x.observaciones)}</td>
       </tr>`;
     }).join("");
@@ -1584,6 +1657,11 @@ function actualizarResumenHistorial(malas){
   texto += elegidos.length
     ? "  ✅ " + elegidos.length + " marcados: " + kilos.toFixed(2) + " KG, " + bolsas + " bolsas."
     : "  " + kilos.toFixed(2) + " KG  |  " + bolsas + " bolsas.";
+
+  const excedidos = historialVisible.filter(superaTarifa).length;
+  if(excedidos > 0){
+    texto += "  ⬆️ " + excedidos + " superan su tarifa.";
+  }
 
   if(malas > 0){
     texto += "  ⚠️ " + malas + " con la fecha mal digitada en la hoja (en rojo).";
@@ -1988,7 +2066,9 @@ function filasDestino(manifiestos){
           tratamiento: t.tratamiento,
           tipo: t.tipo,
           corriente: t.corriente,
-          cantidad: cantidad
+          cantidad: cantidad,
+          // La observación es del manifiesto: solo va en su primera fila.
+          observaciones: primera ? String(m.observaciones || "") : ""
         });
 
         primera = false;
@@ -2023,9 +2103,39 @@ function editable(texto, clase){
   return `<span contenteditable="true"${clase ? ' class="' + clase + '"' : ""}>${esc(texto)}</span>`;
 }
 
+/**
+ * Devuelve un trozo de frase como ", con Nit 900.123-4", con una ✕ para
+ * quitarlo entero del párrafo. Si el dato falta:
+ *   - con "omitir" activado, no se escribe nada;
+ *   - sin él, aparece un recuadro rojo editable para escribirlo.
+ */
+function fragmentoDato(prefijo, valor, aviso, omitir){
+
+  const dato = String(valor || "").trim();
+
+  if(!dato && omitir) return "";
+
+  const contenido = dato
+    ? `<span contenteditable="true">${esc(dato)}</span>`
+    : `<span contenteditable="true" class="falta-dato">${esc(aviso)}</span>`;
+
+  return `<span class="frag-dato">${esc(prefijo)}${contenido}` +
+         `<button type="button" class="quitar-frag no-imprimir" ` +
+         `onclick="quitarFragmento(this)" title="Quitar esta parte de la frase">✕</button></span>`;
+}
+
+function quitarFragmento(boton){
+  const frag = boton.closest(".frag-dato");
+  if(frag) frag.remove();
+}
+
 function tablaDestino(manifiestos){
 
   const filas = filasDestino(manifiestos);
+
+  // La columna de observaciones solo se pone si algún manifiesto trae una,
+  // para no dejar una columna vacía en la mayoría de certificados.
+  const hayObs = filas.some(f => f.observaciones);
 
   const cuerpo = filas.map(f => `
     <tr>
@@ -2036,6 +2146,7 @@ function tablaDestino(manifiestos){
       <td>${editable(f.corriente)}</td>
       <td class="cant valor">${editable(dosDecimales(f.cantidad))}</td>
       <td>KG</td>
+      ${hayObs ? `<td class="obs-dest">${editable(f.observaciones)}</td>` : ""}
       <td class="no-imprimir"><button type="button" class="borrar-fila"
           onclick="borrarFilaDestino(this)" title="Quitar esta fila">🗑️</button></td>
     </tr>`).join("");
@@ -2046,7 +2157,9 @@ function tablaDestino(manifiestos){
         <tr>
           <th>FECHA</th><th>MANIFIESTO</th><th>TRATAMIENTO</th>
           <th>TIPO DE RESIDUO</th><th>CORRIENTE Y - A</th>
-          <th>CANTIDAD</th><th>KG</th><th class="no-imprimir"></th>
+          <th>CANTIDAD</th><th>KG</th>
+          ${hayObs ? "<th>OBSERVACIONES</th>" : ""}
+          <th class="no-imprimir"></th>
         </tr>
       </thead>
       <tbody>${cuerpo}</tbody>
@@ -2064,13 +2177,16 @@ function hojaDestino(cliente, consecutivo, inicio, fin, fechaExpedicion){
     tablaDestino(g.manifiestos)
   ).join("");
 
-  const nit = cliente.nit
-    ? editable(cliente.nit)
-    : `<span contenteditable="true" class="falta-dato">ESCRIBA EL NIT</span>`;
+  // Cada dato va dentro de un fragmento con su ✕: si el cliente no tiene NIT
+  // o dirección se puede escribir a mano, o quitar la frase completa y que
+  // el párrafo siga leyéndose bien.
+  const omitir = $("destOmitir").checked;
 
-  const direccion = cliente.direccion
-    ? editable(cliente.direccion)
-    : `<span contenteditable="true" class="falta-dato">ESCRIBA LA DIRECCIÓN</span>`;
+  const nit = fragmentoDato(
+    ", con Nit ", cliente.nit, "ESCRIBA EL NIT", omitir);
+
+  const direccion = fragmentoDato(
+    ", ubicado en ", cliente.direccion, "ESCRIBA LA DIRECCIÓN", omitir);
 
   const legal = LICENCIAS.map(l =>
     (l[0] ? "<b>" + esc(l[0]) + "</b>" : "") + "<p>" + esc(l[1]) + "</p>"
@@ -2085,8 +2201,8 @@ function hojaDestino(cliente, consecutivo, inicio, fin, fechaExpedicion){
        FINAL DE RESIDUOS PATOGENOS</p>
 
     <p class="parrafo">LASPATH S.A.S E.S.P identificado con NIT ${NIT_LASPATH},
-       certifica que <b>${editable(cliente.nombre)}</b>, con Nit ${nit},
-       ubicado en ${direccion}, entregó para Tratamiento y Disposición Final
+       certifica que <b>${editable(cliente.nombre)}</b>${nit}${direccion}, entregó
+       para Tratamiento y Disposición Final
        los Residuos Peligrosos, Hospitalarios y Similares entre el periodo
        comprendido ${editable(periodoDestino(inicio, fin))}, los siguientes residuos:</p>
 
@@ -2257,8 +2373,27 @@ function nombreArchivoDest(){
     : "Certificados de destinacion (" + hojas.length + ")";
 }
 
+/**
+ * Copia limpia de los certificados: sin botones ✕/🗑️ y sin los atributos de
+ * edición. Es lo que se manda a imprimir o a Word.
+ */
+function copiaLimpiaDestino(){
+  const copia = document.createElement("div");
+  copia.innerHTML = $("destVista").innerHTML;
+  copia.querySelectorAll(".no-imprimir").forEach(e => e.remove());
+  copia.querySelectorAll("[contenteditable]").forEach(e => e.removeAttribute("contenteditable"));
+  return copia;
+}
+
+/**
+ * La vista previa está dentro de .layout y la hoja de impresión oculta ese
+ * contenedor entero, así que imprimirla directamente daba una hoja en blanco.
+ * Se vuelca una copia en #areaDestino, que vive fuera del layout.
+ */
 function exportarDestinacionPDF(){
   if(!hayCertificados()) return;
+
+  $("areaDestino").innerHTML = copiaLimpiaDestino().innerHTML;
 
   const tituloOriginal = document.title;
   document.title = nombreArchivoDest();
@@ -2267,6 +2402,7 @@ function exportarDestinacionPDF(){
   window.addEventListener("afterprint", function restaurar(){
     document.body.classList.remove("imprimiendo-destino");
     document.title = tituloOriginal;
+    $("areaDestino").innerHTML = "";
     window.removeEventListener("afterprint", restaurar);
   });
 
@@ -2274,7 +2410,124 @@ function exportarDestinacionPDF(){
     "En el diálogo de impresión elija «Guardar como PDF». " +
     "Desmarque «Encabezados y pies de página».");
 
-  setTimeout(() => window.print(), 150);
+  setTimeout(() => window.print(), 200);
+}
+
+/**
+ * Word descarta las imágenes en base64 dentro de un HTML suelto: por eso el
+ * logo y la firma salían en blanco. Se genera MHTML, que lleva cada imagen
+ * como una parte MIME aparte referenciada por su Content-Location. Word abre
+ * este formato sin problema y el documento queda editable.
+ */
+function exportarDestinacionWord(){
+  if(!hayCertificados()) return;
+
+  const copia = copiaLimpiaDestino();
+
+  // Las imágenes pasan de data:... a un nombre de archivo, y cada una se
+  // adjunta como parte MIME al final del documento.
+  const partes = [];
+  const vistas = {};
+
+  copia.querySelectorAll("img").forEach(img => {
+    const src = img.getAttribute("src") || "";
+    const m = src.match(/^data:(image\/[a-z]+);base64,(.+)$/i);
+    if(!m) return;
+
+    if(vistas[src] === undefined){
+      const nombre = "imagen" + (partes.length + 1) +
+                     (m[1] === "image/png" ? ".png" : ".jpg");
+      partes.push({ nombre: nombre, tipo: m[1], datos: m[2] });
+      vistas[src] = nombre;
+    }
+
+    img.setAttribute("src", vistas[src]);
+  });
+
+  const estilos =
+    "<style>" +
+    "@page { size: A4; margin: 1.2cm 1.4cm; }" +
+    "body { font-family: Arial, sans-serif; font-size: 11pt; }" +
+    ".destino { page-break-after: always; }" +
+    ".destino:last-child { page-break-after: auto; }" +
+    ".membrete { width: 100%; }" +
+    ".consecutivo { text-align: right; font-weight: bold; }" +
+    ".titulo-dest { text-align: center; font-weight: bold; font-size: 12pt; }" +
+    ".parrafo { text-align: justify; }" +
+    ".mes { text-align: center; font-weight: bold; }" +
+    "table { width: 100%; border-collapse: collapse; }" +
+    "th, td { border: 1px solid #000; padding: 3px 5px; font-size: 9pt; text-align: center; }" +
+    "th { background: #f1f5f9; }" +
+    "td.cant { text-align: right; }" +
+    "tr.total-dest td { font-weight: bold; }" +
+    ".legal { font-size: 8pt; text-align: justify; }" +
+    ".firma-dest img { height: 58px; }" +
+    ".pie-dest { text-align: center; font-size: 8pt; color: #1d4ed8;" +
+    "            border-top: 2px solid #d92525; padding-top: 4px; }" +
+    "</style>";
+
+  const html =
+    '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+    'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
+    'xmlns="http://www.w3.org/TR/REC-html40">' +
+    '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">' +
+    estilos + '</head><body>' + copia.innerHTML + '</body></html>';
+
+  const limite = "----=_NextPart_LASPATH";
+  const base   = "file:///C:/certificado/";
+
+  let mht =
+    "MIME-Version: 1.0\r\n" +
+    'Content-Type: multipart/related; boundary="' + limite + '"; type="text/html"\r\n' +
+    "\r\n" +
+    "--" + limite + "\r\n" +
+    'Content-Type: text/html; charset="utf-8"\r\n' +
+    "Content-Transfer-Encoding: base64\r\n" +
+    "Content-Location: " + base + "documento.html\r\n" +
+    "\r\n" +
+    partirEnLineas(base64DeTexto(html)) + "\r\n";
+
+  partes.forEach(p => {
+    mht +=
+      "--" + limite + "\r\n" +
+      "Content-Type: " + p.tipo + "\r\n" +
+      "Content-Transfer-Encoding: base64\r\n" +
+      "Content-Location: " + base + p.nombre + "\r\n" +
+      "\r\n" +
+      partirEnLineas(p.datos) + "\r\n";
+  });
+
+  mht += "--" + limite + "--\r\n";
+
+  descargarArchivo(mht, nombreArchivoDest() + ".doc", "application/msword");
+
+  mensaje("estadoDestExport",
+    "Word generado con " + partes.length + " imagen(es) incrustada(s). " +
+    "Se abre en Word y queda editable; guárdelo como .docx si lo necesita.");
+}
+
+// btoa no admite caracteres fuera de Latin-1: primero se pasa a UTF-8.
+function base64DeTexto(texto){
+  const bytes = new TextEncoder().encode(texto);
+  let binario = "";
+  bytes.forEach(b => { binario += String.fromCharCode(b); });
+  return btoa(binario);
+}
+
+// MIME exige la base64 partida en líneas de 76 caracteres.
+function partirEnLineas(base64){
+  return (String(base64).match(/.{1,76}/g) || []).join("\r\n");
+}
+
+function descargarArchivo(contenido, nombre, tipo){
+  const blob = new Blob([contenido], { type: tipo });
+  const enlace = document.createElement("a");
+  enlace.href = URL.createObjectURL(blob);
+  enlace.download = nombre;
+  document.body.appendChild(enlace);
+  enlace.click();
+  document.body.removeChild(enlace);
+  setTimeout(() => URL.revokeObjectURL(enlace.href), 2000);
 }
 
 /**
@@ -2355,60 +2608,6 @@ function exportarDestinacionExcel(){
 
   XLSX.writeFile(libro, nombreArchivoDest() + ".xlsx");
   mensaje("estadoDestExport","Excel generado con " + hojasDestino().length + " hoja(s).");
-}
-
-/**
- * Word abre sin problema un HTML con la cabecera de Office, así que se
- * exporta el documento tal cual está en pantalla. Queda editable en Word.
- */
-function exportarDestinacionWord(){
-  if(!hayCertificados()) return;
-
-  const estilos = `
-    <style>
-      @page { size: A4; margin: 1.2cm 1.4cm; }
-      body { font-family: Arial, sans-serif; font-size: 11pt; }
-      .destino { page-break-after: always; }
-      .destino:last-child { page-break-after: auto; }
-      .membrete { width: 100%; }
-      .consecutivo { text-align: right; font-weight: bold; }
-      .titulo-dest { text-align: center; font-weight: bold; font-size: 12pt; }
-      .parrafo { text-align: justify; }
-      .mes { text-align: center; font-weight: bold; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { border: 1px solid #000; padding: 3px 5px; font-size: 9pt; text-align: center; }
-      th { background: #f1f5f9; }
-      td.cant { text-align: right; }
-      tr.total-dest td { font-weight: bold; }
-      .legal { font-size: 8pt; text-align: justify; }
-      .pie-dest { text-align: center; font-size: 8pt; color: #1d4ed8;
-                  border-top: 2px solid #d92525; padding-top: 4px; }
-    </style>`;
-
-  // Se clona para poder quitar los botones sin tocar la vista previa.
-  const copia = document.createElement("div");
-  copia.innerHTML = $("destVista").innerHTML;
-  copia.querySelectorAll(".no-imprimir").forEach(e => e.remove());
-  copia.querySelectorAll("[contenteditable]").forEach(e => e.removeAttribute("contenteditable"));
-
-  const html =
-    '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
-    'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
-    'xmlns="http://www.w3.org/TR/REC-html40">' +
-    '<head><meta charset="utf-8">' + estilos + '</head>' +
-    '<body>' + copia.innerHTML + '</body></html>';
-
-  const blob = new Blob(["﻿", html], { type:"application/msword" });
-  const enlace = document.createElement("a");
-  enlace.href = URL.createObjectURL(blob);
-  enlace.download = nombreArchivoDest() + ".doc";
-  document.body.appendChild(enlace);
-  enlace.click();
-  document.body.removeChild(enlace);
-  setTimeout(() => URL.revokeObjectURL(enlace.href), 2000);
-
-  mensaje("estadoDestExport",
-    "Word generado. Se abre en Word y queda editable; guárdelo como .docx si lo necesita.");
 }
 /* ================= CERTIFICADOS ================= */
 
@@ -2514,6 +2713,50 @@ function esClientePequeno(nombreEnManifiesto){
   // Si la ficha no dice el tipo, se trata como pequeño: es la gran mayoría
   // (1523 de 1627) y así no se pierden registros por un dato faltante.
   return t === "" || t.indexOf("pequen") === 0 || t.indexOf("peque") === 0;
+}
+
+/**
+ * Tarifa del cliente tal como está escrita en la hoja CLIENTES,
+ * por ejemplo "25.000 / 5.000 (0-4)". Con cache: se consulta fila a fila.
+ */
+function tarifaDeCliente(nombreEnManifiesto){
+  const clave = String(nombreEnManifiesto || "").trim();
+  if(!clave) return "";
+
+  if(tarifaPorCliente[clave] === undefined){
+    const ficha = emparejarCliente(clave);
+    tarifaPorCliente[clave] = ficha ? String(ficha.tarifa || "").trim() : "";
+  }
+
+  return tarifaPorCliente[clave];
+}
+
+/**
+ * Kilos incluidos en la tarifa: el número que va después del guion dentro
+ * del paréntesis. "25.000 / 5.000 (0-4)" -> 4.
+ * Los formatos varían ("0-4", "0 -4", "0 - 10"), por eso se limpian los
+ * espacios antes de leerlos. Devuelve 0 si la tarifa no trae el rango.
+ */
+function limiteDeTarifa(tarifa){
+  const m = String(tarifa || "").match(/\(([^)]*)\)/);
+  if(!m) return 0;
+
+  const rango = m[1].replace(/\s+/g, "");
+  const partes = rango.match(/^(\d+(?:[.,]\d+)?)-(\d+(?:[.,]\d+)?)$/);
+  if(!partes) return 0;
+
+  return Number(String(partes[2]).replace(",", ".")) || 0;
+}
+
+function limiteDeCliente(nombreEnManifiesto){
+  return limiteDeTarifa(tarifaDeCliente(nombreEnManifiesto));
+}
+
+// true si el manifiesto supera los kilos incluidos en la tarifa del cliente.
+function superaTarifa(x){
+  const limite = limiteDeCliente(x.cliente);
+  if(limite <= 0) return false;               // sin tarifa no se puede juzgar
+  return (Number(x.total) || 0) > limite;
 }
 
 /**
@@ -3194,7 +3437,7 @@ function exportarExcel(){
   const encabezado = [
     "Fecha","Cliente","Ruta","Móvil","Manifiesto","Bolsas",
     "Biosanitarios","Cortopunzantes","Anatomopatológicos","Farmacéuticos",
-    "Líquido","Medicamentos","Otros","Total KG","Observaciones"
+    "Líquido","Medicamentos","Otros","Total KG","Límite KG","Tarifa","¿Supera?","Observaciones"
   ];
 
   const filas = historialVisible.map(x => [
@@ -3212,6 +3455,9 @@ function exportarExcel(){
     redondear(x.medicamentos),
     redondear(x.otros),
     redondear(x.total),
+    limiteDeCliente(x.cliente) || "",
+    tarifaDeCliente(x.cliente),
+    superaTarifa(x) ? "SI" : "",
     String(x.observaciones || "")
   ]);
 
@@ -3220,14 +3466,14 @@ function exportarExcel(){
    "liquido","medicamentos","otros","total"].forEach(k => {
     totales.push(redondear(historialVisible.reduce((s, x) => s + (Number(x[k]) || 0), 0)));
   });
-  totales.push("");
+  totales.push("", "", "", "");
   totales[0] = "TOTALES";
 
   const hoja = XLSX.utils.aoa_to_sheet([encabezado].concat(filas, [[]], [totales]));
 
   hoja["!cols"] = [
     {wch:12},{wch:46},{wch:7},{wch:7},{wch:12},{wch:8},
-    {wch:14},{wch:14},{wch:18},{wch:14},{wch:12},{wch:14},{wch:10},{wch:12},{wch:30}
+    {wch:14},{wch:14},{wch:18},{wch:14},{wch:12},{wch:14},{wch:10},{wch:12},{wch:10},{wch:22},{wch:10},{wch:30}
   ];
 
   Object.keys(hoja).forEach(ref => {
