@@ -143,6 +143,31 @@ tbody tr:nth-child(even){background:#f8fafc;}
 
 .total{font-size:25px;color:var(--azul);font-weight:bold;}
 
+
+/* ---------- Cola de envío en segundo plano ---------- */
+.cola{
+  position:fixed;right:18px;bottom:18px;z-index:1500;
+  border:2px solid var(--verde-oscuro);border-radius:12px;
+  background:#f1f9f8;width:420px;max-width:calc(100vw - 36px);
+  overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.22);
+}
+.cola.con-rechazos{border-color:var(--rojo-logo);background:#fff4f4;}
+.cola-cabecera{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:9px 12px;font-size:13.5px;font-weight:600;color:var(--verde-oscuro);
+}
+.cola.con-rechazos .cola-cabecera{color:var(--rojo-logo);}
+.cola-cabecera span{flex:1;min-width:180px;}
+.cola-lista{max-height:260px;overflow:auto;border-top:1px solid var(--borde);background:#fff;}
+.cola-item{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:8px 12px;border-bottom:1px solid #eef2f7;font-size:13px;
+}
+.cola-item .cola-texto{flex:1;line-height:1.4;}
+.cola-item small{color:#64748b;}
+.cola-item.rechazado{background:#fee2e2;}
+.cola-item.enviando{background:#fef9c3;}
+.pendiente{color:#b45309;font-size:12px;font-style:italic;}
 /* ---------- Historial: tabla ancha y navegable ---------- */
 #histBuscar{width:100%;max-width:520px;}
 
@@ -283,7 +308,7 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 @media print{
   @page{size:A4;margin:12mm 12mm 8mm;}
   body{background:#fff;}
-  .layout,.modal{display:none!important;}
+  .layout,.modal,.cola{display:none!important;}
   #areaCertificados{display:block!important;}
   /* Alto útil de la página (277mm) menos lo que ocupan el membrete y el pie
      repetidos. Empuja la firma al fondo sin generar una hoja en blanco. */
@@ -400,7 +425,8 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   /* La vista previa vive dentro de .layout, que la impresión oculta entera.
      Por eso al imprimir se vuelca una copia limpia en #areaDestino, que está
      fuera del layout, y se imprime esa. */
-  body.imprimiendo-destino #areaCertificados{display:none!important;}
+  body.imprimiendo-destino #areaCertificados,
+  body.imprimiendo-destino .cola{display:none!important;}
   body.imprimiendo-destino #areaDestino{
     display:block!important;background:#fff;padding:0;margin:0;
   }
@@ -763,6 +789,17 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 </div>
 
 <!-- ================= HOJAS DE CERTIFICADO (solo para imprimir) ================= -->
+
+<!-- Cola de envío: flota sobre cualquier sección, porque ahora también
+     encolan los clientes y las observaciones. -->
+<div id="colaPanel" class="cola" hidden>
+  <div class="cola-cabecera">
+    <span id="colaResumen"></span>
+    <button type="button" class="btn-mini" onclick="procesarCola(true)">🔄 Enviar ahora</button>
+    <button type="button" class="btn-mini" onclick="alternarDetalleCola()">Ver detalle</button>
+  </div>
+  <div id="colaDetalle" class="cola-lista" hidden></div>
+</div>
 <div id="areaCertificados"></div>
 
 <!-- Certificados de destinación listos para imprimir: va FUERA de .layout,
@@ -816,7 +853,7 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbwrHpFGSQoXPGq5qxhSHv-qmpSBuZqQ-DUBumNRJFFwPSxVbiVo0ftXkhgVFmoUsovu/exec";
+const API = "https://script.google.com/macros/s/AKfycbzyXRIMI8mGgvY8gU2yQd_4ZRDCVyiWc7x3FUqCIhJO38SxFNdbWsr97YY006mCi-Wk/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -836,6 +873,7 @@ let resultadosBusqueda = [];
 let historialDatos = [];
 let historialVisible = [];
 let clienteObservacionActual = "";
+let clienteEditando = null;   // cliente que se está editando (null = nuevo)
 
 /* ---------------- utilidades ---------------- */
 
@@ -1217,6 +1255,7 @@ function limpiarFormularioCliente(){
 
 function nuevoCliente(){
   limpiarFormularioCliente();
+  clienteEditando = null;
   $("tituloModalCliente").textContent = "Nuevo cliente";
   $("modalCliente").classList.add("mostrar");
 }
@@ -1227,6 +1266,10 @@ function editarCliente(indice){
 
   limpiarFormularioCliente();
   $("tituloModalCliente").textContent = "Editar cliente";
+
+  // Se recuerda la fila real de la hoja: es lo que permite actualizar al
+  // cliente correcto aunque se le cambie el nombre o no tenga código.
+  clienteEditando = c;
 
   $("cliCodigo").value     = c.codigo      || "";
   $("cliNombre").value     = c.nombre      || "";
@@ -1239,13 +1282,11 @@ function editarCliente(indice){
   $("cliCorreo").value     = c.correo      || "";
   $("cliObservacion").value= c.observaciones || "";
 
-  // Sin código la hoja no puede localizar la fila para actualizarla, así que
-  // se avisa antes de que el usuario llene el formulario en balde.
-  mensaje("estadoFormCliente",
-    c.codigo ? "" : "Este cliente no tiene código. Asígnele uno para poder guardarlo.",
-    !c.codigo);
+  mensaje("estadoFormCliente", c.fila ? "" :
+    "Este cliente viene de una versión anterior del servidor: puede que al " +
+    "guardarlo se cree un duplicado en vez de actualizarlo.", !c.fila);
 
-  marcarFalta("cliCodigo", !c.codigo);
+  marcarFalta("cliCodigo", false);
 
   $("modalCliente").classList.add("mostrar");
 }
@@ -1253,13 +1294,22 @@ function editarCliente(indice){
 function cerrarFormularioCliente(){
   $("modalCliente").classList.remove("mostrar");
 }
-
+/**
+ * Guardar un cliente tampoco espera al servidor. El cambio se aplica de
+ * inmediato en la lista que se ve en pantalla y el envío queda en la cola.
+ */
 function guardarCliente(){
   const codigo = $("cliCodigo").value.trim();
   const nombre = $("cliNombre").value.trim();
 
-  if(!codigo || !nombre){
-    mensaje("estadoFormCliente","Código y nombre son obligatorios", true);
+  // El código solo hace falta para crear: al editar, la fila ya está
+  // identificada y el nombre puede cambiarse libremente.
+  if(!nombre){
+    mensaje("estadoFormCliente","El nombre del cliente es obligatorio", true);
+    return;
+  }
+  if(!clienteEditando && !codigo){
+    mensaje("estadoFormCliente","Para un cliente nuevo el código es obligatorio", true);
     return;
   }
 
@@ -1277,21 +1327,48 @@ function guardarCliente(){
     observaciones:$("cliObservacion").value.trim()
   };
 
-  ocupado("btnGuardarCliente","Guardando...");
-  mensaje("estadoFormCliente","Enviando cliente...");
+  // La fila de la hoja identifica al cliente aunque se le cambie el nombre.
+  if(clienteEditando && clienteEditando.fila) datos.fila = clienteEditando.fila;
 
-  enviar(datos)
-    .then(resp => {
-      ocupado("btnGuardarCliente", null);
-      mensaje("estadoFormCliente", resp.mensaje || "Cliente guardado");
-      actualizarClientes();
-      setTimeout(cerrarFormularioCliente, 1200);
-    })
-    .catch(error => {
-      console.error("Error guardando cliente:", error);
-      ocupado("btnGuardarCliente", null);
-      mensaje("estadoFormCliente", error.message || "No se pudo guardar el cliente", true);
-    });
+  encolar(datos, (clienteEditando ? "Cliente editado: " : "Cliente nuevo: ") + nombre, "cliente");
+
+  aplicarCambioClienteLocal(datos);
+
+  mensaje("estadoFormCliente",
+    "✔ " + nombre + " guardado" +
+    (navigator.onLine ? ". Enviándose en segundo plano." : " sin conexión: se enviará al reconectar."));
+
+  clienteEditando = null;
+  setTimeout(cerrarFormularioCliente, 700);
+}
+
+/**
+ * Refleja el cambio en la lista local sin esperar al servidor, para que la
+ * tabla y el buscador lo muestren ya. Cuando la cola termine de vaciarse se
+ * recargan los clientes desde la hoja y se sincroniza todo.
+ */
+function aplicarCambioClienteLocal(datos){
+
+  const campos = ["codigo","nombre","nit","telefono","direccion",
+                  "ruta","municipio","contacto","correo","observaciones"];
+
+  let ficha = null;
+
+  if(datos.fila) ficha = clientes.find(c => c.fila === datos.fila);
+  if(!ficha && datos.codigo) ficha = clientes.find(c => String(c.codigo) === String(datos.codigo));
+
+  if(ficha){
+    campos.forEach(k => { if(datos[k] !== undefined) ficha[k] = datos[k]; });
+  }else{
+    const nuevo = {};
+    campos.forEach(k => { nuevo[k] = datos[k] || ""; });
+    clientes.push(nuevo);
+  }
+
+  guardarCache("clientes_cache", JSON.stringify(clientes));
+  crearIndiceClientes();
+  cargarClientesTabla();
+  actualizarEstadoClientes();
 }
 
 /* ---------------- observaciones ---------------- */
@@ -1335,34 +1412,222 @@ function verObservaciones(indice){
     });
 }
 
+/**
+ * La observación se muestra en la lista al momento y se envía por la cola.
+ * No se recarga desde el servidor para no perder lo que aún está pendiente.
+ */
 function guardarObservacion(){
   const texto = $("nuevaObservacion").value.trim();
   if(!texto) return;
+
+  const fecha = new Date().toLocaleString();
 
   const datos = {
     accion:"guardarObservacion",
     codigo:clienteObservacionActual,
     observacion:texto,
-    fecha:new Date().toLocaleString()
+    fecha:fecha
   };
 
-  enviar(datos)
-    .then(() => {
-      $("nuevaObservacion").value = "";
-      // Se vuelve a abrir buscando por la clave, no por la posición.
-      const i = clientes.findIndex(x => claveObservacion(x) === clienteObservacionActual);
-      if(i >= 0) verObservaciones(i);
-    })
-    .catch(error => {
-      console.error("Error guardando observación", error);
-      alert(error.message || "No se pudo guardar la observación");
-    });
+  encolar(datos, "Observación de " + clienteObservacionActual, "observacion");
+
+  // Se antepone a lo que ya hay, marcada como pendiente de enviar.
+  const lista = $("listaObservaciones");
+  const previo = /No hay observaciones/.test(lista.textContent) ? "" : lista.innerHTML;
+  lista.innerHTML = "📌 " + esc(fecha) + " - " + esc(texto) +
+                    ' <span class="pendiente">(por enviar)</span>' +
+                    (previo ? "<br>" + previo : "");
+
+  $("nuevaObservacion").value = "";
+  $("nuevaObservacion").focus();
 }
 
 function cerrarObservaciones(){
   $("modalObservaciones").classList.remove("mostrar");
 }
 
+
+/* ================= COLA DE ENVÍO ==================================
+   Guardar un manifiesto no espera al servidor: se apunta en una cola
+   local y la pantalla queda libre al instante. Un proceso de fondo la
+   va vaciando. Si no hay internet, lo guardado se queda en la cola —
+   sobrevive incluso a cerrar el navegador — y sale solo al reconectar.
+   ================================================================== */
+
+const CLAVE_COLA = "cola_manifiestos";
+const REINTENTO_COLA = 15000;   // cada cuánto se reintenta, en milisegundos
+
+let colaEnvios   = [];
+let enviandoCola = false;
+let colaTocoClientes = false;   // hubo cambios de clientes en la cola
+
+function cargarCola(){
+  try{
+    colaEnvios = JSON.parse(leerCache(CLAVE_COLA)) || [];
+  }catch(e){
+    console.warn("Cola dañada, se descarta", e);
+    colaEnvios = [];
+  }
+  // Lo que quedó a medio enviar vuelve a pendiente.
+  colaEnvios.forEach(x => { if(x.estado === "enviando") x.estado = "pendiente"; });
+  pintarCola();
+}
+
+function persistirCola(){
+  guardarCache(CLAVE_COLA, JSON.stringify(colaEnvios));
+  pintarCola();
+}
+
+function encolar(datos, descripcion, tipo){
+  colaEnvios.push({
+    id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+    datos: datos,
+    descripcion: descripcion,
+    tipo: tipo || "manifiesto",
+    estado: "pendiente",
+    intentos: 0,
+    error: "",
+    creado: new Date().toLocaleString()
+  });
+  persistirCola();
+  procesarCola();
+}
+
+function pendientesCola(){
+  return colaEnvios.filter(x => x.estado !== "rechazado").length;
+}
+
+function rechazadosCola(){
+  return colaEnvios.filter(x => x.estado === "rechazado").length;
+}
+
+/**
+ * Envía el primer pendiente y encadena con el siguiente. Distingue dos
+ * fallos: si es de red, el elemento vuelve a la cola y se reintenta; si el
+ * servidor lo rechaza (por ejemplo, manifiesto duplicado) se marca como
+ * rechazado y se sigue con el resto, porque reintentarlo no lo arreglaría.
+ */
+function procesarCola(forzar){
+
+  if(enviandoCola) return;
+
+  const item = colaEnvios.find(x => x.estado === "pendiente");
+  if(!item){ pintarCola(); return; }
+
+  if(!navigator.onLine && !forzar){ pintarCola(); return; }
+
+  enviandoCola  = true;
+  item.estado   = "enviando";
+  item.intentos++;
+  pintarCola();
+
+  enviar(item.datos)
+    .then(() => {
+      colaEnvios   = colaEnvios.filter(x => x.id !== item.id);
+      enviandoCola = false;
+
+      // Lo que cambió en el servidor deja de estar al día en pantalla.
+      if(item.tipo === "manifiesto") historialDatos = [];
+      if(item.tipo === "cliente")    colaTocoClientes = true;
+
+      persistirCola();
+
+      // Al vaciarse la cola se recargan los clientes una sola vez, para
+      // sincronizar números de fila y lo que haya cambiado en la hoja.
+      if(colaTocoClientes && pendientesCola() === 0){
+        colaTocoClientes = false;
+        actualizarClientes();
+      }
+
+      procesarCola();             // sigue con el siguiente
+    })
+    .catch(error => {
+      enviandoCola = false;
+
+      const mensajeError = String((error && error.message) || error || "");
+      const esDeRed = !navigator.onLine ||
+                      /failed to fetch|networkerror|network|load failed|conexión/i.test(mensajeError);
+
+      if(esDeRed){
+        // Se queda esperando a que vuelva la conexión.
+        item.estado = "pendiente";
+        item.error  = "Sin conexión, se reintentará solo";
+        persistirCola();
+      }else{
+        item.estado = "rechazado";
+        item.error  = mensajeError || "El servidor lo rechazó";
+        persistirCola();
+        procesarCola();
+      }
+    });
+}
+
+function alternarDetalleCola(){
+  const d = $("colaDetalle");
+  d.hidden = !d.hidden;
+  pintarCola();
+}
+
+function pintarCola(){
+
+  const panel = $("colaPanel");
+  if(!panel) return;
+
+  const pendientes = pendientesCola();
+  const rechazados = rechazadosCola();
+
+  panel.hidden = (colaEnvios.length === 0);
+  if(colaEnvios.length === 0) return;
+
+  const partes = [];
+  if(pendientes) partes.push("⏳ " + pendientes + " por enviar");
+  if(rechazados) partes.push("⛔ " + rechazados + " rechazado(s)");
+  if(!navigator.onLine) partes.push("📴 sin conexión");
+
+  $("colaResumen").textContent = partes.join("   ·   ");
+  panel.classList.toggle("con-rechazos", rechazados > 0);
+
+  const detalle = $("colaDetalle");
+  if(detalle.hidden) return;
+
+  detalle.innerHTML = colaEnvios.map(x => `
+    <div class="cola-item ${esc(x.estado)}">
+      <span class="cola-icono">${x.estado === "rechazado" ? "⛔" : x.estado === "enviando" ? "📤" : "⏳"}</span>
+      <span class="cola-texto">
+        <b>${esc(x.descripcion)}</b><br>
+        <small>${esc(x.creado)}${x.error ? " — " + esc(x.error) : ""}</small>
+      </span>
+      ${x.estado === "rechazado"
+        ? `<button type="button" class="btn-mini" onclick="reintentarCola('${esc(x.id)}')">Reintentar</button>
+           <button type="button" class="btn-mini" onclick="descartarCola('${esc(x.id)}')">Descartar</button>`
+        : ""}
+    </div>`).join("");
+}
+
+function reintentarCola(id){
+  const item = colaEnvios.find(x => x.id === id);
+  if(!item) return;
+  item.estado = "pendiente";
+  item.error  = "";
+  persistirCola();
+  procesarCola(true);
+}
+
+function descartarCola(id){
+  const item = colaEnvios.find(x => x.id === id);
+  if(!item) return;
+  if(!confirm("¿Descartar definitivamente «" + item.descripcion + "»?\n\nNo se guardará en la hoja.")) return;
+  colaEnvios = colaEnvios.filter(x => x.id !== id);
+  persistirCola();
+}
+
+// Avisa si el número ya está en la cola: sin conexión no se puede consultar
+// el servidor y es fácil repetirlo sin darse cuenta.
+function manifiestoEnCola(numero){
+  const n = String(numero).trim().toLowerCase();
+  return colaEnvios.some(x =>
+    String(x.datos.manifiesto || "").trim().toLowerCase() === n);
+}
 /* ---------------- nuevo manifiesto ---------------- */
 
 function sumar(){
@@ -1393,25 +1658,38 @@ function marcarFalta(id, falta){
   if(el) el.classList.toggle("falta", !!falta);
 }
 
+/**
+ * Guardar NO espera al servidor: el manifiesto entra en la cola local y la
+ * pantalla queda libre de inmediato para el siguiente. El envío ocurre en
+ * segundo plano; si no hay internet, espera ahí hasta que vuelva.
+ */
 function guardar(){
 
   const movil = $("movil").value;
   const fecha = $("manFecha").value;
+  const numero = $("manifiesto").value.trim();
 
   marcarFalta("movil", !movil);
   marcarFalta("manFecha", !fecha);
 
   if(!$("cliente").value){ alert("Seleccione un cliente"); return; }
-  if(!$("manifiesto").value.trim()){ alert("Ingrese el número de manifiesto"); return; }
+  if(!numero){ alert("Ingrese el número de manifiesto"); return; }
   if(!movil){ alert("Seleccione el móvil"); $("movil").focus(); return; }
   if(!fecha){ alert("Indique la fecha de la recolección"); $("manFecha").focus(); return; }
+
+  // Sin conexión no se puede preguntar al servidor, así que al menos se
+  // avisa si el número ya está esperando en la cola.
+  if(manifiestoEnCola(numero)){
+    alert("El manifiesto " + numero + " ya está en la cola de envío.");
+    return;
+  }
 
   const datos = {
     accion:"guardarManifiesto",
     fecha:fecha,
     cliente:$("cliente").value,
     ruta:$("ruta").value,
-    manifiesto:$("manifiesto").value.trim(),
+    manifiesto:numero,
     movil:movil,
     bolsas:$("bolsas").value || "0",
     observaciones:$("observacionesManifiesto").value.trim(),
@@ -1419,22 +1697,18 @@ function guardar(){
   };
   CAMPOS_CANTIDAD.forEach(id => { datos[id] = $(id).value || "0"; });
 
-  ocupado("btnGuardar","Guardando...");
-  mensaje("estadoGuardado","Enviando manifiesto...");
+  const resumen = "Manifiesto " + numero + " · " +
+                  $("cliente").value.slice(0, 40) + " · " +
+                  $("total").textContent + " KG";
 
-  enviar(datos)
-    .then(resp => {
-      ocupado("btnGuardar", null);
-      mensaje("estadoGuardado", resp.mensaje || ("Manifiesto " + datos.manifiesto + " guardado"));
-      limpiarManifiesto();
-      historialDatos = [];   // fuerza recarga del historial la próxima vez
-    })
-    .catch(error => {
-      console.error("Error enviando el manifiesto:", error);
-      ocupado("btnGuardar", null);
-      mensaje("estadoGuardado",
-        (error.message || "No se pudo guardar") + ". Los datos siguen en pantalla.", true);
-    });
+  encolar(datos, resumen);
+
+  mensaje("estadoGuardado",
+    "✔ Manifiesto " + numero + " guardado" +
+    (navigator.onLine ? ". Enviándose en segundo plano." : " sin conexión: se enviará al reconectar."));
+
+  limpiarManifiesto();
+  $("buscar").focus();
 }
 
 /* ---------------- historial ---------------- */
@@ -3622,6 +3896,26 @@ $("destVista").addEventListener("input", e => {
   const celda = e.target.closest("td.valor");
   if(celda) recalcularHoja(celda.closest(".destino"));
 });
+
+/* La cola se vacía sola: al reconectar, cada cierto tiempo, y al volver a
+   la pestaña. Así el usuario no tiene que acordarse de nada. */
+window.addEventListener("online",  () => { pintarCola(); procesarCola(true); });
+window.addEventListener("offline", pintarCola);
+document.addEventListener("visibilitychange", () => {
+  if(!document.hidden) procesarCola();
+});
+setInterval(procesarCola, REINTENTO_COLA);
+
+// Avisa si se intenta cerrar con envíos pendientes.
+window.addEventListener("beforeunload", e => {
+  if(pendientesCola() > 0){
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+
+cargarCola();
+procesarCola();
 fechaManifiestoHoy();
 mostrar("nuevo");
 cargarClientes(false);
