@@ -1,0 +1,2795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liquidador de Renta Persona Natural - Colombia 2025 - Venta de Activos</title>
+  <style>
+    :root{
+      --azul:#153e75;
+      --azul2:#2563a6;
+      --fondo:#f3f6fa;
+      --borde:#d7e0ea;
+      --texto:#182230;
+      --suave:#64748b;
+      --verde:#087f5b;
+      --rojo:#b42318;
+      --amarillo:#9a6700;
+      --blanco:#fff;
+      --sombra:0 8px 26px rgba(20,48,82,.08);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      color:var(--texto);
+      background:var(--fondo);
+      line-height:1.42;
+    }
+    header{
+      background:linear-gradient(135deg,var(--azul),var(--azul2));
+      color:#fff;
+      padding:24px 18px;
+    }
+    header .wrap{max-width:1240px;margin:auto}
+    h1{font-size:clamp(1.45rem,3vw,2.25rem);margin:0 0 6px}
+    header p{margin:0;opacity:.92}
+    .sticky{
+      position:sticky;top:0;z-index:20;
+      background:#fff;border-bottom:1px solid var(--borde);
+      box-shadow:0 4px 15px rgba(20,48,82,.06);
+    }
+    .toolbar{
+      max-width:1240px;margin:auto;padding:10px 14px;
+      display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+    }
+    button,.file-label,select{
+      border:1px solid var(--borde);background:#fff;color:var(--texto);
+      border-radius:9px;padding:9px 12px;font-weight:650;cursor:pointer;
+    }
+    button:hover,.file-label:hover{border-color:var(--azul2)}
+    button.primary{background:var(--azul2);border-color:var(--azul2);color:#fff}
+    button.danger{color:var(--rojo)}
+    button.small{padding:6px 9px;font-size:.83rem}
+    .file-label input{display:none}
+    main{max-width:1240px;margin:18px auto 70px;padding:0 14px}
+    .notice{
+      background:#fff8e7;border:1px solid #f1d08b;border-radius:12px;
+      padding:14px 16px;margin-bottom:16px;color:#604600;
+    }
+    .notice strong{display:block;margin-bottom:4px}
+    .card{
+      background:var(--blanco);border:1px solid var(--borde);
+      border-radius:14px;box-shadow:var(--sombra);
+      padding:18px;margin-bottom:16px;
+      break-inside:avoid;
+    }
+    .card h2{margin:0 0 4px;font-size:1.2rem;color:var(--azul)}
+    .card h3{margin:18px 0 8px;font-size:1rem;color:#29435f}
+    .sub{color:var(--suave);font-size:.9rem;margin:0 0 14px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    .span-2{grid-column:span 2}.span-3{grid-column:span 3}
+    .span-4{grid-column:span 4}.span-5{grid-column:span 5}
+    .span-6{grid-column:span 6}.span-8{grid-column:span 8}
+    .span-12{grid-column:span 12}
+    label{display:block;font-size:.82rem;font-weight:700;margin-bottom:5px;color:#34475c}
+    input,textarea,select{
+      width:100%;border:1px solid var(--borde);border-radius:9px;
+      padding:10px;background:#fff;font-size:.95rem;
+    }
+    input:focus,textarea:focus,select:focus{
+      outline:2px solid rgba(37,99,166,.18);border-color:var(--azul2)
+    }
+    input[readonly]{background:#f4f7fa;font-weight:700}
+    input[data-money="true"]{
+      text-align:right;
+      font-variant-numeric:tabular-nums;
+      letter-spacing:.01em;
+    }
+    .money::before{content:"$ "}
+    .help{font-size:.76rem;color:var(--suave);margin-top:4px}
+    .checkline{display:flex;gap:8px;align-items:flex-start;padding-top:7px}
+    .checkline input{width:auto;margin-top:3px}
+    .checkline label{font-weight:500;margin:0}
+    .divider{height:1px;background:var(--borde);margin:16px 0}
+    .table-wrap{overflow:auto;border:1px solid var(--borde);border-radius:10px}
+    table{width:100%;border-collapse:collapse;min-width:700px}
+    th,td{padding:8px;border-bottom:1px solid var(--borde);text-align:left}
+    th{background:#eef4fa;color:#27445f;font-size:.8rem}
+    td input{padding:8px}
+    .right{text-align:right}
+    .summary{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px
+    }
+    .metric{
+      border:1px solid var(--borde);border-radius:11px;padding:12px;background:#f8fafc
+    }
+    .metric b{display:block;font-size:.78rem;color:var(--suave);margin-bottom:4px}
+    .metric span{font-size:1.12rem;font-weight:800;color:#153e75}
+    .metric.good span{color:var(--verde)}
+    .metric.bad span{color:var(--rojo)}
+    .metric.warn span{color:var(--amarillo)}
+    .result-card{
+      background:linear-gradient(135deg,#0f3564,#2667a8);color:#fff;
+      border:none;
+    }
+    .result-card h2{color:#fff}
+    .result-card .metric{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25)}
+    .result-card .metric b{color:rgba(255,255,255,.78)}
+    .result-card .metric span{color:#fff}
+    .warnings{display:grid;gap:8px;margin-top:12px}
+    .warning{
+      border-left:4px solid #d89b00;background:#fff8e7;color:#604600;
+      padding:10px 12px;border-radius:7px;font-size:.87rem
+    }
+    .warning.error{border-color:var(--rojo);background:#fff0ee;color:#7a271a}
+    .warning.ok{border-color:var(--verde);background:#ecfdf3;color:#05603a}
+    .pill{
+      display:inline-block;padding:3px 8px;border-radius:999px;
+      background:#e7f0fa;color:var(--azul);font-size:.75rem;font-weight:750
+    }
+    .source-list{font-size:.84rem;color:#46586b}
+    .source-list li{margin:6px 0}
+
+    /* ===== Panel lateral de resumen (estilo menu) ===== */
+    :root{--panel-w:302px}
+
+    .live-tax-box{
+      position:fixed;
+      top:0;right:0;bottom:0;
+      z-index:35;
+      width:var(--panel-w);
+      display:flex;
+      flex-direction:column;
+      background:#fff;
+      border-left:1px solid var(--borde);
+      box-shadow:-9px 0 28px rgba(15,53,100,.10);
+      transform:translateX(0);
+      transition:transform .25s ease;
+    }
+    body.panel-left .live-tax-box{
+      right:auto;left:0;
+      border-left:0;border-right:1px solid var(--borde);
+      box-shadow:9px 0 28px rgba(15,53,100,.10);
+    }
+    body.panel-hidden .live-tax-box{transform:translateX(101%)}
+    body.panel-hidden.panel-left .live-tax-box{transform:translateX(-101%)}
+
+    /* el contenido se corre para que el panel no tape nada */
+    body{transition:padding .25s ease}
+    body.panel-open{padding-right:var(--panel-w)}
+    body.panel-open.panel-left{padding-right:0;padding-left:var(--panel-w)}
+
+    .live-panel-head{
+      flex:0 0 auto;
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      padding:11px 12px;
+      background:linear-gradient(135deg,var(--azul),var(--azul2));
+      color:#fff;
+    }
+    .live-panel-title{font-size:.74rem;font-weight:850;letter-spacing:.05em;text-transform:uppercase}
+    .live-panel-actions{display:flex;gap:5px}
+    .live-panel-btn{
+      background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.34);
+      color:#fff;border-radius:8px;padding:3px 8px;
+      font-size:.82rem;font-weight:800;line-height:1.35;cursor:pointer;
+    }
+    .live-panel-btn:hover{background:rgba(255,255,255,.3);border-color:#fff}
+    .live-panel-fixed{
+      flex:0 0 auto;
+      padding:12px 12px 11px;
+      background:#fff;
+      border-bottom:1px solid var(--borde);
+    }
+    .live-panel-body{flex:1 1 auto;overflow-y:auto;padding:12px 12px 18px;min-height:0}
+
+    .live-tax-box .live-label{
+      display:block;color:var(--suave);font-size:.72rem;font-weight:800;
+      letter-spacing:.03em;text-transform:uppercase;margin-bottom:3px;
+    }
+    .live-tax-box .live-value{
+      display:block;font-size:1.42rem;line-height:1.15;font-weight:900;
+      color:var(--rojo);overflow-wrap:anywhere;
+    }
+    .live-tax-box .live-detail{
+      display:block;margin-top:4px;color:var(--suave);font-size:.74rem;
+    }
+    .live-saldo{
+      border:1px solid var(--borde);
+      border-left:4px solid var(--rojo);
+      border-radius:11px;background:#fdfdfe;padding:10px 11px;cursor:pointer;
+      transition:background .18s ease,border-color .18s ease;
+    }
+    .live-saldo:hover{background:#f3f7fc;border-color:var(--azul2)}
+    .live-validator{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:11px}
+    .live-validator-item{
+      border:1px solid var(--borde);border-radius:10px;padding:9px 10px;
+      background:#f8fafc;min-width:0;
+    }
+    .live-validator-item .validator-label{
+      display:block;color:var(--suave);font-size:.68rem;font-weight:800;
+      line-height:1.15;text-transform:uppercase;margin-bottom:4px;
+    }
+    .live-validator-item .validator-value{
+      display:block;color:var(--azul);font-size:1.02rem;font-weight:900;
+      line-height:1.15;overflow-wrap:anywhere;
+    }
+    .live-validator-item.costs .validator-value{color:var(--amarillo)}
+    .live-validator-item .validator-detail{
+      display:block;margin-top:3px;color:var(--suave);font-size:.66rem;line-height:1.2;
+    }
+    .live-tax-divider{height:1px;background:var(--borde);margin:11px 0}
+    .live-tax-box.is-favor .live-saldo{border-left-color:var(--verde)}
+    .live-tax-box.is-favor .live-value{color:var(--verde)}
+    .live-tax-box.is-zero .live-saldo{border-left-color:#94a3b8}
+    .live-tax-box.is-zero .live-value{color:#475569}
+
+    .live-nav{display:flex;flex-direction:column;gap:2px}
+    .live-nav-title{
+      color:var(--suave);font-size:.68rem;font-weight:800;
+      letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px;
+    }
+    .live-nav a{
+      display:block;padding:5px 9px;border-radius:8px;color:#31465c;
+      text-decoration:none;font-size:.78rem;font-weight:650;
+      border-left:3px solid transparent;
+      transition:background .15s ease,border-color .15s ease;
+    }
+    .live-nav a:hover{background:#eef4fb;color:var(--azul);border-left-color:var(--azul2)}
+
+    /* pestana para volver a abrir el panel */
+    .live-tax-handle{
+      position:fixed;top:96px;right:0;z-index:34;
+      display:none;align-items:center;gap:8px;
+      background:var(--azul2);color:#fff;border:0;
+      border-radius:11px 0 0 11px;
+      padding:10px 12px;font-weight:850;font-size:.78rem;
+      box-shadow:-5px 5px 18px rgba(15,53,100,.24);cursor:pointer;
+    }
+    body.panel-left .live-tax-handle{
+      right:auto;left:0;border-radius:0 11px 11px 0;
+      box-shadow:5px 5px 18px rgba(15,53,100,.24);
+    }
+    body.panel-hidden .live-tax-handle{display:flex}
+    .live-tax-handle .handle-amount{font-weight:900}
+    .live-panel-scrim{position:fixed;inset:0;z-index:34;background:rgba(15,35,58,.42);display:none}
+
+    section[id]{scroll-margin-top:78px}
+
+    .asset-sale-list{display:grid;gap:12px;margin:12px 0}
+    .asset-sale-row{
+      border:1px solid var(--borde);border-radius:12px;padding:13px;background:#fbfdff;
+      box-shadow:0 3px 12px rgba(20,48,82,.05)
+    }
+    .asset-sale-row .asset-row-head{
+      display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px
+    }
+    .asset-sale-row .asset-row-title{font-weight:850;color:var(--azul)}
+    .asset-sale-results{
+      display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px
+    }
+    .asset-sale-result{
+      border:1px solid var(--borde);border-radius:9px;padding:9px;background:#fff;min-width:0
+    }
+    .asset-sale-result b{display:block;font-size:.68rem;color:var(--suave);margin-bottom:3px}
+    .asset-sale-result span{display:block;font-size:.84rem;font-weight:850;color:var(--azul);overflow-wrap:anywhere}
+    .asset-sale-result.warn span{color:var(--amarillo)}
+    .asset-sale-result.good span{color:var(--verde)}
+    .asset-sale-result.bad span{color:var(--rojo)}
+    .legal-note{
+      border-left:4px solid var(--azul2);background:#f2f7fc;color:#29435f;
+      padding:10px 12px;border-radius:8px;font-size:.8rem;margin:10px 0
+    }
+
+    .dian-import-card{
+      border:2px solid #8bb8e8;
+      background:linear-gradient(180deg,#f7fbff,#ffffff);
+    }
+    .dian-import-head{
+      display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;
+    }
+    .dian-import-badge{
+      display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;
+      background:#e8f4ff;color:#14558f;font-size:.76rem;font-weight:850;
+    }
+    .dian-import-meta{
+      display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin:12px 0;
+    }
+    .dian-meta-item{
+      border:1px solid var(--borde);border-radius:10px;padding:9px 10px;background:#fff;min-width:0;
+    }
+    .dian-meta-item b{display:block;font-size:.68rem;color:var(--suave);text-transform:uppercase;margin-bottom:3px}
+    .dian-meta-item span{display:block;font-weight:850;color:var(--azul);overflow-wrap:anywhere}
+    .dian-import-note{
+      border-left:4px solid var(--azul2);background:#eef6ff;color:#24496c;
+      padding:10px 12px;border-radius:8px;font-size:.82rem;margin:10px 0;
+    }
+    .dian-import-note.warn{border-color:#d89b00;background:#fff8e7;color:#604600}
+    .dian-import-note.error{border-color:var(--rojo);background:#fff0ee;color:#7a271a}
+    .dian-box-grid{
+      display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-top:10px;
+    }
+    .dian-box-item{
+      border:1px solid var(--borde);border-radius:8px;padding:7px 8px;background:#fff;min-width:0;
+    }
+    .dian-box-item b{display:block;color:#1672a5;font-size:.68rem}
+    .dian-box-item span{display:block;text-align:right;font-weight:800;font-size:.82rem;overflow-wrap:anywhere}
+    .dian-compare-table{min-width:760px}
+    .dian-match{color:var(--verde);font-weight:850}
+    .dian-diff{color:var(--rojo);font-weight:850}
+    .dian-loading{
+      position:fixed;inset:0;z-index:200;background:rgba(15,35,55,.46);display:none;
+      align-items:center;justify-content:center;padding:20px;
+    }
+    .dian-loading.show{display:flex}
+    .dian-loading-box{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:var(--sombra);max-width:420px;text-align:center}
+    .dian-loading-box strong{display:block;color:var(--azul);font-size:1.05rem;margin-bottom:5px}
+    @media(max-width:900px){.dian-import-meta{grid-template-columns:repeat(2,1fr)}.dian-box-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:520px){.dian-import-meta{grid-template-columns:1fr}.dian-box-grid{grid-template-columns:repeat(2,1fr)}}
+
+    @media(max-width:900px){.asset-sale-results{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.asset-sale-results{grid-template-columns:1fr}}
+
+    .quick-guide{
+      border:1px solid #b9d4ef;background:#eef6ff;border-radius:10px;
+      padding:11px 13px;margin:8px 0 14px;font-size:.84rem;color:#24496c;
+    }
+    .quick-guide strong{color:#153e75}
+    details.extra-details{border:1px solid var(--borde);border-radius:10px;padding:10px 12px;background:#fafcff}
+    details.extra-details summary{cursor:pointer;font-weight:800;color:var(--azul)}
+    details.extra-details[open] summary{margin-bottom:12px}
+    #print210{display:none}
+    .draft-page{background:#fff;color:#000;font-family:Arial,sans-serif}
+    .f210-title{display:grid;grid-template-columns:23mm 1fr 30mm;border:1px solid #000}
+    .f210-title>div{border-right:1px solid #000;padding:4px;text-align:center;font-weight:bold}
+    .f210-title>div:last-child{border-right:0;background:#2f75b5;color:#fff;font-size:23pt;display:flex;align-items:center;justify-content:center}
+    .f210-brand{font-size:10pt;display:flex;align-items:center;justify-content:center}
+    .f210-heading{font-size:10pt;line-height:1.15}
+    .f210-draft-banner{border:1px solid #000;border-top:0;text-align:center;padding:4px;font-size:11pt;color:#1672a5;font-weight:bold}
+    .f210-meta,.f210-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}
+    .f210-meta td,.f210-meta th,.f210-table td,.f210-table th{border:1px solid #000;padding:2px 3px;vertical-align:middle}
+    .f210-meta td{height:10mm;font-size:6.5pt}
+    .f210-meta strong{display:block;font-size:5.8pt;font-weight:normal;margin-bottom:2px}
+    .f210-value{font-size:7pt;font-weight:bold;text-align:right;white-space:nowrap}
+    .f210-value.center{text-align:center}
+    .f210-num{width:7mm;text-align:center;color:#1672a5;font-size:6pt;font-weight:bold;background:#eef3f8}
+    .f210-label{font-size:5.7pt;line-height:1.05}
+    .f210-section{background:#dce6f1;font-weight:bold;font-size:6.3pt;text-align:left}
+    .f210-colhead{font-size:5.6pt;text-align:center;background:#f4f4f4;font-weight:bold;height:10mm}
+    .f210-row-alt{background:#dfe7f1}
+    .f210-subtitle{font-size:7.5pt;font-weight:bold;margin:5px 0 2px}
+    .f210-note{font-size:6pt;line-height:1.15;margin:4px 0}
+    .f210-foot{display:grid;grid-template-columns:1.1fr 1fr 1.1fr;border:1px solid #000;border-top:0;min-height:23mm}
+    .f210-foot>div{border-right:1px solid #000;padding:4px;font-size:6pt}
+    .f210-foot>div:last-child{border-right:0}
+    .f210-sign{height:12mm;border-bottom:1px solid #000;margin-top:4px}
+    .f210-footerline{display:flex;justify-content:space-between;font-size:6pt;margin-top:6mm}
+    .f210-page2-title{text-align:center;font-size:14pt;margin:4mm 0 6mm;border-bottom:1px solid #000;padding-bottom:3mm}
+    .f210-info-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0;margin-bottom:4mm}
+    .f210-info-table td,.f210-info-table th{border:1px solid #000;padding:2px 3px;font-size:6.5pt}
+    .f210-info-table th{background:#dedede;font-weight:bold}
+    .f210-yellow{background:#ffd600;font-weight:bold;text-align:center;width:7mm}
+    .f210-green{background:#b9dca7}
+    .f210-warning{border:1px solid #bbb;padding:4mm;font-size:8pt;line-height:1.25;text-align:center;margin-top:5mm}
+    .f210-warning strong{color:#c62828}
+    .no-print{}
+    .print-only{display:none}
+    @media(max-width:900px){
+      .span-2,.span-3,.span-4,.span-5,.span-6,.span-8{grid-column:span 12}
+      .summary{grid-template-columns:repeat(2,1fr)}
+      .toolbar select{flex:1 1 100%}
+      /* en pantallas angostas el resumen se ancla abajo, siempre visible */
+      body.panel-open{padding-right:0}
+      body.panel-open.panel-left{padding-left:0}
+      .live-tax-box{
+        top:auto;left:0;right:0;bottom:0;
+        width:auto;max-height:60vh;
+        border-left:0;border-right:0;border-top:1px solid var(--borde);
+        box-shadow:0 -9px 28px rgba(15,53,100,.14);
+      }
+      body.panel-left .live-tax-box{left:0;right:0;border-right:0;border-top:1px solid var(--borde)}
+      body.panel-hidden .live-tax-box,
+      body.panel-hidden.panel-left .live-tax-box{transform:translateY(101%)}
+      .live-panel-fixed{overflow-y:auto;min-height:0}
+      .live-panel-body{display:none}
+      .live-validator{grid-template-columns:1fr 1fr;margin-bottom:9px}
+      .live-validator-item .validator-detail{display:none}
+      .live-tax-box .live-detail{display:none}
+      .live-tax-handle{
+        top:auto;bottom:0;right:14px;
+        border-radius:11px 11px 0 0;
+        box-shadow:0 -4px 16px rgba(15,53,100,.24);
+      }
+      body.panel-left .live-tax-handle{
+        left:14px;right:auto;
+        border-radius:11px 11px 0 0;
+        box-shadow:0 -4px 16px rgba(15,53,100,.24);
+      }
+      .live-panel-scrim{display:none!important}
+    }
+    @media(max-width:520px){
+      .summary{grid-template-columns:1fr}
+      .card{padding:14px}
+      .toolbar button,.toolbar .file-label{flex:1 1 calc(50% - 8px);text-align:center}
+      .live-tax-box .live-value{font-size:1.25rem}
+      .live-validator-item .validator-value{font-size:.92rem}
+    }
+    @media print{
+      @page{size:A4 portrait;margin:6mm}
+      body{background:#fff;font-size:9.5pt;padding:0!important}
+      body:not(.print210) header{padding:10px 0;background:#fff;color:#000;border-bottom:2px solid #1f4e79}
+      body:not(.print210) header .wrap{max-width:none}
+      body:not(.print210) .sticky,body:not(.print210) .no-print,body:not(.print210) .notice,body:not(.print210) .live-tax-box,body:not(.print210) .live-tax-handle,body:not(.print210) .live-panel-scrim{display:none!important}
+      body:not(.print210) main{max-width:none;margin:0;padding:0}
+      body:not(.print210) .card{box-shadow:none;border:1px solid #aaa;border-radius:5px;padding:10px;margin:0 0 8px}
+      body:not(.print210) .result-card{background:#fff!important;color:#000!important;border:2px solid #1f4e79}
+      body:not(.print210) .result-card h2,body:not(.print210) .result-card .metric span,body:not(.print210) .result-card .metric b{color:#000!important}
+      body:not(.print210) .result-card .metric{background:#fff;border-color:#aaa}
+      body:not(.print210) input,body:not(.print210) select,body:not(.print210) textarea{border:none!important;padding:1px;background:#fff!important}
+      body:not(.print210) .summary{grid-template-columns:repeat(4,1fr);gap:5px}
+      body:not(.print210) .metric{padding:6px;border-radius:3px}
+      body:not(.print210) .metric span{font-size:10pt}
+      body:not(.print210) .print-only{display:block}
+      body:not(.print210) .table-wrap{overflow:visible}
+      body:not(.print210) table{min-width:0;font-size:8.5pt}
+      body:not(.print210) th,body:not(.print210) td{padding:4px}
+
+      body.print210>header,body.print210>.sticky,body.print210>.live-tax-box,body.print210>.live-tax-handle,body.print210>.live-panel-scrim,body.print210>main{display:none!important}
+      body.print210 #print210{display:block!important}
+      body.print210 .draft-page{width:198mm;min-height:284mm;margin:0;page-break-after:always;overflow:hidden}
+      body.print210 .draft-page:first-child{zoom:.84;width:235.7mm;min-height:338mm}
+      body.print210 .draft-page:last-child{page-break-after:auto}
+    }
+  
+
+    /* Validador de información para enviar al cliente */
+    .vc-modal{
+      position:fixed;inset:0;z-index:120;background:rgba(15,35,58,.62);
+      display:flex;align-items:flex-start;justify-content:center;padding:24px;
+      overflow:auto;
+    }
+    .vc-modal[hidden]{display:none!important}
+    .vc-panel{
+      width:min(1180px,100%);background:#fff;border-radius:16px;border:1px solid var(--borde);
+      box-shadow:0 22px 70px rgba(0,0,0,.26);margin:auto;padding:18px;
+    }
+    .vc-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:14px}
+    .vc-head h2{margin:0 0 5px;color:var(--azul)}
+    .vc-head p{margin:0;color:var(--suave);font-size:.9rem;max-width:850px}
+    .vc-close{font-size:1.15rem;line-height:1;padding:8px 11px}
+    .vc-client-grid{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:14px}
+    .vc-columns{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start}
+    .vc-block{border:1px solid var(--borde);border-radius:13px;background:#fbfdff;padding:12px;min-width:0}
+    .vc-block h3{margin:0 0 3px;color:#29435f;font-size:1rem}
+    .vc-block .vc-sub{font-size:.76rem;color:var(--suave);margin-bottom:8px}
+    .vc-paste{
+      min-height:86px;resize:vertical;border:2px dashed #9bb9d8;background:#f4f9ff;
+      font-size:.85rem;line-height:1.3;margin-bottom:8px;
+    }
+    .vc-paste:focus{border-style:solid}
+    .vc-actions{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 9px}
+    .vc-stat{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0}
+    .vc-stat div{border:1px solid var(--borde);border-radius:8px;background:#fff;padding:7px}
+    .vc-stat b{display:block;font-size:.66rem;color:var(--suave);text-transform:uppercase}
+    .vc-stat span{display:block;font-weight:850;color:var(--azul);font-size:.9rem;margin-top:2px}
+    .vc-summary-table{margin-top:8px;max-height:210px;overflow:auto;border:1px solid var(--borde);border-radius:9px}
+    .vc-summary-table table{min-width:420px;font-size:.78rem}
+    .vc-detail{margin-top:9px}
+    .vc-detail summary{cursor:pointer;font-size:.78rem;font-weight:750;color:var(--azul)}
+    .vc-detail .table-wrap{margin-top:6px;max-height:260px}
+    .vc-detail table{font-size:.74rem;min-width:640px}
+    .vc-detail th,.vc-detail td{padding:6px}
+    .vc-footer{margin-top:15px;border-top:1px solid var(--borde);padding-top:14px}
+    .vc-footer-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .vc-result{min-height:260px;margin-top:9px;font-family:inherit;line-height:1.42}
+    .vc-note{border-left:4px solid var(--azul2);background:#eef6ff;border-radius:8px;padding:9px 11px;font-size:.8rem;color:#29435f;margin-bottom:12px}
+    .vc-empty{color:var(--suave);font-size:.78rem;padding:10px;text-align:center}
+    @media(max-width:980px){.vc-columns{grid-template-columns:1fr}.vc-client-grid{grid-template-columns:1fr}}
+    @media(max-width:600px){.vc-modal{padding:8px}.vc-panel{padding:12px}.vc-head{gap:8px}.vc-stat{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Liquidador de Renta — Persona Natural</h1>
+    <p>Colombia · Año gravable 2025 · Hoja de trabajo basada en la estructura del Formulario 210</p>
+  </div>
+</header>
+
+<div class="sticky no-print">
+  <div class="toolbar">
+    <button class="primary" type="button" onclick="calcular()">Calcular declaración</button>
+    <button type="button" onclick="guardarCaso()">Guardar caso</button>
+    <select id="casosGuardados" aria-label="Casos guardados"><option value="">Casos guardados…</option></select>
+    <button type="button" onclick="cargarCaso()">Abrir</button>
+    <button class="danger" type="button" onclick="eliminarCaso()">Eliminar</button>
+    <button type="button" onclick="nuevoCaso()">Nuevo</button>
+    <button type="button" onclick="exportarJSON()">Exportar respaldo</button>
+    <label class="file-label">Importar respaldo<input id="importFile" type="file" accept=".json" onchange="importarJSON(event)"></label>
+    <button type="button" onclick="seleccionarPDFDian()">Cargar declaración sugerida DIAN (PDF)</button>
+    <input id="dianPdfFile" type="file" accept="application/pdf,.pdf" style="display:none" onchange="importarDeclaracionDianPDF(event)">
+    <button type="button" onclick="abrirValidadorCliente()">Validar información XLS al cliente</button>
+    <button type="button" onclick="imprimirPDF()">Exportar borrador 210 PDF</button>
+    <button type="button" onclick="imprimirHojaTrabajo()">Imprimir hoja de trabajo</button>
+  </div>
+</div>
+
+<button id="liveTaxHandle" class="live-tax-handle no-print" type="button" onclick="togglePanelResumen()" title="Mostrar el panel de resumen" aria-label="Mostrar el panel de resumen">
+  <span>&#9776; Resumen</span>
+  <span id="liveHandleValue" class="handle-amount">$ 0</span>
+</button>
+<div id="livePanelScrim" class="live-panel-scrim no-print" onclick="togglePanelResumen()" aria-hidden="true"></div>
+
+<aside id="liveTaxBox" class="live-tax-box is-zero no-print" aria-label="Resumen en vivo de la declaración">
+  <div class="live-panel-head">
+    <span class="live-panel-title">Resumen en vivo</span>
+    <div class="live-panel-actions">
+      <button class="live-panel-btn" type="button" onclick="moverPanelResumen()" title="Mover el panel al otro lado" aria-label="Mover el panel al otro lado">&#8646;</button>
+      <button class="live-panel-btn" type="button" onclick="togglePanelResumen()" title="Ocultar el panel" aria-label="Ocultar el panel">&#10005;</button>
+    </div>
+  </div>
+
+  <div class="live-panel-fixed">
+    <div class="live-validator" aria-label="Validador visual de ingresos y costos">
+      <div class="live-validator-item">
+        <span class="validator-label">Total ingresos registrados</span>
+        <span id="liveIncomeValue" class="validator-value">$ 0</span>
+        <span class="validator-detail">Suma de ingresos brutos de todas las secciones.</span>
+      </div>
+      <div class="live-validator-item costs">
+        <span class="validator-label">Total costos y gastos</span>
+        <span id="liveCostsValue" class="validator-value">$ 0</span>
+        <span id="liveCostsDetail" class="validator-detail">0 % de los ingresos registrados.</span>
+      </div>
+    </div>
+
+    <div class="live-saldo" onclick="irAResultadoFinal()" title="Haz clic para ir al resultado final">
+      <span id="liveTaxLabel" class="live-label">Saldo estimado</span>
+      <span id="liveTaxValue" class="live-value">$ 0</span>
+      <span id="liveTaxDetail" class="live-detail">Se actualiza automáticamente al llenar el formulario.</span>
+    </div>
+  </div>
+
+  <div class="live-panel-body">
+    <nav class="live-nav" aria-label="Secciones de la hoja de trabajo">
+      <span class="live-nav-title">Ir a la sección</span>
+      <a href="#sec1">1. Configuración tributaria</a>
+      <a href="#sec2">2. Datos del declarante</a>
+      <a href="#sec3">3. Patrimonio y deudas</a>
+      <a href="#sec4">4. Cédula general</a>
+      <a href="#sec5">5. Rentas exentas y deducciones</a>
+      <a href="#sec6">6. Cédula de pensiones</a>
+      <a href="#sec7">7. Dividendos</a>
+      <a href="#sec8">8. Ganancias ocasionales</a>
+      <a href="#sec9">9. Descuentos y retenciones</a>
+      <a href="#sec10">10. Información adicional</a>
+      <a href="#resultadoFinal">11. Resultado estimado</a>
+      <a href="#sec12">12. Alertas y revisión</a>
+      <a href="#revisionPatrimonialCard">Revisión patrimonial</a>
+    </nav>
+  </div>
+</aside>
+
+<main>
+  <div class="notice">
+    <strong>Alcance de esta herramienta</strong>
+    Es una hoja de trabajo para organizar y estimar la declaración. No presenta ni reemplaza el formulario oficial de la DIAN, no verifica certificados, soportes, residencia fiscal, convenios internacionales, ECE, comparación patrimonial ni todos los casos especiales. La declaración definitiva debe revisarse y diligenciarse en el servicio oficial de la DIAN.
+  </div>
+
+  <section id="dianImportCard" class="card dian-import-card no-print" hidden>
+    <div class="dian-import-head">
+      <div>
+        <span class="dian-import-badge">Formulario 210 leído desde PDF</span>
+        <h2 style="margin-top:7px">Declaración sugerida DIAN importada</h2>
+        <p class="sub" id="dianImportStatus">Los valores del PDF se usan como punto de partida para esta hoja de trabajo.</p>
+      </div>
+      <button type="button" class="small" onclick="seleccionarPDFDian()">Cambiar PDF</button>
+    </div>
+    <div id="dianImportMeta" class="dian-import-meta"></div>
+    <div id="dianImportNotes"></div>
+
+    <details class="extra-details" open>
+      <summary>Control contra la declaración DIAN</summary>
+      <div class="help" style="margin:7px 0 10px">Compara las casillas clave del PDF original con el cálculo actual. Si luego modificas datos, la diferencia te permite ver exactamente qué cambió.</div>
+      <div class="table-wrap">
+        <table class="dian-compare-table">
+          <thead><tr><th>Casilla</th><th>Concepto</th><th class="right">DIAN PDF</th><th class="right">Hoja actual</th><th class="right">Diferencia</th><th>Estado</th></tr></thead>
+          <tbody id="dianCompareBody"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="extra-details" style="margin-top:10px">
+      <summary>Ver casillas importadas 28 a 141</summary>
+      <div id="dianBoxesGrid" class="dian-box-grid"></div>
+    </details>
+  </section>
+
+  <section class="card" id="sec1">
+    <h2>1. Configuración tributaria</h2>
+    <p class="sub">La UVT queda predeterminada para 2025, pero puede editarse para reutilizar la herramienta en otro año.</p>
+    <div class="grid">
+      <div class="span-3"><label>Año gravable</label><input id="anio" type="number" value="2025"></div>
+      <div class="span-3"><label>Valor UVT</label><input id="uvt" type="number" value="49799" min="1"></div>
+      <div class="span-3"><label>Límite general (%)</label><input id="limiteGeneralPct" type="number" value="40" step="0.01"></div>
+      <div class="span-3"><label>Límite general (UVT)</label><input id="limiteGeneralUVT" type="number" value="1340"></div>
+
+      <div class="span-3"><label>Exención laboral (%)</label><input id="exencionLaboralPct" type="number" value="25" step="0.01"></div>
+      <div class="span-3"><label>Tope exención laboral (UVT)</label><input id="exencionLaboralUVT" type="number" value="790"></div>
+      <div class="span-3"><label>Compras electrónicas (%)</label><input id="facturaPct" type="number" value="1" step="0.01"></div>
+      <div class="span-3"><label>Tope compras electrónicas (UVT)</label><input id="facturaUVT" type="number" value="240"></div>
+
+      <div class="span-3"><label>AFC/FVP/AVC (%)</label><input id="afcPct" type="number" value="30" step="0.01"></div>
+      <div class="span-3"><label>Tope AFC/FVP/AVC (UVT)</label><input id="afcUVT" type="number" value="3800"></div>
+      <div class="span-3"><label>Intereses de vivienda (UVT/año)</label><input id="viviendaUVT" type="number" value="1200"></div>
+      <div class="span-3"><label>Intereses ICETEX (UVT/año)</label><input id="icetexUVT" type="number" value="100"></div>
+
+      <div class="span-3"><label>Salud prepagada (UVT/mes)</label><input id="saludUVTMes" type="number" value="16"></div>
+      <div class="span-3"><label>Dependientes ordinarios (UVT/mes)</label><input id="dependUVTMes" type="number" value="32"></div>
+      <div class="span-3"><label>Adición por dependiente (UVT/año)</label><input id="dependAdicionUVT" type="number" value="72"></div>
+      <div class="span-3"><label>Tope indicativo costos independientes (%)</label><input id="costosIndicativoPct" type="number" value="60"></div>
+
+      <div class="span-3"><label>Pensión exenta (UVT/mes)</label><input id="pensionUVTMes" type="number" value="1000"></div>
+      <div class="span-3"><label>Tarifa dividendo 2.ª subcédula (%)</label><input id="divCorpPct" type="number" value="35" step="0.01"></div>
+      <div class="span-3"><label>Ganancia ocasional general (%)</label><input id="goPct" type="number" value="15" step="0.01"></div>
+      <div class="span-3"><label>Loterías, rifas y apuestas (%)</label><input id="loteriaPct" type="number" value="20" step="0.01"></div>
+    </div>
+    <div class="help">Los parámetros pueden cambiarse, pero modificar una cifra legal sin verificar la norma puede producir resultados incorrectos.</div>
+  </section>
+
+  <section class="card" id="sec2">
+    <h2>2. Datos del declarante</h2>
+    <div class="grid">
+      <div class="span-3"><label>Tipo de documento</label><select id="tipoDoc"><option>CC</option><option>CE</option><option>Pasaporte</option><option>NIT</option></select></div>
+      <div class="span-3"><label>Número de identificación</label><input id="identificacion" type="text"></div>
+      <div class="span-2"><label>DV</label><input id="dv" type="text" maxlength="1"></div>
+      <div class="span-4"><label>Actividad económica</label><input id="actividad" type="text"></div>
+
+      <div class="span-3"><label>Primer apellido</label><input id="apellido1" type="text"></div>
+      <div class="span-3"><label>Segundo apellido</label><input id="apellido2" type="text"></div>
+      <div class="span-3"><label>Primer nombre</label><input id="nombre1" type="text"></div>
+      <div class="span-3"><label>Otros nombres</label><input id="nombre2" type="text"></div>
+
+      <div class="span-4"><label>Dirección</label><input id="direccion" type="text"></div>
+      <div class="span-3"><label>Municipio / departamento</label><input id="municipio" type="text"></div>
+      <div class="span-2"><label>Teléfono</label><input id="telefono" type="text"></div>
+      <div class="span-3"><label>Correo electrónico</label><input id="correo" type="email"></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec3">
+    <h2>3. Patrimonio y deudas al 31 de diciembre</h2>
+    <p class="sub">Registra cada activo y cada obligación por separado. El patrimonio líquido se calcula como patrimonio bruto menos deudas.</p>
+
+    <h3>Activos</h3>
+    <div class="table-wrap">
+      <table id="tablaActivos">
+        <thead><tr><th>Concepto</th><th>Descripción / identificación</th><th class="right">Valor fiscal</th><th class="no-print">Acción</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <button class="small no-print" type="button" onclick="agregarFila('activos')">+ Agregar activo</button>
+
+    <h3>Deudas o préstamos</h3>
+    <div class="table-wrap">
+      <table id="tablaDeudas">
+        <thead><tr><th>Acreedor</th><th>NIT / documento</th><th>Concepto</th><th class="right">Saldo</th><th class="no-print">Acción</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <button class="small no-print" type="button" onclick="agregarFila('deudas')">+ Agregar deuda</button>
+
+    <div class="summary">
+      <div class="metric"><b>Patrimonio bruto</b><span id="rPatrimonioBruto">$ 0</span></div>
+      <div class="metric"><b>Total deudas</b><span id="rDeudas">$ 0</span></div>
+      <div class="metric good"><b>Patrimonio líquido</b><span id="rPatrimonioLiquido">$ 0</span></div>
+      <div class="metric"><b>Patrimonio líquido en UVT</b><span id="rPatrimonioUVT">0</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec4">
+    <h2>4. Cédula general — ingresos, costos y gastos</h2>
+    <p class="sub">Los costos procedentes no tienen un porcentaje máximo general automático. Deben cumplir causalidad, necesidad, proporcionalidad y soportes. Para trabajo independiente, superar el 60 % genera una marca informativa, no un rechazo automático.</p>
+
+    <h3>Rentas de trabajo — salarios y honorarios sin costos</h3>
+    <div class="quick-guide"><strong>Forma fácil de llenarlo:</strong> toma del certificado 220 los salarios, honorarios sin costos, salud y pensión. No registres aquí cesantías exentas, medicina prepagada ni el 25 % exento: esos valores van en la sección de rentas exentas y deducciones.</div>
+    <div class="grid">
+      <div class="span-4"><label>Salarios y prestaciones</label><input id="trabSalarios" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Honorarios sin costos</label><input id="trabHonorariosSinCostos" type="number" min="0" value="0"><div class="help">Honorarios que se declaran como renta de trabajo sin restar costos.</div></div>
+      <div class="span-4"><label>Otros ingresos de trabajo</label><input id="trabOtrosIngresos" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Total ingresos brutos</label><input id="trabajoBruto" readonly></div>
+
+      <div class="span-3"><label>Salud obligatoria</label><input id="trabSaludObl" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Pensión obligatoria</label><input id="trabPensionObl" type="number" min="0" value="0"><div class="help">No repitas aquí el fondo de solidaridad si ya está incluido en el certificado.</div></div>
+      <div class="span-3"><label>Fondo de solidaridad pensional</label><input id="trabFondoSolidaridad" type="number" min="0" value="0"><div class="help">Llénalo solo cuando venga separado del aporte obligatorio a pensión.</div></div>
+      <div class="span-3"><label>Aportes voluntarios al RAIS</label><input id="trabVolRAIS" type="number" min="0" value="0"><div class="help">Se limita automáticamente al 25 % del ingreso y a 2.500 UVT, considerando también los aportes de independientes.</div></div>
+      <div class="span-4"><label>Otros ingresos no constitutivos certificados</label><input id="trabOtrosINCR" type="number" min="0" value="0"><div class="help">Solo valores que el certificado o una norma identifique expresamente como no constitutivos.</div></div>
+      <div class="span-4"><label>Total ingresos no constitutivos</label><input id="trabajoINCR" readonly></div>
+      <div class="span-4"><label>Renta líquida antes de beneficios</label><input id="trabajoNetoVista" readonly></div>
+    </div>
+
+    <h3>Rentas de trabajo independientes — honorarios o servicios personales</h3>
+    <div class="quick-guide"><strong>Forma fácil de llenarlo:</strong> usa el total de honorarios o servicios facturados/certificados y los aportes pagados en PILA. Luego elige si vas a restar costos reales soportados o aplicar la exención laboral del 25 %; el sistema no permite usar las dos opciones sobre el mismo ingreso.</div>
+    <div class="grid">
+      <div class="span-4"><label>Honorarios o servicios personales</label><input id="indHonorarios" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Otros ingresos personales independientes</label><input id="indOtrosIngresos" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Total ingresos brutos</label><input id="indBruto" readonly></div>
+
+      <div class="span-3"><label>Salud obligatoria pagada</label><input id="indSaludObl" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Pensión obligatoria pagada</label><input id="indPensionObl" type="number" min="0" value="0"><div class="help">No repitas el fondo de solidaridad si está incluido en la PILA.</div></div>
+      <div class="span-3"><label>Fondo de solidaridad pensional</label><input id="indFondoSolidaridad" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Aportes voluntarios al RAIS</label><input id="indVolRAIS" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Otros ingresos no constitutivos certificados</label><input id="indOtrosINCR" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Total ingresos no constitutivos</label><input id="indINCR" readonly></div>
+      <div class="span-4"><label>Costos y gastos soportados</label><input id="indCostos" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Tratamiento elegido</label>
+        <select id="indModo">
+          <option value="costos">Restar costos y gastos</option>
+          <option value="exencion">No restar costos y aplicar exención laboral del 25 %</option>
+        </select>
+      </div>
+      <div class="span-4"><label>Renta líquida antes de beneficios</label><input id="indNetoVista" readonly></div>
+      <div class="span-2"><label>Costos / ingresos</label><input id="indRelacionVista" readonly></div>
+      <div class="span-2"><label>Indicador 60 %</label><input id="indIndicadorVista" readonly></div>
+    </div>
+
+    <h3>Rentas de capital</h3>
+    <div class="grid">
+      <div class="span-3"><label>Ingresos brutos</label><input id="capitalBruto" type="number" min="0" value="0"><div class="help">Ej.: arrendamientos, rendimientos y regalías.</div></div>
+      <div class="span-3"><label>Ingresos no constitutivos</label><input id="capitalINCR" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Costos y deducciones procedentes</label><input id="capitalCostos" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Renta líquida antes de beneficios</label><input id="capitalNetoVista" readonly></div>
+    </div>
+
+    <h3>Rentas no laborales</h3>
+    <div class="grid">
+      <div class="span-3"><label>Ingresos brutos</label><input id="noLaboralBruto" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Devoluciones, rebajas y descuentos</label><input id="noLaboralDev" type="number" min="0" value="0"></div>
+      <div class="span-2"><label>Ingresos no constitutivos</label><input id="noLaboralINCR" type="number" min="0" value="0"></div>
+      <div class="span-2"><label>Costos y gastos procedentes</label><input id="noLaboralCostos" type="number" min="0" value="0"></div>
+      <div class="span-2"><label>Renta líquida antes de beneficios</label><input id="noLaboralNetoVista" readonly></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec5">
+    <h2>5. Rentas exentas y deducciones de la cédula general</h2>
+    <p class="sub">La herramienta aplica límites individuales y después el límite conjunto del 40 % y 1.340 UVT. Las rentas exentas expresamente excluidas del límite se registran aparte.</p>
+    <div class="grid">
+      <div class="span-4"><label>Aportes AFC, FVP y/o AVC</label><input id="afcValor" type="number" min="0" value="0"><div class="help">Límite combinado: 30 % del ingreso tributario y 3.800 UVT; además puede quedar sujeto al límite general.</div></div>
+      <div class="span-4"><label>Intereses de vivienda pagados</label><input id="viviendaValor" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Medicina prepagada / seguro de salud</label><input id="saludValor" type="number" min="0" value="0"></div>
+
+      <div class="span-3"><label>Meses con pagos de salud</label><input id="saludMeses" type="number" min="0" max="12" value="12"></div>
+      <div class="span-3"><label>¿Aplica deducción ordinaria por dependientes?</label><select id="dependOrdinaria"><option value="no">No</option><option value="si">Sí</option></select></div>
+      <div class="span-3"><label>Meses con dependiente</label><input id="dependMeses" type="number" min="0" max="12" value="12"></div>
+      <div class="span-3"><label>Número de dependientes para adición de 72 UVT</label><input id="dependNumero" type="number" min="0" max="4" value="0"></div>
+
+      <div class="span-4"><label>GMF total pagado y certificado</label><input id="gmfPagado" type="number" min="0" value="0"><div class="help">El sistema toma automáticamente el 50 %.</div></div>
+      <div class="span-4"><label>Intereses de préstamo educativo ICETEX</label><input id="icetexValor" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Otras deducciones o rentas exentas limitadas</label><input id="otrasLimitadas" type="number" min="0" value="0"></div>
+
+      <div class="span-4"><label>Rentas exentas no sometidas al límite general</label><input id="noLimitadas" type="number" min="0" value="0"><div class="help">Solo registre valores respaldados por una norma que expresamente los excluya.</div></div>
+      <div class="span-4"><label>Compras con factura electrónica que cumplen requisitos</label><input id="comprasElectronicas" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Aplicar exención laboral del 25 %</label><select id="aplicar25"><option value="si">Sí</option><option value="no">No</option></select></div>
+      <div class="span-4"><label>Ubicar beneficios en el borrador 210</label><select id="beneficioDestino"><option value="auto">Automático: renta con mayor valor</option><option value="trabajo">Rentas de trabajo</option><option value="ind">Trabajo independiente</option><option value="capital">Rentas de capital</option><option value="nolaboral">Rentas no laborales</option></select><div class="help">Solo organiza las casillas del borrador; no cambia el impuesto total.</div></div>
+    </div>
+
+    <details class="extra-details" style="margin-top:14px">
+      <summary>Datos de dependientes para el borrador 210</summary>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Beneficio</th><th>Tipo de documento</th><th>Número</th><th>Parentesco</th></tr></thead>
+          <tbody>
+            <tr><td>Dependiente adicional 1 - 72 UVT</td><td><input id="depTipo1" type="text"></td><td><input id="depDoc1" type="text"></td><td><input id="depPar1" type="text"></td></tr>
+            <tr><td>Dependiente adicional 2 - 72 UVT</td><td><input id="depTipo2" type="text"></td><td><input id="depDoc2" type="text"></td><td><input id="depPar2" type="text"></td></tr>
+            <tr><td>Dependiente adicional 3 - 72 UVT</td><td><input id="depTipo3" type="text"></td><td><input id="depDoc3" type="text"></td><td><input id="depPar3" type="text"></td></tr>
+            <tr><td>Dependiente adicional 4 - 72 UVT</td><td><input id="depTipo4" type="text"></td><td><input id="depDoc4" type="text"></td><td><input id="depPar4" type="text"></td></tr>
+            <tr><td>Dependiente deducción 10 % art. 387</td><td><input id="depTipo5" type="text"></td><td><input id="depDoc5" type="text"></td><td><input id="depPar5" type="text"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="help">Estos datos se muestran en la segunda página del borrador. El parentesco y la calidad de dependiente deben verificarse según la norma.</div>
+    </details>
+
+    <div class="divider"></div>
+    <div class="summary">
+      <div class="metric"><b>Base para límite general</b><span id="rBaseLimite">$ 0</span></div>
+      <div class="metric"><b>Máximo 40 % / 1.340 UVT</b><span id="rLimiteGeneral">$ 0</span></div>
+      <div class="metric"><b>Beneficios limitados aceptados</b><span id="rBeneficiosLimitados">$ 0</span></div>
+      <div class="metric"><b>Beneficios por fuera del límite</b><span id="rBeneficiosFuera">$ 0</span></div>
+      <div class="metric"><b>Exención laboral 25 % calculada</b><span id="rExencion25">$ 0</span></div>
+      <div class="metric"><b>Adición dependientes 72 UVT</b><span id="rAdicionDepend">$ 0</span></div>
+      <div class="metric"><b>Deducción factura electrónica</b><span id="rFacturaElectronica">$ 0</span></div>
+      <div class="metric good"><b>Renta ordinaria cédula general</b><span id="rGeneralOrdinaria">$ 0</span></div>
+    </div>
+
+    <h3>Otros ajustes de la cédula general</h3>
+    <div class="grid">
+      <div class="span-3"><label>Compensación de pérdidas anteriores</label><input id="compPerdidas" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Compensación exceso renta presuntiva</label><input id="compPresuntiva" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Rentas gravables adicionales</label><input id="rentasGravables" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Renta presuntiva manual</label><input id="rentaPresuntiva" type="number" min="0" value="0"><div class="help">La tarifa general de renta presuntiva es 0 %, pero pueden existir rentas de activos exceptuados.</div></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec6">
+    <h2>6. Cédula de pensiones</h2>
+    <div class="grid">
+      <div class="span-3"><label>Pensiones de fuente nacional</label><input id="pensionNacional" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Pensiones del exterior</label><input id="pensionExterior" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Ingresos no constitutivos</label><input id="pensionINCR" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Meses de pensión nacional recibida</label><input id="pensionMeses" type="number" min="0" max="12" value="12"></div>
+    </div>
+    <div class="summary">
+      <div class="metric"><b>Renta líquida pensiones</b><span id="rPensionLiquida">$ 0</span></div>
+      <div class="metric"><b>Exención pensión nacional</b><span id="rPensionExenta">$ 0</span></div>
+      <div class="metric good"><b>Renta gravable pensiones</b><span id="rPensionGravable">$ 0</span></div>
+      <div class="metric"><b>Renta gravable en UVT</b><span id="rPensionUVT">0</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec7">
+    <h2>7. Dividendos y participaciones</h2>
+    <div class="grid">
+      <div class="span-3"><label>Dividendos gravados 2016 y anteriores</label><input id="div2016" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>1.ª subcédula 2017 y siguientes — numeral 3 art. 49</label><input id="divSub1" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>2.ª subcédula 2017 y siguientes — parágrafo 2 art. 49</label><input id="divSub2" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Dividendos del exterior</label><input id="divExterior" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Rentas exentas dividendos del exterior</label><input id="divExteriorExento" type="number" min="0" value="0"></div>
+    </div>
+    <div class="summary">
+      <div class="metric"><b>Impuesto 2.ª subcédula art. 240</b><span id="rDivCorpTax">$ 0</span></div>
+      <div class="metric"><b>Dividendos integrados a tabla art. 241</b><span id="rDivBase241">$ 0</span></div>
+      <div class="metric"><b>Impuesto dividendos 2016</b><span id="rDiv2016Tax">$ 0</span></div>
+      <div class="metric"><b>Impuesto dividendos exterior</b><span id="rDivExteriorTax">$ 0</span></div>
+      <div class="metric good"><b>Descuento tributario dividendos</b><span id="rDivDescuento">$ 0</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec8">
+    <h2>8. Ganancias ocasionales</h2>
+
+    <h3>Venta de activos fijos o activos movibles</h3>
+    <div class="quick-guide"><strong>Clasificación automática:</strong> si el bien era un activo fijo y fue poseído durante 2 años o más, la utilidad residual se lleva a ganancias ocasionales. Si fue poseído por menos de 2 años, o era inventario/activo movible, se lleva a rentas no laborales. En activos fijos depreciables, la recuperación de depreciaciones se separa como renta gravable de la cédula general.</div>
+    <div class="legal-note"><strong>No dupliques valores:</strong> las ventas registradas aquí se suman automáticamente al borrador 210. Los campos manuales de ganancias ocasionales que aparecen más abajo deben usarse únicamente para otros conceptos no registrados en este módulo.</div>
+    <div id="ventasActivosLista" class="asset-sale-list"></div>
+    <button class="small no-print" type="button" onclick="agregarVentaActivo()">+ Agregar venta de activo</button>
+
+    <div class="summary">
+      <div class="metric"><b>Precio fiscal total de ventas</b><span id="rVentaActivosPrecio">$ 0</span></div>
+      <div class="metric"><b>Costo fiscal neto registrado</b><span id="rVentaActivosCosto">$ 0</span></div>
+      <div class="metric warn"><b>Recuperación de depreciaciones — casilla 96</b><span id="rVentaActivosRecuperacion">$ 0</span></div>
+      <div class="metric"><b>Resultado ordinario — rentas no laborales</b><span id="rVentaActivosOrdinaria">$ 0</span></div>
+      <div class="metric good"><b>Ganancia ocasional gravable por ventas</b><span id="rVentaActivosGO">$ 0</span></div>
+      <div class="metric"><b>Exención vivienda art. 311-1 aplicada</b><span id="rVentaActivosExenta">$ 0</span></div>
+      <div class="metric"><b>Retenciones registradas por ventas</b><span id="rVentaActivosRetencion">$ 0</span></div>
+      <div class="metric good"><b>Impuesto GO estimado por ventas</b><span id="rVentaActivosImpuestoGO">$ 0</span></div>
+    </div>
+
+    <div class="grid">
+      <div class="span-3"><label>Otros ingresos por ganancias ocasionales generales</label><input id="goIngresos" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Otros costos fiscales de ganancias ocasionales</label><input id="goCostos" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Otras ganancias ocasionales no gravadas y exentas</label><input id="goExentas" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Premio bruto de lotería, rifa, apuesta o chance</label><input id="loterias" type="number" min="0" value="0"><div class="help">Registra el valor total del premio antes de descontar la retención.</div></div>
+      <div class="span-6"><label>Retención practicada por la casa de chance, lotería u operador</label><input id="retencionPremios" type="number" min="0" value="0"><div class="help">Copia el valor exacto que aparece en el certificado o comprobante de pago. Esta retención se suma automáticamente a la casilla 132.</div></div>
+    </div>
+    <div class="summary">
+      <div class="metric"><b>Ganancia ocasional gravable general</b><span id="rGOBase">$ 0</span></div>
+      <div class="metric"><b>Impuesto general</b><span id="rGOTax">$ 0</span></div>
+      <div class="metric"><b>Impuesto del premio</b><span id="rLoteriaTax">$ 0</span></div>
+      <div class="metric good"><b>Total impuesto ganancias ocasionales</b><span id="rGOTotal">$ 0</span></div>
+      <div class="metric"><b>Retención certificada del premio</b><span id="rRetencionPremios">$ 0</span></div>
+      <div class="metric"><b>Impuesto del premio pendiente después de retención</b><span id="rPremioPendiente">$ 0</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec9">
+    <h2>9. Descuentos, retenciones y anticipo</h2>
+    <div class="grid">
+      <div class="span-3"><label>Impuestos de renta pagados en el exterior</label><input id="impuestoExterior" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Donaciones con derecho a descuento</label><input id="donaciones" type="number" min="0" value="0"><div class="help">Se estima el 25 % del valor registrado.</div></div>
+      <div class="span-3"><label>Inversión I+D+i con derecho a descuento</label><input id="idi" type="number" min="0" value="0"><div class="help">Se estima el 30 % del valor registrado.</div></div>
+      <div class="span-3"><label>Otros descuentos tributarios</label><input id="otrosDescuentos" type="number" min="0" value="0"></div>
+
+      <div class="span-3"><label>Anticipo liquidado año anterior</label><input id="anticipoAnterior" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Saldo a favor anterior no solicitado</label><input id="saldoFavorAnterior" type="number" min="0" value="0"></div>
+      <div class="span-3"><label>Otras retenciones del año</label><input id="retenciones" type="number" min="0" value="0"><div class="help">No vuelvas a incluir aquí la retención del premio registrada en ganancias ocasionales.</div></div>
+      <div class="span-3"><label>Año de declaración para anticipo</label>
+        <select id="nivelAnticipo">
+          <option value="0">No calcular / manual</option>
+          <option value="25">Primera declaración — 25 %</option>
+          <option value="50">Segunda declaración — 50 %</option>
+          <option value="75">Tercera o posterior — 75 %</option>
+        </select>
+      </div>
+
+      <div class="span-4"><label>Anticipo manual para el siguiente año</label><input id="anticipoManual" type="number" min="0" value="0"><div class="help">Si es mayor que cero reemplaza el cálculo automático.</div></div>
+      <div class="span-4"><label>Sanciones</label><input id="sanciones" type="number" min="0" value="0"></div>
+      <div class="span-4"><label>Descuento exterior por ganancias ocasionales</label><input id="goExteriorDescuento" type="number" min="0" value="0"></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec10">
+    <h2>10. Información adicional para diligenciar en la DIAN</h2>
+    <p class="sub">Esta sección queda cerrada para no complicar el formulario. Ábrela solamente si alguno de estos casos especiales aplica.</p>
+    <details class="extra-details">
+      <summary>Mostrar preguntas especiales del borrador</summary>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pregunta</th><th>Respuesta</th><th>Valor relacionado</th></tr></thead>
+          <tbody>
+            <tr><td>¿Retiró cesantías acumuladas a 31 de diciembre de 2016 exentas?</td><td><select id="qCesantias2016"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vCesantias2016" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió seguros o compensaciones por muerte de miembro de FF. MM. o Policía?</td><td><select id="qSeguroFFMM"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vSeguroFFMM" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió ingresos adicionales al salario básico como miembro de FF. MM. o Policía?</td><td><select id="qIngresoFFMM"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vIngresoFFMM" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió gastos de representación como rector o profesor de universidad pública?</td><td><select id="qProfesorPublico"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vProfesorPublico" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió prima especial o costo de vida como diplomático?</td><td><select id="qDiplomatico"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vDiplomatico" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió ingresos por rentas hoteleras de los numerales 3 y 4 del art. 207-2?</td><td><select id="qHotelera"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vHotelera" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió rentas pasivas ECE de capital provenientes de CAN o convenio?</td><td><select id="qECECapital"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vECECapital" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió rentas pasivas ECE no laborales provenientes de CAN o convenio?</td><td><select id="qECENoLaboral"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vECENoLaboral" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió gastos de representación como magistrado, fiscal, procurador o juez?</td><td><select id="qMagistrado"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vMagistrado" type="number" min="0" value="0"></td></tr>
+            <tr><td>¿Recibió renta de trabajo de la CAN o amparada por convenio de doble tributación?</td><td><select id="qTrabajoCAN"><option value="no">No</option><option value="si">Sí</option></select></td><td><input id="vTrabajoCAN" type="number" min="0" value="0"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section class="card result-card" id="resultadoFinal">
+    <h2>11. Resultado estimado</h2>
+    <p class="sub" style="color:rgba(255,255,255,.8)">Cálculo automático en pesos colombianos, aproximado al múltiplo de mil más cercano.</p>
+    <div class="summary">
+      <div class="metric"><b>Renta líquida gravable cédula general</b><span id="rGeneralGravable">$ 0</span></div>
+      <div class="metric"><b>Base art. 241 en UVT</b><span id="rBase241UVT">0</span></div>
+      <div class="metric"><b>Impuesto tabla art. 241</b><span id="rTax241">$ 0</span></div>
+      <div class="metric"><b>Total impuesto rentas líquidas</b><span id="rImpuestoRentas">$ 0</span></div>
+
+      <div class="metric"><b>Total descuentos tributarios</b><span id="rDescuentos">$ 0</span></div>
+      <div class="metric"><b>Impuesto neto de renta</b><span id="rImpuestoNeto">$ 0</span></div>
+      <div class="metric"><b>Total impuesto a cargo</b><span id="rTotalImpuesto">$ 0</span></div>
+      <div class="metric"><b>Anticipo siguiente año</b><span id="rAnticipo">$ 0</span></div>
+
+      <div class="metric bad"><b>Saldo total a pagar</b><span id="rSaldoPagar">$ 0</span></div>
+      <div class="metric good"><b>Saldo total a favor</b><span id="rSaldoFavor">$ 0</span></div>
+      <div class="metric"><b>Umbral inicial 1.090 UVT</b><span id="rUmbral1090">$ 0</span></div>
+      <div class="metric"><b>Tarifa marginal alcanzada</b><span id="rTarifaMarginal">0 %</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec12">
+    <h2>12. Alertas y revisión</h2>
+    <div id="alertas" class="warnings"></div>
+  </section>
+
+  <section class="card source-list">
+    <h2>Reglas incorporadas en esta versión</h2>
+    <ul>
+      <li>UVT 2025 predeterminada en $49.799.</li>
+      <li>Ingresos no constitutivos separados para salud obligatoria, pensión obligatoria, fondo de solidaridad y cotizaciones voluntarias al RAIS con límite del 25 % y 2.500 UVT.</li>
+      <li>Exportación de un borrador no oficial con las casillas 29 a 141 y una segunda página de información adicional.</li>
+      <li>Tabla progresiva del artículo 241 del Estatuto Tributario desde 1.090 UVT.</li>
+      <li>Límite conjunto de rentas exentas y deducciones: 40 % y máximo 1.340 UVT.</li>
+      <li>Exención del 25 % de rentas de trabajo con límite anual de 790 UVT.</li>
+      <li>Adición anual de 72 UVT por dependiente, máximo cuatro, y deducción ordinaria por dependientes.</li>
+      <li>Deducción del 1 % por compras con factura electrónica, máximo 240 UVT, cuando se cumplan todos los requisitos.</li>
+      <li>Indicador informativo de costos del 60 % para rentas de trabajo independientes.</li>
+      <li>Ganancias ocasionales generales al 15 % y loterías, rifas y apuestas al 20 %.</li>
+      <li>Venta de activos fijos poseídos durante dos años o más clasificada como ganancia ocasional; activos fijos por menos de dos años y activos movibles clasificados como renta ordinaria.</li>
+      <li>Separación de la recuperación de depreciaciones en activos fijos depreciables y aplicación opcional de la exención de hasta 5.000 UVT por venta de vivienda cuando se indiquen los requisitos del artículo 311-1.</li>
+    </ul>
+    <p><strong>Importante:</strong> esta hoja no decide si un valor es fiscalmente procedente. Esa conclusión depende de la naturaleza del ingreso, soportes, fechas, residencia, certificados, relación de causalidad y demás requisitos legales.</p>
+  </section>
+
+  <section class="card no-print" id="revisionPatrimonialCard">
+    <h2>13. Revisión patrimonial / conciliación patrimonial</h2>
+    <p class="sub">
+      Compara el patrimonio líquido del año anterior con el declarado y verifica que el incremento quede
+      justificado con la renta del año, el ajuste fiscal de activos y los rendimientos no gravados
+      (artículos 236 a 239-1 del Estatuto Tributario).
+    </p>
+
+    <div class="grid">
+      <div class="span-4">
+        <label>Patrimonio líquido año anterior</label>
+        <input id="rpPatrimonioAnterior" type="text" inputmode="numeric" value="0">
+        <div class="help">Casilla 31 de la declaración del año gravable anterior.</div>
+      </div>
+      <div class="span-4">
+        <label>Patrimonio líquido declarado actualmente</label>
+        <input id="rpPatrimonioActual" type="text" inputmode="numeric" value="0" oninput="marcarPatrimonioManual()">
+        <input id="rpActualManual" type="hidden" value="0">
+        <div class="help">Se toma solo de la sección 3 mientras no lo escribas a mano.</div>
+      </div>
+      <div class="span-4">
+        <label>Patrimonio máximo sugerido</label>
+        <input id="rpPatrimonioMaximo" type="text" data-money="true" readonly>
+        <div class="help">Patrimonio anterior + capacidad de ahorro + justificaciones.</div>
+      </div>
+    </div>
+
+    <h3>A. Capacidad de ahorro del año</h3>
+    <div class="grid">
+      <div class="span-3"><label>Ingresos brutos registrados</label><input id="rpIngresos" type="text" data-money="true" readonly></div>
+      <div class="span-3"><label>(−) Costos y gastos registrados</label><input id="rpCostos" type="text" data-money="true" readonly></div>
+      <div class="span-3"><label>(−) Impuesto a cargo del año</label><input id="rpImpuestos" type="text" data-money="true" readonly></div>
+      <div class="span-3">
+        <label>(−) Gastos personales / consumo</label>
+        <input id="rpGastosPersonales" type="text" inputmode="numeric" value="0">
+        <div class="help">Sostenimiento del hogar. En cero se estima con el porcentaje de al lado.</div>
+      </div>
+      <div class="span-3">
+        <label>% estimado de gastos personales</label>
+        <input id="rpGastosPct" type="number" step="1" min="0" max="100" value="30">
+      </div>
+      <div class="span-3"><label>Gastos personales aplicados</label><input id="rpGastosUsados" type="text" data-money="true" readonly></div>
+      <div class="span-6"><label>= Capacidad de ahorro del año</label><input id="rpCapacidadAhorro" type="text" data-money="true" readonly></div>
+    </div>
+
+    <h3>B. Ajuste fiscal de activos (artículos 70, 73 y 280 del E.T.)</h3>
+    <div class="grid">
+      <div class="span-4">
+        <label>Costo fiscal de activos fijos sujetos a reajuste</label>
+        <input id="rpReajusteBase" type="text" inputmode="numeric" value="0">
+        <div class="help">Bienes muebles e inmuebles con carácter de activo fijo poseídos a 31 de diciembre.</div>
+      </div>
+      <div class="span-2">
+        <label>% reajuste fiscal</label>
+        <input id="rpReajustePct" type="number" step="0.01" min="0" value="5.81">
+        <div class="help">AG 2025: 5,81 %.</div>
+      </div>
+      <div class="span-3"><label>Reajuste calculado (art. 70)</label><input id="rpReajusteValor" type="text" data-money="true" readonly></div>
+      <div class="span-3">
+        <label>Ajuste adicional art. 73 / avalúo</label>
+        <input id="rpReajusteManual" type="text" inputmode="numeric" value="0">
+        <div class="help">Solo personas naturales: bienes raíces, acciones y aportes.</div>
+      </div>
+    </div>
+    <div class="legal-note">
+      <strong>Ajuste fiscal de activos.</strong> Es opcional y se decide cada año. Aumenta el costo fiscal de los activos
+      fijos: sube el patrimonio declarado (y con eso justifica parte del incremento patrimonial) y reduce la utilidad o la
+      ganancia ocasional el día que se venda el activo. Para el año gravable 2025 el porcentaje del artículo 70 del E.T. es
+      <strong>5,81 %</strong> (Decreto 449 del 27 de abril de 2026). El artículo 73 es solo para personas naturales con
+      bienes raíces, acciones y aportes, usa factores según el año de adquisición y no se aplica al mismo bien junto con el
+      artículo 70. El reajuste no genera ingreso ni renta gravada; si lo aplicas, refleja el mayor valor en los activos de la
+      sección 3 y conserva el detalle por activo.
+    </div>
+
+    <h3>C. Rendimientos no gravados — componente inflacionario (artículo 38 del E.T.)</h3>
+    <div class="grid">
+      <div class="span-4">
+        <label>Rendimientos financieros brutos del año</label>
+        <input id="rpRendimientosBrutos" type="text" inputmode="numeric" value="0">
+        <div class="help">Intereses de CDT, cuentas de ahorro, bonos y demás rendimientos.</div>
+      </div>
+      <div class="span-2">
+        <label>% componente inflacionario</label>
+        <input id="rpRendimientosPct" type="number" step="0.01" min="0" max="100" value="55.43">
+        <div class="help">AG 2025: 55,43 %.</div>
+      </div>
+      <div class="span-3"><label>Parte no gravada (INCRNGO)</label><input id="rpRendimientosNoGravados" type="text" data-money="true" readonly></div>
+      <div class="span-3"><label>Parte gravada</label><input id="rpRendimientosGravados" type="text" data-money="true" readonly></div>
+      <div class="span-12 checkline">
+        <input id="rpRendIncluidos" type="checkbox" checked>
+        <label for="rpRendIncluidos">Estos rendimientos ya están incluidos en los ingresos registrados de la hoja. Si lo dejas marcado no se vuelven a sumar en la justificación, para no duplicar el mismo dinero.</label>
+      </div>
+      <div class="span-4">
+        <label>Costos y gastos financieros del año</label>
+        <input id="rpGastosFinancieros" type="text" inputmode="numeric" value="0">
+        <div class="help">Intereses pagados por créditos, solo para el cálculo del componente no deducible.</div>
+      </div>
+      <div class="span-2">
+        <label>% no deducible</label>
+        <input id="rpGastosFinPct" type="number" step="0.01" min="0" max="100" value="28.35">
+        <div class="help">AG 2025: 28,35 %.</div>
+      </div>
+      <div class="span-3"><label>Componente no deducible</label><input id="rpGastosFinNoDeducible" type="text" data-money="true" readonly></div>
+      <div class="span-3"><label>Parte deducible</label><input id="rpGastosFinDeducible" type="text" data-money="true" readonly></div>
+    </div>
+    <div class="legal-note">
+      <strong>Rendimientos no gravados.</strong> Los artículos 38 a 41 del E.T. permiten tratar como ingreso no constitutivo
+      de renta ni ganancia ocasional la parte inflacionaria de los rendimientos financieros, y en contrapartida vuelven no
+      deducible la parte inflacionaria de los gastos financieros. Aplica <strong>únicamente a personas naturales y sucesiones
+      ilíquidas no obligadas a llevar contabilidad</strong>. Para el año gravable 2025 el Decreto 898 del 29 de julio de 2026
+      fijó <strong>55,43 %</strong> de los rendimientos financieros como no gravado (5,10 % de inflación DANE ÷ 9,20 % de tasa
+      de captación) y <strong>28,35 %</strong> de los costos y gastos financieros como no deducible.
+    </div>
+
+    <h3>D. Otras justificaciones del incremento</h3>
+    <div class="grid">
+      <div class="span-12">
+        <label>Herencias, legados, donaciones, gananciales, préstamos recibidos y valorizaciones</label>
+        <input id="rpOtrasJustificaciones" type="text" inputmode="numeric" value="0">
+        <div class="help">No repitas aquí valores que ya estén en los ingresos registrados: las ganancias ocasionales y la venta de activos de las secciones 3 y 8 ya están contadas.</div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="metric"><b>Incremento patrimonial del año</b><span id="rpIncremento">$ 0</span></div>
+      <div class="metric"><b>Total justificaciones</b><span id="rpJustificado">$ 0</span></div>
+      <div class="metric"><b>Patrimonio máximo sugerido</b><span id="rpMaximoMetric">$ 0</span></div>
+      <div class="metric" id="rpDiferenciaMetric"><b>Incremento sin justificar</b><span id="rpDiferencia">$ 0</span></div>
+    </div>
+
+    <div class="warnings" id="rpResultado"></div>
+
+    <div style="margin-top:12px">
+      <button class="primary" type="button" onclick="calcularRevisionPatrimonial()">Revisar patrimonio</button>
+      <button type="button" onclick="traerPatrimonioHoja()">Traer patrimonio de la hoja</button>
+      <button type="button" onclick="aplicarPatrimonioSugerido()">Aplicar patrimonio sugerido</button>
+    </div>
+
+    <div class="legal-note">
+      Este control es una alerta de consistencia, no una liquidación oficial. Si el incremento patrimonial no queda
+      justificado, la diferencia puede tomarse como renta líquida gravable por comparación patrimonial (artículos 236 y 237
+      del E.T.). Un incremento puede estar soportado en préstamos, herencias, donaciones, gananciales, venta de activos,
+      rentas exentas, ingresos no constitutivos de renta, reajustes fiscales o avalúos; en todos los casos debe existir
+      documentación idónea.
+    </div>
+  </section>
+
+</main>
+
+
+
+
+<div id="vcModal" class="vc-modal no-print" hidden>
+  <section class="vc-panel" role="dialog" aria-modal="true" aria-labelledby="vcTitle">
+    <div class="vc-head">
+      <div>
+        <h2 id="vcTitle">Validar información XLS al cliente</h2>
+        <p>No tienes que subir ningún Excel. Copia las filas desde Excel, desde una tabla o desde la información de la DIAN y pega con <strong>Ctrl + V</strong> en el bloque correspondiente. El sistema convierte lo pegado en tabla y suma automáticamente los registros que tengan el mismo Nombre / Razón Social.</p>
+      </div>
+      <button class="vc-close danger" type="button" onclick="cerrarValidadorCliente()" title="Cerrar">×</button>
+    </div>
+
+    <div class="vc-note"><strong>Importante:</strong> este módulo no decide si un concepto es fiscalmente ingreso, deuda o retención. Solamente organiza lo que tú pegues en cada bloque, conserva el detalle y suma por tercero. Así puedes usarlo como control antes de acomodar la declaración.</div>
+
+    <div class="vc-client-grid">
+      <div><label>Cliente</label><input id="vcNombreCliente" type="text" placeholder="Nombre del cliente"></div>
+      <div><label>Año gravable</label><input id="vcAnio" type="number" value="2025"></div>
+    </div>
+
+    <div class="vc-columns">
+      <div class="vc-block">
+        <h3>1. Ingresos / información reportada</h3>
+        <div class="vc-sub">Pega columnas tipo: Nombre / Razón Social · Detalle · Valor.</div>
+        <textarea class="vc-paste" id="vcPasteIngresos" placeholder="Haz clic aquí y presiona Ctrl + V" onpaste="procesarPegadoCliente(event,'ingresos')"></textarea>
+        <div class="vc-actions"><button type="button" class="small" onclick="limpiarValidacionCliente('ingresos')">Limpiar ingresos</button></div>
+        <div class="vc-stat"><div><b>Filas pegadas</b><span id="vcCountIngresos">0</span></div><div><b>Total pegado</b><span id="vcTotalIngresos">$ 0</span></div></div>
+        <div class="vc-summary-table" id="vcGroupIngresos"><div class="vc-empty">Aún no has pegado información.</div></div>
+        <details class="vc-detail"><summary>Ver detalle pegado</summary><div class="table-wrap"><table><thead><tr><th>Nombre / Razón Social</th><th>Detalle</th><th class="right">Valor</th><th>Acción</th></tr></thead><tbody id="vcBodyIngresos"></tbody></table></div></details>
+      </div>
+
+      <div class="vc-block">
+        <h3>2. Deudas</h3>
+        <div class="vc-sub">Pega la tabla de obligaciones o saldos reportados.</div>
+        <textarea class="vc-paste" id="vcPasteDeudas" placeholder="Haz clic aquí y presiona Ctrl + V" onpaste="procesarPegadoCliente(event,'deudas')"></textarea>
+        <div class="vc-actions"><button type="button" class="small" onclick="limpiarValidacionCliente('deudas')">Limpiar deudas</button></div>
+        <div class="vc-stat"><div><b>Filas pegadas</b><span id="vcCountDeudas">0</span></div><div><b>Total pegado</b><span id="vcTotalDeudas">$ 0</span></div></div>
+        <div class="vc-summary-table" id="vcGroupDeudas"><div class="vc-empty">Aún no has pegado información.</div></div>
+        <details class="vc-detail"><summary>Ver detalle pegado</summary><div class="table-wrap"><table><thead><tr><th>Nombre / Razón Social</th><th>Detalle</th><th class="right">Valor</th><th>Acción</th></tr></thead><tbody id="vcBodyDeudas"></tbody></table></div></details>
+      </div>
+
+      <div class="vc-block">
+        <h3>3. Retenciones</h3>
+        <div class="vc-sub">Pega la tabla de retenciones o certificados reportados.</div>
+        <textarea class="vc-paste" id="vcPasteRetenciones" placeholder="Haz clic aquí y presiona Ctrl + V" onpaste="procesarPegadoCliente(event,'retenciones')"></textarea>
+        <div class="vc-actions"><button type="button" class="small" onclick="limpiarValidacionCliente('retenciones')">Limpiar retenciones</button></div>
+        <div class="vc-stat"><div><b>Filas pegadas</b><span id="vcCountRetenciones">0</span></div><div><b>Total pegado</b><span id="vcTotalRetenciones">$ 0</span></div></div>
+        <div class="vc-summary-table" id="vcGroupRetenciones"><div class="vc-empty">Aún no has pegado información.</div></div>
+        <details class="vc-detail"><summary>Ver detalle pegado</summary><div class="table-wrap"><table><thead><tr><th>Nombre / Razón Social</th><th>Detalle</th><th class="right">Valor</th><th>Acción</th></tr></thead><tbody id="vcBodyRetenciones"></tbody></table></div></details>
+      </div>
+    </div>
+
+    <div class="vc-footer">
+      <div class="vc-footer-head">
+        <div><strong>Resumen para enviar al cliente</strong><div class="help">Puedes editar el texto antes de copiarlo.</div></div>
+        <div class="vc-actions">
+          <button type="button" class="primary" onclick="generarResumenCliente()">Generar resumen</button>
+          <button type="button" onclick="copiarResumenCliente()">Copiar resumen</button>
+          <button type="button" class="danger" onclick="limpiarValidacionCliente('todo')">Limpiar todo</button>
+        </div>
+      </div>
+      <textarea id="vcTextoResumen" class="vc-result" placeholder="Aquí aparecerá el resumen agrupado para enviárselo al cliente."></textarea>
+    </div>
+  </section>
+</div>
+
+<div id="dianLoading" class="dian-loading no-print" aria-live="polite">
+  <div class="dian-loading-box">
+    <strong>Leyendo Formulario 210…</strong>
+    <span id="dianLoadingText">Extrayendo casillas del PDF de la DIAN.</span>
+  </div>
+</div>
+
+
+<div id="print210">
+  <section class="draft-page">
+    <div class="f210-title">
+      <div class="f210-brand">BORRADOR</div>
+      <div class="f210-heading">Declaración de renta y complementarios<br>personas naturales y asimiladas residentes<br>y sucesiones ilíquidas de causantes residentes</div>
+      <div>210</div>
+    </div>
+    <div class="f210-draft-banner">BORRADOR DE TRABAJO - NO VÁLIDO PARA PRESENTAR ANTE LA DIAN</div>
+    <table class="f210-meta">
+      <tr><td style="width:15%"><strong>1. Año</strong><span id="p210anio"></span></td><td colspan="5"><strong>4. Número de formulario</strong>NO OFICIAL</td></tr>
+      <tr>
+        <td colspan="2"><strong>5. NIT / identificación</strong><span id="p210nit"></span></td>
+        <td style="width:7%"><strong>6. DV</strong><span id="p210dv"></span></td>
+        <td><strong>7. Primer apellido</strong><span id="p210ap1"></span></td>
+        <td><strong>8. Segundo apellido</strong><span id="p210ap2"></span></td>
+        <td><strong>9-10. Nombres</strong><span id="p210nombres"></span></td>
+      </tr>
+      <tr><td colspan="2"><strong>24. Actividad económica principal</strong><span id="p210actividad"></span></td><td colspan="2"><strong>12. Código dirección seccional</strong><span id="p210seccional"></span></td><td colspan="2"><strong>28. 1 % compras con factura electrónica</strong><span id="p210box28"></span></td></tr>
+    </table>
+
+    <table class="f210-table">
+      <tr><th class="f210-section" colspan="2">Patrimonio</th><td class="f210-label">Total patrimonio bruto</td><td class="f210-num">29</td><td class="f210-value" data-f210="29"></td><td class="f210-label">Deudas</td><td class="f210-num">30</td><td class="f210-value" data-f210="30"></td><td class="f210-label">Total patrimonio líquido</td><td class="f210-num">31</td><td class="f210-value" data-f210="31"></td></tr>
+    </table>
+
+    <div class="f210-subtitle">Cédula general</div>
+    <table class="f210-table" id="draftCedulaGeneral">
+      <colgroup><col style="width:28%"><col style="width:18%"><col style="width:18%"><col style="width:18%"><col style="width:18%"></colgroup>
+      <tr><th class="f210-colhead">Conceptos / rentas</th><th class="f210-colhead">Rentas de trabajo</th><th class="f210-colhead">Trabajo independiente</th><th class="f210-colhead">Rentas de capital</th><th class="f210-colhead">Rentas no laborales</th></tr>
+      <tbody id="draftGeneralBody"></tbody>
+    </table>
+
+    <table class="f210-table" style="margin-top:2px">
+      <tbody id="draftGeneralTotals"></tbody>
+    </table>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:2px">
+      <div>
+        <div class="f210-subtitle">Cédula de pensiones</div>
+        <table class="f210-table"><tbody id="draftPension"></tbody></table>
+        <div class="f210-subtitle">Cédula de dividendos y participaciones</div>
+        <table class="f210-table"><tbody id="draftDividendos"></tbody></table>
+        <div class="f210-subtitle">Ganancias ocasionales</div>
+        <table class="f210-table"><tbody id="draftGO"></tbody></table>
+      </div>
+      <div>
+        <div class="f210-subtitle">Liquidación privada</div>
+        <table class="f210-table"><tbody id="draftLiquidacion"></tbody></table>
+      </div>
+    </div>
+
+    <table class="f210-table" style="margin-top:2px"><tbody id="draftSaldos"></tbody></table>
+    <table class="f210-table" style="margin-top:2px"><tbody id="draftInfoBottom"></tbody></table>
+    <div class="f210-foot">
+      <div>981. Código representación<div class="f210-sign"></div>Firma del declarante o representante</div>
+      <div>997. Espacio exclusivo para sello de entidad recaudadora</div>
+      <div>980. Pago total $ <span id="p210pagoTotal" style="float:right;font-weight:bold"></span></div>
+    </div>
+    <div class="f210-footerline"><span>Liquidador de renta - borrador no oficial</span><span id="p210fecha1"></span></div>
+  </section>
+
+  <section class="draft-page">
+    <div class="f210-page2-title">INFORMACIÓN ADICIONAL - BORRADOR 210</div>
+    <div class="f210-subtitle">INFORMACIÓN DE DEPENDIENTES PARA EL DILIGENCIAMIENTO EN LA WEB-DIAN</div>
+    <table class="f210-info-table" id="draftDependientes"></table>
+    <div class="f210-subtitle">RESUMEN DE DEPENDIENTES</div>
+    <table class="f210-info-table"><tbody id="draftDepResumen"></tbody></table>
+    <div class="f210-subtitle">INFORMACIÓN ADICIONAL PARA EL DILIGENCIAMIENTO EN LA WEB-DIAN</div>
+    <table class="f210-info-table"><thead><tr><th style="width:9%">R</th><th>Pregunta / concepto</th><th style="width:23%">Valor</th></tr></thead><tbody id="draftPreguntas"></tbody></table>
+    <table class="f210-info-table" style="width:60%;margin-top:4mm"><tbody id="draftIndicadores"></tbody></table>
+    <div class="f210-warning"><strong>IMPORTANTE:</strong><br>Este documento es una hoja de trabajo inspirada en la estructura de casillas del Formulario 210. No contiene códigos de barras, número oficial de formulario, firma electrónica ni mecanismos de presentación. Los valores deben verificarse y diligenciarse en el servicio oficial de la DIAN.</div>
+    <div class="f210-footerline"><span>Liquidador de renta - borrador no oficial</span><span id="p210fecha2"></span></div>
+  </section>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const n = id => {
+    const el = $(id);
+    if(!el) return 0;
+    const v = Number(String(el.value).replace(/[^0-9.-]/g,''));
+    return Number.isFinite(v) ? Math.max(0,v) : 0;
+  };
+  const pct = id => n(id)/100;
+  const fmt = v => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number(v)||0);
+  const fmtNum = v => new Intl.NumberFormat('es-CO',{maximumFractionDigits:2}).format(Number(v)||0);
+  const mil = v => Math.round((Number(v)||0)/1000)*1000;
+  const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
+
+  const moneyFieldIds = new Set([
+    'uvt',
+    'trabSalarios','trabHonorariosSinCostos','trabOtrosIngresos',
+    'trabSaludObl','trabPensionObl','trabFondoSolidaridad','trabVolRAIS','trabOtrosINCR',
+    'indHonorarios','indOtrosIngresos','indSaludObl','indPensionObl',
+    'indFondoSolidaridad','indVolRAIS','indOtrosINCR','indCostos',
+    'capitalBruto','capitalINCR','capitalCostos',
+    'noLaboralBruto','noLaboralDev','noLaboralINCR','noLaboralCostos',
+    'afcValor','viviendaValor','saludValor','gmfPagado','icetexValor',
+    'otrasLimitadas','noLimitadas','comprasElectronicas',
+    'compPerdidas','compPresuntiva','rentasGravables','rentaPresuntiva',
+    'pensionNacional','pensionExterior','pensionINCR',
+    'div2016','divSub1','divSub2','divExterior','divExteriorExento',
+    'goIngresos','goCostos','goExentas','loterias','retencionPremios',
+    'impuestoExterior','donaciones','idi','otrosDescuentos',
+    'anticipoAnterior','saldoFavorAnterior','retenciones',
+    'anticipoManual','sanciones','goExteriorDescuento',
+    'vCesantias2016','vSeguroFFMM','vIngresoFFMM','vProfesorPublico',
+    'vDiplomatico','vHotelera','vECECapital','vECENoLaboral',
+    'vMagistrado','vTrabajoCAN',
+    'rpPatrimonioAnterior','rpPatrimonioActual','rpGastosPersonales',
+    'rpReajusteBase','rpReajusteManual','rpRendimientosBrutos',
+    'rpGastosFinancieros','rpOtrasJustificaciones'
+  ]);
+
+  function rawNumber(value){
+    const digits=String(value??'').replace(/[^0-9]/g,'');
+    return digits ? Number(digits) : 0;
+  }
+
+  function groupedNumber(value){
+    const amount=rawNumber(value);
+    return amount ? amount.toLocaleString('en-US',{maximumFractionDigits:0}) : '0';
+  }
+
+  function prepareMoneyInput(el){
+    if(!el || el.dataset.money==='true') return;
+    el.dataset.money='true';
+    el.type='text';
+    el.inputMode='numeric';
+    el.autocomplete='off';
+    el.value=groupedNumber(el.value);
+  }
+
+  function formatMoneyInput(el){
+    if(!el || el.dataset.money!=='true' || el.readOnly) return;
+    const previous=el.value;
+    const digitsBeforeCursor=previous.slice(0,el.selectionStart??previous.length).replace(/\D/g,'').length;
+    const formatted=groupedNumber(previous);
+    el.value=formatted;
+
+    let position=0, seen=0;
+    while(position<formatted.length && seen<digitsBeforeCursor){
+      if(/\d/.test(formatted[position])) seen++;
+      position++;
+    }
+    try{el.setSelectionRange(position,position)}catch(_){}
+  }
+
+  function initializeMoneyInputs(root=document){
+    root.querySelectorAll('input[id]').forEach(el=>{
+      if(moneyFieldIds.has(el.id)) prepareMoneyInput(el);
+    });
+    root.querySelectorAll('input.valor').forEach(el=>prepareMoneyInput(el));
+  }
+
+  function setMoney(id,v){ $(id).textContent = fmt(mil(v)); }
+  function setValueMoney(id,v){ $(id).value = groupedNumber(mil(v)); }
+
+  function agregarFila(tipo, data={}){
+    const tbody = tipo==='activos' ? $('tablaActivos').querySelector('tbody') : $('tablaDeudas').querySelector('tbody');
+    const tr = document.createElement('tr');
+    if(tipo==='activos'){
+      tr.innerHTML = `
+        <td><input class="concepto" type="text" value="${esc(data.concepto||'')}"></td>
+        <td><input class="detalle" type="text" value="${esc(data.detalle||'')}"></td>
+        <td><input class="valor right" type="text" inputmode="numeric" data-money="true" value="${groupedNumber(data.valor||0)}"></td>
+        <td class="no-print"><button type="button" class="small danger" onclick="this.closest('tr').remove();calcular()">Quitar</button></td>`;
+    }else{
+      tr.innerHTML = `
+        <td><input class="acreedor" type="text" value="${esc(data.acreedor||'')}"></td>
+        <td><input class="documento" type="text" value="${esc(data.documento||'')}"></td>
+        <td><input class="concepto" type="text" value="${esc(data.concepto||'')}"></td>
+        <td><input class="valor right" type="text" inputmode="numeric" data-money="true" value="${groupedNumber(data.valor||0)}"></td>
+        <td class="no-print"><button type="button" class="small danger" onclick="this.closest('tr').remove();calcular()">Quitar</button></td>`;
+    }
+    tbody.appendChild(tr);
+    initializeMoneyInputs(tr);
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function filas(tipo){
+    const tbody = tipo==='activos' ? $('tablaActivos').querySelector('tbody') : $('tablaDeudas').querySelector('tbody');
+    return [...tbody.querySelectorAll('tr')].map(tr=>{
+      if(tipo==='activos'){
+        return {concepto:tr.querySelector('.concepto').value,detalle:tr.querySelector('.detalle').value,valor:rawNumber(tr.querySelector('.valor').value)};
+      }
+      return {acreedor:tr.querySelector('.acreedor').value,documento:tr.querySelector('.documento').value,concepto:tr.querySelector('.concepto').value,valor:rawNumber(tr.querySelector('.valor').value)};
+    });
+  }
+  function totalFilas(tipo){ return filas(tipo).reduce((a,x)=>a+(Number(x.valor)||0),0); }
+
+  function impuesto241(basePesos, uvt){
+    const b = Math.max(0,basePesos/uvt);
+    let taxUVT=0, marginal=0;
+    if(b<=1090){taxUVT=0;marginal=0}
+    else if(b<=1700){taxUVT=(b-1090)*.19;marginal=19}
+    else if(b<=4100){taxUVT=(b-1700)*.28+116;marginal=28}
+    else if(b<=8670){taxUVT=(b-4100)*.33+788;marginal=33}
+    else if(b<=18970){taxUVT=(b-8670)*.35+2296;marginal=35}
+    else if(b<=31000){taxUVT=(b-18970)*.37+5901;marginal=37}
+    else{taxUVT=(b-31000)*.39+10352;marginal=39}
+    return {tax:mil(taxUVT*uvt),marginal,baseUVT:b};
+  }
+  function impuestoDividendos2016(basePesos, uvt){
+    const b=Math.max(0,basePesos/uvt);
+    let t=0;
+    if(b<=1090)t=0;
+    else if(b<=1700)t=(b-1090)*.19;
+    else if(b<=4100)t=(b-1700)*.28+116;
+    else t=(b-4100)*.33+788;
+    return mil(t*uvt);
+  }
+
+  function agregarVentaActivo(data={}){
+    const lista=$('ventasActivosLista');
+    if(!lista) return;
+    const row=document.createElement('div');
+    row.className='asset-sale-row';
+    row.dataset.vaRow='true';
+    const tipo=data.tipo||'otro';
+    const naturaleza=data.naturaleza||'fijo';
+    const depreciable=data.depreciable||'no';
+    const beneficio311=data.beneficio311||'no';
+    row.innerHTML=`
+      <div class="asset-row-head">
+        <span class="asset-row-title">Venta de activo</span>
+        <button type="button" class="small danger no-print" onclick="this.closest('[data-va-row]').remove();calcular()">Quitar</button>
+      </div>
+      <div class="grid">
+        <div class="span-4"><label>Descripción del activo</label><input class="va-descripcion" type="text" value="${esc(data.descripcion||'')}"></div>
+        <div class="span-3"><label>Tipo de activo</label><select class="va-tipo">
+          <option value="vivienda" ${tipo==='vivienda'?'selected':''}>Casa o apartamento de habitación</option>
+          <option value="inmueble" ${tipo==='inmueble'?'selected':''}>Otro inmueble</option>
+          <option value="vehiculo" ${tipo==='vehiculo'?'selected':''}>Vehículo</option>
+          <option value="maquinaria" ${tipo==='maquinaria'?'selected':''}>Maquinaria, equipo o mueble</option>
+          <option value="acciones" ${tipo==='acciones'?'selected':''}>Acciones, cuotas o participaciones</option>
+          <option value="otro" ${tipo==='otro'?'selected':''}>Otro activo</option>
+        </select></div>
+        <div class="span-3"><label>Naturaleza fiscal</label><select class="va-naturaleza">
+          <option value="fijo" ${naturaleza==='fijo'?'selected':''}>Activo fijo — no se vende en el giro ordinario</option>
+          <option value="movible" ${naturaleza==='movible'?'selected':''}>Inventario o activo movible</option>
+        </select></div>
+        <div class="span-1"><label>Años</label><input class="va-anos" type="number" min="0" step="1" value="${Number(data.anos)||0}"></div>
+        <div class="span-1"><label>Meses</label><input class="va-meses" type="number" min="0" max="11" step="1" value="${Number(data.meses)||0}"></div>
+
+        <div class="span-3"><label>Valor por el que se vendió</label><input class="va-precio valor" type="text" inputmode="numeric" data-money="true" value="${groupedNumber(data.precio||0)}"></div>
+        <div class="span-3"><label>Costo fiscal neto al vender</label><input class="va-costo valor" type="text" inputmode="numeric" data-money="true" value="${groupedNumber(data.costo||0)}"><div class="help">Valor fiscal después de ajustes y, cuando aplique, después de depreciaciones.</div></div>
+        <div class="span-3"><label>Avalúo o valor mínimo fiscal</label><input class="va-avaluo valor" type="text" inputmode="numeric" data-money="true" value="${groupedNumber(data.avaluo||0)}"><div class="help">En inmuebles puede ser avalúo catastral/autoavalúo; en otros bienes, el mínimo oficial aplicable.</div></div>
+        <div class="span-3"><label>Retención efectivamente practicada</label><input class="va-retencion valor" type="text" inputmode="numeric" data-money="true" value="${groupedNumber(data.retencion||0)}"><div class="help">Use el certificado o comprobante. La referencia general del art. 398 es 1 %.</div></div>
+
+        <div class="span-3"><label>¿Activo fijo depreciable?</label><select class="va-depreciable">
+          <option value="no" ${depreciable==='no'?'selected':''}>No</option>
+          <option value="si" ${depreciable==='si'?'selected':''}>Sí</option>
+        </select></div>
+        <div class="span-3"><label>Depreciación fiscal deducida acumulada</label><input class="va-depreciacion valor" type="text" inputmode="numeric" data-money="true" value="${groupedNumber(data.depreciacion||0)}"><div class="help">Solo la depreciación o amortización que sí se tomó como deducción fiscal.</div></div>
+        <div class="span-6"><label>Exención por venta de casa o apartamento — art. 311-1</label><select class="va-beneficio311">
+          <option value="no" ${beneficio311==='no'?'selected':''}>No aplicar</option>
+          <option value="si" ${beneficio311==='si'?'selected':''}>Sí, cumplo integralmente AFC o abono directo a crédito hipotecario</option>
+        </select><div class="help">Solo aplica a casa o apartamento de habitación y hasta 5.000 UVT de utilidad, sujeto a todos los requisitos legales.</div></div>
+      </div>
+      <div class="asset-sale-results">
+        <div class="asset-sale-result"><b>Precio fiscal usado</b><span class="va-out-precio">$ 0</span></div>
+        <div class="asset-sale-result"><b>Clasificación</b><span class="va-out-clasificacion">Sin datos</span></div>
+        <div class="asset-sale-result"><b>Utilidad o pérdida fiscal</b><span class="va-out-utilidad">$ 0</span></div>
+        <div class="asset-sale-result warn"><b>Recuperación depreciación</b><span class="va-out-recuperacion">$ 0</span></div>
+        <div class="asset-sale-result good"><b>Resultado gravable residual</b><span class="va-out-base">$ 0</span></div>
+        <div class="asset-sale-result"><b>Exención vivienda aplicada</b><span class="va-out-exenta">$ 0</span></div>
+        <div class="asset-sale-result"><b>Retención referencia 1 %</b><span class="va-out-ret-ref">$ 0</span></div>
+        <div class="asset-sale-result good"><b>Impuesto directo estimado</b><span class="va-out-impuesto">$ 0</span></div>
+      </div>`;
+    lista.appendChild(row);
+    initializeMoneyInputs(row);
+    calcular();
+  }
+
+  function filasVentasActivos(){
+    const lista=$('ventasActivosLista');
+    if(!lista) return [];
+    return [...lista.querySelectorAll('[data-va-row]')].map(row=>({
+      descripcion:row.querySelector('.va-descripcion').value,
+      tipo:row.querySelector('.va-tipo').value,
+      naturaleza:row.querySelector('.va-naturaleza').value,
+      anos:Number(row.querySelector('.va-anos').value)||0,
+      meses:Number(row.querySelector('.va-meses').value)||0,
+      precio:rawNumber(row.querySelector('.va-precio').value),
+      costo:rawNumber(row.querySelector('.va-costo').value),
+      avaluo:rawNumber(row.querySelector('.va-avaluo').value),
+      retencion:rawNumber(row.querySelector('.va-retencion').value),
+      depreciable:row.querySelector('.va-depreciable').value,
+      depreciacion:rawNumber(row.querySelector('.va-depreciacion').value),
+      beneficio311:row.querySelector('.va-beneficio311').value
+    }));
+  }
+
+  function calcularVentasActivos(uvt,actualizarVista=true){
+    const rows=$('ventasActivosLista')?[...$('ventasActivosLista').querySelectorAll('[data-va-row]')]:[];
+    const total={
+      count:0,precio:0,costoFiscal:0,depreciacion:0,recuperacion:0,retencion:0,retencionReferencia:0,
+      ordinaryGross:0,ordinaryCost:0,ordinaryResult:0,goGross:0,goCost:0,goExempt:0,goResult:0,goTax:0,
+      adjustedPriceCount:0,lossCount:0,houseBenefitCount:0,details:[]
+    };
+    rows.forEach(row=>{
+      const tipo=row.querySelector('.va-tipo').value;
+      const naturaleza=row.querySelector('.va-naturaleza').value;
+      const years=Math.max(0,Number(row.querySelector('.va-anos').value)||0);
+      const months=clamp(Math.max(0,Number(row.querySelector('.va-meses').value)||0),0,11);
+      const monthsHeld=Math.floor(years)*12+Math.floor(months);
+      const enteredPrice=rawNumber(row.querySelector('.va-precio').value);
+      const fiscalCost=rawNumber(row.querySelector('.va-costo').value);
+      const minimumValue=rawNumber(row.querySelector('.va-avaluo').value);
+      const isRealEstate=tipo==='vivienda'||tipo==='inmueble';
+      const fiscalPrice=isRealEstate?Math.max(enteredPrice,minimumValue,fiscalCost):Math.max(enteredPrice,minimumValue);
+      const isFixed=naturaleza==='fijo';
+      const isDepreciable=isFixed&&row.querySelector('.va-depreciable').value==='si';
+      const depreciation=isDepreciable?rawNumber(row.querySelector('.va-depreciacion').value):0;
+      const utility=fiscalPrice-fiscalCost;
+      const positiveUtility=Math.max(0,utility);
+      const recovery=Math.min(positiveUtility,depreciation);
+      const residualBeforeExemption=utility-recovery;
+      const isGO=isFixed&&monthsHeld>=24;
+      const benefitRequested=row.querySelector('.va-beneficio311').value==='si';
+      const houseExempt=isGO&&tipo==='vivienda'&&benefitRequested
+        ? Math.min(Math.max(0,residualBeforeExemption),5000*uvt)
+        : 0;
+      const taxableResidual=residualBeforeExemption-houseExempt;
+      const actualRetention=rawNumber(row.querySelector('.va-retencion').value);
+      const retentionReference=fiscalPrice*.01;
+      const directTax=isGO?Math.max(0,taxableResidual)*pct('goPct'):0;
+      let classification='';
+      if(!isFixed) classification='Renta ordinaria — activo movible';
+      else if(isGO) classification='Ganancia ocasional — 2 años o más';
+      else classification='Renta no laboral — menos de 2 años';
+
+      if(isGO){
+        total.goGross+=fiscalPrice;
+        total.goCost+=fiscalCost+recovery;
+        total.goExempt+=houseExempt;
+      }else{
+        total.ordinaryGross+=fiscalPrice;
+        total.ordinaryCost+=fiscalCost+recovery;
+      }
+      total.count+=fiscalPrice>0||fiscalCost>0?1:0;
+      total.precio+=fiscalPrice;
+      total.costoFiscal+=fiscalCost;
+      total.depreciacion+=depreciation;
+      total.recuperacion+=recovery;
+      total.retencion+=actualRetention;
+      total.retencionReferencia+=retentionReference;
+      if(fiscalPrice>enteredPrice+1) total.adjustedPriceCount++;
+      if(utility<0) total.lossCount++;
+      if(houseExempt>0){total.houseBenefitCount++;}
+      total.details.push({tipo,naturaleza,monthsHeld,enteredPrice,fiscalPrice,fiscalCost,depreciation,recovery,utility,isGO,houseExempt,taxableResidual,actualRetention,retentionReference,classification});
+
+      if(actualizarVista){
+        row.querySelector('.va-out-precio').textContent=fmt(mil(fiscalPrice));
+        row.querySelector('.va-out-clasificacion').textContent=classification;
+        row.querySelector('.va-out-utilidad').textContent=fmt(mil(utility));
+        row.querySelector('.va-out-recuperacion').textContent=fmt(mil(recovery));
+        row.querySelector('.va-out-base').textContent=fmt(mil(taxableResidual));
+        row.querySelector('.va-out-exenta').textContent=fmt(mil(houseExempt));
+        row.querySelector('.va-out-ret-ref').textContent=fmt(mil(retentionReference));
+        row.querySelector('.va-out-impuesto').textContent=isGO?fmt(mil(directTax)):'Se integra a tabla art. 241';
+      }
+    });
+    total.ordinaryResult=total.ordinaryGross-total.ordinaryCost;
+    total.goResult=Math.max(0,total.goGross-total.goCost-total.goExempt);
+    total.goTax=mil(total.goResult*pct('goPct'));
+    if(actualizarVista){
+      setMoney('rVentaActivosPrecio',total.precio);
+      setMoney('rVentaActivosCosto',total.costoFiscal);
+      setMoney('rVentaActivosRecuperacion',total.recuperacion);
+      setMoney('rVentaActivosOrdinaria',total.ordinaryResult);
+      setMoney('rVentaActivosGO',total.goResult);
+      setMoney('rVentaActivosExenta',total.goExempt);
+      setMoney('rVentaActivosRetencion',total.retencion);
+      setMoney('rVentaActivosImpuestoGO',total.goTax);
+    }
+    return total;
+  }
+
+  function calcular(){
+    const uvt=Math.max(1,n('uvt'));
+    const ventasActivos=calcularVentasActivos(uvt,true);
+
+    const patrimonio=totalFilas('activos');
+    const deudas=totalFilas('deudas');
+    const patrimonioLiquido=Math.max(0,patrimonio-deudas);
+    setMoney('rPatrimonioBruto',patrimonio);
+    setMoney('rDeudas',deudas);
+    setMoney('rPatrimonioLiquido',patrimonioLiquido);
+    $('rPatrimonioUVT').textContent=fmtNum(patrimonioLiquido/uvt);
+
+    const trabBr=n('trabSalarios')+n('trabHonorariosSinCostos')+n('trabOtrosIngresos');
+    const indBr=n('indHonorarios')+n('indOtrosIngresos');
+    const raisSolicitado=n('trabVolRAIS')+n('indVolRAIS');
+    const raisAceptado=Math.min(raisSolicitado,(trabBr+indBr)*.25,2500*uvt);
+    const raisTrab=raisSolicitado>0?raisAceptado*(n('trabVolRAIS')/raisSolicitado):0;
+    const raisInd=raisSolicitado>0?raisAceptado*(n('indVolRAIS')/raisSolicitado):0;
+    const trabIncr=Math.min(n('trabSaludObl')+n('trabPensionObl')+n('trabFondoSolidaridad')+raisTrab+n('trabOtrosINCR'),trabBr);
+    const indIncr=Math.min(n('indSaludObl')+n('indPensionObl')+n('indFondoSolidaridad')+raisInd+n('indOtrosINCR'),indBr);
+    const trabNeto=Math.max(0,trabBr-trabIncr);
+
+    $('trabajoBruto').value=fmt(mil(trabBr));
+    $('trabajoINCR').value=fmt(mil(trabIncr));
+    $('indBruto').value=fmt(mil(indBr));
+    $('indINCR').value=fmt(mil(indIncr));
+
+    const indCostInput=n('indCostos'), indModo=$('indModo').value;
+    const indCostUsed=indModo==='costos'?indCostInput:0;
+    const indNeto=Math.max(0,indBr-indIncr-indCostUsed);
+    const indRelacion=indBr>0?indCostInput/indBr:0;
+    const indicador=pct('costosIndicativoPct');
+
+    const capBr=n('capitalBruto'), capIncr=Math.min(n('capitalINCR'),capBr), capCost=n('capitalCostos');
+    const capNeto=Math.max(0,capBr-capIncr-capCost);
+
+    const nlBr=n('noLaboralBruto')+ventasActivos.ordinaryGross, nlDev=n('noLaboralDev'), nlIncr=Math.min(n('noLaboralINCR'),nlBr), nlCost=n('noLaboralCostos')+ventasActivos.ordinaryCost;
+    const nlNeto=Math.max(0,nlBr-nlDev-nlIncr-nlCost);
+
+    setValueMoney('trabajoNetoVista',trabNeto);
+    setValueMoney('indNetoVista',indNeto);
+    $('indRelacionVista').value=(indRelacion*100).toFixed(2)+' %';
+    $('indIndicadorVista').value=indBr===0?'Sin ingresos':(indRelacion>indicador?'Supera el indicador':'No supera el indicador');
+    setValueMoney('capitalNetoVista',capNeto);
+    setValueMoney('noLaboralNetoVista',nlNeto);
+
+    const generalNeto=trabNeto+indNeto+capNeto+nlNeto;
+    const baseLimite=Math.max(0,trabBr+indBr+capBr+nlBr-trabIncr-indIncr-capIncr-nlIncr);
+    const limiteGeneral=Math.min(baseLimite*pct('limiteGeneralPct'),n('limiteGeneralUVT')*uvt);
+
+    const afcAceptado=Math.min(n('afcValor'),baseLimite*pct('afcPct'),n('afcUVT')*uvt);
+    const viviendaAceptada=Math.min(n('viviendaValor'),n('viviendaUVT')*uvt);
+    const saludAceptada=Math.min(n('saludValor'),clamp(n('saludMeses'),0,12)*n('saludUVTMes')*uvt);
+    const trabajoElegibleDepend=trabBr+(indModo==='exencion'?indBr:0);
+    const dependOrd=$('dependOrdinaria').value==='si'
+      ? Math.min(trabajoElegibleDepend*.10,clamp(n('dependMeses'),0,12)*n('dependUVTMes')*uvt)
+      : 0;
+    const gmfAceptado=n('gmfPagado')*.50;
+    const icetexAceptado=Math.min(n('icetexValor'),n('icetexUVT')*uvt);
+    const otrasAceptadas=n('otrasLimitadas');
+
+    const beneficiosPrevios=afcAceptado+viviendaAceptada+saludAceptada+dependOrd+gmfAceptado+icetexAceptado+otrasAceptadas;
+    const rentaTrabajoElegible25=trabNeto+(indModo==='exencion'?Math.max(0,indBr-indIncr):0);
+    const base25=Math.max(0,rentaTrabajoElegible25-Math.min(rentaTrabajoElegible25,beneficiosPrevios));
+    const exencion25=$('aplicar25').value==='si'
+      ? Math.min(base25*pct('exencionLaboralPct'),n('exencionLaboralUVT')*uvt)
+      : 0;
+
+    const totalLimitadasSolicitadas=beneficiosPrevios+exencion25;
+    const limitadasAceptadas=Math.min(totalLimitadasSolicitadas,limiteGeneral,generalNeto);
+
+    const noLimitadasAceptadas=Math.min(n('noLimitadas'),Math.max(0,generalNeto-limitadasAceptadas));
+    const saldoTrasBeneficios=Math.max(0,generalNeto-limitadasAceptadas-noLimitadasAceptadas);
+
+    const docsDepend=[1,2,3,4].filter(i=>String($('depDoc'+i).value||'').trim()).length;
+    if(docsDepend>0) $('dependNumero').value=docsDepend;
+    const dependCount=clamp(Math.floor(n('dependNumero')),0,4);
+    const adicionDependMax=dependCount*n('dependAdicionUVT')*uvt;
+    const workNetAfter=Math.max(0,trabNeto+indNeto-Math.min(trabNeto+indNeto,limitadasAceptadas+noLimitadasAceptadas));
+    const adicionDepend=Math.min(adicionDependMax,workNetAfter,saldoTrasBeneficios);
+
+    const saldoTrasDepend=Math.max(0,saldoTrasBeneficios-adicionDepend);
+    const facturaElectronica=Math.min(n('comprasElectronicas')*pct('facturaPct'),n('facturaUVT')*uvt,saldoTrasDepend);
+
+    const generalOrdinaria=Math.max(0,generalNeto-limitadasAceptadas-noLimitadasAceptadas-adicionDepend-facturaElectronica);
+    const rentasGravablesTotal=n('rentasGravables')+ventasActivos.recuperacion;
+    const generalGravable=Math.max(0,generalOrdinaria+rentasGravablesTotal-n('compPerdidas')-n('compPresuntiva'));
+
+    const rentasPorTipo={trabajo:trabNeto,ind:indNeto,capital:capNeto,nolaboral:nlNeto};
+    let beneficioDestino=$('beneficioDestino').value;
+    if(beneficioDestino==='auto') beneficioDestino=Object.keys(rentasPorTipo).sort((a,b)=>rentasPorTipo[b]-rentasPorTipo[a])[0];
+    let cupoRegular=limitadasAceptadas;
+    const afcDraft=Math.min(afcAceptado,cupoRegular); cupoRegular-=afcDraft;
+    const ex25Draft=Math.min(exencion25,cupoRegular); cupoRegular-=ex25Draft;
+    const viviendaDraft=Math.min(viviendaAceptada,cupoRegular); cupoRegular-=viviendaDraft;
+    const otherDedRequested=saludAceptada+dependOrd+gmfAceptado+icetexAceptado+otrasAceptadas;
+    const otherDedDraft=Math.min(otherDedRequested,cupoRegular); cupoRegular-=otherDedDraft;
+    const otherExDraft=Math.max(0,cupoRegular)+noLimitadasAceptadas;
+    const asignacion={trabajo:{afc:0,otherEx:0,vivienda:0,otherDed:0},ind:{afc:0,otherEx:0,vivienda:0,otherDed:0},capital:{afc:0,otherEx:0,vivienda:0,otherDed:0},nolaboral:{afc:0,otherEx:0,vivienda:0,otherDed:0}};
+    asignacion[beneficioDestino]={afc:afcDraft,otherEx:ex25Draft+otherExDraft,vivienda:viviendaDraft,otherDed:otherDedDraft};
+    const presuntiva=n('rentaPresuntiva');
+
+    setMoney('rBaseLimite',baseLimite);
+    setMoney('rLimiteGeneral',limiteGeneral);
+    setMoney('rBeneficiosLimitados',limitadasAceptadas);
+    setMoney('rBeneficiosFuera',noLimitadasAceptadas+adicionDepend+facturaElectronica);
+    setMoney('rExencion25',exencion25);
+    setMoney('rAdicionDepend',adicionDepend);
+    setMoney('rFacturaElectronica',facturaElectronica);
+    setMoney('rGeneralOrdinaria',generalOrdinaria);
+    setMoney('rGeneralGravable',generalGravable);
+
+    const penNal=n('pensionNacional'), penExt=n('pensionExterior'), penIncr=Math.min(n('pensionINCR'),penNal+penExt);
+    const penLiquida=Math.max(0,penNal+penExt-penIncr);
+    const penExenta=Math.min(penNal,clamp(n('pensionMeses'),0,12)*n('pensionUVTMes')*uvt,penLiquida);
+    const penGravable=Math.max(0,penLiquida-penExenta);
+    setMoney('rPensionLiquida',penLiquida);
+    setMoney('rPensionExenta',penExenta);
+    setMoney('rPensionGravable',penGravable);
+    $('rPensionUVT').textContent=fmtNum(penGravable/uvt);
+
+    const div2016=n('div2016'), div1=n('divSub1'), div2=n('divSub2');
+    const divCorpTax=mil(div2*pct('divCorpPct'));
+    const div2Neto=Math.max(0,div2-divCorpTax);
+    const divBase241=div1+div2Neto;
+    const div2016Tax=impuestoDividendos2016(div2016,uvt);
+    const divExteriorBase=Math.max(0,n('divExterior')-n('divExteriorExento'));
+    const divExteriorTax=mil(divExteriorBase*pct('divCorpPct'));
+    const divDescuento=mil(Math.max(0,(divBase241/uvt)-1090)*.19*uvt);
+
+    setMoney('rDivCorpTax',divCorpTax);
+    setMoney('rDivBase241',divBase241);
+    setMoney('rDiv2016Tax',div2016Tax);
+    setMoney('rDivExteriorTax',divExteriorTax);
+    setMoney('rDivDescuento',divDescuento);
+
+    const goIngresosTotal=n('goIngresos')+ventasActivos.goGross;
+    const goCostosTotal=n('goCostos')+ventasActivos.goCost;
+    const goExentasTotal=n('goExentas')+ventasActivos.goExempt;
+    const goBase=Math.max(0,goIngresosTotal-goCostosTotal-goExentasTotal);
+    const goTax=mil(goBase*pct('goPct'));
+    const lotTax=mil(n('loterias')*pct('loteriaPct'));
+    const retencionPremios=n('retencionPremios');
+    const premioPendiente=Math.max(0,lotTax-retencionPremios);
+    const goTotal=goTax+lotTax;
+    setMoney('rGOBase',goBase);
+    setMoney('rGOTax',goTax);
+    setMoney('rLoteriaTax',lotTax);
+    setMoney('rGOTotal',goTotal);
+    setMoney('rRetencionPremios',retencionPremios);
+    setMoney('rPremioPendiente',premioPendiente);
+
+    const base241=Math.max(generalGravable,presuntiva)+penGravable+divBase241;
+    const calc241=impuesto241(base241,uvt);
+    const impuestoRentas=calc241.tax+divCorpTax+div2016Tax+divExteriorTax;
+
+    const descExterior=Math.min(n('impuestoExterior'),impuestoRentas);
+    const descDonaciones=n('donaciones')*.25;
+    const descIDI=n('idi')*.30;
+    const descEspeciales=Math.min(descDonaciones+descIDI,impuestoRentas*.30);
+    const descOtros=n('otrosDescuentos');
+    const descuentos=Math.min(impuestoRentas,divDescuento+descExterior+descEspeciales+descOtros);
+    const impuestoNeto=Math.max(0,impuestoRentas-descuentos);
+
+    const goDesc=Math.min(n('goExteriorDescuento'),goTotal);
+    const totalImpuesto=Math.max(0,impuestoNeto+goTotal-goDesc);
+
+    const otrasRetenciones=n('retenciones')+ventasActivos.retencion;
+    const ret=otrasRetenciones+retencionPremios;
+    const anticipoAuto=Math.max(0,impuestoNeto*(n('nivelAnticipo')/100)-ret);
+    const anticipo=n('anticipoManual')>0?n('anticipoManual'):anticipoAuto;
+    const balance=totalImpuesto+anticipo+n('sanciones')-n('anticipoAnterior')-n('saldoFavorAnterior')-ret;
+    const saldoPagar=Math.max(0,balance);
+    const saldoFavor=Math.max(0,-balance);
+
+    setMoney('rTax241',calc241.tax);
+    setMoney('rImpuestoRentas',impuestoRentas);
+    setMoney('rDescuentos',descuentos);
+    setMoney('rImpuestoNeto',impuestoNeto);
+    setMoney('rTotalImpuesto',totalImpuesto);
+    setMoney('rAnticipo',anticipo);
+    setMoney('rSaldoPagar',saldoPagar);
+    setMoney('rSaldoFavor',saldoFavor);
+
+    const totalIngresosRegistrados=
+      trabBr+indBr+capBr+nlBr+
+      penNal+penExt+
+      div2016+div1+div2+n('divExterior')+
+      goIngresosTotal+n('loterias');
+
+    const totalCostosGastosRegistrados=
+      indCostInput+capCost+n('noLaboralCostos')+n('goCostos')+ventasActivos.costoFiscal;
+
+    const relacionCostosTotal=totalIngresosRegistrados>0
+      ? totalCostosGastosRegistrados/totalIngresosRegistrados
+      : 0;
+
+    $('liveIncomeValue').textContent=fmt(mil(totalIngresosRegistrados));
+    $('liveCostsValue').textContent=fmt(mil(totalCostosGastosRegistrados));
+    $('liveCostsDetail').textContent=
+      `${(relacionCostosTotal*100).toFixed(2)} % de los ingresos registrados.`;
+
+    const liveBox=$('liveTaxBox');
+    const liveLabel=$('liveTaxLabel');
+    const liveValue=$('liveTaxValue');
+    const liveDetail=$('liveTaxDetail');
+    liveBox.classList.remove('is-favor','is-zero');
+    if(saldoPagar>0){
+      liveLabel.textContent='Saldo estimado a pagar';
+      liveValue.textContent=fmt(mil(saldoPagar));
+      liveDetail.textContent='Cálculo actualizado automáticamente.';
+    }else if(saldoFavor>0){
+      liveBox.classList.add('is-favor');
+      liveLabel.textContent='Saldo estimado a favor';
+      liveValue.textContent=fmt(mil(saldoFavor));
+      liveDetail.textContent='Cálculo actualizado automáticamente.';
+    }else{
+      liveBox.classList.add('is-zero');
+      liveLabel.textContent='Saldo estimado';
+      liveValue.textContent=fmt(0);
+      liveDetail.textContent='Se actualiza automáticamente al llenar el formulario.';
+    }
+    const liveHandle=$('liveHandleValue');
+    if(liveHandle) liveHandle.textContent=liveValue.textContent;
+
+    $('rBase241UVT').textContent=fmtNum(calc241.baseUVT);
+    $('rTarifaMarginal').textContent=calc241.marginal+' %';
+    setMoney('rUmbral1090',1090*uvt);
+
+    generarAlertas({
+      uvt, generalNeto, baseLimite, limiteGeneral, totalLimitadasSolicitadas, limitadasAceptadas,
+      indBr, indCostInput, indRelacion, indicador, indModo, capBr,capIncr,capCost,nlBr,nlDev,nlIncr,nlCost,
+      penExt, div2016,div1,div2,divExteriorBase, dependCount, facturaElectronica,
+      loterias:n('loterias'), lotTax, retencionPremios,
+      compras:n('comprasElectronicas'), saldoPagar,saldoFavor, patrimonio,deudas,
+      afcIn:n('afcValor'),afcAceptado,viviendaIn:n('viviendaValor'),viviendaAceptada,
+      saludIn:n('saludValor'),saludAceptada,icetexIn:n('icetexValor'),icetexAceptado,
+      noLimitadasIn:n('noLimitadas'), noLimitadasAceptadas, raisSolicitado, raisAceptado,
+      fondoSolidaridad:n('trabFondoSolidaridad')+n('indFondoSolidaridad'), ventasActivos
+    });
+    window._calc210={
+      uvt,patrimonio,deudas,patrimonioLiquido,trabBr,trabIncr,trabNeto,indBr,indIncr,indCostInput,indCostUsed,indNeto,indRelacion,indicador,
+      capBr,capIncr,capCost,capNeto,nlBr,nlDev,nlIncr,nlCost,nlNeto,generalNeto,limitadasAceptadas,noLimitadasAceptadas,
+      adicionDepend,facturaElectronica,generalOrdinaria,generalGravable,presuntiva,asignacion,beneficioDestino,
+      penNal,penExt,penIncr,penLiquida,penExenta,penGravable,div2016,div1,div2,divCorpTax,divBase241,div2016Tax,divExteriorBase,divExteriorTax,divDescuento,
+      goIngresosTotal,goCostosTotal,goExentasTotal,goBase,goTax,lotTax,retencionPremios,premioPendiente,goTotal,base241,calc241,impuestoRentas,descuentos,impuestoNeto,goDesc,totalImpuesto,anticipo,otrasRetenciones,ret,saldoPagar,saldoFavor,
+      totalIngresosRegistrados,totalCostosGastosRegistrados,relacionCostosTotal,
+      dependCount,raisSolicitado,raisAceptado,afcDraft,ex25Draft,viviendaDraft,otherDedDraft,otherExDraft,rentasGravablesTotal,ventasActivos
+    };
+    actualizarComparacionDian();
+    if(typeof calcularRevisionPatrimonial==='function') calcularRevisionPatrimonial();
+    return {saldoPagar,saldoFavor};
+  }
+
+  function generarAlertas(d){
+    const alerts=[];
+    alerts.push({t:'ok',m:`UVT utilizada: ${fmt(d.uvt)}. Umbral inicial de la tabla: ${fmt(mil(1090*d.uvt))}.`});
+    if(d.raisSolicitado>d.raisAceptado+1){
+      alerts.push({t:'warn',m:`Los aportes voluntarios al RAIS se limitaron de ${fmt(d.raisSolicitado)} a ${fmt(mil(d.raisAceptado))}, aplicando el 25 % del ingreso laboral o tributario y el máximo de 2.500 UVT.`});
+    }
+    if(d.fondoSolidaridad>0){
+      alerts.push({t:'ok',m:'Se registró fondo de solidaridad pensional por separado. Confirma que este valor no esté incluido dentro del total certificado como pensión obligatoria para evitar duplicarlo.'});
+    }
+    if(d.totalLimitadasSolicitadas>d.limitadasAceptadas+1){
+      alerts.push({t:'warn',m:`Los beneficios limitados solicitados superan el valor aceptado por el límite conjunto. Solicitado: ${fmt(mil(d.totalLimitadasSolicitadas))}; aceptado: ${fmt(mil(d.limitadasAceptadas))}.`});
+    }
+    if(d.indBr>0 && d.indModo==='costos' && d.indRelacion>d.indicador){
+      alerts.push({t:'warn',m:`Los costos de rentas de trabajo independientes equivalen al ${(d.indRelacion*100).toFixed(2)} % de los ingresos y superan el indicador del ${(d.indicador*100).toFixed(0)} %. La DIAN exige informarlo, pero el 60 % no es un límite automático de rechazo.`});
+    }
+    if(d.indModo==='exencion' && d.indCostInput>0){
+      alerts.push({t:'warn',m:'Se eligió la exención laboral del 25 % para ingresos independientes. Los costos digitados no se restaron, porque para este tratamiento debe optarse entre costos y gastos o la exención.'});
+    }
+    if(d.capCost+d.capIncr>d.capBr && d.capBr>0) alerts.push({t:'warn',m:'Las rentas de capital generan una pérdida o valor negativo antes de beneficios. Revise la procedencia y el tratamiento de la pérdida.'});
+    if(d.nlDev+d.nlIncr+d.nlCost>d.nlBr && d.nlBr>0) alerts.push({t:'warn',m:'Las rentas no laborales generan una pérdida o valor negativo antes de beneficios. Revise el soporte y la compensación permitida.'});
+    if(d.penExt>0) alerts.push({t:'warn',m:'Se registraron pensiones del exterior. La herramienta no les aplicó automáticamente la exención mensual de pensiones nacionales; revise convenio, fuente y tratamiento específico.'});
+    if(d.div2016+d.div1+d.div2+d.divExteriorBase>0) alerts.push({t:'warn',m:'Se registraron dividendos. Verifique el certificado de la sociedad, el año de origen de la utilidad, la subcédula correcta y la tarifa corporativa aplicable.'});
+    if(d.loterias>0 && d.retencionPremios===0) alerts.push({t:'warn',m:'Se registró un premio de lotería, rifa, apuesta o chance, pero la retención certificada está en cero. Revise el comprobante entregado por el operador.'});
+    if(d.retencionPremios>0 && d.loterias===0) alerts.push({t:'warn',m:'Se registró una retención de premios, pero no se registró el valor bruto del premio. El ingreso debe informarse antes de descontar la retención.'});
+    if(d.retencionPremios>d.lotTax+1000) alerts.push({t:'warn',m:`La retención registrada (${fmt(d.retencionPremios)}) supera el impuesto estimado del premio (${fmt(d.lotTax)}). Revise el certificado y el valor bruto informado.`});
+    if(d.loterias>0 && d.retencionPremios>0) alerts.push({t:'ok',m:`La retención del premio por ${fmt(d.retencionPremios)} fue incluida automáticamente dentro de la casilla 132 del borrador 210.`});
+    if(d.dependCount>0) alerts.push({t:'warn',m:'La adición de 72 UVT por dependiente exige verificar quién califica como dependiente y evitar duplicidades no permitidas entre deducciones.'});
+    if(d.compras>0 && d.facturaElectronica===0) alerts.push({t:'warn',m:'Las compras electrónicas no generaron deducción porque la renta disponible fue cero o el valor no superó el redondeo. Revise además los requisitos de factura, identificación y pago electrónico.'});
+    if(d.afcIn>d.afcAceptado+1) alerts.push({t:'warn',m:`Los aportes AFC/FVP/AVC se limitaron de ${fmt(d.afcIn)} a ${fmt(mil(d.afcAceptado))}.`});
+    if(d.viviendaIn>d.viviendaAceptada+1) alerts.push({t:'warn',m:`Los intereses de vivienda se limitaron de ${fmt(d.viviendaIn)} a ${fmt(mil(d.viviendaAceptada))}.`});
+    if(d.saludIn>d.saludAceptada+1) alerts.push({t:'warn',m:`Los pagos de salud se limitaron de ${fmt(d.saludIn)} a ${fmt(mil(d.saludAceptada))}, según meses y UVT configuradas.`});
+    if(d.icetexIn>d.icetexAceptado+1) alerts.push({t:'warn',m:`Los intereses ICETEX se limitaron de ${fmt(d.icetexIn)} a ${fmt(mil(d.icetexAceptado))}.`});
+    if(d.noLimitadasIn>d.noLimitadasAceptadas+1) alerts.push({t:'warn',m:'Las rentas exentas registradas como no limitadas excedían la renta disponible y fueron reducidas. Confirme además que una norma las excluya expresamente del límite.'});
+    if(d.patrimonio===0) alerts.push({t:'warn',m:'No se registraron activos. Confirme que el patrimonio al 31 de diciembre esté completo.'});
+    if(d.deudas>0) alerts.push({t:'ok',m:'Las deudas se restaron del patrimonio bruto. Conserve documentos idóneos o de fecha cierta, según corresponda.'});
+    if(d.ventasActivos&&d.ventasActivos.count>0){
+      alerts.push({t:'ok',m:`Se procesaron ${d.ventasActivos.count} venta(s) de activos. Precio fiscal total utilizado: ${fmt(mil(d.ventasActivos.precio))}; costo fiscal neto: ${fmt(mil(d.ventasActivos.costoFiscal))}.`});
+      alerts.push({t:'ok',m:`Las retenciones efectivamente registradas por ventas de activos (${fmt(mil(d.ventasActivos.retencion))}) se sumaron a las retenciones de la declaración. La referencia general del artículo 398 equivale al 1 % del valor de enajenación, pero debe prevalecer el certificado real.`});
+      if(d.ventasActivos.adjustedPriceCount>0) alerts.push({t:'warn',m:`En ${d.ventasActivos.adjustedPriceCount} venta(s) el precio fiscal usado fue mayor que el precio digitado por aplicación del avalúo, valor mínimo o, tratándose de inmuebles, del costo fiscal mínimo previsto en el artículo 90 del E.T.`});
+      if(d.ventasActivos.recuperacion>0) alerts.push({t:'warn',m:`Se separó ${fmt(mil(d.ventasActivos.recuperacion))} como recuperación de depreciaciones. Este valor se adicionó a rentas gravables de la cédula general, sin rentas exentas ni deducciones.`});
+      if(d.ventasActivos.houseBenefitCount>0) alerts.push({t:'warn',m:`Se aplicó la exención del artículo 311-1 a ${d.ventasActivos.houseBenefitCount} venta(s) de vivienda. Verifique que la totalidad de los dineros haya cumplido la destinación AFC o el abono directo al crédito hipotecario exigido por la norma.`});
+      if(d.ventasActivos.lossCount>0) alerts.push({t:'warn',m:'Se registraron ventas con pérdida fiscal. La aceptación de pérdidas puede estar limitada por el artículo 312 y otras reglas especiales; revise vinculación, naturaleza del activo y soportes.'});
+    }
+    if(d.saldoPagar>0) alerts.push({t:'error',m:`Resultado estimado: saldo a pagar de ${fmt(mil(d.saldoPagar))}. Antes de presentar, confronte cada casilla con los certificados y el formulario oficial.`});
+    if(d.saldoFavor>0) alerts.push({t:'ok',m:`Resultado estimado: saldo a favor de ${fmt(mil(d.saldoFavor))}. Verifique retenciones, anticipos y saldos anteriores.`});
+    if(d.saldoPagar===0 && d.saldoFavor===0) alerts.push({t:'ok',m:'El cálculo actual no arroja saldo a pagar ni saldo a favor.'});
+    $('alertas').innerHTML=alerts.map(a=>`<div class="warning ${a.t==='error'?'error':a.t==='ok'?'ok':''}">${a.m}</div>`).join('');
+  }
+
+
+  const DIAN210_COORDS = {"28":[180.2,590],"29":[192.2,252],"30":[192.2,411],"31":[192.2,590],"32":[216.2,230],"33":[240.2,230],"34":[264.2,230],"35":[288.2,230],"36":[300.2,230],"37":[312.2,230],"38":[324.2,230],"39":[336.2,230],"40":[348.2,230],"41":[360.2,230],"42":[408.2,230],"43":[216.2,350],"44":[240.2,350],"45":[252.2,350],"46":[264.2,350],"47":[288.2,350],"48":[300.2,350],"49":[312.2,350],"50":[324.2,350],"51":[336.2,350],"52":[348.2,350],"53":[360.2,350],"54":[372.2,350],"55":[384.2,350],"56":[396.2,350],"57":[408.2,350],"58":[216.2,470],"59":[240.2,470],"60":[252.2,470],"61":[264.2,470],"62":[276.2,470],"63":[288.2,470],"64":[300.2,470],"65":[312.2,470],"66":[324.2,470],"67":[336.2,470],"68":[348.2,470],"69":[360.2,470],"70":[372.2,470],"71":[384.2,470],"72":[396.2,470],"73":[408.2,470],"74":[216.2,590],"75":[228.2,590],"76":[240.2,590],"77":[252.2,590],"78":[264.2,590],"79":[276.2,590],"80":[288.2,590],"81":[300.2,590],"82":[312.2,590],"83":[324.2,590],"84":[336.2,590],"85":[348.2,590],"86":[360.2,590],"87":[372.2,590],"88":[384.2,590],"89":[396.2,590],"90":[408.2,590],"91":[420.2,170],"92":[420.2,310],"93":[420.2,450],"94":[420.2,590],"95":[432.2,170],"96":[432.2,310],"97":[432.2,450],"98":[432.2,590],"99":[444.2,310],"100":[456.2,310],"101":[468.2,310],"102":[480.2,310],"103":[492.2,310],"104":[504.2,310],"105":[516.2,310],"106":[528.2,310],"107":[540.2,310],"108":[552.2,310],"109":[564.2,310],"110":[576.2,310],"111":[588.2,310],"112":[600.2,310],"113":[612.2,310],"114":[624.2,310],"115":[636.2,310],"116":[444.2,590],"117":[456.2,590],"118":[468.2,590],"119":[480.2,590],"120":[492.2,590],"121":[504.2,590],"122":[516.2,460],"123":[516.2,590],"124":[528.2,460],"125":[528.2,590],"126":[540.2,590],"127":[552.2,590],"128":[564.2,590],"129":[576.2,590],"130":[588.2,590],"131":[600.2,590],"132":[612.2,590],"133":[624.2,590],"134":[648.2,170],"135":[648.2,310],"136":[648.2,450],"137":[648.2,590],"138":[660.2,130],"139":[660.2,290],"140":[660.2,450],"141":[660.2,590]};
+  let _pdfJsPromise=null;
+
+  function seleccionarPDFDian(){
+    const input=$('dianPdfFile');
+    if(input){ input.value=''; input.click(); }
+  }
+
+  function setDianLoading(show,text=''){
+    const box=$('dianLoading');
+    if(!box) return;
+    if(text && $('dianLoadingText')) $('dianLoadingText').textContent=text;
+    box.classList.toggle('show',!!show);
+  }
+
+  async function asegurarPDFJS(){
+    if(window._pdfjsDianModule) return window._pdfjsDianModule;
+    if(_pdfJsPromise) return _pdfJsPromise;
+    _pdfJsPromise=(async()=>{
+      const fuentes=[
+        {
+          lib:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.2.108/pdf.min.mjs',
+          worker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.2.108/pdf.worker.min.mjs'
+        },
+        {
+          lib:'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.min.mjs',
+          worker:'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs'
+        }
+      ];
+      let ultimoError=null;
+      for(const fuente of fuentes){
+        try{
+          const modulo=await import(fuente.lib);
+          modulo.GlobalWorkerOptions.workerSrc=fuente.worker;
+          window._pdfjsDianModule=modulo;
+          return modulo;
+        }catch(err){ultimoError=err;}
+      }
+      throw ultimoError||new Error('No fue posible iniciar el lector PDF.');
+    })();
+    return _pdfJsPromise;
+  }
+
+  function itemPDFNormalizado(it,pageHeight){
+    const t=it.transform||[1,0,0,1,0,0];
+    const h=Math.abs(Number(t[3])||Number(it.height)||0);
+    const x=Number(t[4])||0;
+    const y=Number(t[5])||0;
+    const width=Number(it.width)||0;
+    return {text:String(it.str||'').trim(),x,right:x+width,top:pageHeight-y-h,height:h,width};
+  }
+
+  function esNumeroPDF(s){ return /^-?[0-9][0-9.,]*$/.test(String(s||'').trim()); }
+  function numeroPDF(s){
+    const limpio=String(s??'').replace(/[^0-9-]/g,'');
+    const v=Number(limpio||0);
+    return Number.isFinite(v)?v:0;
+  }
+
+  function buscarValor210(items,topObjetivo,rightObjetivo){
+    const candidatos=items
+      .filter(i=>i.height>=6.2 && esNumeroPDF(i.text) && Math.abs(i.top-topObjetivo)<=5.2 && Math.abs(i.right-rightObjetivo)<=8.5)
+      .map(i=>({i,score:Math.abs(i.top-topObjetivo)*2+Math.abs(i.right-rightObjetivo)}))
+      .sort((a,b)=>a.score-b.score);
+    return candidatos.length?{found:true,text:candidatos[0].i.text,value:numeroPDF(candidatos[0].i.text)}:{found:false,text:'',value:0};
+  }
+
+  function textosEnZona(items,x0,x1,top0,top1,minHeight=6){
+    return items.filter(i=>i.height>=minHeight && i.x>=x0 && i.x<=x1 && i.top>=top0 && i.top<=top1 && i.text)
+      .sort((a,b)=>a.x-b.x);
+  }
+
+  function unirTextoZona(items,x0,x1,top0,top1,minHeight=6){
+    return textosEnZona(items,x0,x1,top0,top1,minHeight).map(i=>i.text).join(' ').replace(/\s+/g,' ').trim();
+  }
+
+  function unirDigitosZona(items,x0,x1,top0,top1){
+    return textosEnZona(items,x0,x1,top0,top1,7).filter(i=>/^\d+$/.test(i.text)).map(i=>i.text).join('');
+  }
+
+  function leerMeta210(items){
+    const year=unirDigitosZona(items,60,112,56,74).slice(0,4);
+    const nit=unirDigitosZona(items,100,195,164,178);
+    const dv=unirDigitosZona(items,195,209,164,178).slice(0,1);
+    const actividad=unirDigitosZona(items,60,125,176,190).slice(0,6);
+    const seccional=unirDigitosZona(items,560,596,164,178);
+    const formulario=textosEnZona(items,450,570,65,90,8).map(i=>i.text).find(t=>/^\d{10,}$/.test(t))||'';
+    return {
+      year,nit,dv,actividad,seccional,formulario,
+      apellido1:unirTextoZona(items,208,286,164,178,7),
+      apellido2:unirTextoZona(items,289,367,164,178,7),
+      nombre1:unirTextoZona(items,370,452,164,178,7),
+      nombre2:unirTextoZona(items,454,548,164,178,7)
+    };
+  }
+
+  async function extraer210DesdePDF(file){
+    const pdfjs=await asegurarPDFJS();
+    const data=new Uint8Array(await file.arrayBuffer());
+    const pdf=await pdfjs.getDocument({data,isEvalSupported:false}).promise;
+    if(!pdf.numPages) throw new Error('El PDF no contiene páginas.');
+    const page=await pdf.getPage(1);
+    const viewport=page.getViewport({scale:1});
+    const content=await page.getTextContent();
+    const items=content.items.map(it=>itemPDFNormalizado(it,viewport.height)).filter(i=>i.text);
+    const boxes={},missing=[];
+    Object.entries(DIAN210_COORDS).forEach(([box,coord])=>{
+      const r=buscarValor210(items,coord[0],coord[1]);
+      boxes[box]=r.value;
+      if(!r.found) missing.push(Number(box));
+    });
+    const meta=leerMeta210(items);
+    const detectadas=Object.keys(DIAN210_COORDS).length-missing.length;
+    if(detectadas<80 || !meta.nit || !meta.year){
+      throw new Error('No pude reconocer este archivo como un Formulario 210 digital de la DIAN. Usa el PDF original descargado de la DIAN, no una foto ni un escaneo.');
+    }
+    return {boxes,meta,missing,detectadas,total:Object.keys(DIAN210_COORDS).length,pages:pdf.numPages};
+  }
+
+  function ponerCampo(id,value){
+    const el=$(id); if(!el) return;
+    if(el.dataset.money==='true') el.value=groupedNumber(value||0);
+    else el.value=String(value??'');
+  }
+
+  function limpiarParaImportacionDian(){
+    moneyFieldIds.forEach(id=>{
+      if(id==='uvt') return;
+      const el=$(id);
+      if(el && !el.readOnly) el.value='0';
+    });
+    ['dependNumero'].forEach(id=>{if($(id))$(id).value='0'});
+    if($('dependOrdinaria')) $('dependOrdinaria').value='no';
+    if($('aplicar25')) $('aplicar25').value='no';
+    if($('indModo')) $('indModo').value='costos';
+    if($('nivelAnticipo')) $('nivelAnticipo').value='0';
+    if($('beneficioDestino')) $('beneficioDestino').value='auto';
+    ['qCesantias2016','qSeguroFFMM','qIngresoFFMM','qProfesorPublico','qDiplomatico','qHotelera','qECECapital','qECENoLaboral','qMagistrado','qTrabajoCAN'].forEach(id=>{if($(id))$(id).value='no'});
+    for(let i=1;i<=5;i++) ['depTipo','depDoc','depPar'].forEach(p=>{if($(p+i))$(p+i).value=''});
+    $('tablaActivos').querySelector('tbody').innerHTML='';
+    $('tablaDeudas').querySelector('tbody').innerHTML='';
+    if($('ventasActivosLista')) $('ventasActivosLista').innerHTML='';
+  }
+
+  function sumaCajas(b,nums){ return nums.reduce((s,x)=>s+(Number(b[x])||0),0); }
+
+  function aplicarImportacion210(resultado,fileName){
+    const b=resultado.boxes, m=resultado.meta;
+    limpiarParaImportacionDian();
+
+    if(m.year) $('anio').value=m.year;
+    if(m.nit) $('identificacion').value=m.nit;
+    if(m.dv) $('dv').value=m.dv;
+    if(m.actividad) $('actividad').value=m.actividad;
+    if(m.apellido1) $('apellido1').value=m.apellido1;
+    if(m.apellido2) $('apellido2').value=m.apellido2;
+    if(m.nombre1) $('nombre1').value=m.nombre1;
+    if(m.nombre2) $('nombre2').value=m.nombre2;
+
+    agregarFila('activos',{concepto:'Patrimonio bruto importado DIAN - casilla 29',detalle:'Valor total del Formulario 210',valor:b[29]||0});
+    agregarFila('deudas',{acreedor:'Total deudas importado DIAN',documento:'',concepto:'Casilla 30 del Formulario 210',valor:b[30]||0});
+    agregarVentaActivo();
+
+    ponerCampo('trabSalarios',b[32]);
+    ponerCampo('trabOtrosINCR',b[33]);
+    ponerCampo('indHonorarios',b[43]);
+    ponerCampo('indOtrosINCR',b[44]);
+    ponerCampo('indCostos',b[45]);
+    ponerCampo('capitalBruto',b[58]);
+    ponerCampo('capitalINCR',b[59]);
+    ponerCampo('capitalCostos',b[60]);
+    ponerCampo('noLaboralBruto',b[74]);
+    ponerCampo('noLaboralDev',b[75]);
+    ponerCampo('noLaboralINCR',b[76]);
+    ponerCampo('noLaboralCostos',b[77]);
+
+    const afc=sumaCajas(b,[35,47,63,80]);
+    const vivienda=sumaCajas(b,[38,50,66,83]);
+    const otrasExentas=sumaCajas(b,[36,48,64,81]);
+    const otrasDeducciones=sumaCajas(b,[39,51,67,84]);
+    ponerCampo('afcValor',afc);
+    ponerCampo('viviendaValor',vivienda);
+    ponerCampo('otrasLimitadas',otrasExentas+otrasDeducciones);
+    $('aplicar25').value='no';
+
+    const beneficioPorRenta={
+      trabajo:sumaCajas(b,[35,36,38,39]),
+      ind:sumaCajas(b,[47,48,50,51]),
+      capital:sumaCajas(b,[63,64,66,67]),
+      nolaboral:sumaCajas(b,[80,81,83,84])
+    };
+    const destinos=Object.entries(beneficioPorRenta).filter(([,v])=>v>0).sort((a,z)=>z[1]-a[1]);
+    if(destinos.length) $('beneficioDestino').value=destinos[0][0];
+
+    const facturaDeduccion=Number(b[28])||0;
+    const tasaFactura=Math.max(0.000001,pct('facturaPct'));
+    ponerCampo('comprasElectronicas',facturaDeduccion/tasaFactura);
+    const uvt=Math.max(1,n('uvt'));
+    const dep139=Number(b[139])||0;
+    if(dep139>0){
+      const estimados=Math.max(0,Math.min(4,Math.round(dep139/(72*uvt))));
+      $('dependNumero').value=String(estimados);
+    }
+
+    ponerCampo('compPerdidas',b[94]);
+    ponerCampo('compPresuntiva',b[95]);
+    ponerCampo('rentasGravables',b[96]);
+    ponerCampo('rentaPresuntiva',b[98]);
+
+    ponerCampo('pensionNacional',b[99]);
+    ponerCampo('pensionINCR',b[100]);
+    ponerCampo('div2016',b[104]);
+    ponerCampo('divSub1',b[107]);
+    ponerCampo('divSub2',b[108]);
+    ponerCampo('divExterior',b[109]);
+    ponerCampo('divExteriorExento',b[110]);
+
+    ponerCampo('goIngresos',b[112]);
+    ponerCampo('goCostos',b[113]);
+    ponerCampo('goExentas',b[114]);
+    ponerCampo('goExteriorDescuento',b[128]);
+
+    ponerCampo('impuestoExterior',b[122]);
+    ponerCampo('donaciones',(Number(b[123])||0)/0.25);
+    const div2=Number(b[108])||0;
+    const divCorp=mil(div2*pct('divCorpPct'));
+    const divBase=(Number(b[107])||0)+Math.max(0,div2-divCorp);
+    const descDivEstimado=mil(Math.max(0,(divBase/uvt)-1090)*.19*uvt);
+    ponerCampo('otrosDescuentos',Math.max(0,(Number(b[124])||0)-descDivEstimado));
+    ponerCampo('anticipoAnterior',b[130]);
+    ponerCampo('saldoFavorAnterior',b[131]);
+    ponerCampo('retenciones',b[132]);
+    ponerCampo('anticipoManual',b[133]);
+    ponerCampo('sanciones',b[135]);
+    $('nivelAnticipo').value='0';
+
+    if(Number(b[62])>0){ $('qECECapital').value='si'; ponerCampo('vECECapital',b[62]); }
+    if(Number(b[79])>0){ $('qECENoLaboral').value='si'; ponerCampo('vECENoLaboral',b[79]); }
+
+    initializeMoneyInputs();
+    document.querySelectorAll('input[data-money="true"]:not([readonly])').forEach(el=>el.value=groupedNumber(el.value));
+    window._dian210Import={...resultado,fileName,beneficioPorRenta,importedAt:new Date().toISOString()};
+    calcular();
+    mostrarImportacionDian();
+    $('dianImportCard').hidden=false;
+    $('dianImportCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function conceptosComparacionDian(){
+    return {
+      29:'Patrimonio bruto',30:'Deudas',31:'Patrimonio líquido',
+      91:'Renta líquida cédula general',92:'Beneficios imputables a nivel general',93:'Renta líquida ordinaria cédula general',
+      97:'Renta líquida gravable cédula general',98:'Renta presuntiva',111:'Base art. 241',
+      121:'Total impuesto sobre rentas líquidas',125:'Total descuentos tributarios',126:'Impuesto neto de renta',
+      127:'Impuesto de ganancias ocasionales',129:'Total impuesto a cargo',132:'Total retenciones',133:'Anticipo siguiente año',
+      136:'Total saldo a pagar',137:'Total saldo a favor',139:'Adición por dependientes'
+    };
+  }
+
+  function casillasActualesParaComparar(){
+    const c=window._calc210;if(!c)return {};
+    const saldoPorImpuesto=Math.max(0,c.totalImpuesto+c.anticipo-n('anticipoAnterior')-n('saldoFavorAnterior')-c.ret);
+    return {
+      29:c.patrimonio,30:c.deudas,31:c.patrimonioLiquido,
+      91:Math.max(0,c.generalNeto-c.limitadasAceptadas-c.noLimitadasAceptadas),
+      92:c.adicionDepend+c.facturaElectronica,93:c.generalOrdinaria,97:c.generalGravable,98:c.presuntiva,
+      111:c.base241,121:c.impuestoRentas,125:c.descuentos,126:c.impuestoNeto,127:c.goTotal,129:c.totalImpuesto,
+      132:c.ret,133:c.anticipo,134:saldoPorImpuesto,136:c.saldoPagar,137:c.saldoFavor,139:c.adicionDepend
+    };
+  }
+
+  function actualizarComparacionDian(){
+    if(!window._dian210Import || !$('dianCompareBody') || !window._calc210) return;
+    const src=window._dian210Import.boxes||{};
+    const cur=casillasActualesParaComparar();
+    const conceptos=conceptosComparacionDian();
+    $('dianCompareBody').innerHTML=Object.entries(conceptos).map(([k,label])=>{
+      const b=Number(k),a=Number(src[b])||0,v=Number(cur[b])||0,d=v-a;
+      const ok=Math.abs(d)<1000;
+      return `<tr><td><strong>${b}</strong></td><td>${label}</td><td class="right">${fmt(mil(a))}</td><td class="right">${fmt(mil(v))}</td><td class="right ${ok?'dian-match':'dian-diff'}">${ok?'$ 0':fmt(mil(d))}</td><td class="${ok?'dian-match':'dian-diff'}">${ok?'Coincide':'Revisar'}</td></tr>`;
+    }).join('');
+  }
+
+  function mostrarImportacionDian(){
+    const d=window._dian210Import;if(!d)return;
+    const b=d.boxes,m=d.meta||{};
+    const nombre=[m.nombre1,m.nombre2,m.apellido1,m.apellido2].filter(Boolean).join(' ');
+    $('dianImportStatus').textContent=`Archivo: ${d.fileName||'PDF DIAN'} · Se reconocieron ${d.detectadas} de ${d.total} casillas por posición.`;
+    $('dianImportMeta').innerHTML=`
+      <div class="dian-meta-item"><b>Año</b><span>${m.year||'-'}</span></div>
+      <div class="dian-meta-item"><b>NIT / identificación</b><span>${m.nit||'-'}${m.dv?' - '+m.dv:''}</span></div>
+      <div class="dian-meta-item"><b>Declarante</b><span>${esc(nombre||'-')}</span></div>
+      <div class="dian-meta-item"><b>Actividad</b><span>${m.actividad||'-'}</span></div>
+      <div class="dian-meta-item"><b>Número formulario</b><span>${m.formulario||'-'}</span></div>`;
+
+    const notes=[];
+    if(d.missing&&d.missing.length) notes.push({t:'warn',m:`No se localizaron ${d.missing.length} casillas en la capa de texto: ${d.missing.slice(0,18).join(', ')}${d.missing.length>18?'…':''}. Se cargaron como cero y debes verificarlas contra el PDF.`});
+    const patrimonioEsperado=Math.max(0,(Number(b[29])||0)-(Number(b[30])||0));
+    if(Math.abs(patrimonioEsperado-(Number(b[31])||0))>=1000) notes.push({t:'warn',m:'Las casillas 29, 30 y 31 del PDF no cuadran aritméticamente. Revísalas antes de continuar.'});
+    notes.push({t:'',m:'La importación copia las casillas del Formulario 210 sin inventar desgloses que el PDF no trae. Cuando una casilla agrupa varios conceptos, el valor se coloca en el campo principal u “otros” de esa renta para que tengas una base editable.'});
+    if((Number(b[99])||0)>0) notes.push({t:'warn',m:'La casilla 99 agrupa pensiones del país y del exterior. El PDF 210 no las separa; el valor se cargó provisionalmente como pensión nacional. Revísalo si existen pensiones del exterior.'});
+    if((Number(b[105])||0)>0) notes.push({t:'warn',m:'La casilla 105 (ingresos no constitutivos en dividendos 2016 y anteriores) no tiene un campo independiente en esta versión del liquidador. Debes revisarla manualmente.'});
+    const rentasConBeneficio=Object.values(d.beneficioPorRenta||{}).filter(v=>v>0).length;
+    if(rentasConBeneficio>1) notes.push({t:'warn',m:'El PDF trae rentas exentas/deducciones distribuidas en más de una renta. Esta hoja conserva el total, pero su módulo actual ubica los beneficios en una sola renta para el borrador. Usa el control de casillas para revisar la distribución.'});
+    const goBase=Number(b[115])||0, goTax=Number(b[127])||0;
+    const goTaxGeneral=mil(goBase*pct('goPct'));
+    if(goBase>0 && Math.abs(goTax-goTaxGeneral)>2000) notes.push({t:'warn',m:'El impuesto de ganancias ocasionales del PDF no coincide con aplicar la tarifa general configurada a toda la casilla 115. Puede haber loterías/rifas u otro tratamiento especial; revisa esa sección antes de usar el resultado.'});
+    if(String(m.year||'')!==String($('anio').value||'')) notes.push({t:'warn',m:'El año leído del PDF y el año del formulario no coinciden.'});
+    $('dianImportNotes').innerHTML=notes.map(x=>`<div class="dian-import-note ${x.t||''}">${x.m}</div>`).join('');
+
+    $('dianBoxesGrid').innerHTML=Object.keys(DIAN210_COORDS).sort((a,z)=>Number(a)-Number(z)).map(k=>`<div class="dian-box-item"><b>Casilla ${k}</b><span>${fmt(mil(Number(b[k])||0))}</span></div>`).join('');
+    actualizarComparacionDian();
+  }
+
+  async function importarDeclaracionDianPDF(event){
+    const input=event.target, file=input&&input.files?input.files[0]:null;
+    if(!file) return;
+    if(!/\.pdf$/i.test(file.name) && file.type!=='application/pdf'){
+      alert('Selecciona un archivo PDF.');input.value='';return;
+    }
+    try{
+      setDianLoading(true,'Abriendo el PDF y leyendo las posiciones de las casillas 28 a 141…');
+      const r=await extraer210DesdePDF(file);
+      setDianLoading(true,'Formulario 210 reconocido. Cargando los valores en la hoja de trabajo…');
+      aplicarImportacion210(r,file.name);
+    }catch(err){
+      console.error(err);
+      alert(`No se pudo importar la declaración DIAN. ${err&&err.message?err.message:'Revisa que sea el PDF original del Formulario 210.'}`);
+    }finally{
+      setDianLoading(false);
+      if(input)input.value='';
+    }
+  }
+
+  function campos(){
+    return [...document.querySelectorAll('input[id],select[id],textarea[id]')]
+      .filter(el=>!['casosGuardados','importFile','dianPdfFile'].includes(el.id));
+  }
+  function obtenerDatos(){
+    const data={values:{},activos:filas('activos'),deudas:filas('deudas'),ventasActivos:filasVentasActivos(),validacionCliente:obtenerValidacionClienteDatos()};
+    campos().forEach(el=>data.values[el.id]=el.type==='checkbox'?el.checked:el.value);
+    return data;
+  }
+  function aplicarDatos(data){
+    if(!data||!data.values) return;
+    const v=data.values;
+    cargarValidacionClienteDatos(data.validacionCliente||{});
+    if(!v.trabSalarios && Number(v.trabajoBruto||0)>0) v.trabSalarios=v.trabajoBruto;
+    if(!v.trabOtrosINCR && Number(v.trabajoINCR||0)>0) v.trabOtrosINCR=v.trabajoINCR;
+    if(!v.indHonorarios && Number(v.indBruto||0)>0) v.indHonorarios=v.indBruto;
+    if(!v.indOtrosINCR && Number(v.indINCR||0)>0) v.indOtrosINCR=v.indINCR;
+    campos().forEach(el=>{
+      if(Object.prototype.hasOwnProperty.call(data.values,el.id)){
+        if(el.type==='checkbox')el.checked=!!data.values[el.id];
+        else el.value=data.values[el.id];
+      }
+    });
+    $('tablaActivos').querySelector('tbody').innerHTML='';
+    $('tablaDeudas').querySelector('tbody').innerHTML='';
+    (data.activos||[]).forEach(x=>agregarFila('activos',x));
+    (data.deudas||[]).forEach(x=>agregarFila('deudas',x));
+    if(!(data.activos||[]).length) agregarFila('activos');
+    if(!(data.deudas||[]).length) agregarFila('deudas');
+    if($('ventasActivosLista')){
+      $('ventasActivosLista').innerHTML='';
+      (data.ventasActivos||[]).forEach(x=>agregarVentaActivo(x));
+      if(!(data.ventasActivos||[]).length) agregarVentaActivo();
+    }
+    initializeMoneyInputs();
+    document.querySelectorAll('input[data-money="true"]:not([readonly])').forEach(el=>el.value=groupedNumber(el.value));
+    calcular();
+  }
+  function nombreCaso(){
+    const nombre=[$('nombre1').value,$('nombre2').value,$('apellido1').value,$('apellido2').value].filter(Boolean).join(' ').trim();
+    const doc=$('identificacion').value.trim();
+    return `${doc||'SIN-DOC'} — ${nombre||'SIN NOMBRE'} — AG ${$('anio').value}`;
+  }
+  function leerCasos(){try{return JSON.parse(localStorage.getItem('rentaPNCasos')||'{}')}catch{return {}}}
+  function escribirCasos(c){localStorage.setItem('rentaPNCasos',JSON.stringify(c));actualizarCasos()}
+  function actualizarCasos(){
+    const casos=leerCasos(); const sel=$('casosGuardados');
+    const actual=sel.value; sel.innerHTML='<option value="">Casos guardados…</option>';
+    Object.keys(casos).sort().forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel.appendChild(o)});
+    if(casos[actual])sel.value=actual;
+  }
+  function guardarCaso(){
+    calcular();
+    const casos=leerCasos(); const key=nombreCaso();
+    casos[key]=obtenerDatos(); escribirCasos(casos); $('casosGuardados').value=key;
+    alert('Caso guardado en este navegador.');
+  }
+  function cargarCaso(){
+    const key=$('casosGuardados').value;if(!key)return alert('Selecciona un caso guardado.');
+    aplicarDatos(leerCasos()[key]);
+  }
+  function eliminarCaso(){
+    const key=$('casosGuardados').value;if(!key)return alert('Selecciona un caso.');
+    if(!confirm(`¿Eliminar ${key}?`))return;
+    const casos=leerCasos();delete casos[key];escribirCasos(casos);
+  }
+  function nuevoCaso(){
+    if(!confirm('¿Limpiar el formulario actual? Guarda primero si necesitas conservarlo.'))return;
+    location.reload();
+  }
+  function exportarJSON(){
+    calcular();
+    const blob=new Blob([JSON.stringify(obtenerDatos(),null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=`renta_${$('identificacion').value||'persona'}_${$('anio').value}.json`;
+    a.click();URL.revokeObjectURL(a.href);
+  }
+  function importarJSON(e){
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{try{aplicarDatos(JSON.parse(r.result));alert('Respaldo importado.')}catch{alert('El archivo no es un respaldo válido.')}};
+    r.readAsText(f);e.target.value='';
+  }
+  function f210Money(v){return (Number(v)||0)>0?new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}).format(mil(v)):'-'}
+  function setF210(num,v){document.querySelectorAll(`[data-f210="${num}"]`).forEach(el=>el.textContent=f210Money(v))}
+  function row210(label,num,val,alt=false){return `<tr class="${alt?'f210-row-alt':''}"><td class="f210-label">${label}</td><td class="f210-num">${num}</td><td class="f210-value" data-f210="${num}">${f210Money(val)}</td></tr>`}
+  function cell210(num,val){return `<span class="f210-num" style="display:inline-block;padding:2px">${num}</span><span class="f210-value" data-f210="${num}" style="display:inline-block;min-width:25mm">${f210Money(val)}</span>`}
+  function categoriaDraft(nombre,nums,vals,a,especial=0){
+    const totalEx=a.afc+a.otherEx, totalDed=a.vivienda+a.otherDed;
+    const netAfter=Math.max(0,vals.net-totalEx-totalDed);
+    return {nombre,nums,vals,a,totalEx,totalDed,limited:Math.min(vals.net,totalEx+totalDed),ordinary:Math.max(0,netAfter),loss:Math.max(0,-vals.raw),especial};
+  }
+  function draftGeneralRow(label,key,cats,alt=false){
+    return `<tr class="${alt?'f210-row-alt':''}"><td class="f210-label">${label}</td>${cats.map(c=>`<td style="padding:0"><span class="f210-num" style="display:inline-block;width:7mm;padding:2px">${c.nums[key]||''}</span><span class="f210-value" style="display:inline-block;width:calc(100% - 8mm);padding:2px" data-f210="${c.nums[key]||''}">${c.nums[key]?f210Money(c[key]??c.vals[key]??0):''}</span></td>`).join('')}</tr>`;
+  }
+  function poblarBorrador210(){
+    calcular();
+    const c=window._calc210;
+    $('p210anio').textContent=$('anio').value;
+    $('p210nit').textContent=$('identificacion').value||'-'; $('p210dv').textContent=$('dv').value||'-';
+    $('p210ap1').textContent=$('apellido1').value||'-'; $('p210ap2').textContent=$('apellido2').value||'-';
+    $('p210nombres').textContent=[$('nombre1').value,$('nombre2').value].filter(Boolean).join(' ')||'-';
+    $('p210actividad').textContent=$('actividad').value||'-'; $('p210seccional').textContent='-';
+    $('p210box28').textContent=f210Money(c.facturaElectronica);
+    setF210(29,c.patrimonio);setF210(30,c.deudas);setF210(31,c.patrimonioLiquido);
+
+    const nums={
+      trabajo:{gross:32,incr:33,net:34,afc:35,otherEx:36,totalEx:37,vivienda:38,otherDed:39,totalDed:40,limited:41,ordinary:42},
+      ind:{gross:43,incr:44,cost:45,net:46,afc:47,otherEx:48,totalEx:49,vivienda:50,otherDed:51,totalDed:52,limited:53,ordinary:54,loss:55,comp:56,final:57},
+      capital:{gross:58,incr:59,cost:60,net:61,ece:62,afc:63,otherEx:64,totalEx:65,vivienda:66,otherDed:67,totalDed:68,limited:69,ordinary:70,loss:71,comp:72,final:73},
+      nolaboral:{gross:74,returns:75,incr:76,cost:77,net:78,ece:79,afc:80,otherEx:81,totalEx:82,vivienda:83,otherDed:84,totalDed:85,limited:86,ordinary:87,loss:88,comp:89,final:90}
+    };
+    const cats=[
+      categoriaDraft('Trabajo',nums.trabajo,{gross:c.trabBr,incr:c.trabIncr,cost:0,net:c.trabNeto,raw:c.trabBr-c.trabIncr,returns:0,ece:0},c.asignacion.trabajo),
+      categoriaDraft('Independiente',nums.ind,{gross:c.indBr,incr:c.indIncr,cost:c.indCostUsed,net:c.indNeto,raw:c.indBr-c.indIncr-c.indCostUsed,returns:0,ece:0},c.asignacion.ind),
+      categoriaDraft('Capital',nums.capital,{gross:c.capBr,incr:c.capIncr,cost:c.capCost,net:c.capNeto,raw:c.capBr-c.capIncr-c.capCost,returns:0,ece:n('vECECapital')},c.asignacion.capital),
+      categoriaDraft('No laboral',nums.nolaboral,{gross:c.nlBr,returns:c.nlDev,incr:c.nlIncr,cost:c.nlCost,net:c.nlNeto,raw:c.nlBr-c.nlDev-c.nlIncr-c.nlCost,ece:n('vECENoLaboral')},c.asignacion.nolaboral)
+    ];
+    cats.forEach(x=>{x.afc=x.a.afc;x.otherEx=x.a.otherEx;x.vivienda=x.a.vivienda;x.otherDed=x.a.otherDed;x.totalEx=x.a.afc+x.a.otherEx;x.totalDed=x.a.vivienda+x.a.otherDed;x.limited=Math.min(x.vals.net,x.totalEx+x.totalDed);x.ordinary=Math.max(0,x.vals.net-x.totalEx-x.totalDed);x.comp=0;x.final=x.ordinary;x.gross=x.vals.gross;x.incr=x.vals.incr;x.cost=x.vals.cost;x.net=x.vals.net;x.returns=x.vals.returns;x.ece=x.vals.ece;});
+    const rows=[['Ingresos brutos','gross'],['Devoluciones, rebajas y descuentos','returns'],['Ingresos no constitutivos de renta','incr'],['Costos y deducciones procedentes','cost'],['Renta líquida','net'],['Rentas líquidas pasivas - ECE','ece'],['Aportes voluntarios AFC, FVP y/o AVC','afc'],['Otras rentas exentas','otherEx'],['Total rentas exentas','totalEx'],['Intereses de vivienda','vivienda'],['Otras deducciones imputables','otherDed'],['Total deducciones imputables','totalDed'],['Rentas exentas y/o deducciones limitadas','limited'],['Renta líquida ordinaria del ejercicio','ordinary'],['Pérdida líquida del ejercicio','loss'],['Compensaciones por pérdidas','comp'],['Renta líquida ordinaria','final']];
+    $('draftGeneralBody').innerHTML=rows.map((r,i)=>draftGeneralRow(r[0],r[1],cats,i%2===1)).join('');
+    const regularAfter=c.generalNeto-c.limitadasAceptadas-c.noLimitadasAceptadas;
+    $('draftGeneralTotals').innerHTML=`
+      <tr><td class="f210-label">Renta líquida cédula general</td><td class="f210-num">91</td><td class="f210-value" data-f210="91">${f210Money(regularAfter)}</td><td class="f210-label">Rentas exentas y deducciones imputables a nivel general</td><td class="f210-num">92</td><td class="f210-value" data-f210="92">${f210Money(c.adicionDepend+c.facturaElectronica)}</td><td class="f210-label">Renta líquida ordinaria cédula general</td><td class="f210-num">93</td><td class="f210-value" data-f210="93">${f210Money(c.generalOrdinaria)}</td></tr>
+      <tr class="f210-row-alt"><td class="f210-label">Compensación pérdidas 2018 y anteriores</td><td class="f210-num">94</td><td class="f210-value" data-f210="94">${f210Money(n('compPerdidas'))}</td><td class="f210-label">Compensación exceso renta presuntiva</td><td class="f210-num">95</td><td class="f210-value" data-f210="95">${f210Money(n('compPresuntiva'))}</td><td class="f210-label">Rentas gravables</td><td class="f210-num">96</td><td class="f210-value" data-f210="96">${f210Money(c.rentasGravablesTotal)}</td></tr>
+      <tr><td class="f210-label">Renta líquida gravable cédula general</td><td class="f210-num">97</td><td class="f210-value" data-f210="97">${f210Money(c.generalGravable)}</td><td class="f210-label">Renta presuntiva</td><td class="f210-num">98</td><td class="f210-value" data-f210="98">${f210Money(c.presuntiva)}</td><td colspan="3"></td></tr>`;
+
+    $('draftPension').innerHTML=row210('Ingresos brutos por rentas de pensiones del país y exterior',99,c.penNal+c.penExt)+row210('Ingresos no constitutivos de renta',100,c.penIncr,true)+row210('Renta líquida',101,c.penLiquida)+row210('Rentas exentas de pensiones',102,c.penExenta,true)+row210('Renta líquida gravable cédula de pensiones',103,c.penGravable);
+    $('draftDividendos').innerHTML=row210('Dividendos 2016 y anteriores y otros',104,c.div2016)+row210('Ingresos no constitutivos de renta',105,0,true)+row210('Renta líquida ordinaria 2016 y anteriores',106,c.div2016)+row210('1.ª subcédula 2017 y siguientes',107,c.div1,true)+row210('2.ª subcédula 2017 y siguientes',108,c.div2)+row210('Dividendos recibidos del exterior',109,n('divExterior'),true)+row210('Rentas exentas de la casilla 109',110,n('divExteriorExento'));
+    $('draftGO').innerHTML=row210('Ingresos por ganancias ocasionales país y exterior',112,c.goIngresosTotal+n('loterias'))+row210('Costos por ganancias ocasionales',113,c.goCostosTotal,true)+row210('Ganancias ocasionales no gravadas y exentas',114,c.goExentasTotal)+row210('Ganancias ocasionales gravables',115,c.goBase+n('loterias'),true);
+    const taxPres=impuesto241(c.presuntiva+c.penGravable+c.divBase241,c.uvt).tax;
+    $('draftLiquidacion').innerHTML=row210('Renta líquida gravable art. 241',111,c.base241)+row210('Impuesto cédula general, pensiones y dividendos',116,c.calc241.tax,true)+row210('Impuesto renta presuntiva, pensiones y dividendos',117,taxPres)+row210('Impuesto dividendos 2.ª subcédula art. 240',118,c.divCorpTax,true)+row210('Impuesto dividendos año 2016',119,c.div2016Tax)+row210('Impuesto dividendos exterior',120,c.divExteriorTax,true)+row210('Total impuesto sobre rentas líquidas gravables',121,c.impuestoRentas)+row210('Impuestos pagados en el exterior',122,n('impuestoExterior'),true)+row210('Donaciones',123,n('donaciones')*.25)+row210('Dividendos, participaciones y otros descuentos',124,Math.max(0,c.descuentos-Math.min(n('impuestoExterior'),c.impuestoRentas)-n('donaciones')*.25),true)+row210('Total descuentos tributarios',125,c.descuentos)+row210('Impuesto neto de renta',126,c.impuestoNeto,true)+row210('Impuesto de ganancias ocasionales',127,c.goTotal)+row210('Descuento exterior ganancias ocasionales',128,c.goDesc,true)+row210('Total impuesto a cargo',129,c.totalImpuesto)+row210('Anticipo renta año anterior',130,n('anticipoAnterior'),true)+row210('Saldo a favor año anterior',131,n('saldoFavorAnterior'))+row210('Total retenciones de renta y ganancias ocasionales',132,c.ret,true)+row210('Anticipo año siguiente',133,c.anticipo);
+    const saldoPorImpuesto=Math.max(0,c.totalImpuesto+c.anticipo-n('anticipoAnterior')-n('saldoFavorAnterior')-c.ret);
+    $('draftSaldos').innerHTML=`<tr><td class="f210-label">Saldo a pagar por impuesto</td><td class="f210-num">134</td><td class="f210-value" data-f210="134">${f210Money(saldoPorImpuesto)}</td><td class="f210-label">Sanciones</td><td class="f210-num">135</td><td class="f210-value" data-f210="135">${f210Money(n('sanciones'))}</td><td class="f210-label">Total saldo a pagar</td><td class="f210-num">136</td><td class="f210-value" data-f210="136">${f210Money(c.saldoPagar)}</td><td class="f210-label">Total saldo a favor</td><td class="f210-num">137</td><td class="f210-value" data-f210="137">${f210Money(c.saldoFavor)}</td></tr>`;
+    $('draftInfoBottom').innerHTML=`<tr class="f210-row-alt"><td class="f210-label">Número de dependientes económicos</td><td class="f210-num">138</td><td class="f210-value" data-f210="138">${c.dependCount||0}</td><td class="f210-label">Adición por dependientes a la casilla 92</td><td class="f210-num">139</td><td class="f210-value" data-f210="139">${f210Money(c.adicionDepend)}</td><td class="f210-label">Superó tope indicativo art. 336-1</td><td class="f210-num">140</td><td class="f210-value center" data-f210="140">${c.indRelacion>c.indicador?'X':'-'}</td><td class="f210-label">Aporte voluntario RAIS aceptado</td><td class="f210-num">141</td><td class="f210-value" data-f210="141">${f210Money(c.raisAceptado)}</td></tr>`;
+    $('p210pagoTotal').textContent=f210Money(c.saldoPagar);
+
+    const depRows=[1,2,3,4,5].map(i=>`<tr><td class="${i<5?'f210-yellow':'f210-green'}">${i}</td><td>${i<5?'Dependiente adicional 72 UVT':'Dependiente deducción 10 % art. 387'}</td><td>Tipo: ${$('depTipo'+i).value||'-'}</td><td>Identificación: ${$('depDoc'+i).value||'-'}</td><td>Parentesco: ${$('depPar'+i).value||'-'}</td></tr>`).join('');
+    $('draftDependientes').innerHTML=depRows;
+    $('draftDepResumen').innerHTML=`<tr><th>138</th><td>Número de dependientes económicos</td><td>${c.dependCount||0}</td></tr><tr><th>139</th><td>Adición por dependientes a casilla 92</td><td>${f210Money(c.adicionDepend)}</td></tr><tr><th>316</th><td>Valor deducción ordinaria por dependientes</td><td>${f210Money($('dependOrdinaria').value==='si'?Math.min((c.trabBr+( $('indModo').value==='exencion'?c.indBr:0))*.10,n('dependMeses')*n('dependUVTMes')*c.uvt):0)}</td></tr>`;
+    const qs=[
+      ['299-297','¿Adquirió bienes o servicios con factura electrónica cumpliendo requisitos?',n('comprasElectronicas')>0?'Sí':'No',c.facturaElectronica],
+      ['245-246','¿Retiró cesantías acumuladas a 31 de diciembre de 2016 exentas?',$('qCesantias2016').value==='si'?'Sí':'No',n('vCesantias2016')],
+      ['247-248','¿Recibió seguros o compensaciones por muerte de miembro de FF. MM. o Policía?',$('qSeguroFFMM').value==='si'?'Sí':'No',n('vSeguroFFMM')],
+      ['249-250','¿Recibió ingresos adicionales como miembro de FF. MM. o Policía?',$('qIngresoFFMM').value==='si'?'Sí':'No',n('vIngresoFFMM')],
+      ['251-252','¿Recibió gastos de representación como rector o profesor de universidad pública?',$('qProfesorPublico').value==='si'?'Sí':'No',n('vProfesorPublico')],
+      ['253-254','¿Recibió prima especial o costo de vida como diplomático?',$('qDiplomatico').value==='si'?'Sí':'No',n('vDiplomatico')],
+      ['255-256','¿Recibió ingresos por rentas hoteleras art. 207-2?',$('qHotelera').value==='si'?'Sí':'No',n('vHotelera')],
+      ['275-276','¿Recibió rentas pasivas ECE de capital provenientes de CAN o convenio?',$('qECECapital').value==='si'?'Sí':'No',n('vECECapital')],
+      ['277-278','¿Recibió rentas pasivas ECE no laborales provenientes de CAN o convenio?',$('qECENoLaboral').value==='si'?'Sí':'No',n('vECENoLaboral')],
+      ['279-280','¿Recibió gastos de representación como magistrado, fiscal, procurador o juez?',$('qMagistrado').value==='si'?'Sí':'No',n('vMagistrado')],
+      ['282-283','¿Recibió renta de trabajo de la CAN o por convenio de doble tributación?',$('qTrabajoCAN').value==='si'?'Sí':'No',n('vTrabajoCAN')]
+    ];
+    $('draftPreguntas').innerHTML=qs.map(q=>`<tr><td>${q[2]}</td><td>${q[0]}. ${q[1]}</td><td class="f210-value">${f210Money(q[3])}</td></tr>`).join('');
+    $('draftIndicadores').innerHTML=`<tr><th>140</th><td>¿Superó el tope indicativo relativo al art. 336-1?</td><td>${c.indRelacion>c.indicador?'Sí':'No'}</td></tr><tr><th>355</th><td>Salarios</td><td>${f210Money(n('trabSalarios'))}</td></tr><tr><th>356</th><td>Honorarios sin costos</td><td>${f210Money(n('trabHonorariosSinCostos'))}</td></tr><tr><th>Control</th><td>Retención certificada por loterías, rifas, apuestas o chance incluida en casilla 132</td><td>${f210Money(c.retencionPremios)}</td></tr>`;
+    const ahora=new Date().toLocaleString('es-CO');$('p210fecha1').textContent=ahora;$('p210fecha2').textContent=ahora;
+  }
+  function imprimirPDF(){
+    poblarBorrador210();
+    document.title=`Borrador_210_${$('identificacion').value||'persona'}_${$('anio').value}`;
+    document.body.classList.add('print210');
+    setTimeout(()=>window.print(),120);
+  }
+  function imprimirHojaTrabajo(){
+    calcular();document.body.classList.remove('print210');
+    document.title=`Hoja_trabajo_renta_${$('identificacion').value||'persona'}_${$('anio').value}`;
+    setTimeout(()=>window.print(),80);
+  }
+  window.addEventListener('afterprint',()=>document.body.classList.remove('print210'));
+
+  document.addEventListener('input',e=>{
+    if(e.target.matches('input[data-money="true"]')) formatMoneyInput(e.target);
+    if(e.target.matches('input,select,textarea')) calcular();
+  });
+  document.addEventListener('change',e=>{
+    if(e.target.matches('input[data-money="true"]')) formatMoneyInput(e.target);
+    if(e.target.matches('input,select,textarea')) calcular();
+  });
+
+
+  // ===== VALIDACIÓN DE INFORMACIÓN PEGADA PARA EL CLIENTE =====
+  const VC_DATA={ingresos:[],deudas:[],retenciones:[]};
+
+  function vcEsc(s){
+    return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function vcKey(s){
+    return String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  }
+  function vcCleanText(s){
+    return String(s??'').replace(/<br\s*\/?\s*>/gi,' ').replace(/&nbsp;/gi,' ').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+  }
+  function vcMoney(v){
+    let s=String(v??'').replace(/<[^>]*>/g,'').replace(/\u00a0/g,' ').trim();
+    s=s.replace(/[^0-9,.-]/g,'');
+    if(!s) return 0;
+    const neg=s.includes('-');
+    s=s.replace(/-/g,'');
+    const commas=(s.match(/,/g)||[]).length, dots=(s.match(/\./g)||[]).length;
+    if(commas&&dots){
+      if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',','.');
+      else s=s.replace(/,/g,'');
+    }else if(commas){
+      if(commas>1) s=s.replace(/,/g,'');
+      else{
+        const dec=s.length-s.lastIndexOf(',')-1;
+        if(dec===2) s=s.replace(',','.'); else s=s.replace(/,/g,'');
+      }
+    }else if(dots){
+      if(dots>1) s=s.replace(/\./g,'');
+      else{
+        const dec=s.length-s.lastIndexOf('.')-1;
+        if(dec!==2) s=s.replace(/\./g,'');
+      }
+    }
+    const num=Number(s);
+    return Number.isFinite(num)?(neg?-num:num):0;
+  }
+  function vcSplitLine(line,markdown=false){
+    if(markdown){
+      let s=line.trim();
+      if(s.startsWith('|')) s=s.slice(1);
+      if(s.endsWith('|')) s=s.slice(0,-1);
+      return s.split('|').map(vcCleanText);
+    }
+    if(line.includes('\t')) return line.split('\t').map(vcCleanText);
+    if(line.includes(';')) return line.split(';').map(vcCleanText);
+    return [vcCleanText(line)];
+  }
+  function vcParseClipboard(text){
+    const raw=String(text??'').replace(/\r/g,'');
+    let lines=raw.split('\n').map(x=>x.trimEnd()).filter(x=>x.trim());
+    if(!lines.length) return [];
+    const markdown=lines.filter(x=>x.includes('|')).length>=Math.max(1,Math.floor(lines.length*.6));
+    let rows=lines.map(line=>vcSplitLine(line,markdown)).filter(c=>c.length>=2);
+    rows=rows.filter(c=>!c.every(x=>/^:?-{2,}:?$/.test(x.replace(/\s/g,''))));
+    if(!rows.length) return [];
+
+    let nameIdx=0,detailIdx=1,valueIdx=rows[0].length-1,start=0;
+    const first=rows[0].map(x=>vcKey(x));
+    const looksHeader=first.some(x=>x.includes('NOMBRE')||x.includes('RAZON SOCIAL')||x.includes('DETALLE')||x.includes('VALOR')||x.includes('RETENC'));
+    if(looksHeader){
+      const find=(tests,def)=>{const i=first.findIndex(x=>tests.some(t=>x.includes(t)));return i>=0?i:def};
+      nameIdx=find(['NOMBRE','RAZON SOCIAL','TERCERO','PAGADOR','AGENTE'],0);
+      detailIdx=find(['DETALLE','CONCEPTO','DESCRIPCION'],Math.min(1,rows[0].length-1));
+      valueIdx=find(['VALOR','MONTO','SALDO','RETENC'],rows[0].length-1);
+      start=1;
+    }
+    const out=[];
+    for(let i=start;i<rows.length;i++){
+      const c=rows[i];
+      if(c.length<2) continue;
+      const nombre=vcCleanText(c[nameIdx]??c[0]);
+      const detalle=vcCleanText(c[detailIdx]??'');
+      const valor=vcMoney(c[valueIdx]??c[c.length-1]);
+      if(!nombre && !detalle && !valor) continue;
+      if(!nombre || (!valor && !String(c[valueIdx]??'').match(/\b0([.,]0+)?\b/))) continue;
+      out.push({nombre,detalle,valor});
+    }
+    return out;
+  }
+  function procesarPegadoCliente(event,tipo){
+    const texto=(event.clipboardData||window.clipboardData)?.getData('text')||'';
+    if(!texto) return;
+    event.preventDefault();
+    const rows=vcParseClipboard(texto);
+    if(!rows.length){
+      alert('No pude reconocer filas. Pega una tabla con Nombre / Razón Social, Detalle y Valor. Desde Excel funciona directamente con Ctrl + V.');
+      return;
+    }
+    VC_DATA[tipo].push(...rows);
+    event.target.value=`${rows.length} fila(s) pegada(s) correctamente. Puedes volver a pegar para agregar más.`;
+    renderValidacionCliente(tipo);
+    generarResumenCliente();
+  }
+  function vcAgrupar(tipo){
+    const map=new Map();
+    VC_DATA[tipo].forEach(r=>{
+      const k=vcKey(r.nombre)||'(SIN NOMBRE)';
+      if(!map.has(k)) map.set(k,{nombre:r.nombre||'(Sin nombre)',total:0,count:0,detalles:new Set()});
+      const g=map.get(k);g.total+=Number(r.valor)||0;g.count++;if(r.detalle)g.detalles.add(r.detalle);
+    });
+    return [...map.values()].sort((a,b)=>b.total-a.total||a.nombre.localeCompare(b.nombre,'es'));
+  }
+  function renderValidacionCliente(tipo){
+    const cap=tipo.charAt(0).toUpperCase()+tipo.slice(1);
+    const data=VC_DATA[tipo];
+    const total=data.reduce((a,r)=>a+(Number(r.valor)||0),0);
+    const count=$('vcCount'+cap),totalEl=$('vcTotal'+cap),body=$('vcBody'+cap),group=$('vcGroup'+cap);
+    if(count)count.textContent=data.length;
+    if(totalEl)totalEl.textContent=fmt(total);
+    if(body) body.innerHTML=data.map((r,i)=>`<tr><td>${vcEsc(r.nombre)}</td><td>${vcEsc(r.detalle)}</td><td class="right">${fmt(r.valor)}</td><td><button type="button" class="small danger" onclick="quitarFilaValidacion('${tipo}',${i})">Quitar</button></td></tr>`).join('');
+    const grouped=vcAgrupar(tipo);
+    if(group){
+      group.innerHTML=grouped.length?`<table><thead><tr><th>Nombre / Razón Social</th><th class="right">Registros</th><th class="right">Total</th></tr></thead><tbody>${grouped.map(g=>`<tr><td>${vcEsc(g.nombre)}</td><td class="right">${g.count}</td><td class="right"><strong>${fmt(g.total)}</strong></td></tr>`).join('')}</tbody></table>`:'<div class="vc-empty">Aún no has pegado información.</div>';
+    }
+  }
+  function renderTodoValidacionCliente(){['ingresos','deudas','retenciones'].forEach(renderValidacionCliente)}
+  function quitarFilaValidacion(tipo,index){
+    VC_DATA[tipo].splice(index,1);renderValidacionCliente(tipo);generarResumenCliente();
+  }
+  function limpiarValidacionCliente(tipo){
+    if(tipo==='todo'){
+      if(!confirm('¿Limpiar ingresos, deudas y retenciones del validador?'))return;
+      Object.keys(VC_DATA).forEach(k=>VC_DATA[k]=[]);
+      ['vcPasteIngresos','vcPasteDeudas','vcPasteRetenciones'].forEach(id=>{if($(id))$(id).value=''});
+    }else{
+      VC_DATA[tipo]=[];
+      const id='vcPaste'+tipo.charAt(0).toUpperCase()+tipo.slice(1);if($(id))$(id).value='';
+    }
+    renderTodoValidacionCliente();generarResumenCliente();
+  }
+  function vcResumenSeccion(tipo,titulo){
+    const groups=vcAgrupar(tipo),total=VC_DATA[tipo].reduce((a,r)=>a+(Number(r.valor)||0),0);
+    if(!groups.length) return `${titulo}\n• No aparece información pegada en este bloque.\nTOTAL: ${fmt(0)}`;
+    const lineas=groups.map(g=>`• ${g.nombre}: ${fmt(g.total)}`);
+    return `${titulo}\n${lineas.join('\n')}\nTOTAL: ${fmt(total)}`;
+  }
+  function generarResumenCliente(){
+    const nombre=vcCleanText($('vcNombreCliente')?.value)||vcCleanText([$('nombre1')?.value,$('nombre2')?.value,$('apellido1')?.value,$('apellido2')?.value].filter(Boolean).join(' '))||'cliente';
+    const anio=$('vcAnio')?.value||$('anio')?.value||'';
+    const texto=`Hola, ${nombre}. Estoy revisando la información disponible para preparar su declaración de renta del año gravable ${anio}. Por favor valide los siguientes valores y me confirma si reconoce la información o si hace falta incluir algo adicional.\n\n${vcResumenSeccion('ingresos','INGRESOS / INFORMACIÓN REPORTADA')}\n\n${vcResumenSeccion('deudas','DEUDAS REPORTADAS')}\n\n${vcResumenSeccion('retenciones','RETENCIONES REPORTADAS')}\n\nPor favor confírmeme:\n1. Si durante el año recibió otros ingresos que no aparezcan aquí.\n2. Si al 31 de diciembre tenía otras deudas u obligaciones pendientes que no estén relacionadas.\n3. Si le practicaron otras retenciones y tiene certificados que no aparezcan en este resumen.\n4. Si identifica algún valor o tercero que no corresponda o que deba revisarse.\n\nEste resumen es únicamente para validar la información antes de preparar la declaración definitiva.`;
+    if($('vcTextoResumen')) $('vcTextoResumen').value=texto;
+    return texto;
+  }
+  async function copiarResumenCliente(){
+    const texto=$('vcTextoResumen')?.value||generarResumenCliente();
+    try{await navigator.clipboard.writeText(texto);alert('Resumen copiado. Ya puedes pegarlo en WhatsApp o correo.');}
+    catch(_){const el=$('vcTextoResumen');el.focus();el.select();document.execCommand('copy');alert('Resumen copiado.');}
+  }
+  function abrirValidadorCliente(){
+    const nombre=[$('nombre1')?.value,$('nombre2')?.value,$('apellido1')?.value,$('apellido2')?.value].filter(Boolean).join(' ').trim();
+    if($('vcNombreCliente')&&!$('vcNombreCliente').value)$('vcNombreCliente').value=nombre;
+    if($('vcAnio'))$('vcAnio').value=$('anio')?.value||$('vcAnio').value;
+    renderTodoValidacionCliente();generarResumenCliente();
+    $('vcModal').hidden=false;document.body.style.overflow='hidden';
+    setTimeout(()=>$('vcPasteIngresos')?.focus(),50);
+  }
+  function cerrarValidadorCliente(){if($('vcModal'))$('vcModal').hidden=true;document.body.style.overflow=''}
+  function obtenerValidacionClienteDatos(){
+    return {ingresos:VC_DATA.ingresos,deudas:VC_DATA.deudas,retenciones:VC_DATA.retenciones,nombre:$('vcNombreCliente')?.value||'',anio:$('vcAnio')?.value||'',texto:$('vcTextoResumen')?.value||''};
+  }
+  function cargarValidacionClienteDatos(d={}){
+    ['ingresos','deudas','retenciones'].forEach(k=>VC_DATA[k]=Array.isArray(d[k])?d[k].map(r=>({nombre:String(r.nombre||''),detalle:String(r.detalle||''),valor:Number(r.valor)||0})):[]);
+    if($('vcNombreCliente')&&d.nombre!=null)$('vcNombreCliente').value=d.nombre;
+    if($('vcAnio')&&d.anio!=null)$('vcAnio').value=d.anio;
+    if($('vcTextoResumen')&&d.texto!=null)$('vcTextoResumen').value=d.texto;
+    renderTodoValidacionCliente();
+  }
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('vcModal')&&!$('vcModal').hidden)cerrarValidadorCliente()});
+  document.addEventListener('click',e=>{if(e.target===$('vcModal'))cerrarValidadorCliente()});
+
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    initializeMoneyInputs();
+    agregarFila('activos');
+    agregarFila('deudas');
+    agregarVentaActivo();
+    actualizarCasos();
+    renderTodoValidacionCliente();
+    calcular();
+  });
+</script>
+
+<script>
+/* ================= Panel lateral de resumen ================= */
+const PANEL_KEY='rentaPNPanelResumen2';
+let PANEL_STATE=null;
+function estadoPanelResumen(){
+  if(PANEL_STATE) return PANEL_STATE;
+  let st={};
+  try{st=JSON.parse(localStorage.getItem(PANEL_KEY)||'{}')||{}}catch(_){st={}}
+  PANEL_STATE=st;
+  return PANEL_STATE;
+}
+function aplicarPanelResumen(st){
+  st=st||{};
+  const abierto=st.abierto!==false;
+  const lado=st.lado==='right'?'right':'left';
+  document.body.classList.toggle('panel-left',lado==='left');
+  document.body.classList.toggle('panel-open',abierto);
+  document.body.classList.toggle('panel-hidden',!abierto);
+  const box=document.getElementById('liveTaxBox');
+  if(box) box.setAttribute('aria-hidden',abierto?'false':'true');
+  PANEL_STATE={abierto:abierto,lado:lado};
+  try{localStorage.setItem(PANEL_KEY,JSON.stringify(PANEL_STATE))}catch(_){}
+  ajustarEspacioPanel();
+}
+function togglePanelResumen(){
+  const st=estadoPanelResumen();
+  aplicarPanelResumen({abierto:st.abierto===false,lado:st.lado});
+}
+function moverPanelResumen(){
+  const st=estadoPanelResumen();
+  aplicarPanelResumen({abierto:st.abierto!==false,lado:st.lado==='right'?'left':'right'});
+}
+/* reserva el espacio que ocupa la barra inferior para que no tape el contenido */
+function ajustarEspacioPanel(){
+  const box=document.getElementById('liveTaxBox');
+  if(!box) return;
+  const abajo=window.matchMedia('(max-width:900px)').matches;
+  const visible=!document.body.classList.contains('panel-hidden');
+  document.body.style.paddingBottom=(abajo&&visible)?(box.offsetHeight+14)+'px':'';
+}
+function irAResultadoFinal(){
+  const el=document.getElementById('resultadoFinal');
+  if(el) el.scrollIntoView({behavior:'smooth'});
+}
+window.addEventListener('DOMContentLoaded',()=>{
+  /* el resumen arranca siempre visible, salvo que el usuario lo haya ocultado */
+  aplicarPanelResumen(estadoPanelResumen());
+  window.addEventListener('resize',ajustarEspacioPanel);
+  setTimeout(ajustarEspacioPanel,300);
+  /* navegacion del menu por JS: funciona aunque el anclaje # no responda */
+  document.querySelectorAll('.live-nav a').forEach(a=>{
+    a.addEventListener('click',e=>{
+      const destino=document.querySelector(a.getAttribute('href')||'');
+      if(!destino) return;
+      e.preventDefault();
+      destino.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  });
+});
+
+/* ============ Revisión patrimonial / conciliación patrimonial ============
+   Ajuste fiscal de activos: art. 70, 73 y 280 E.T. — AG 2025: 5,81 % (Decreto 449 de 2026).
+   Rendimientos no gravados: art. 38 a 41 E.T. — AG 2025: 55,43 % no gravado y
+   28,35 % de gasto financiero no deducible (Decreto 898 de 2026).
+   Solo personas naturales y sucesiones ilíquidas no obligadas a llevar contabilidad.        */
+function rpNum(id){
+  const el=document.getElementById(id);
+  if(!el) return 0;
+  const v=Number(String(el.value).replace(/[^0-9.-]/g,''));
+  return Number.isFinite(v)?v:0;
+}
+function rpMiles(v){
+  const r=Math.round(Number(v)||0);
+  return (r<0?'-':'')+Math.abs(r).toLocaleString('en-US',{maximumFractionDigits:0});
+}
+function rpSet(id,v){
+  const el=document.getElementById(id);
+  if(el) el.value=rpMiles(v);
+}
+function rpTexto(id,v){
+  const el=document.getElementById(id);
+  if(el) el.textContent=fmt(mil(v));
+}
+
+function calcularRevisionPatrimonial(){
+  const c=window._calc210||{};
+  const uvt=Math.max(1,Number(c.uvt)||0);
+
+  /* el patrimonio declarado se sincroniza con la sección 3 mientras no se edite a mano */
+  const elActual=document.getElementById('rpPatrimonioActual');
+  const manual=document.getElementById('rpActualManual');
+  if(elActual && (!manual || manual.value!=='1') && Number.isFinite(Number(c.patrimonioLiquido)))
+    elActual.value=rpMiles(c.patrimonioLiquido);
+
+  const anterior=rpNum('rpPatrimonioAnterior');
+  const actual=rpNum('rpPatrimonioActual');
+
+  /* A. capacidad de ahorro */
+  const ingresos=Number(c.totalIngresosRegistrados)||0;
+  const costos=Number(c.totalCostosGastosRegistrados)||0;
+  const impuestos=Number(c.totalImpuesto)||0;
+  rpSet('rpIngresos',ingresos);
+  rpSet('rpCostos',costos);
+  rpSet('rpImpuestos',impuestos);
+
+  const pctGastos=Math.min(100,Math.max(0,rpNum('rpGastosPct')));
+  const gastosDigitados=rpNum('rpGastosPersonales');
+  const gastosPersonales=gastosDigitados>0?gastosDigitados:ingresos*pctGastos/100;
+  rpSet('rpGastosUsados',gastosPersonales);
+  const capacidadAhorro=ingresos-costos-impuestos-gastosPersonales;
+  rpSet('rpCapacidadAhorro',capacidadAhorro);
+
+  /* B. ajuste fiscal de activos */
+  const reajusteBase=rpNum('rpReajusteBase');
+  const reajustePct=Math.max(0,rpNum('rpReajustePct'));
+  const reajusteArt70=reajusteBase*reajustePct/100;
+  const reajusteManual=rpNum('rpReajusteManual');
+  const reajusteTotal=reajusteArt70+reajusteManual;
+  rpSet('rpReajusteValor',reajusteArt70);
+
+  /* C. rendimientos no gravados (componente inflacionario) */
+  const rendBrutos=rpNum('rpRendimientosBrutos');
+  const rendPct=Math.min(100,Math.max(0,rpNum('rpRendimientosPct')));
+  const rendNoGravados=rendBrutos*rendPct/100;
+  const rendGravados=rendBrutos-rendNoGravados;
+  rpSet('rpRendimientosNoGravados',rendNoGravados);
+  rpSet('rpRendimientosGravados',rendGravados);
+
+  const gfBrutos=rpNum('rpGastosFinancieros');
+  const gfPct=Math.min(100,Math.max(0,rpNum('rpGastosFinPct')));
+  const gfNoDeducible=gfBrutos*gfPct/100;
+  rpSet('rpGastosFinNoDeducible',gfNoDeducible);
+  rpSet('rpGastosFinDeducible',gfBrutos-gfNoDeducible);
+
+  const chk=document.getElementById('rpRendIncluidos');
+  const rendIncluidos=chk?chk.checked:true;
+  const rendJustifica=rendIncluidos?0:rendBrutos;
+
+  /* D. otras justificaciones y cierre */
+  const otras=rpNum('rpOtrasJustificaciones');
+  const justificado=capacidadAhorro+reajusteTotal+rendJustifica+otras;
+  const maximo=anterior+justificado;
+  const incremento=actual-anterior;
+  const diferencia=incremento-justificado;
+
+  rpSet('rpPatrimonioMaximo',Math.max(0,maximo));
+  rpTexto('rpIncremento',incremento);
+  rpTexto('rpJustificado',justificado);
+  rpTexto('rpMaximoMetric',Math.max(0,maximo));
+  rpTexto('rpDiferencia',Math.max(0,diferencia));
+
+  const tolerancia=Math.max(500000,uvt*20);
+  const metric=document.getElementById('rpDiferenciaMetric');
+  if(metric){metric.classList.remove('bad','good');metric.classList.add(diferencia>tolerancia?'bad':'good');}
+
+  const alertas=[];
+  if(anterior<=0) alertas.push(['warn','Falta el patrimonio líquido del año anterior (casilla 31). Sin ese dato la comparación patrimonial no es concluyente.']);
+  if(diferencia>tolerancia){
+    alertas.push(['error','El incremento patrimonial supera las justificaciones en '+fmt(mil(diferencia))+'. Ese exceso puede tomarse como renta líquida gravable por comparación patrimonial (arts. 236 y 237 del E.T.). Revisa préstamos, herencias, donaciones, ventas de activos, reajuste fiscal o avalúos antes de presentar.']);
+  }else if(incremento<0){
+    alertas.push(['ok','El patrimonio disminuyó frente al año anterior en '+fmt(mil(-incremento))+'. Verifica que la disminución esté soportada: ventas, pago de deudas, retiros, donaciones o pérdidas.']);
+  }else{
+    alertas.push(['ok','El incremento patrimonial queda justificado con la información registrada. Margen disponible: '+fmt(mil(-diferencia))+'.']);
+  }
+  if(gastosDigitados<=0 && ingresos>0) alertas.push(['warn','Los gastos personales se estimaron en el '+pctGastos+' % de los ingresos ('+fmt(mil(gastosPersonales))+'). Ajusta el valor real para que la conciliación sea confiable.']);
+  if(reajusteTotal>0) alertas.push(['warn','Ajuste fiscal de activos aplicado por '+fmt(mil(reajusteTotal))+'. Refleja ese mayor valor en los activos de la sección 3 y guarda el detalle por bien: sube el costo fiscal, no genera ingreso ni renta gravada.']);
+  if(rendNoGravados>0) alertas.push(['ok','Rendimientos no gravados por componente inflacionario: '+fmt(mil(rendNoGravados))+' (INCRNGO). Solo aplica a personas naturales y sucesiones ilíquidas no obligadas a llevar contabilidad.']);
+  if(gfNoDeducible>0) alertas.push(['warn','Del gasto financiero, '+fmt(mil(gfNoDeducible))+' no es deducible por componente inflacionario (arts. 41, 81 y 118 del E.T.).']);
+  if(!rendIncluidos && rendBrutos>0) alertas.push(['warn','Marcaste que los rendimientos financieros no están en los ingresos registrados: se sumaron '+fmt(mil(rendBrutos))+' a la justificación. Inclúyelos también en la cédula que corresponda.']);
+
+  ajustarEspacioPanel();
+
+  const div=document.getElementById('rpResultado');
+  if(div) div.innerHTML=alertas.map(a=>'<div class="warning'+(a[0]==='ok'?' ok':(a[0]==='error'?' error':''))+'">'+a[1]+'</div>').join('');
+}
+
+function marcarPatrimonioManual(){
+  const h=document.getElementById('rpActualManual');
+  if(h) h.value='1';
+}
+function traerPatrimonioHoja(){
+  const c=window._calc210||{};
+  const el=document.getElementById('rpPatrimonioActual');
+  if(!el) return;
+  const h=document.getElementById('rpActualManual');
+  if(h) h.value='0';
+  el.value=rpMiles(Number(c.patrimonioLiquido)||0);
+  calcularRevisionPatrimonial();
+}
+
+function aplicarPatrimonioSugerido(){
+  const sugerido=rpNum('rpPatrimonioMaximo');
+  if(sugerido<=0){
+    alert('Primero calcula el patrimonio máximo sugerido: necesita el patrimonio del año anterior y los ingresos de la hoja.');
+    return;
+  }
+  const el=document.getElementById('rpPatrimonioActual');
+  if(!el) return;
+  const h=document.getElementById('rpActualManual');
+  if(h) h.value='1';
+  el.value=rpMiles(sugerido);
+  calcularRevisionPatrimonial();
+  alert('Se copió el patrimonio máximo sugerido en el campo de patrimonio declarado, solo como referencia. Los activos y las deudas de la sección 3 no se modifican: ajústalos con los soportes reales.');
+}
+</script>
+
+</body>
+</html>
