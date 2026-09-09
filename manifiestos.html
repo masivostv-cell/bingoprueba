@@ -143,6 +143,74 @@ tbody tr:nth-child(even){background:#f8fafc;}
 
 .total{font-size:25px;color:var(--azul);font-weight:bold;}
 
+.tabla-historial td.frecuencia{white-space:nowrap;color:#334155;}
+.calculada{color:#64748b;}
+.calculada small{
+  font-style:italic;font-size:11px;color:#94a3b8;
+  border:1px solid var(--borde);border-radius:4px;padding:0 4px;margin-left:4px;
+}
+
+/* ---------- Columna editable + filtro tipo Excel ---------- */
+th.con-filtro{padding-right:36px;position:relative;white-space:nowrap;}
+.icono-filtro{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  background:transparent;border:0;color:#fff;cursor:pointer;
+  font-size:13px;line-height:1;padding:5px 6px;border-radius:5px;opacity:.7;
+}
+.icono-filtro:hover{background:rgba(255,255,255,.25);opacity:1;}
+.icono-filtro.activo{opacity:1;background:#fff;color:var(--azul);}
+
+.panel-filtro{
+  display:none;position:fixed;width:280px;
+  background:#fff;color:#1f2937;text-align:left;font-weight:400;
+  border:1px solid var(--borde);border-radius:10px;
+  box-shadow:0 12px 30px rgba(0,0,0,.25);z-index:1500;padding:12px;
+}
+.panel-filtro.abierto{display:block;}
+.panel-filtro .titulo-filtro{margin:0 0 8px;font-size:13px;color:#475569;}
+.panel-filtro input[type="text"]{width:100%;margin:0 0 8px;}
+.panel-filtro .valores{
+  max-height:200px;overflow:auto;border:1px solid var(--borde);
+  border-radius:7px;padding:6px;margin-bottom:10px;
+}
+.panel-filtro label{
+  display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:13px;
+  cursor:pointer;border-radius:5px;
+}
+.panel-filtro label:hover{background:#e0f2fe;}
+.panel-filtro label input{width:auto;margin:0;flex-shrink:0;}
+.panel-filtro label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.panel-filtro .todo{border-bottom:1px solid var(--borde);margin-bottom:4px;padding-bottom:6px;font-weight:600;}
+.panel-filtro .pie{display:flex;gap:8px;}
+.panel-filtro .pie button{flex:1;padding:9px;border-radius:7px;border:0;cursor:pointer;font-weight:600;font-size:13px;}
+.panel-filtro .aplicar{background:var(--verde-oscuro);color:#fff;}
+.panel-filtro .limpiar{background:#fff;color:var(--verde-oscuro);border:1px solid var(--verde-oscuro);}
+.panel-filtro .vacio{color:#94a3b8;font-size:13px;padding:6px 4px;}
+
+.chip-filtro{
+  display:none;align-items:center;gap:8px;margin:5px;padding:7px 12px;
+  background:#e0f2fe;border:1px solid #7dd3fc;border-radius:20px;
+  font-size:13px;color:#075985;
+}
+.chip-filtro.visible{display:inline-flex;}
+.chip-filtro button{border:0;background:transparent;cursor:pointer;color:#075985;font-size:15px;padding:0 2px;}
+
+.celda-recoleccion{padding:4px 6px;min-width:180px;white-space:nowrap;}
+.celda-recoleccion .valor-celda{display:inline-block;padding:4px 0;}
+.celda-recoleccion .lapiz{
+  border:0;background:transparent;cursor:pointer;
+  font-size:13px;padding:3px 5px;border-radius:5px;margin-left:4px;
+  opacity:0;transition:opacity .12s ease;
+}
+.celda-recoleccion:hover .lapiz,
+.celda-recoleccion .lapiz:focus{opacity:.85;}
+.celda-recoleccion .lapiz:hover{background:#e0f2fe;opacity:1;}
+.celda-recoleccion.editando input{
+  width:100%;margin:0;padding:6px 8px;font-size:14px;
+  border:1px solid var(--verde-oscuro);background:#fff;border-radius:6px;outline:none;
+}
+.celda-recoleccion.guardado{background:#f0fdf4;transition:background .4s ease;}
+
 
 /* ---------- Cola de envío en segundo plano ---------- */
 .cola{
@@ -531,14 +599,39 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
         <br>
         <input id="buscarClienteTabla" placeholder="Buscar cliente..." oninput="filtrarClientesTabla()">
 
+        <span id="chipFiltroclientes" class="chip-filtro">
+          <span id="chipTextoclientes"></span>
+          <button type="button" title="Quitar filtros de columna"
+                  onclick="limpiarFiltrosDeZona('clientes')">✕</button>
+        </span>
+
         <div class="tabla-scroll">
           <table>
             <thead>
-              <tr><th>Código</th><th>Cliente</th><th>Ruta</th><th>Acciones</th></tr>
+              <tr>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>Ruta</th>
+                <th class="con-filtro" title="Columna H de la hoja CLIENTES">
+                  Frecuencia
+                  <button type="button" class="icono-filtro" data-filtro="cliFrecuencia"
+                          title="Filtrar esta columna"
+                          onclick="alternarPanelFiltro(event,'cliFrecuencia')">▼</button>
+                </th>
+                <th class="con-filtro">
+                  Tipo de recolección
+                  <button type="button" class="icono-filtro" data-filtro="cliRecoleccion"
+                          title="Filtrar esta columna"
+                          onclick="alternarPanelFiltro(event,'cliRecoleccion')">▼</button>
+                </th>
+                <th>Acciones</th>
+              </tr>
             </thead>
             <tbody id="tablaClientes"></tbody>
           </table>
         </div>
+
+
       </div>
     </section>
 
@@ -574,6 +667,12 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
         <button type="button" class="btn-pro btn-neutro"  onclick="exportarExcel()">📥 Exportar Excel</button>
         <button type="button" class="btn-pro btn-guardar" onclick="certificarDesdeHistorial()">🧾 Certificar estos manifiestos</button>
 
+        <span id="chipFiltrohistorial" class="chip-filtro">
+          <span id="chipTextohistorial"></span>
+          <button type="button" title="Quitar filtros de columna"
+                  onclick="limpiarFiltrosDeZona('historial')">✕</button>
+        </span>
+
         <p id="estadoHistorial" class="estado"></p>
 
         <div class="tabla-scroll">
@@ -583,7 +682,14 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
                 <th class="col-check" title="Marcar para certificar">
                   <input type="checkbox" id="histTodos" onchange="marcarTodosHistorial(this.checked)">
                 </th>
-                <th>Fecha</th><th>Cliente</th><th>Ruta</th><th>Móvil</th>
+                <th>Fecha</th><th>Cliente</th><th>Ruta</th>
+                <th class="con-filtro" title="Frecuencia de la ficha del cliente (columna H)">
+                  Frecuencia
+                  <button type="button" class="icono-filtro" data-filtro="histFrecuencia"
+                          title="Filtrar esta columna"
+                          onclick="alternarPanelFiltro(event,'histFrecuencia')">▼</button>
+                </th>
+                <th>Móvil</th>
                 <th>Manifiesto</th><th>Bolsas</th>
                 <th>Biosanit.</th><th>Cortopunz.</th><th>Anatomop.</th>
                 <th>Farmacéut.</th><th>Líquido</th><th>Medicam.</th><th>Otros</th>
@@ -806,6 +912,20 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
      porque al imprimir se oculta todo el layout. -->
 <div id="areaDestino"></div>
 
+<!-- Panel de filtro de columna: uno solo para todas las tablas.
+     Va aquí, fuera de las tarjetas, para que no lo recorte el scroll. -->
+<div id="panelFiltro" class="panel-filtro" onclick="event.stopPropagation()">
+  <p class="titulo-filtro">Filtrar por <b id="filtroTitulo"></b></p>
+  <input type="text" id="filtroTexto" placeholder="Contiene… (ej: semanal)"
+         oninput="pintarValoresFiltro()"
+         onkeydown="if(event.key==='Enter'){event.preventDefault();aplicarFiltro();}">
+  <div class="valores" id="filtroValores"></div>
+  <div class="pie">
+    <button type="button" class="limpiar" onclick="limpiarFiltro(filtroAbierto)">Limpiar</button>
+    <button type="button" class="aplicar" onclick="aplicarFiltro()">Aplicar</button>
+  </div>
+</div>
+
 <!-- ================= MODAL CLIENTE ================= -->
 <div id="modalCliente" class="modal">
   <div class="modal-contenido">
@@ -823,7 +943,8 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
     <input id="cliMunicipio" placeholder="Municipio">
     <input id="cliContacto"  placeholder="Contacto">
     <br>
-    <input id="cliCorreo"    placeholder="Correo">
+    <input id="cliCorreo"       placeholder="Correo">
+    <input id="cliRecoleccion"  placeholder="Tipo de recolección">
     <br><br>
     <textarea id="cliObservacion" placeholder="Observaciones" rows="4"></textarea>
     <br><br>
@@ -853,7 +974,7 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbzyXRIMI8mGgvY8gU2yQd_4ZRDCVyiWc7x3FUqCIhJO38SxFNdbWsr97YY006mCi-Wk/exec";
+const API = "https://script.google.com/macros/s/AKfycbzwFgrTAwxMvgoFDP2JTPV7MqzCABzykbDhjR-tTvna54BXh1f-ImleZilgaxly7npH/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -867,6 +988,7 @@ let indiceNombres = [];      // clientes normalizados para emparejar con el mani
 let rutaPorCliente = {};      // cache: texto del manifiesto -> ruta
 let tipoPorCliente = {};      // cache: texto del manifiesto -> tipo de cliente
 let tarifaPorCliente = {};    // cache: texto del manifiesto -> tarifa
+let frecuenciaPorCliente = {};// cache: texto del manifiesto -> frecuencia (col. H)
 let ubaPorRuta = null;        // mapa ruta -> U.B.A. (se arma una sola vez)
 let manifiestosElegidos = {}; // número de manifiesto -> marcado con la casilla
 let resultadosBusqueda = [];
@@ -1113,7 +1235,7 @@ function crearIndiceClientes(){
     posicion: i,
     texto: normalizar([
       c.codigo, c.nombre, c.ruta, c.telefono,
-      c.direccion, c.municipio, c.contacto
+      c.direccion, c.municipio, c.contacto, c.recoleccion, c.frecuencia
     ].join(" ")),
     datos: c
   }));
@@ -1140,6 +1262,7 @@ function crearIndiceNombres(){
   rutaPorCliente = {};   // los caches quedan obsoletos
   tipoPorCliente = {};
   tarifaPorCliente = {};
+  frecuenciaPorCliente = {};
   ubaPorRuta = null;
 }
 
@@ -1214,19 +1337,30 @@ function renderizarTablaClientes(lista){
   if(!cuerpo) return;
 
   if(!lista || lista.length === 0){
-    cuerpo.innerHTML = '<tr><td colspan="4">No hay clientes para mostrar</td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="6">No hay clientes para mostrar</td></tr>';
     return;
   }
 
   // Se identifica cada cliente por su POSICIÓN en la lista, no por el código:
   // 1560 de 1627 clientes lo tienen vacío y buscar por código abría siempre
   // el primero de esos.
+  // La posición se saca de un Map hecho una sola vez: con indexOf dentro del
+  // bucle eran ~1,3 millones de comparaciones para pintar la tabla completa.
+  const posicion = new Map();
+  clientes.forEach((c, i) => posicion.set(c, i));
+
   cuerpo.innerHTML = lista.map(c => {
-    const i = clientes.indexOf(c);
+    const i = posicion.get(c);
     return `<tr>
       <td>${esc(c.codigo)}</td>
       <td>${esc(c.nombre)}</td>
       <td>${esc(c.ruta)}</td>
+      <td class="celda-recoleccion">
+        ${celdaFicha(c.frecuencia, c.frecuenciaFija, "frecuencia", i)}
+      </td>
+      <td class="celda-recoleccion">
+        ${celdaFicha(c.recoleccion, c.recoleccionFija, "recoleccion", i)}
+      </td>
       <td class="acciones">
         <button type="button" title="Editar" onclick="editarCliente(${i})">✏️</button>
         <button type="button" title="Observaciones" onclick="verObservaciones(${i})">📌</button>
@@ -1237,18 +1371,299 @@ function renderizarTablaClientes(lista){
 
 function cargarClientesTabla(){
   const input = $("buscarClienteTabla");
-  renderizarTablaClientes(input && input.value.trim() ? filtrarPorTexto(input.value) : clientes);
+
+  let lista = (input && input.value.trim())
+    ? filtrarPorTexto(input.value)
+    : clientes;
+
+  lista = lista.filter(c => pasaFiltro("cliFrecuencia", c) && pasaFiltro("cliRecoleccion", c));
+
+  renderizarTablaClientes(lista);
+  pintarEstadoFiltros();
+
+  if(hayFiltroEnZona("clientes")){
+    actualizarEstadoClientes("Mostrando " + lista.length + " de " + clientes.length + " clientes (filtrados)");
+  }
 }
 
 function filtrarClientesTabla(){
   cargarClientesTabla();
 }
 
+
+/* ----- columna "Tipo de recolección": edición en línea ----- */
+
+/**
+ * Guarda solo esa celda. Igual que el resto de la aplicación, el cambio se ve
+ * de inmediato y el envío al servidor pasa por la cola, así que funciona
+ * aunque en ese momento no haya conexión.
+ */
+
+
+/* ----- filtros estilo Excel, reutilizables por columna -----------------
+   Un solo panel sirve a todas las columnas filtrables. Cada una se declara
+   aquí con: de dónde salen sus valores, cómo se lee el valor de una fila y
+   qué repintar al aplicar.
+   -------------------------------------------------------------------- */
+
+const DEF_FILTROS = {
+
+  cliFrecuencia: {
+    zona:"clientes", etiqueta:"Frecuencia",
+    universo: () => clientes,
+    valor: c => c.frecuencia,
+    aplicar: () => cargarClientesTabla()
+  },
+
+  cliRecoleccion: {
+    zona:"clientes", etiqueta:"Recolección",
+    universo: () => clientes,
+    valor: c => c.recoleccion,
+    aplicar: () => cargarClientesTabla()
+  },
+
+  histFrecuencia: {
+    zona:"historial", etiqueta:"Frecuencia",
+    universo: () => historialDatos,
+    valor: x => frecuenciaDeCliente(x.cliente),
+    aplicar: () => filtrarHistorial()
+  }
+};
+
+// id -> { texto, valores }.  valores null = todos.
+let filtros = {};
+let filtroAbierto = null;
+
+
+function filtroDe(id){
+  if(!filtros[id]) filtros[id] = { texto:"", valores:null };
+  return filtros[id];
+}
+
+
+function hayFiltro(id){
+  const f = filtros[id];
+  return !!(f && (f.texto || f.valores));
+}
+
+
+function hayFiltroEnZona(zona){
+  return Object.keys(DEF_FILTROS).some(id => DEF_FILTROS[id].zona === zona && hayFiltro(id));
+}
+
+
+/** ¿Esta fila pasa el filtro de esa columna? */
+function pasaFiltro(id, item){
+
+  if(!hayFiltro(id)) return true;
+
+  const f = filtroDe(id);
+  const valor = String(DEF_FILTROS[id].valor(item) || "").trim();
+
+  if(f.texto && !normalizar(valor).includes(normalizar(f.texto))) return false;
+  if(f.valores && f.valores.indexOf(valor) === -1) return false;
+
+  return true;
+}
+
+
+/** Valores distintos de la columna, con cuántas filas tiene cada uno. */
+function valoresDeFiltro(id){
+
+  const def = DEF_FILTROS[id];
+  const cuenta = {};
+
+  (def.universo() || []).forEach(item => {
+    const v = String(def.valor(item) || "").trim();
+    cuenta[v] = (cuenta[v] || 0) + 1;
+  });
+
+  const lista = Object.keys(cuenta).sort((a, b) => {
+    if(a === "") return 1;
+    if(b === "") return -1;
+    return a.localeCompare(b, "es", { numeric:true });
+  });
+
+  return { lista:lista, cuenta:cuenta };
+}
+
+
+function alternarPanelFiltro(evento, id){
+
+  evento.stopPropagation();
+
+  const panel = $("panelFiltro");
+
+  if(panel.classList.contains("abierto") && filtroAbierto === id){
+    cerrarPanelFiltro();
+    return;
+  }
+
+  filtroAbierto = id;
+
+  // position:fixed calculado a mano: dentro del <th> lo recortaría el
+  // overflow-x de la tabla.
+  const caja = evento.currentTarget.getBoundingClientRect();
+  const ancho = 280;
+  panel.style.top  = Math.round(Math.min(caja.bottom + 6, window.innerHeight - 320)) + "px";
+  panel.style.left = Math.round(Math.max(10, Math.min(caja.right - ancho, window.innerWidth - ancho - 10))) + "px";
+
+  $("filtroTitulo").textContent = DEF_FILTROS[id].etiqueta;
+  $("filtroTexto").value = filtroDe(id).texto;
+  pintarValoresFiltro();
+
+  panel.classList.add("abierto");
+  $("filtroTexto").focus();
+}
+
+
+function cerrarPanelFiltro(){
+  $("panelFiltro").classList.remove("abierto");
+  filtroAbierto = null;
+}
+
+
+function pintarValoresFiltro(){
+
+  if(!filtroAbierto) return;
+
+  const busqueda = normalizar($("filtroTexto").value.trim());
+  const contenedor = $("filtroValores");
+  const f = filtroDe(filtroAbierto);
+  const { lista, cuenta } = valoresDeFiltro(filtroAbierto);
+
+  const visibles = lista.filter(v => !busqueda || normalizar(v).includes(busqueda));
+
+  if(visibles.length === 0){
+    contenedor.innerHTML = '<div class="vacio">Ningún valor coincide</div>';
+    return;
+  }
+
+  const marcado = v => (!f.valores || f.valores.indexOf(v) !== -1) ? " checked" : "";
+
+  contenedor.innerHTML =
+    '<label class="todo"><input type="checkbox" id="filtroTodo" checked ' +
+    'onchange="marcarTodosFiltro(this.checked)"><span>(Seleccionar todo)</span></label>' +
+    visibles.map(v => `
+      <label>
+        <input type="checkbox" class="caja-valor" value="${esc(v)}"${marcado(v)}>
+        <span>${v === "" ? "(vacías)" : esc(v)} · ${cuenta[v] || 0}</span>
+      </label>`).join("");
+
+  sincronizarTodoFiltro();
+}
+
+
+function marcarTodosFiltro(marcar){
+  document.querySelectorAll("#filtroValores .caja-valor")
+    .forEach(caja => { caja.checked = marcar; });
+}
+
+
+function sincronizarTodoFiltro(){
+  const cajas = Array.from(document.querySelectorAll("#filtroValores .caja-valor"));
+  const todo = $("filtroTodo");
+  if(todo) todo.checked = cajas.length > 0 && cajas.every(c => c.checked);
+}
+
+
+function aplicarFiltro(){
+
+  if(!filtroAbierto) return;
+
+  const id = filtroAbierto;
+  const cajas = Array.from(document.querySelectorAll("#filtroValores .caja-valor"));
+  const marcadas = cajas.filter(c => c.checked).map(c => c.value);
+
+  const f = filtroDe(id);
+  f.texto = $("filtroTexto").value.trim();
+
+  // Si están todas marcadas manda solo el texto "contiene".
+  f.valores = (cajas.length > 0 && marcadas.length === cajas.length) ? null : marcadas;
+
+  cerrarPanelFiltro();
+  DEF_FILTROS[id].aplicar();
+  pintarEstadoFiltros();
+}
+
+
+/** Limpia un filtro concreto, o todos los de una zona si se pasa la zona. */
+function limpiarFiltro(id){
+  filtros[id] = { texto:"", valores:null };
+  cerrarPanelFiltro();
+  DEF_FILTROS[id].aplicar();
+  pintarEstadoFiltros();
+}
+
+
+function limpiarFiltrosDeZona(zona){
+  Object.keys(DEF_FILTROS).forEach(id => {
+    if(DEF_FILTROS[id].zona === zona) filtros[id] = { texto:"", valores:null };
+  });
+  cerrarPanelFiltro();
+
+  if(zona === "clientes")  cargarClientesTabla();
+  if(zona === "historial") filtrarHistorial();
+
+  pintarEstadoFiltros();
+}
+
+
+/** Describe un filtro para el chip: contiene "cada" + 3 valor(es) */
+function textoDeFiltro(id){
+  const f = filtroDe(id);
+  const partes = [];
+  if(f.texto)   partes.push('contiene "' + f.texto + '"');
+  if(f.valores) partes.push(f.valores.length + " valor(es)");
+  return DEF_FILTROS[id].etiqueta + ": " + partes.join(" + ");
+}
+
+
+/** Enciende los iconos activos y pinta los chips de cada zona. */
+function pintarEstadoFiltros(){
+
+  document.querySelectorAll(".icono-filtro[data-filtro]").forEach(icono => {
+    const activo = hayFiltro(icono.dataset.filtro);
+    icono.classList.toggle("activo", activo);
+    icono.title = activo ? "Filtro activo. Clic para cambiarlo." : "Filtrar esta columna";
+  });
+
+  ["clientes","historial"].forEach(zona => {
+
+    const chip = $("chipFiltro" + zona);
+    if(!chip) return;
+
+    const activos = Object.keys(DEF_FILTROS)
+      .filter(id => DEF_FILTROS[id].zona === zona && hayFiltro(id))
+      .map(textoDeFiltro);
+
+    if(activos.length === 0){
+      chip.classList.remove("visible");
+      return;
+    }
+
+    $("chipTexto" + zona).textContent = activos.join("  ·  ");
+    chip.classList.add("visible");
+  });
+}
+
+
+document.addEventListener("click", e => {
+  const panel = $("panelFiltro");
+  if(panel && panel.classList.contains("abierto") && !e.target.closest("#panelFiltro")){
+    cerrarPanelFiltro();
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape") cerrarPanelFiltro();
+});
+
 /* ----- formulario de cliente ----- */
 
 function limpiarFormularioCliente(){
   ["cliCodigo","cliNombre","cliNit","cliTelefono","cliDireccion",
-   "cliRuta","cliMunicipio","cliContacto","cliCorreo","cliObservacion"]
+   "cliRuta","cliMunicipio","cliContacto","cliCorreo","cliObservacion","cliRecoleccion"]
    .forEach(id => { const el = $(id); if(el) el.value = ""; });
   mensaje("estadoFormCliente","");
 }
@@ -1281,6 +1696,7 @@ function editarCliente(indice){
   $("cliContacto").value   = c.contacto    || "";
   $("cliCorreo").value     = c.correo      || "";
   $("cliObservacion").value= c.observaciones || "";
+  $("cliRecoleccion").value= c.recoleccion || "";
 
   mensaje("estadoFormCliente", c.fila ? "" :
     "Este cliente viene de una versión anterior del servidor: puede que al " +
@@ -1324,7 +1740,8 @@ function guardarCliente(){
     municipio:$("cliMunicipio").value.trim(),
     contacto:$("cliContacto").value.trim(),
     correo:$("cliCorreo").value.trim(),
-    observaciones:$("cliObservacion").value.trim()
+    observaciones:$("cliObservacion").value.trim(),
+    recoleccion:$("cliRecoleccion").value.trim()
   };
 
   // La fila de la hoja identifica al cliente aunque se le cambie el nombre.
@@ -1350,7 +1767,8 @@ function guardarCliente(){
 function aplicarCambioClienteLocal(datos){
 
   const campos = ["codigo","nombre","nit","telefono","direccion",
-                  "ruta","municipio","contacto","correo","observaciones"];
+                  "ruta","municipio","contacto","correo","observaciones",
+                  "recoleccion","frecuencia"];
 
   let ficha = null;
 
@@ -1739,7 +2157,7 @@ function pedir(url){
 
 function cargarHistorial(){
   const cuerpo = $("tablaHistorial");
-  cuerpo.innerHTML = '<tr><td colspan="15">Cargando...</td></tr>';
+  cuerpo.innerHTML = '<tr><td colspan="19">Cargando...</td></tr>';
   ocupado("btnHistorial","Consultando...");
   mensaje("estadoHistorial","");
 
@@ -1755,7 +2173,7 @@ function cargarHistorial(){
     .catch(error => {
       console.error("Historial:", error);
       ocupado("btnHistorial", null);
-      cuerpo.innerHTML = '<tr><td colspan="15">Error cargando información</td></tr>';
+      cuerpo.innerHTML = '<tr><td colspan="19">Error cargando información</td></tr>';
       mensaje("estadoHistorial",
         "No se pudo consultar el servidor: " + (error.message || error), true);
     });
@@ -1788,6 +2206,9 @@ function filtrarHistorial(){
 
     // Solo los manifiestos que superan los kilos incluidos en su tarifa.
     if(soloExcedidos && !superaTarifa(x)) return false;
+
+    // Filtro de columna (icono ▼ en "Frecuencia")
+    if(!pasaFiltro("histFrecuencia", x)) return false;
 
     return true;
   };
@@ -1824,6 +2245,7 @@ function filtrarHistorial(){
   }
 
   mostrarHistorial(resultado);
+  pintarEstadoFiltros();
 }
 
 function limpiarFiltroHistorial(){
@@ -1832,7 +2254,11 @@ function limpiarFiltroHistorial(){
   $("histKilos").value = "0";
   $("histMovil").value = "";
   $("histBuscar").value = "";
+  Object.keys(DEF_FILTROS).forEach(id => {
+    if(DEF_FILTROS[id].zona === "historial") filtros[id] = { texto:"", valores:null };
+  });
   mostrarHistorial(historialDatos);
+  pintarEstadoFiltros();
 }
 
 function fechaValida(valor){
@@ -1880,9 +2306,9 @@ function mostrarHistorial(datos){
   let malas = 0;
 
   if(historialVisible.length === 0){
-    cuerpo.innerHTML = '<tr><td colspan="18">Sin registros</td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="19">Sin registros</td></tr>';
   }else{
-    cuerpo.innerHTML = historialVisible.map(x => {
+    cuerpo.innerHTML = historialVisible.map((x, iFila) => {
       const buena = fechaValida(x.fecha);
       if(!buena) malas++;
       const clase = buena
@@ -1903,6 +2329,7 @@ function mostrarHistorial(datos){
         <td${clase}>${esc(x.fecha)}</td>
         <td class="cliente">${esc(x.cliente)}</td>
         <td>${esc(x.ruta)}</td>
+        <td class="frecuencia" title="Se edita en la pestaña Clientes">${esc(frecuenciaDeCliente(x.cliente))}</td>
         <td class="num">${esc(x.movil)}</td>
         <td class="num">${esc(x.manifiesto)}</td>
         <td class="num">${esc(x.bolsas)}</td>
@@ -3075,6 +3502,188 @@ function esClientePequeno(nombreEnManifiesto){
  * Tarifa del cliente tal como está escrita en la hoja CLIENTES,
  * por ejemplo "25.000 / 5.000 (0-4)". Con cache: se consulta fila a fila.
  */
+/**
+ * Frecuencia de recolección del cliente (columna H de la hoja CLIENTES).
+ * El manifiesto solo trae el nombre escrito a mano, así que se empareja con
+ * la ficha igual que la ruta y la tarifa, y se cachea porque el historial
+ * puede traer miles de filas del mismo cliente.
+ */
+function frecuenciaDeCliente(nombreEnManifiesto){
+  const clave = String(nombreEnManifiesto || "").trim();
+  if(!clave) return "";
+
+  if(frecuenciaPorCliente[clave] === undefined){
+    const ficha = emparejarCliente(clave);
+    frecuenciaPorCliente[clave] = ficha ? String(ficha.frecuencia || "").trim() : "";
+  }
+
+  return frecuenciaPorCliente[clave];
+}
+
+
+/* ----- edición de celdas de la ficha del cliente ---------------------
+   Se edita con el lápiz, no con campos siempre abiertos: con 1.600 clientes
+   la tabla llegaba a pintar más de 3.000 <input> y por eso se sentía lenta.
+   Ahora solo existe un campo, el de la celda que se está editando.
+   -------------------------------------------------------------------- */
+
+const ACCION_CAMPO = {
+  frecuencia:  "guardarFrecuencia",
+  recoleccion: "guardarRecoleccion"
+};
+
+const ETIQUETA_CAMPO = {
+  frecuencia:  "Frecuencia",
+  recoleccion: "Recolección"
+};
+
+let celdaEditando = null;
+
+
+/**
+ * Contenido de una celda editable: el valor y un lápiz. Si en la hoja esa
+ * celda es una FÓRMULA se muestra solo el texto con la marca fx, porque
+ * escribir encima borraría el cálculo.
+ */
+function celdaFicha(valor, calculada, campo, indice){
+
+  if(calculada){
+    return `<span class="calculada" title="Esta celda es una fórmula en la hoja. Cámbiela allí.">`
+         + `${esc(valor)} <small>fx</small></span>`;
+  }
+
+  return `<span class="valor-celda">${esc(valor)}</span>`
+       + `<button type="button" class="lapiz" title="Editar ${esc(ETIQUETA_CAMPO[campo] || campo)}"`
+       + ` onclick="editarCelda(this,'${campo}',${indice})">✏️</button>`;
+}
+
+
+/** Convierte la celda en un campo de texto. Solo una a la vez. */
+function editarCelda(boton, campo, indice){
+
+  const td = boton.closest("td");
+  const ficha = clientes[indice];
+  if(!td || !ficha) return;
+
+  cerrarCeldaEnEdicion();
+
+  const anterior = String(ficha[campo] || "");
+
+  td.classList.add("editando");
+  td.innerHTML = `<input type="text" value="${esc(anterior)}" placeholder="—">`;
+
+  const input = td.querySelector("input");
+  celdaEditando = { td, campo, indice, anterior, cancelado:false };
+
+  input.focus();
+  input.select();
+
+  input.addEventListener("keydown", e => {
+    if(e.key === "Enter"){ e.preventDefault(); input.blur(); }
+    if(e.key === "Escape"){ celdaEditando.cancelado = true; input.blur(); }
+  });
+
+  input.addEventListener("blur", () => terminarCelda(input));
+}
+
+
+function cerrarCeldaEnEdicion(){
+  if(!celdaEditando) return;
+  const input = celdaEditando.td.querySelector("input");
+  if(input) input.blur();
+}
+
+
+function terminarCelda(input){
+
+  if(!celdaEditando) return;
+
+  const { td, campo, indice, anterior, cancelado } = celdaEditando;
+  celdaEditando = null;
+
+  const ficha = clientes[indice];
+  const valor = cancelado ? anterior : input.value.trim();
+  const cambio = !cancelado && valor !== String(anterior).trim();
+
+  td.classList.remove("editando");
+
+  const guardado = cambio ? guardarCampoFicha(ficha, campo, valor) : false;
+  const mostrado = guardado ? valor : anterior;
+
+  td.innerHTML = celdaFicha(mostrado, false, campo, indice);
+
+  if(guardado){
+    td.classList.add("guardado");
+    setTimeout(() => td.classList.remove("guardado"), 1500);
+  }
+}
+
+
+/**
+ * Guarda un campo de la ficha (columna H o T). El envío va por la cola, así
+ * que no se espera al servidor. Lo caro —serializar 1.600 clientes y rehacer
+ * el índice de búsqueda— se aplaza con programarSincronizacionClientes().
+ */
+function guardarCampoFicha(ficha, campo, valor){
+
+  if(!ficha.fila && !ficha.codigo && !ficha.nombre){
+    alert("Este cliente no se puede identificar en la hoja.\n" +
+          "Actualice los clientes desde el servidor e intente de nuevo.");
+    return false;
+  }
+
+  const datos = {
+    accion: ACCION_CAMPO[campo],
+    codigo: ficha.codigo || "",
+    nombre: ficha.nombre || ""
+  };
+  datos[campo] = valor;
+
+  // La fila de la hoja es lo único fiable: la mayoría no tiene código.
+  if(ficha.fila) datos.fila = ficha.fila;
+
+  // tipo "celda": a diferencia de "cliente", NO dispara la recarga completa
+  // de clientes al vaciarse la cola. Cambiar una celda no mueve ninguna fila.
+  encolar(datos,
+    ETIQUETA_CAMPO[campo] + " · " + (ficha.nombre || ficha.codigo) +
+    " → " + (valor || "(vacío)"),
+    "celda");
+
+  ficha[campo] = valor;
+
+  // Los caches por nombre son pequeños: se rehacen al instante.
+  frecuenciaPorCliente = {};
+
+  programarSincronizacionClientes();
+
+  return true;
+}
+
+
+// Guardar en localStorage y rehacer el índice cuesta con 1.600 clientes, así
+// que se hace una sola vez cuando se deja de editar, no en cada celda.
+let temporizadorClientes = null;
+
+function programarSincronizacionClientes(){
+  clearTimeout(temporizadorClientes);
+  temporizadorClientes = setTimeout(sincronizarClientesYa, 1500);
+}
+
+function sincronizarClientesYa(){
+  clearTimeout(temporizadorClientes);
+  temporizadorClientes = null;
+  guardarCache("clientes_cache", JSON.stringify(clientes));
+  crearIndiceClientes();
+}
+
+// Si se cierra la pestaña antes de que pase ese segundo y medio, se guarda ya.
+window.addEventListener("beforeunload", () => {
+  if(temporizadorClientes) sincronizarClientesYa();
+});
+
+
+
+
 function tarifaDeCliente(nombreEnManifiesto){
   const clave = String(nombreEnManifiesto || "").trim();
   if(!clave) return "";
@@ -3917,6 +4526,7 @@ window.addEventListener("beforeunload", e => {
 cargarCola();
 procesarCola();
 fechaManifiestoHoy();
+pintarEstadoFiltros();
 mostrar("nuevo");
 cargarClientes(false);
 cargarMoviles();
