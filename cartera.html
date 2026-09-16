@@ -30,7 +30,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBUb_-e3wEQFIBvR0TrgJcMSL-fsVYoinMYtcJU8GzXRXEjeBD4oFrPRPGgEll3Bvt/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxj1ILx89prxIVR2CbwxjwgBEPTRbvtEOIvJyqnJAO6PyZlNwnJM3Le2fukrj4oaM57/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -527,6 +527,15 @@
     </div>
 </div>
 
+<!-- Cola de guardado (discreta) -->
+<div id="colaIcono" class="hidden fixed bottom-4 left-4 z-50">
+    <button type="button" id="colaBtn" class="flex items-center gap-1.5 text-[11px] leading-none px-2.5 py-1.5 rounded-full border bg-white/90 text-gray-500 border-gray-200 shadow-sm opacity-80 hover:opacity-100" title="Recibos pendientes por guardar">
+        <svg id="colaSpin" class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        <span id="colaTexto">Guardando</span>
+    </button>
+    <div id="colaPanel" class="hidden absolute bottom-9 left-0 w-80 max-h-80 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs"></div>
+</div>
+
 <!-- Indicador de Estado -->
 <div id="statusBadge" class="fixed bottom-4 right-4 bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium shadow flex items-center gap-2 border border-yellow-300 z-50">
     <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -683,7 +692,7 @@
             return `REC-${ahora.getFullYear()}${p(ahora.getMonth()+1)}${p(ahora.getDate())}-${p(ahora.getHours())}${p(ahora.getMinutes())}${p(ahora.getSeconds())}-${ms}`;
         }
         function extraerReciboDelDetalle(detalle) {
-            const m = String(detalle || '').match(/Recibo:\s*(REC-[A-Z0-9-]+)/i);
+            const m = String(detalle || '').match(/Recibo:\s*(REC-[A-Z0-9-]+|\d{6,})/i);
             return m ? m[1].toUpperCase() : '';
         }
 
@@ -2493,6 +2502,22 @@
                 console.warn('No se pudo leer la huella local:', e);
             }
 
+            // 3) Recibos que siguen en la cola de guardado de este navegador.
+            (colaMem || []).forEach(item => {
+                if (normalizarNit(item.nit) !== nitObjetivo) return;
+                if (fechaComparable(item.fecha) !== fechaObjetivo) return;
+                if (Math.abs((Number(item.valor) || 0) - valorObjetivo) >= 0.5) return;
+                encontrados.unshift({
+                    origen: 'cola',
+                    fecha: item.fecha,
+                    nit: item.nit,
+                    valor: item.valor,
+                    detalle: 'Este recibo está en cola y se guardará automáticamente cuando haya Internet.',
+                    recibo: item.recibo || 'En cola (número pendiente)',
+                    formaPago: item.formaPago || ''
+                });
+            });
+
             return encontrados;
         }
 
@@ -2549,6 +2574,327 @@
 
         document.getElementById('btnForzarDuplicado')
             .addEventListener('click', () => cerrarModalDuplicado(true));
+
+        // ----------------------------------------------------
+        // COLA DE GUARDADO: TODO RECIBO QUEDA PRIMERO EN EL NAVEGADOR
+        // (IndexedDB, respaldo localStorage) y se envía solo cuando hay
+        // Internet. Nunca se borra de la cola hasta que el servidor
+        // confirme. El servidor asigna el consecutivo (columna H).
+        // ----------------------------------------------------
+        const COLA_DB_NOMBRE = 'cartera_cola_db';
+        const COLA_STORE = 'envios';
+        const COLA_LS_KEY = 'cartera_cola_envios';
+        const colaIcono = document.getElementById('colaIcono');
+        const colaBtn = document.getElementById('colaBtn');
+        const colaTexto = document.getElementById('colaTexto');
+        const colaSpin = document.getElementById('colaSpin');
+        const colaPanel = document.getElementById('colaPanel');
+        let colaMem = [];
+        let colaProcesando = false;
+        let colaTimer = null;
+        let colaDBPromise = null;
+        let ultimoReciboAsignado = '';
+
+        function idEnvioNuevo() {
+            try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (_) {}
+            return 'E' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+        }
+
+        function colaDB() {
+            if (!colaDBPromise) {
+                colaDBPromise = new Promise((resolve, reject) => {
+                    if (!('indexedDB' in window)) return reject(new Error('IndexedDB no disponible'));
+                    const req = indexedDB.open(COLA_DB_NOMBRE, 1);
+                    req.onupgradeneeded = () => {
+                        if (!req.result.objectStoreNames.contains(COLA_STORE)) {
+                            req.result.createObjectStore(COLA_STORE, { keyPath: 'id' });
+                        }
+                    };
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                }).catch(e => { colaDBPromise = null; throw e; });
+            }
+            return colaDBPromise;
+        }
+
+        function colaLeerLS() {
+            try { return JSON.parse(localStorage.getItem(COLA_LS_KEY) || '[]') || []; } catch (_) { return []; }
+        }
+
+        async function colaTx(modo, fn) {
+            const db = await colaDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(COLA_STORE, modo);
+                const out = fn(tx.objectStore(COLA_STORE));
+                tx.oncomplete = () => resolve(out && out.result !== undefined ? out.result : undefined);
+                tx.onerror = () => reject(tx.error);
+                tx.onabort = () => reject(tx.error);
+            });
+        }
+
+        // Lanza error solo si NO se pudo guardar en ningún lado.
+        async function colaPersistir(item) {
+            item.actualizado = Date.now();
+            try {
+                await colaTx('readwrite', st => st.put(item));
+                return;
+            } catch (e) {
+                console.warn('Cola IndexedDB falló, uso localStorage:', e);
+            }
+            const lista = colaLeerLS().filter(x => x.id !== item.id);
+            lista.push(item);
+            localStorage.setItem(COLA_LS_KEY, JSON.stringify(lista));
+        }
+
+        async function colaBorrar(id) {
+            try { await colaTx('readwrite', st => st.delete(id)); } catch (_) {}
+            try {
+                const lista = colaLeerLS();
+                if (lista.some(x => x.id === id)) {
+                    localStorage.setItem(COLA_LS_KEY, JSON.stringify(lista.filter(x => x.id !== id)));
+                }
+            } catch (_) {}
+            colaMem = colaMem.filter(x => x.id !== id);
+        }
+
+        async function colaCargar() {
+            const mapa = new Map();
+            const meter = x => {
+                if (!x || !x.id) return;
+                const prev = mapa.get(x.id);
+                if (!prev || (x.actualizado || 0) >= (prev.actualizado || 0)) mapa.set(x.id, x);
+            };
+            try { (await colaTx('readonly', st => st.getAll()) || []).forEach(meter); } catch (_) {}
+            colaLeerLS().forEach(meter);
+            return [...mapa.values()].sort((a, b) => (a.creado || 0) - (b.creado || 0));
+        }
+
+        function escHtml(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function pintarCola() {
+            const total = colaMem.length;
+            const revision = colaMem.filter(x => x.estado === 'revision').length;
+            if (!total) {
+                colaIcono.classList.add('hidden');
+                colaPanel.classList.add('hidden');
+                return;
+            }
+            colaIcono.classList.remove('hidden');
+            const base = 'flex items-center gap-1.5 text-[11px] leading-none px-2.5 py-1.5 rounded-full border shadow-sm hover:opacity-100 ';
+            if (revision) {
+                colaBtn.className = base + 'bg-red-50 text-red-700 border-red-200 opacity-100';
+                colaSpin.classList.add('hidden');
+                colaTexto.textContent = `Revisar recibo${revision > 1 ? 's' : ''} (${revision})`;
+            } else {
+                colaBtn.className = base + 'bg-white/90 text-gray-500 border-gray-200 opacity-80';
+                colaSpin.classList.remove('hidden');
+                colaSpin.classList.toggle('animate-spin', navigator.onLine);
+                colaTexto.textContent = (navigator.onLine ? 'Guardando' : 'Guardando · sin red') + (total > 1 ? ` (${total})` : '');
+            }
+            if (!colaPanel.classList.contains('hidden')) pintarPanelCola();
+        }
+
+        function pintarPanelCola() {
+            colaPanel.innerHTML = `<div class="font-semibold text-gray-700 mb-2">Recibos en cola</div>` +
+                colaMem.map(x => `
+                    <div class="border-t border-gray-100 py-2">
+                        <div class="flex justify-between gap-2"><span class="font-medium text-gray-800 truncate">${escHtml(x.cliente)}</span><span class="whitespace-nowrap">${escHtml(formatCurrency(x.valor))}</span></div>
+                        <div class="text-gray-500">${escHtml(formatDate(x.fecha))} · ${escHtml(x.formaPago)} · ${x.pagoOk ? 'Recibo ' + escHtml(x.recibo) + ' (falta anticipo)' : 'número pendiente'}</div>
+                        ${x.ultimoError ? `<div class="${x.estado === 'revision' ? 'text-red-600' : 'text-gray-400'} mt-1">${escHtml(x.ultimoError)}</div>` : ''}
+                        ${x.estado === 'revision' ? `<div class="flex gap-2 mt-2">
+                            <button type="button" data-cola-reintentar="${escHtml(x.id)}" class="px-2 py-1 rounded bg-blue-600 text-white">Reintentar</button>
+                            <button type="button" data-cola-descartar="${escHtml(x.id)}" class="px-2 py-1 rounded bg-gray-100 text-gray-700">Descartar</button>
+                        </div>` : ''}
+                    </div>`).join('') +
+                (ultimoReciboAsignado ? `<div class="border-t border-gray-100 pt-2 text-gray-400">Último recibo guardado: ${escHtml(ultimoReciboAsignado)}</div>` : '');
+        }
+
+        colaBtn.addEventListener('click', () => {
+            colaPanel.classList.toggle('hidden');
+            if (!colaPanel.classList.contains('hidden')) pintarPanelCola();
+        });
+
+        colaPanel.addEventListener('click', async ev => {
+            const rid = ev.target.getAttribute('data-cola-reintentar');
+            const did = ev.target.getAttribute('data-cola-descartar');
+            if (rid) {
+                const item = colaMem.find(x => x.id === rid);
+                if (!item) return;
+                item.estado = 'pendiente';
+                item.intentos = 0;
+                item.proximoIntento = 0;
+                await colaPersistir(item).catch(() => {});
+                pintarCola();
+                procesarCola();
+            } else if (did) {
+                const item = colaMem.find(x => x.id === did);
+                if (!item) return;
+                if (!confirm(`¿Descartar el recibo de ${item.cliente} por ${formatCurrency(item.valor)}? No quedará guardado.`)) return;
+                await colaBorrar(did);
+                if (item.formaPago === 'Banco') limpiarCacheBanco();
+                pintarCola();
+            }
+        });
+
+        async function postServidor(body, timeoutMs = 45000) {
+            const res = await fetchConTimeout(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(body)
+            }, timeoutMs);
+            const txt = await res.text();
+            try {
+                return JSON.parse(txt);
+            } catch (_) {
+                // Página de error de Google / cuota / red intermedia: se reintenta.
+                throw new Error('El servidor no respondió bien; se reintentará.');
+            }
+        }
+
+        // Errores del servidor que son pasajeros (bloqueo ocupado, cuota,
+        // Google lento): se reintentan siempre, nunca pasan a "Revisar".
+        const ERRORES_PASAJEROS = /lock|bloqueo|timed? ?out|tiempo de espera|too many|demasiad|quota|cuota|rate|service|servicio|exceed|excedi|internal|interno|temporar|unavailable|no disponible|try again|intent(a|e) de nuevo|backend/i;
+
+        function errorServidor(msg) {
+            const texto = msg || 'El servidor rechazó el recibo.';
+            const e = new Error(texto);
+            e.servidor = !ERRORES_PASAJEROS.test(texto);
+            return e;
+        }
+
+        async function procesarItemCola(item) {
+            try {
+                if (!item.pagoOk) {
+                    let body = { ...item.payload, idEnvio: item.id, consecutivo: true };
+                    let data = await postServidor(body);
+
+                    if (data.status === 'duplicate' && !item.payload.permitirDuplicado) {
+                        const dup = data.duplicate || {};
+                        const seguir = await confirmarPagoDuplicado([{
+                            origen: 'servidor',
+                            fecha: dup.fecha || item.fecha,
+                            nit: dup.nit || item.nit,
+                            valor: Number(dup.valor) || item.valor,
+                            detalle: dup.detalle || data.message || '',
+                            recibo: dup.recibo || '',
+                            formaPago: dup.formaPago || item.formaPago
+                        }], { cliente: item.cliente, nit: item.nit, fecha: item.fecha, valor: item.valor, formaPago: item.formaPago });
+
+                        if (!seguir) {
+                            await colaBorrar(item.id);
+                            if (item.formaPago === 'Banco') limpiarCacheBanco();
+                            showToast(`Recibo de ${item.cliente} cancelado: ya estaba registrado.`);
+                            return 'ok';
+                        }
+                        item.payload.permitirDuplicado = true;
+                        await colaPersistir(item);
+                        body = { ...item.payload, idEnvio: item.id, consecutivo: true };
+                        data = await postServidor(body);
+                    }
+
+                    if (data.status !== 'success') throw errorServidor(data.message);
+
+                    item.pagoOk = true;
+                    item.recibo = String(data.recibo || item.payload.recibo || '');
+                    item.intentos = 0;
+                    item.ultimoError = '';
+                    await colaPersistir(item);
+                }
+
+                if (item.payloadExtra && !item.extraOk) {
+                    const dataExtra = await postServidor({
+                        ...item.payloadExtra,
+                        recibo: item.recibo,
+                        idEnvio: item.id + '-extra'
+                    });
+                    if (dataExtra.ok === false || dataExtra.status === 'error') {
+                        throw errorServidor('Pago guardado (recibo ' + item.recibo + '), pero falló el anticipo: ' + (dataExtra.message || 'error'));
+                    }
+                    item.extraOk = true;
+                }
+
+                await colaBorrar(item.id);
+                ultimoReciboAsignado = item.recibo;
+                try {
+                    const huella = JSON.parse(localStorage.getItem('cartera_ultimo_pago_guardado') || 'null');
+                    if (huella && huella.recibo === item.payload.recibo) {
+                        huella.recibo = item.recibo;
+                        localStorage.setItem('cartera_ultimo_pago_guardado', JSON.stringify(huella));
+                    }
+                } catch (_) {}
+                revalidarDespuesDeGuardarSilencioso(item.fecha);
+                return 'ok';
+            } catch (e) {
+                item.intentos = (item.intentos || 0) + 1;
+                item.ultimoError = e.message || 'Error desconocido';
+                // Errores de red: se reintenta para siempre.
+                // Rechazos del servidor: 3 intentos y luego queda en "Revisar".
+                if (e.servidor && item.intentos >= 3) item.estado = 'revision';
+                item.proximoIntento = Date.now() + Math.min(60000, 2000 * Math.pow(2, Math.min(item.intentos, 5)));
+                await colaPersistir(item).catch(() => {});
+                console.warn('Cola: no se pudo enviar', item.id, e);
+                return e.servidor ? 'error' : 'sin-red';
+            }
+        }
+
+        async function procesarCola() {
+            if (colaProcesando) return;
+            if (!colaMem.length) { pintarCola(); return; }
+            // No interrumpir mientras el usuario confirma un duplicado.
+            if (isSavingPayment || resolverDuplicado) { programarCola(3000); return; }
+            if (!navigator.onLine) { pintarCola(); programarCola(); return; }
+            colaProcesando = true;
+            pintarCola();
+            try {
+                for (const item of colaMem.slice()) {
+                    if (item.estado === 'revision') continue;
+                    if (item.proximoIntento && item.proximoIntento > Date.now()) continue;
+                    const r = await procesarItemCola(item);
+                    pintarCola();
+                    if (r === 'sin-red') break; // se respeta el orden de los consecutivos
+                }
+            } finally {
+                colaProcesando = false;
+                pintarCola();
+                programarCola();
+            }
+        }
+
+        function programarCola(ms) {
+            clearTimeout(colaTimer);
+            const activos = colaMem.filter(x => x.estado !== 'revision');
+            if (!activos.length) return;
+            let espera = ms;
+            if (espera == null) {
+                const proximo = Math.min(...activos.map(x => x.proximoIntento || 0));
+                espera = Math.max(1500, Math.min(20000, proximo - Date.now()));
+            }
+            colaTimer = setTimeout(procesarCola, espera);
+        }
+
+        async function encolarRecibo(item) {
+            await colaPersistir(item); // si falla, el que llama avisa
+            colaMem.push(item);
+            pintarCola();
+            setTimeout(procesarCola, 50);
+        }
+
+        window.addEventListener('online', () => { pintarCola(); procesarCola(); });
+        window.addEventListener('offline', pintarCola);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') procesarCola();
+        });
+        window.addEventListener('beforeunload', ev => {
+            if (colaMem.length) { ev.preventDefault(); ev.returnValue = ''; }
+        });
+        try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (_) {}
+        colaCargar().then(lista => {
+            colaMem = lista;
+            pintarCola();
+            procesarCola();
+        });
 
         // ----------------------------------------------------
         // GUARDAR ABONO (FORM SUBMIT)
@@ -2849,69 +3195,41 @@
                 observaciones: obs
             };
 
+            payload.idEnvio = idEnvioNuevo();
+            const itemCola = {
+                id: payload.idEnvio,
+                creado: Date.now(),
+                estado: 'pendiente',
+                intentos: 0,
+                pagoOk: false,
+                extraOk: false,
+                recibo: '',
+                cliente: clientePago.nombre,
+                nit: clientePago.nit,
+                valor: retData.netoBanco,
+                fecha: fechaPagoVal,
+                formaPago: formaPago,
+                payload: payload,
+                payloadExtra: anticipo > 0 ? payloadExtra : null
+            };
+
             try {
-                let resPago = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-                let dataPago = await resPago.json();
+                // 1) Queda guardado en el navegador ANTES de cualquier envío.
+                await encolarRecibo(itemCola);
+            } catch (e) {
+                console.error('No se pudo encolar:', e);
+                isMessageVisible = false;
+                document.getElementById('mensajePanel').classList.add('hidden');
+                document.getElementById('facturasPanel').classList.remove('hidden');
+                document.getElementById('historialPanel').classList.remove('hidden');
+                document.getElementById('pagoPanel').classList.remove('hidden');
+                showToast('No se pudo guardar el recibo en este navegador (almacenamiento lleno o bloqueado). NO quedó registrado, intenta de nuevo.');
+                isSavingPayment = false;
+                return;
+            }
 
-                // Segunda barrera: si otro equipo registró el pago después del
-                // último refresco, Apps Script lo detecta. En vez de dejar pasar
-                // el duplicado, mostramos el mismo aviso y exigimos confirmación.
-                if (dataPago.status === 'duplicate') {
-                    const dupServidor = dataPago.duplicate || {};
-                    const continuarServidor = await confirmarPagoDuplicado([{
-                        origen: 'servidor',
-                        fecha: dupServidor.fecha || fechaPagoVal,
-                        nit: dupServidor.nit || clientePago.nit,
-                        valor: Number(dupServidor.valor) || retData.netoBanco,
-                        detalle: dupServidor.detalle || dataPago.message || '',
-                        recibo: dupServidor.recibo || '',
-                        formaPago: dupServidor.formaPago || formaPago
-                    }], {
-                        cliente: clientePago.nombre,
-                        nit: clientePago.nit,
-                        fecha: fechaPagoVal,
-                        valor: retData.netoBanco,
-                        formaPago: formaPago
-                    });
-
-                    if (!continuarServidor) {
-                        throw new Error('Registro cancelado: este ingreso ya aparece registrado.');
-                    }
-
-                    payload.permitirDuplicado = true;
-                    resPago = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload)
-                    });
-                    dataPago = await resPago.json();
-                }
-
-                if (dataPago.status !== 'success') {
-                    throw new Error(dataPago.message || 'No fue posible guardar el pago.');
-                }
-
-                const necesitaExtra = anticipo > 0;
-                let extraOk = true;
-                if (necesitaExtra) {
-                    try {
-                        const resExtra = await fetch(SCRIPT_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify(payloadExtra)
-                        });
-                        const dataExtra = await resExtra.json();
-                        extraOk = dataExtra.ok !== false && dataExtra.status !== 'error';
-                    } catch (eExtra) {
-                        extraOk = false;
-                        console.error('Error extra:', eExtra);
-                    }
-                }
-
+            try {
+                // 2) Ajustes locales inmediatos para no reutilizar el mismo movimiento.
                 if (formaPago === 'Banco' && bancoSeleccionado) {
                     actualizarBancoCacheLocalTrasPago(
                         fechaPagoVal,
@@ -2921,8 +3239,6 @@
                     );
                 }
 
-                // Si se envió un teléfono válido, el servidor lo actualizó en TERCEROS!F.
-                // Si se dejó vacío, no tocamos el teléfono existente ni el caché local.
                 if (clientePago.telefono) {
                     if (currentClient && String(currentClient.nit || '') === String(clientePago.nit || '')) {
                         currentClient.telefono = clientePago.telefono;
@@ -2930,11 +3246,8 @@
                     const terceroActualizado = (allData.clientes || []).find(c => String(c.nit || '') === String(clientePago.nit || ''));
                     if (terceroActualizado) terceroActualizado.telefono = clientePago.telefono;
                     guardarCacheLocalCartera(allData);
-                    telefonoTerceroAyuda.textContent = 'Teléfono actualizado automáticamente en TERCEROS al guardar el pago.';
+                    telefonoTerceroAyuda.textContent = 'El teléfono se actualizará en TERCEROS al guardar el recibo.';
                     telefonoTerceroAyuda.className = 'text-xs text-green-600 mt-1 font-medium';
-                } else {
-                    telefonoTerceroAyuda.textContent = 'Teléfono opcional. El pago se guardó sin modificar TERCEROS!F.';
-                    telefonoTerceroAyuda.className = 'text-xs text-gray-500 mt-1';
                 }
 
                 guardarHuellaPagoLocal({
@@ -2945,31 +3258,8 @@
                     formaPago: formaPago,
                     recibo: reciboId
                 });
-
-                if (!extraOk) {
-                    showToast('El pago quedó guardado, pero revisa el comprobante/anticipo en Apps Script.');
-                } else {
-                    let mensajeExito = formaPago === 'Banco'
-                        ? 'Pago guardado y banco conciliado.'
-                        : 'Pago guardado.';
-                    if (anticipo > 0) mensajeExito += ' Anticipo registrado.';
-                    if (comprobanteDataUrl) mensajeExito += ' Comprobante guardado en el recibo.';
-                    showToast(mensajeExito, 'success');
-                }
-
-                // Revisión en segundo plano SOLO al guardar. No bloquea, no muestra
-                // cargadores y si falla Internet conserva el caché actual.
-                revalidarDespuesDeGuardarSilencioso(fechaPagoVal);
             } catch (e) {
-                console.error('Error Sheet:', e);
-                // Si falló el pago real, no dejamos visible el mensaje de éxito.
-                isMessageVisible = false;
-                document.getElementById('mensajePanel').classList.add('hidden');
-                document.getElementById('facturasPanel').classList.remove('hidden');
-                document.getElementById('historialPanel').classList.remove('hidden');
-                document.getElementById('pagoPanel').classList.remove('hidden');
-                showToast(e.message || 'Ocurrió un error al guardar el pago.');
-                if (formaPago === 'Banco') programarBusquedaBanco();
+                console.warn('Ajustes locales tras encolar:', e);
             } finally {
                 isSavingPayment = false;
             }
