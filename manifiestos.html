@@ -2,8 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sistema de Manifiestos</title>
+
+<!-- << v7 >> Para que al agregarla a la pantalla de inicio se comporte como
+     una aplicación y no como una página dentro del navegador. -->
+<meta name="theme-color" content="#176b64">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Manifiestos">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Evita que iOS convierta los números de manifiesto en enlaces de llamada -->
+<meta name="format-detection" content="telephone=no">
 
 <style>
 :root{
@@ -563,6 +573,93 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
   background:#f8fafc;border:1px solid var(--borde);border-radius:10px;
   padding:12px;margin-top:10px;white-space:pre-wrap;
   font-size:13px;max-height:220px;overflow:auto;
+}
+
+/* ===========================================================
+   << v7 >>  CELULAR
+   Los conductores llenan los manifiestos en la ruta, desde el
+   teléfono. Todo lo de abajo solo aplica en pantallas angostas;
+   en el computador la aplicación se ve igual que siempre.
+   =========================================================== */
+
+@media (max-width:820px){
+
+  /* ---- estructura: el menú arriba, el contenido debajo ---- */
+  .layout{flex-direction:column;}
+
+  .menu{width:100%;padding:12px;}
+  .menu h2{font-size:19px;margin:0 0 10px;}
+
+  /* Los accesos van en fila y se acomodan solos, para no gastar
+     media pantalla en el menú. */
+  .menu button[data-seccion]{
+    display:inline-block;width:auto;
+    margin:4px 5px 0 0;padding:11px 13px;font-size:13.5px;
+  }
+
+  /* El conductor solo tiene el formulario: el menú sobra entero. */
+  body.perfil-conductor .menu button[data-seccion]{display:none;}
+
+  /* El espacio de abajo es para que el panel de la cola, que va fijo en
+     esa esquina, no quede encima del botón de guardar. */
+  .contenido{padding:12px 12px 130px;}
+  .card{padding:16px;border-radius:12px;margin-bottom:14px;}
+  .card h2{font-size:20px;}
+  .card h3{font-size:16px;margin-bottom:4px;}
+
+  /* ---- controles del tamaño del dedo ----
+     16px en los campos no es capricho: por debajo de eso, iOS hace
+     zoom solo al tocarlos y descuadra la pantalla. */
+  input,select,textarea{font-size:16px;padding:12px;}
+  input,select{width:100%;margin:5px 0;}
+  input[type="date"]{width:100%;}
+  input[type="checkbox"],input[type="radio"]{width:auto;margin:0;}
+
+  .buscador{max-width:none;}
+  #buscar,#histBuscar,#observacionesManifiesto,#buscarClienteTabla{max-width:none;}
+  .lista{max-height:50vh;}
+  .item{padding:13px 10px;font-size:15px;}
+
+  .btn-pro{width:100%;margin:6px 0;padding:15px;font-size:15.5px;}
+  .btn-mini{padding:10px 14px;font-size:14px;}
+
+  /* Ese botón flota en la esquina de la tarjeta; en el celular se
+     montaría encima del título. */
+  .btn-actualizar{position:static;width:100%;margin:0 0 12px;}
+
+  .total{font-size:23px;}
+
+  /* ---- firma: más alta, que se firma con el dedo ---- */
+  .firma-lienzo{height:210px;max-width:none;}
+  .firma-botones{display:flex;gap:8px;}
+  .firma-botones .btn-mini{flex:1;margin:0;}
+
+  /* ---- la cola no puede tapar el botón de guardar ---- */
+  .cola{left:8px;right:8px;bottom:8px;width:auto;max-width:none;}
+  .cola-lista{max-height:35vh;}
+
+  /* ---- ventanas emergentes: desde abajo, como una app ---- */
+  .modal{padding:0;align-items:flex-end;}
+  .modal-contenido{
+    width:100%;max-width:100%;max-height:92vh;
+    border-radius:16px 16px 0 0;padding:18px;
+  }
+
+  /* ---- tablas: se deslizan de lado en vez de romper la pantalla ---- */
+  .tabla-scroll{-webkit-overflow-scrolling:touch;margin-top:14px;}
+  td,th{padding:8px;font-size:13px;}
+  .panel-filtro{max-width:calc(100vw - 24px);}
+
+  /* ---- acceso ---- */
+  .caja-acceso{padding:22px;}
+  .sesion{margin:0 0 10px;}
+}
+
+/* Pantallas muy angostas (celulares pequeños) */
+@media (max-width:380px){
+  .contenido{padding:9px 9px 130px;}
+  .card{padding:13px;}
+  .menu button[data-seccion]{font-size:12.5px;padding:10px;}
 }
 </style>
 </head>
