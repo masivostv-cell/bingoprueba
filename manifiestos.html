@@ -519,21 +519,91 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   box-shadow:0 10px 30px rgba(0,0,0,.35);
 }
 .modal-contenido textarea{width:100%;}
+
+/* ---------- << v5 >> acceso ---------- */
+#pantallaAcceso{
+  position:fixed;inset:0;z-index:4000;display:none;
+  align-items:center;justify-content:center;padding:20px;
+  background:linear-gradient(160deg,var(--verde-logo),var(--verde-oscuro));
+}
+#pantallaAcceso.mostrar{display:flex;}
+.caja-acceso{
+  background:#fff;width:380px;max-width:100%;padding:28px;
+  border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.30);
+}
+.caja-acceso h2{margin:0 0 4px;color:var(--verde-oscuro);}
+.caja-acceso input{width:100%;margin:6px 0;}
+.caja-acceso .btn-pro{width:100%;margin-top:12px;}
+
+.sesion{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin:0 0 16px;padding:10px;border-radius:10px;
+  background:rgba(255,255,255,.18);font-size:13px;line-height:1.3;
+}
+.sesion .quien{font-weight:bold;}
+.sesion .perfil{opacity:.85;}
+.sesion button{
+  width:auto;margin:0;padding:6px 10px;font-size:13px;
+  background:#fff;color:var(--verde-oscuro);
+}
+
+/* El conductor solo ve el formulario. Esconder los botones es comodidad;
+   el permiso de verdad lo aplica el Apps Script en cada llamada. */
+body.perfil-conductor [data-solo-admin]{display:none!important;}
+
+/* ---------- << v5 >> firma del cliente ---------- */
+.firma-lienzo{
+  width:100%;max-width:520px;height:180px;display:block;
+  background:#fff;border:2px dashed var(--borde);border-radius:12px;
+  touch-action:none;cursor:crosshair;
+}
+.firma-lienzo.falta{border-color:var(--rojo-logo);background:#fff4f4;}
+.firma-botones{margin-top:6px;}
+.wa-resumen{
+  background:#f8fafc;border:1px solid var(--borde);border-radius:10px;
+  padding:12px;margin-top:10px;white-space:pre-wrap;
+  font-size:13px;max-height:220px;overflow:auto;
+}
 </style>
 </head>
 
 <body>
 
+<!-- ================= ACCESO  (<< v5 >>) ================= -->
+<div id="pantallaAcceso">
+  <div class="caja-acceso">
+    <h2>Manifiestos</h2>
+    <p class="ayuda">Entre con el usuario que le entreg&oacute; administraci&oacute;n.</p>
+
+    <input id="accUsuario" placeholder="Usuario"
+           autocomplete="username" autocapitalize="none" autocorrect="off">
+    <input id="accClave" type="password" placeholder="Contrase&ntilde;a"
+           autocomplete="current-password">
+
+    <button type="button" id="btnEntrar" class="btn-pro btn-guardar" onclick="entrar()">
+      &#128275; Entrar
+    </button>
+    <p id="estadoAcceso" class="estado"></p>
+  </div>
+</div>
+
 <div class="layout">
 
   <nav class="menu">
     <h2>Manifiestos</h2>
+
+    <div class="sesion">
+      <span class="quien" id="sesionNombre"></span>
+      <span class="perfil" id="sesionPerfil"></span>
+      <button type="button" onclick="salir()">Salir</button>
+    </div>
+
     <button type="button" data-seccion="nuevo"     onclick="mostrar('nuevo')">📄 Nuevo manifiesto</button>
-    <button type="button" data-seccion="clientes"  onclick="mostrar('clientes')">👥 Clientes</button>
-    <button type="button" data-seccion="historial" onclick="mostrar('historial')">📚 Historial de manifiestos</button>
-    <button type="button" data-seccion="certificados" onclick="mostrar('certificados')">🧾 Certificados</button>
-    <button type="button" data-seccion="destinacion" onclick="mostrar('destinacion')">📜 Certificados de destinación</button>
-    <button type="button" data-seccion="reportes"  onclick="mostrar('reportes')">📊 Reportes</button>
+    <button type="button" data-seccion="clientes"  data-solo-admin onclick="mostrar('clientes')">👥 Clientes</button>
+    <button type="button" data-seccion="historial" data-solo-admin onclick="mostrar('historial')">📚 Historial de manifiestos</button>
+    <button type="button" data-seccion="certificados" data-solo-admin onclick="mostrar('certificados')">🧾 Certificados</button>
+    <button type="button" data-seccion="destinacion" data-solo-admin onclick="mostrar('destinacion')">📜 Certificados de destinación</button>
+    <button type="button" data-seccion="reportes"  data-solo-admin onclick="mostrar('reportes')">📊 Reportes</button>
   </nav>
 
   <main class="contenido">
@@ -561,7 +631,13 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
         <input type="date" id="manFecha" title="Fecha de la recolección">
         <button type="button" class="btn-mini" onclick="fechaManifiestoHoy()">Hoy</button>
         <br>
-        <input id="manifiesto" placeholder="Número manifiesto (obligatorio)">
+        <input id="manifiesto" placeholder="Número manifiesto (obligatorio)"
+               oninput="pintarEstadoNumero()">
+        <button type="button" class="btn-mini" title="Volver a poner el número que sigue"
+                onclick="ponerNumeroSugerido(true)">🔢 Siguiente</button>
+        <br>
+        <span class="ayuda" id="estadoNumero"></span>
+        <br>
         <select id="movil" title="Móvil (obligatorio)">
           <option value="">Móvil (obligatorio)</option>
         </select>
@@ -580,6 +656,15 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 
         <textarea id="observacionesManifiesto" rows="3"
                   placeholder="Observaciones del manifiesto (opcional)"></textarea>
+        <br>
+
+        <h3>Firma del cliente</h3>
+        <span class="ayuda">Pásele el celular al cliente para que firme con el dedo.</span>
+        <canvas id="firmaLienzo" class="firma-lienzo"></canvas>
+        <div class="firma-botones">
+          <button type="button" class="btn-mini" onclick="deshacerFirma()">↶ Deshacer</button>
+          <button type="button" class="btn-mini" onclick="limpiarFirma()">🧽 Borrar firma</button>
+        </div>
         <br>
 
         <button type="button" id="btnGuardar" class="btn-pro btn-guardar" onclick="guardar()">💾 Guardar</button>
@@ -695,6 +780,7 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
                 <th>Farmacéut.</th><th>Líquido</th><th>Medicam.</th><th>Otros</th>
                 <th>Total KG</th><th title="Kilos incluidos en la tarifa">Límite</th>
                 <th>Tarifa</th><th>Observaciones</th>
+                <th title="Firma que dejó el cliente al recibir la recolección">Firma</th>
               </tr>
             </thead>
             <tbody id="tablaHistorial"></tbody>
@@ -970,11 +1056,40 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   </div>
 </div>
 
+<!-- ================= WHATSAPP AL CLIENTE  (<< v5 >>) ================= -->
+<div id="modalWhatsApp" class="modal">
+  <div class="modal-contenido">
+    <h2>Enviarle la constancia al cliente</h2>
+    <p class="ayuda">Se abre WhatsApp con el mensaje ya escrito: usted solo oprime enviar.</p>
+
+    <input id="waTelefono" type="tel" inputmode="numeric"
+           placeholder="Celular del cliente (ej. 3001234567)">
+    <p id="estadoWhatsApp" class="estado"></p>
+
+    <div class="wa-resumen" id="waResumen"></div>
+    <br>
+    <button type="button" class="btn-pro btn-guardar"   onclick="enviarWhatsApp()">📲 Abrir WhatsApp</button>
+    <button type="button" class="btn-pro btn-consultar" onclick="cerrarWhatsApp()">Omitir</button>
+  </div>
+</div>
+
+<!-- ================= VER UNA FIRMA GUARDADA  (<< v5 >>) ================= -->
+<div id="modalFirma" class="modal">
+  <div class="modal-contenido">
+    <h2>Firma del cliente</h2>
+    <p id="firmaVistaTitulo"></p>
+    <canvas id="firmaVista" class="firma-lienzo"></canvas>
+    <p id="estadoFirmaVista" class="estado"></p>
+    <br>
+    <button type="button" class="btn-pro btn-consultar" onclick="cerrarFirmaVista()">Cerrar</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycby8ONs-ydD-QndCxrtK6wxxEOde5FQe2BdvC4ipAG279E8sRpNu3xlxQ4F-pfifTLiD/exec";
+const API = "https://script.google.com/macros/s/AKfycbwHBJhho1XuxsbWQwVomyAjFMm8BqzX4rCHf64bZPYFvbmOYO_v74DLkPhof8wcCC9Q/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -996,6 +1111,7 @@ let historialDatos = [];
 let historialVisible = [];
 let clienteObservacionActual = "";
 let clienteEditando = null;   // cliente que se está editando (null = nuevo)
+let clienteSeleccionado = null; // << v5 >> cliente del manifiesto en curso (para su teléfono)
 
 /* ---------------- utilidades ---------------- */
 
@@ -1059,9 +1175,19 @@ function ocupado(idBoton, texto){
 // Envía al Apps Script y traduce su respuesta. Si el navegador no puede
 // leer el cuerpo (CORS), asume que llegó bien en vez de reportar un falso error.
 function enviar(datos){
-  return fetch(API, { method:"POST", body:JSON.stringify(datos) })
+
+  // << v5 >> El token se agrega AQUÍ, no al encolar: así lo que quedó
+  // esperando sin señal sale con el token vigente cuando alguien vuelve a
+  // entrar, en vez de morir con el que tenía guardado.
+  const cuerpo = Object.assign({}, datos, { token: sesion.token || "" });
+
+  return fetch(API, { method:"POST", body:JSON.stringify(cuerpo) })
     .then(r => r.json().catch(() => ({ estado:"ok" })))
     .then(resp => {
+      if(resp && resp.sesion){
+        avisarSesionVencida();
+        throw new Error(resp.mensaje || "Sesión vencida");
+      }
       if(resp && resp.estado === "error"){
         throw new Error(resp.mensaje || "El servidor rechazó la operación");
       }
@@ -1077,9 +1203,526 @@ function mensaje(id, texto, esError){
   p.classList.toggle("error", !!esError);
 }
 
+/* ---------------- << v5 >> acceso: sesión y perfiles ---------------- */
+
+/* Nombre con el que sale la empresa en el WhatsApp del cliente.
+   CÁMBIELO por el nombre real del negocio. */
+const EMPRESA = "Recolección de residuos";
+
+/* Poner en false si alguna vez se necesita guardar sin firma. */
+const EXIGIR_FIRMA = true;
+
+const CLAVE_SESION = "sesion_manifiestos";
+
+let sesion = { token:"", usuario:"", nombre:"", tipo:"" };
+
+/* Lo único que puede abrir un conductor. El resto ni se le muestra ni se
+   lo responde el servidor. */
+const SECCIONES_CONDUCTOR = ["nuevo"];
+
+function cargarSesion(){
+  let guardada = null;
+  try{ guardada = JSON.parse(leerCache(CLAVE_SESION)); }catch(e){ guardada = null; }
+  if(guardada && typeof guardada === "object" && guardada.token){
+    sesion = {
+      token:   String(guardada.token   || ""),
+      usuario: String(guardada.usuario || ""),
+      nombre:  String(guardada.nombre  || ""),
+      tipo:    String(guardada.tipo    || "")
+    };
+  }
+}
+
+function guardarSesion(){
+  guardarCache(CLAVE_SESION, JSON.stringify(sesion));
+}
+
+function esAdmin(){ return sesion.tipo === "administracion"; }
+
+function seccionPermitida(id){
+  return esAdmin() || SECCIONES_CONDUCTOR.indexOf(id) !== -1;
+}
+
+function pedirAcceso(texto){
+  mensaje("estadoAcceso", texto || "", !!texto);
+  $("pantallaAcceso").classList.add("mostrar");
+  const u = $("accUsuario");
+  if(u){ u.value = sesion.usuario || ""; setTimeout(() => u.focus(), 60); }
+}
+
+/**
+ * El único envío que no lleva token. La lista de usuarios nunca baja al
+ * navegador: el servidor responde solo con el token y el perfil de quien
+ * entra.
+ */
+function entrar(){
+
+  const usuario = $("accUsuario").value.trim();
+  const clave   = $("accClave").value;
+
+  if(!usuario || !clave){
+    mensaje("estadoAcceso", "Escriba el usuario y la contraseña", true);
+    return;
+  }
+
+  if(!navigator.onLine){
+    mensaje("estadoAcceso",
+      "Sin conexión no se puede entrar por primera vez. Busque señal un momento.", true);
+    return;
+  }
+
+  ocupado("btnEntrar", "Entrando...");
+  mensaje("estadoAcceso", "");
+
+  fetch(API, { method:"POST",
+               body: JSON.stringify({ accion:"login", usuario:usuario, clave:clave }) })
+    .then(r => r.json())
+    .then(resp => {
+      if(!resp || resp.estado === "error"){
+        throw new Error((resp && resp.mensaje) || "No se pudo entrar");
+      }
+      ocupado("btnEntrar", null);
+
+      sesion = { token:resp.token, usuario:resp.usuario,
+                 nombre:resp.nombre, tipo:resp.tipo };
+      guardarSesion();
+
+      $("accClave").value = "";
+      $("pantallaAcceso").classList.remove("mostrar");
+      arrancarApp();
+    })
+    .catch(error => {
+      ocupado("btnEntrar", null);
+      mensaje("estadoAcceso", (error && error.message) || String(error), true);
+    });
+}
+
+function salir(){
+
+  if(pendientesCola() > 0 &&
+     !confirm("Quedan " + pendientesCola() + " envío(s) sin subir.\n\n" +
+              "Se conservan en este celular, pero solo saldrán cuando alguien " +
+              "vuelva a entrar. ¿Salir de todas formas?")){
+    return;
+  }
+
+  sesion = { token:"", usuario:sesion.usuario, nombre:"", tipo:"" };
+  guardarSesion();
+
+  document.body.classList.remove("perfil-conductor");
+  pedirAcceso("");
+}
+
+/* El servidor avisa cuando el token ya no sirve. No se borra la cola: al
+   volver a entrar, los envíos pendientes salen con el token nuevo. */
+function avisarSesionVencida(){
+  sesion.token = "";
+  guardarSesion();
+  pedirAcceso("La sesión venció. Vuelva a entrar; lo pendiente se enviará solo.");
+}
+
+function aplicarRol(){
+  document.body.classList.toggle("perfil-conductor", !esAdmin());
+  $("sesionNombre").textContent = sesion.nombre || sesion.usuario || "";
+  $("sesionPerfil").textContent = esAdmin() ? "Administración" : "Conductor";
+}
+
+/* Arranque de la aplicación una vez hay sesión. */
+function arrancarApp(){
+  aplicarRol();
+  mostrar("nuevo");
+  cargarClientes(false);
+  cargarMoviles();
+  procesarCola();
+
+  // << v6 >> Números de manifiesto apartados para poder trabajar sin señal.
+  cargarReserva();
+  pintarEstadoNumero();
+  asegurarReserva().then(() => ponerNumeroSugerido(false));
+}
+
+
+/* ---------------- << v5 >> firma del cliente ----------------
+
+   La firma NO se guarda como imagen: un PNG en base64 son 10 o 15 KB por
+   manifiesto. Se guarda el trazo (las coordenadas por donde pasó el dedo),
+   que son uno o dos KB de texto plano, caben de sobra en una celda y se
+   vuelven a dibujar igual cuando hace falta verla.
+
+   Formato:  F1;600x200;x,y x,y x,y|x,y x,y     ("|" separa un trazo de otro) */
+
+const FIRMA_ANCHO = 600;
+const FIRMA_ALTO  = 200;
+
+let trazosFirma  = [];
+let trazoActual  = null;
+
+function prepararFirma(){
+
+  const lienzo = $("firmaLienzo");
+  if(!lienzo) return;
+
+  lienzo.width  = FIRMA_ANCHO;
+  lienzo.height = FIRMA_ALTO;
+
+  lienzo.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    lienzo.setPointerCapture(e.pointerId);
+    trazoActual = [puntoFirma(lienzo, e)];
+    trazosFirma.push(trazoActual);
+    lienzo.classList.remove("falta");
+  });
+
+  lienzo.addEventListener("pointermove", e => {
+    if(!trazoActual) return;
+    e.preventDefault();
+    const punto = puntoFirma(lienzo, e);
+    const previo = trazoActual[trazoActual.length - 1];
+    // Se descartan los puntos casi pegados: el trazo queda igual y el texto
+    // guardado pesa la mitad.
+    if(Math.abs(punto[0] - previo[0]) + Math.abs(punto[1] - previo[1]) < 2) return;
+    trazoActual.push(punto);
+    pintarFirma();
+  });
+
+  ["pointerup","pointercancel","pointerleave"].forEach(evento => {
+    lienzo.addEventListener(evento, () => { trazoActual = null; });
+  });
+
+  pintarFirma();
+}
+
+function puntoFirma(lienzo, e){
+  const caja = lienzo.getBoundingClientRect();
+  return [
+    Math.round((e.clientX - caja.left) * FIRMA_ANCHO / caja.width),
+    Math.round((e.clientY - caja.top)  * FIRMA_ALTO  / caja.height)
+  ];
+}
+
+function pintarFirma(){
+  dibujarTrazos($("firmaLienzo"), trazosFirma);
+}
+
+function dibujarTrazos(lienzo, trazos){
+
+  if(!lienzo) return;
+
+  const ctx = lienzo.getContext("2d");
+  ctx.clearRect(0, 0, lienzo.width, lienzo.height);
+
+  // Línea de apoyo, como en el papel
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(40, lienzo.height - 40);
+  ctx.lineTo(lienzo.width - 40, lienzo.height - 40);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#0f172a";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  (trazos || []).forEach(trazo => {
+    if(!trazo.length) return;
+    ctx.beginPath();
+    ctx.moveTo(trazo[0][0], trazo[0][1]);
+    // Un punto suelto (un toque) se dibuja como punto, no se pierde.
+    if(trazo.length === 1) ctx.lineTo(trazo[0][0] + 0.5, trazo[0][1]);
+    else trazo.slice(1).forEach(p => ctx.lineTo(p[0], p[1]));
+    ctx.stroke();
+  });
+}
+
+function limpiarFirma(){
+  trazosFirma = [];
+  trazoActual = null;
+  const lienzo = $("firmaLienzo");
+  if(lienzo) lienzo.classList.remove("falta");
+  pintarFirma();
+}
+
+function deshacerFirma(){
+  trazosFirma.pop();
+  pintarFirma();
+}
+
+function hayFirma(){
+  return trazosFirma.some(t => t.length > 1);
+}
+
+function firmaComoTexto(){
+  if(!hayFirma()) return "";
+  return "F1;" + FIRMA_ANCHO + "x" + FIRMA_ALTO + ";" +
+         trazosFirma
+           .filter(t => t.length)
+           .map(t => t.map(p => p[0] + "," + p[1]).join(" "))
+           .join("|");
+}
+
+/* Lee el texto guardado y lo vuelve trazos para poder dibujarlo. */
+function trazosDesdeTexto(texto){
+
+  const partes = String(texto || "").split(";");
+  if(partes.length < 3 || partes[0] !== "F1") return [];
+
+  return partes.slice(2).join(";").split("|").map(trazo =>
+    trazo.trim().split(" ").filter(Boolean).map(par => {
+      const xy = par.split(",");
+      return [Number(xy[0]) || 0, Number(xy[1]) || 0];
+    })
+  );
+}
+
+
+/* ---------------- << v5 >> ver una firma guardada ---------------- */
+
+function verFirma(evento, numeroManifiesto){
+
+  if(evento) evento.stopPropagation();
+
+  $("firmaVistaTitulo").textContent = "Manifiesto " + numeroManifiesto;
+  $("modalFirma").classList.add("mostrar");
+  mensaje("estadoFirmaVista", "Cargando firma...");
+
+  const lienzo = $("firmaVista");
+  lienzo.width  = FIRMA_ANCHO;
+  lienzo.height = FIRMA_ALTO;
+  dibujarTrazos(lienzo, []);
+
+  pedir(API + "?accion=firma&manifiesto=" + encodeURIComponent(numeroManifiesto))
+    .then(resp => {
+      const trazos = trazosDesdeTexto(resp && resp.firma);
+      dibujarTrazos(lienzo, trazos);
+      mensaje("estadoFirmaVista",
+        trazos.length ? "" : "Este manifiesto no tiene firma guardada.", !trazos.length);
+    })
+    .catch(error => {
+      mensaje("estadoFirmaVista",
+        "No se pudo traer la firma: " + ((error && error.message) || error), true);
+    });
+}
+
+function cerrarFirmaVista(){
+  $("modalFirma").classList.remove("mostrar");
+}
+
+
+/* ---------------- << v5 >> aviso al cliente por WhatsApp ----------------
+
+   Apps Script no puede mandar un WhatsApp por su cuenta: para eso hace
+   falta la API de WhatsApp Business de Meta, con empresa verificada,
+   plantillas aprobadas y pago por mensaje. Lo que sí se puede, y no cuesta
+   nada, es abrir WhatsApp con el mensaje y el número ya puestos para que el
+   conductor solo oprima enviar. */
+
+let envioWhatsApp = null;   // datos del último manifiesto guardado
+
+function prepararWhatsApp(datos, telefono){
+
+  envioWhatsApp = datos;
+
+  $("waTelefono").value = soloDigitos(telefono);
+  $("waResumen").textContent = textoWhatsApp(datos);
+  mensaje("estadoWhatsApp", "");
+
+  $("modalWhatsApp").classList.add("mostrar");
+}
+
+function cerrarWhatsApp(){
+  $("modalWhatsApp").classList.remove("mostrar");
+  envioWhatsApp = null;
+  const buscador = $("buscar");
+  if(buscador) buscador.focus();
+}
+
+function soloDigitos(valor){
+  return String(valor || "").replace(/[^0-9]/g, "");
+}
+
+/**
+ * Colombia: los celulares son 10 dígitos que empiezan por 3 y WhatsApp los
+ * necesita con el indicativo 57 adelante. Si el número ya viene con
+ * indicativo, se respeta.
+ */
+function telefonoWhatsApp(valor){
+
+  let n = soloDigitos(valor);
+
+  if(n.length === 10 && n.charAt(0) === "3") n = "57" + n;
+  else if(n.length === 12 && n.slice(0, 2) === "57") { /* ya lo trae */ }
+  else if(n.length === 13 && n.slice(0, 3) === "573") n = n.slice(1);
+
+  return n;
+}
+
+function textoWhatsApp(d){
+
+  const lineas = [];
+
+  lineas.push(EMPRESA);
+  lineas.push("Constancia de recolección de residuos");
+  lineas.push("");
+  lineas.push("Cliente: " + d.cliente);
+  lineas.push("Manifiesto N° " + d.manifiesto);
+  lineas.push("Fecha: " + fechaDiaMes(d.fecha));
+  lineas.push("");
+
+  CAMPOS_CANTIDAD.forEach(id => {
+    const valor = Number(d[id]) || 0;
+    if(valor > 0) lineas.push("- " + etiquetaResiduo(id) + ": " + dosDecimales(valor) + " KG");
+  });
+
+  lineas.push("");
+  lineas.push("TOTAL RECOLECTADO: " + dosDecimales(d.total) + " KG");
+  if(Number(d.bolsas) > 0) lineas.push("Bolsas: " + d.bolsas);
+  lineas.push("Móvil: " + d.movil);
+  lineas.push("");
+  lineas.push("Gracias por su gestión ambiental.");
+
+  return lineas.join("\n");
+}
+
+function etiquetaResiduo(id){
+  const nombres = {
+    biosanitarios:"Biosanitarios", cortopunzantes:"Cortopunzantes",
+    anatomopatologicos:"Anatomopatológicos", farmaceuticos:"Farmacéuticos",
+    liquido:"Líquido", medicamentos:"Medicamentos", otros:"Otros"
+  };
+  return nombres[id] || id;
+}
+
+function enviarWhatsApp(){
+
+  if(!envioWhatsApp) return;
+
+  const numero = telefonoWhatsApp($("waTelefono").value);
+
+  if(numero.length < 10){
+    mensaje("estadoWhatsApp", "Revise el número: faltan dígitos.", true);
+    $("waTelefono").focus();
+    return;
+  }
+
+  const url = "https://wa.me/" + numero +
+              "?text=" + encodeURIComponent(textoWhatsApp(envioWhatsApp));
+
+  window.open(url, "_blank");
+  cerrarWhatsApp();
+}
+
+
+/* ---------------- << v6 >> número de manifiesto automático ----------------
+
+   El número lo entrega el servidor, nunca el celular: con varios conductores
+   registrando a la vez, dos aparatos contando cada uno por su lado acabarían
+   en el mismo número. Como se trabaja sin señal, cada celular se lleva un
+   bloque apartado y lo va gastando; cuando le quedan pocos y hay internet,
+   pide más. El campo queda editable para los talonarios físicos: si el
+   operario escribe otro número, la reserva no se toca. */
+
+const CLAVE_RESERVA  = "reserva_manifiestos";
+const RESERVA_BLOQUE = 10;   // cuántos números se piden de una vez
+const RESERVA_MINIMA = 3;    // por debajo de esto se piden más
+
+let reservaNumeros = [];
+let numeroSugerido = "";     // el último número que la app puso sola
+
+function cargarReserva(){
+  let guardada = null;
+  try{ guardada = JSON.parse(leerCache(CLAVE_RESERVA)); }catch(e){ guardada = null; }
+  reservaNumeros = Array.isArray(guardada)
+    ? guardada.map(Number).filter(n => n > 0)
+    : [];
+}
+
+function guardarReserva(){
+  guardarCache(CLAVE_RESERVA, JSON.stringify(reservaNumeros));
+}
+
+/* Pide más números. Sin señal no pasa nada: se sigue con los apartados. */
+function pedirNumeros(cuantos){
+
+  if(!sesion.token || !navigator.onLine || cuantos < 1) return Promise.resolve();
+
+  return pedir(API + "?accion=numeroManifiesto&reservar=" + cuantos)
+    .then(resp => {
+      ((resp && resp.numeros) || []).forEach(n => {
+        if(reservaNumeros.indexOf(Number(n)) === -1) reservaNumeros.push(Number(n));
+      });
+      reservaNumeros.sort((a, b) => a - b);
+      guardarReserva();
+    })
+    .catch(error => {
+      // Quedarse sin reserva no puede tumbar el formulario: se avisa en
+      // pantalla y el operario escribe el número a mano.
+      console.warn("No se pudieron reservar números:", error);
+    });
+}
+
+function asegurarReserva(){
+  if(reservaNumeros.length >= RESERVA_MINIMA) return Promise.resolve();
+  return pedirNumeros(RESERVA_BLOQUE - reservaNumeros.length);
+}
+
+/**
+ * Pone en el campo el número que sigue. Con forzar=true lo repone aunque el
+ * operario haya escrito otro (es lo que hace el botón "Siguiente").
+ */
+function ponerNumeroSugerido(forzar){
+
+  const campo  = $("manifiesto");
+  const actual = campo.value.trim();
+
+  // Si hay algo escrito a mano, no se pisa salvo que lo pidan.
+  if(!forzar && actual && actual !== numeroSugerido){ pintarEstadoNumero(); return; }
+
+  numeroSugerido = reservaNumeros.length ? String(reservaNumeros[0]) : "";
+  campo.value = numeroSugerido;
+
+  pintarEstadoNumero();
+}
+
+function pintarEstadoNumero(){
+
+  const aviso = $("estadoNumero");
+  if(!aviso) return;
+
+  if(!reservaNumeros.length){
+    aviso.textContent = navigator.onLine
+      ? "No hay números reservados todavía: escríbalo a mano."
+      : "Sin señal y sin números reservados: escríbalo a mano.";
+    return;
+  }
+
+  const automatico = numeroSugerido && $("manifiesto").value.trim() === numeroSugerido;
+
+  aviso.textContent = (automatico ? "Automático. " : "Escrito a mano. ") +
+    "Quedan " + reservaNumeros.length + " números para trabajar sin señal.";
+}
+
+/* Al guardar: el número solo se gasta si es el que dio la aplicación. */
+function consumirNumero(usado){
+
+  if(numeroSugerido && String(usado) === numeroSugerido){
+    reservaNumeros.shift();
+    guardarReserva();
+  }
+
+  numeroSugerido = "";
+  asegurarReserva().then(() => ponerNumeroSugerido(true));
+}
+
+
 /* ---------------- navegación ---------------- */
 
 function mostrar(id){
+
+  // << v5 >> Un conductor solo tiene el formulario. Si llega aquí por un
+  // atajo o por el historial del navegador, se le devuelve a lo suyo.
+  if(!seccionPermitida(id)) id = "nuevo";
+
   document.querySelectorAll(".seccion").forEach(s => s.classList.remove("activa"));
   const seccion = $(id);
   if(seccion) seccion.classList.add("activa");
@@ -1316,6 +1959,7 @@ function buscarCliente(){
 function seleccionar(indice){
   const c = resultadosBusqueda[indice];
   if(!c) return;
+  clienteSeleccionado = c;          // << v5 >> de aquí sale el celular para el WhatsApp
   $("cliente").value = c.nombre || "";
   $("ruta").value    = c.ruta || "";
   $("buscar").value  = c.nombre || "";
@@ -1929,6 +2573,10 @@ function procesarCola(forzar){
 
   if(enviandoCola) return;
 
+  // << v5 >> Sin sesión no se envía nada, pero tampoco se pierde: la cola
+  // espera igual que cuando no hay señal.
+  if(!sesion.token){ pintarCola(); return; }
+
   const item = colaEnvios.find(x => x.estado === "pendiente");
   if(!item){ pintarCola(); return; }
 
@@ -1963,8 +2611,10 @@ function procesarCola(forzar){
       enviandoCola = false;
 
       const mensajeError = String((error && error.message) || error || "");
+      // Un token vencido se trata como un fallo de red: el manifiesto se
+      // queda esperando y sale solo cuando alguien vuelve a entrar.
       const esDeRed = !navigator.onLine ||
-                      /failed to fetch|networkerror|network|load failed|conexión/i.test(mensajeError);
+                      /failed to fetch|networkerror|network|load failed|conexión|sesi[oó]n/i.test(mensajeError);
 
       if(esDeRed){
         // Se queda esperando a que vuelva la conexión.
@@ -2065,6 +2715,8 @@ function limpiarManifiesto(){
   $("observacionesManifiesto").value = "";
   CAMPOS_CANTIDAD.forEach(id => { $(id).value = ""; });
   $("total").textContent = "0.00";
+  clienteSeleccionado = null;
+  limpiarFirma();                    // << v5 >>
 }
 
 function fechaManifiestoHoy(){
@@ -2095,6 +2747,15 @@ function guardar(){
   if(!movil){ alert("Seleccione el móvil"); $("movil").focus(); return; }
   if(!fecha){ alert("Indique la fecha de la recolección"); $("manFecha").focus(); return; }
 
+  // << v5 >> La firma del cliente es la constancia de que se le recogió.
+  if(EXIGIR_FIRMA && !hayFirma()){
+    const lienzo = $("firmaLienzo");
+    lienzo.classList.add("falta");
+    lienzo.scrollIntoView({ block:"center", behavior:"smooth" });
+    alert("Falta la firma del cliente.");
+    return;
+  }
+
   // Sin conexión no se puede preguntar al servidor, así que al menos se
   // avisa si el número ya está esperando en la cola.
   if(manifiestoEnCola(numero)){
@@ -2111,9 +2772,15 @@ function guardar(){
     movil:movil,
     bolsas:$("bolsas").value || "0",
     observaciones:$("observacionesManifiesto").value.trim(),
-    total:$("total").textContent
+    total:$("total").textContent,
+    firma:firmaComoTexto()            // << v5 >> el trazo, como texto
   };
   CAMPOS_CANTIDAD.forEach(id => { datos[id] = $(id).value || "0"; });
+
+  // << v5 >> Copia para el WhatsApp: hay que tomarla ANTES de limpiar la
+  // pantalla, que es lo siguiente que pasa.
+  const paraCliente = Object.assign({}, datos);
+  const telefonoCliente = (clienteSeleccionado && clienteSeleccionado.telefono) || "";
 
   const resumen = "Manifiesto " + numero + " · " +
                   $("cliente").value.slice(0, 40) + " · " +
@@ -2126,7 +2793,10 @@ function guardar(){
     (navigator.onLine ? ". Enviándose en segundo plano." : " sin conexión: se enviará al reconectar."));
 
   limpiarManifiesto();
-  $("buscar").focus();
+  consumirNumero(numero);            // << v6 >> deja listo el siguiente
+
+  // << v5 >> Ahora se le ofrece mandarle la constancia al cliente.
+  prepararWhatsApp(paraCliente, telefonoCliente);
 }
 
 /* ---------------- historial ---------------- */
@@ -2134,14 +2804,21 @@ function guardar(){
 // GET al Apps Script con diagnóstico claro: distingue entre "sin red",
 // "despliegue no público" (Google devuelve HTML de login) y "error del script".
 function pedir(url){
-  return fetch(url, { method:"GET", redirect:"follow" })
+
+  // << v5 >> Toda consulta va firmada con el token de la sesión.
+  const separador = url.indexOf("?") === -1 ? "?" : "&";
+  const completa  = url + separador + "token=" + encodeURIComponent(sesion.token || "");
+
+  return fetch(completa, { method:"GET", redirect:"follow" })
     .then(async r => {
       const texto = await r.text();
       if(!r.ok){
         throw new Error("HTTP " + r.status + " " + r.statusText);
       }
+      let datos;
+
       try{
-        return JSON.parse(texto);
+        datos = JSON.parse(texto);
       }catch(e){
         if(/<html|<!doctype/i.test(texto)){
           throw new Error(
@@ -2152,12 +2829,20 @@ function pedir(url){
         }
         throw new Error("Respuesta no válida del servidor: " + texto.slice(0, 150));
       }
+
+      // << v5 >> El token ya no sirve: se pide entrar otra vez.
+      if(datos && datos.sesion){
+        avisarSesionVencida();
+        throw new Error(datos.mensaje || "La sesión venció");
+      }
+
+      return datos;
     });
 }
 
 function cargarHistorial(){
   const cuerpo = $("tablaHistorial");
-  cuerpo.innerHTML = '<tr><td colspan="19">Cargando...</td></tr>';
+  cuerpo.innerHTML = '<tr><td colspan="20">Cargando...</td></tr>';
   ocupado("btnHistorial","Consultando...");
   mensaje("estadoHistorial","");
 
@@ -2173,7 +2858,7 @@ function cargarHistorial(){
     .catch(error => {
       console.error("Historial:", error);
       ocupado("btnHistorial", null);
-      cuerpo.innerHTML = '<tr><td colspan="19">Error cargando información</td></tr>';
+      cuerpo.innerHTML = '<tr><td colspan="20">Error cargando información</td></tr>';
       mensaje("estadoHistorial",
         "No se pudo consultar el servidor: " + (error.message || error), true);
     });
@@ -2306,7 +2991,7 @@ function mostrarHistorial(datos){
   let malas = 0;
 
   if(historialVisible.length === 0){
-    cuerpo.innerHTML = '<tr><td colspan="19">Sin registros</td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="20">Sin registros</td></tr>';
   }else{
     cuerpo.innerHTML = historialVisible.map((x, iFila) => {
       const buena = fechaValida(x.fecha);
@@ -2344,6 +3029,11 @@ function mostrarHistorial(datos){
         <td class="num">${limite ? limite : "—"}</td>
         <td class="tarifa">${esc(tarifa)}</td>
         <td class="obs">${esc(x.observaciones)}</td>
+        <td class="num">${x.firma
+          ? `<button type="button" class="btn-mini" data-man="${esc(x.manifiesto)}"
+                     title="Ver la firma del cliente"
+                     onclick="verFirma(event, this.dataset.man)">✍ Ver</button>`
+          : "—"}</td>
       </tr>`;
     }).join("");
   }
@@ -4494,7 +5184,17 @@ document.addEventListener("keydown", e => {
   if(e.key === "Escape"){
     cerrarFormularioCliente();
     cerrarObservaciones();
+    cerrarWhatsApp();          // << v5 >>
+    cerrarFirmaVista();        // << v5 >>
   }
+});
+
+// << v5 >> Entrar con la tecla Enter, que en el celular es lo natural.
+["accUsuario","accClave"].forEach(id => {
+  $(id).addEventListener("keydown", e => { if(e.key === "Enter") entrar(); });
+});
+$("waTelefono").addEventListener("keydown", e => {
+  if(e.key === "Enter") enviarWhatsApp();
 });
 
 $("movil").addEventListener("change", () => marcarFalta("movil", !$("movil").value));
@@ -4524,12 +5224,20 @@ window.addEventListener("beforeunload", e => {
 });
 
 cargarCola();
-procesarCola();
 fechaManifiestoHoy();
 pintarEstadoFiltros();
-mostrar("nuevo");
-cargarClientes(false);
-cargarMoviles();
+prepararFirma();
+
+/* << v5 >> Nada arranca hasta saber quién está usando la aplicación. Si ya
+   había entrado antes en este celular, la sesión sigue guardada y pasa
+   directo: así el conductor puede empezar el día sin señal. */
+cargarSesion();
+
+if(sesion.token){
+  arrancarApp();
+}else{
+  pedirAcceso("");
+}
 </script>
 
 </body>
