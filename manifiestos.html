@@ -569,6 +569,11 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 }
 .firma-lienzo.falta{border-color:var(--rojo-logo);background:#fff4f4;}
 .firma-botones{margin-top:6px;}
+.wa-guardar{
+  display:flex;align-items:center;gap:8px;
+  margin:6px 5px;font-size:14px;color:#334155;cursor:pointer;
+}
+.wa-guardar input{width:auto;margin:0;flex-shrink:0;transform:scale(1.3);}
 .wa-resumen{
   background:#f8fafc;border:1px solid var(--borde);border-radius:10px;
   padding:12px;margin-top:10px;white-space:pre-wrap;
@@ -750,6 +755,18 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         <input type="number" step="0.01" min="0" id="otros"               placeholder="Otros"              oninput="sumar()">
 
         <h2 class="total">TOTAL: <span id="total">0.00</span></h2>
+
+        <h3>Abono del cliente</h3>
+        <span class="ayuda">Déjelo vacío si el cliente no pagó nada en la recolección.</span>
+        <br>
+        <input type="number" step="1" min="0" id="abono" inputmode="numeric"
+               placeholder="Valor del abono" oninput="mostrarFormaPago()">
+        <select id="formaPago" title="Forma de pago">
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia">Transferencia</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <br>
 
         <textarea id="observacionesManifiesto" rows="3"
                   placeholder="Observaciones del manifiesto (opcional)"></textarea>
@@ -1160,13 +1177,20 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
     <p class="ayuda">Se abre WhatsApp con el mensaje ya escrito: usted solo oprime enviar.</p>
 
     <input id="waTelefono" type="tel" inputmode="numeric"
-           placeholder="Celular del cliente (ej. 3001234567)">
+           placeholder="Celular del cliente (ej. 3001234567)"
+           oninput="revisarCasillaTelefono()">
+
+    <label class="wa-guardar">
+      <input type="checkbox" id="waGuardar" onchange="this.dataset.tocada='1'">
+      <span id="waGuardarTexto">Guardar este número en la ficha del cliente</span>
+    </label>
+
     <p id="estadoWhatsApp" class="estado"></p>
 
     <div class="wa-resumen" id="waResumen"></div>
     <br>
     <button type="button" class="btn-pro btn-guardar"   onclick="enviarWhatsApp()">📲 Abrir WhatsApp</button>
-    <button type="button" class="btn-pro btn-consultar" onclick="cerrarWhatsApp()">Omitir</button>
+    <button type="button" class="btn-pro btn-consultar" onclick="cerrarWhatsApp()">No enviar</button>
   </div>
 </div>
 
@@ -1186,7 +1210,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbwHBJhho1XuxsbWQwVomyAjFMm8BqzX4rCHf64bZPYFvbmOYO_v74DLkPhof8wcCC9Q/exec";
+const API = "https://script.google.com/macros/s/AKfycbzyOxQ-PXUAY8CtXYgsrJVpGoJqrD3yGFol8AiafPBqbjcy0RnTuxRtB-s1AmbSYzs_/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -1614,22 +1638,93 @@ function cerrarFirmaVista(){
    nada, es abrir WhatsApp con el mensaje y el número ya puestos para que el
    conductor solo oprima enviar. */
 
-let envioWhatsApp = null;   // datos del último manifiesto guardado
+let envioWhatsApp   = null;   // datos del último manifiesto guardado
+let clienteWhatsApp = null;   // << v8 >> ficha del cliente de ese manifiesto
 
-function prepararWhatsApp(datos, telefono){
+function prepararWhatsApp(datos, telefono, ficha){
 
-  envioWhatsApp = datos;
+  envioWhatsApp   = datos;
+  clienteWhatsApp = ficha || null;
 
   $("waTelefono").value = soloDigitos(telefono);
   $("waResumen").textContent = textoWhatsApp(datos);
   mensaje("estadoWhatsApp", "");
 
+  // << v8 >> La casilla se marca sola cuando hay algo nuevo que guardar: si
+  // el cliente no tenía número, o si el conductor escribe uno distinto.
+  const casilla = $("waGuardar");
+  casilla.dataset.tocada = "";
+  casilla.parentElement.style.display = clienteWhatsApp ? "flex" : "none";
+
+  $("waGuardarTexto").textContent = soloDigitos(telefono)
+    ? "Actualizar el número en la ficha del cliente"
+    : "Guardar este número en la ficha del cliente";
+
+  revisarCasillaTelefono();
+
   $("modalWhatsApp").classList.add("mostrar");
 }
 
-function cerrarWhatsApp(){
+/**
+ * << v8 >> Marca o desmarca la casilla sola según lo que se vaya escribiendo.
+ * Si el operario la toca a mano, se respeta su decisión y no se vuelve a
+ * mover.
+ */
+function revisarCasillaTelefono(){
+
+  const casilla = $("waGuardar");
+  if(!casilla || !clienteWhatsApp) return;
+  if(casilla.dataset.tocada === "1") return;
+
+  const nuevo    = soloDigitos($("waTelefono").value);
+  const guardado = soloDigitos(clienteWhatsApp.telefono);
+
+  casilla.checked = nuevo.length >= 10 && nuevo !== guardado;
+}
+
+
+/**
+ * << v8 >> Manda el celular a la ficha del cliente, por la cola, para que
+ * también funcione sin señal. Solo si la casilla está marcada y el número
+ * cambió: repetir la misma escritura en cada manifiesto no aporta nada.
+ */
+function guardarTelefonoCliente(){
+
+  const casilla = $("waGuardar");
+  if(!casilla || !casilla.checked || !clienteWhatsApp) return;
+
+  const nuevo = soloDigitos($("waTelefono").value);
+
+  if(nuevo.length < 10) return;
+  if(nuevo === soloDigitos(clienteWhatsApp.telefono)) return;
+
+  encolar({
+    accion:"guardarTelefono",
+    fila:     clienteWhatsApp.fila || "",
+    codigo:   clienteWhatsApp.codigo || "",
+    nombre:   clienteWhatsApp.nombre || "",
+    telefono: nuevo
+  }, "Teléfono de " + (clienteWhatsApp.nombre || "cliente"), "telefono");
+
+  // La copia que tiene el celular se actualiza de una vez: si al mismo
+  // cliente se le recoge otra vez, el número ya sale puesto sin esperar a
+  // que alguien recargue la lista.
+  clienteWhatsApp.telefono = nuevo;
+
+  const ficha = clientes.find(c => c.fila === clienteWhatsApp.fila);
+  if(ficha) ficha.telefono = nuevo;
+
+  guardarCache("clientes_cache", JSON.stringify(clientes));
+}
+
+function cerrarWhatsApp(guardar){
+
+  // Con la tecla Escape se cierra sin guardar nada; con los botones sí.
+  if(guardar !== false) guardarTelefonoCliente();
+
   $("modalWhatsApp").classList.remove("mostrar");
   envioWhatsApp = null;
+  clienteWhatsApp = null;
   const buscador = $("buscar");
   if(buscador) buscador.focus();
 }
@@ -1675,10 +1770,30 @@ function textoWhatsApp(d){
   lineas.push("TOTAL RECOLECTADO: " + dosDecimales(d.total) + " KG");
   if(Number(d.bolsas) > 0) lineas.push("Bolsas: " + d.bolsas);
   lineas.push("Móvil: " + d.movil);
+
+  // << v9 >> El abono va en el mensaje: le queda al cliente la constancia
+  // de lo que entregó, que es justo lo que se pierde con un pago en efectivo.
+  if(Number(d.abono) > 0){
+    lineas.push("");
+    lineas.push("ABONO RECIBIDO: " + pesos(d.abono) +
+                " (" + (d.formaPago || "Efectivo") + ")");
+  }
   lineas.push("");
   lineas.push("Gracias por su gestión ambiental.");
 
   return lineas.join("\n");
+}
+
+/* << v9 >> La forma de pago solo estorba si no hay abono. */
+function mostrarFormaPago(){
+  const hay = Number($("abono").value) > 0;
+  $("formaPago").style.display = hay ? "" : "none";
+}
+
+/* Valor en pesos, sin decimales: los abonos se reciben en billetes. */
+function pesos(valor){
+  const n = Math.round(Number(valor) || 0);
+  return "$" + n.toLocaleString("es-CO");
 }
 
 function etiquetaResiduo(id){
@@ -1705,8 +1820,9 @@ function enviarWhatsApp(){
   const url = "https://wa.me/" + numero +
               "?text=" + encodeURIComponent(textoWhatsApp(envioWhatsApp));
 
+  guardarTelefonoCliente();            // << v8 >> antes de cerrar
   window.open(url, "_blank");
-  cerrarWhatsApp();
+  cerrarWhatsApp(false);
 }
 
 
@@ -2809,6 +2925,9 @@ function limpiarManifiesto(){
   $("manifiesto").value = "";
   $("buscar").value = "";
   $("bolsas").value = "";
+  $("abono").value = "";                       // << v9 >>
+  $("formaPago").value = "Efectivo";
+  mostrarFormaPago();
   $("observacionesManifiesto").value = "";
   CAMPOS_CANTIDAD.forEach(id => { $(id).value = ""; });
   $("total").textContent = "0.00";
@@ -2870,18 +2989,24 @@ function guardar(){
     bolsas:$("bolsas").value || "0",
     observaciones:$("observacionesManifiesto").value.trim(),
     total:$("total").textContent,
-    firma:firmaComoTexto()            // << v5 >> el trazo, como texto
+    firma:firmaComoTexto(),           // << v5 >> el trazo, como texto
+    abono:$("abono").value || "0",    // << v9 >>
+    formaPago:$("formaPago").value
   };
   CAMPOS_CANTIDAD.forEach(id => { datos[id] = $(id).value || "0"; });
 
   // << v5 >> Copia para el WhatsApp: hay que tomarla ANTES de limpiar la
   // pantalla, que es lo siguiente que pasa.
-  const paraCliente = Object.assign({}, datos);
+  const paraCliente     = Object.assign({}, datos);
+  const fichaCliente    = clienteSeleccionado;
   const telefonoCliente = (clienteSeleccionado && clienteSeleccionado.telefono) || "";
+
+  const abonado = Number($("abono").value) || 0;
 
   const resumen = "Manifiesto " + numero + " · " +
                   $("cliente").value.slice(0, 40) + " · " +
-                  $("total").textContent + " KG";
+                  $("total").textContent + " KG" +
+                  (abonado > 0 ? " · abono " + pesos(abonado) : "");
 
   encolar(datos, resumen);
 
@@ -2893,7 +3018,7 @@ function guardar(){
   consumirNumero(numero);            // << v6 >> deja listo el siguiente
 
   // << v5 >> Ahora se le ofrece mandarle la constancia al cliente.
-  prepararWhatsApp(paraCliente, telefonoCliente);
+  prepararWhatsApp(paraCliente, telefonoCliente, fichaCliente);
 }
 
 /* ---------------- historial ---------------- */
@@ -5281,7 +5406,7 @@ document.addEventListener("keydown", e => {
   if(e.key === "Escape"){
     cerrarFormularioCliente();
     cerrarObservaciones();
-    cerrarWhatsApp();          // << v5 >>
+    cerrarWhatsApp(false);     // << v5 >> se cierra sin guardar el teléfono
     cerrarFirmaVista();        // << v5 >>
   }
 });
@@ -5324,6 +5449,7 @@ cargarCola();
 fechaManifiestoHoy();
 pintarEstadoFiltros();
 prepararFirma();
+mostrarFormaPago();        // << v9 >> la forma de pago arranca escondida
 
 /* << v5 >> Nada arranca hasta saber quién está usando la aplicación. Si ya
    había entrado antes en este celular, la sesión sigue guardada y pasa
