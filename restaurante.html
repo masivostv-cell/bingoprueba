@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>POS Restaurante</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%BD%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <style>
@@ -116,6 +116,9 @@ table.tbl th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-sp
   padding:9px 12px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:0;z-index:1;font-weight:700}
 table.tbl td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
 table.tbl tbody tr:hover{background:var(--panel2)}
+table.tbl tr.rcierre td{background:var(--warn-soft);font-weight:700;border-bottom:1px solid var(--warn)}
+table.tbl tr.rfuera td{background:var(--bad-soft)}
+table.tbl td.sal{font-variant-numeric:tabular-nums;font-weight:700}
 table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .tblwrap{overflow:auto;max-height:100%}
 
@@ -254,17 +257,85 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 .quickamt button{padding:9px 4px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);font-size:12.5px;font-weight:650}
 .quickamt button:hover{border-color:var(--brand)}
 
-@media (max-width:1080px){
+#navtoggle{display:none;width:40px;height:40px;border-radius:10px;font-size:21px;color:var(--ink2);flex:0 0 auto}
+#navtoggle:active{background:var(--line2)}
+#scrim{position:fixed;inset:0;background:rgba(10,14,20,.5);z-index:65;display:none;backdrop-filter:blur(2px)}
+#scrim.on{display:block}
+#posbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:52;padding:10px 14px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));background:var(--brand);color:#fff;
+  align-items:center;gap:12px;box-shadow:0 -4px 18px rgba(0,0,0,.22);font-weight:700}
+#posbar .n{background:rgba(255,255,255,.22);border-radius:20px;padding:2px 10px;font-size:13px}
+#posbar .t{margin-left:auto;font-size:17px;font-variant-numeric:tabular-nums}
+#cartcerrar{display:none}
+
+@media (max-width:1080px) and (min-width:861px){
   #app{grid-template-columns:64px 1fr}
   .brand b,.brand small,.nav a span.tx,.nav .sec,.userchip .nm,.userchip .rl{display:none}
-  .nav a{justify-content:center;padding:11px 0}
+  .nav a{justify-content:center;padding:11px 0;position:relative}
   .nav a .badge{position:absolute;margin:0;transform:translate(15px,-11px);font-size:9px;padding:0 5px}
-  .nav a{position:relative}
   #pos{grid-template-columns:1fr 320px}
 }
-@media (max-width:820px){
-  #pos{grid-template-columns:1fr;grid-template-rows:1fr auto}
-  #poscart{max-height:44vh;border-top:1px solid var(--line)}
+
+/* ---------------- teléfono ---------------- */
+@media (max-width:860px){
+  #app{grid-template-columns:1fr}
+  #navtoggle{display:grid;place-items:center}
+  #sidebar{position:fixed;top:0;bottom:0;left:0;width:258px;z-index:70;
+    transform:translateX(-100%);transition:transform .2s ease-out}
+  #sidebar.abierto{transform:translateX(0)}
+  #topbar{height:56px;padding:0 10px;gap:8px;padding-top:env(safe-area-inset-top)}
+  #topbar h1{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+  #topbar .sub{display:none}
+  #btntheme{display:none}
+  #sync{padding:4px 8px;font-size:11px}
+  #view{padding:10px}
+
+  .kpis{grid-template-columns:1fr 1fr;gap:9px}
+  .kpi{padding:11px 12px}.kpi .vl{font-size:19px}
+  .card>.bd{padding:12px}
+  .grid[style*="grid-template-columns"]{grid-template-columns:1fr!important}
+  .kpis{grid-template-columns:1fr 1fr!important}
+  .mesas{grid-template-columns:1fr 1fr!important;gap:9px}
+  .mesa{min-height:88px;padding:11px}
+  table.tbl th,table.tbl td{padding:8px 9px;font-size:12.5px}
+  .tblwrap{-webkit-overflow-scrolling:touch}
+  .btn{padding:9px 13px}
+  .btn.sm{padding:7px 11px;font-size:12.5px}
+  input,select,textarea{font-size:16px;padding:10px 11px}   /* 16px evita el zoom de iOS */
+
+  .modal{max-width:100%!important;max-height:100%;height:100%;border-radius:0}
+  .modal>.bd{padding:14px}
+  .modal>.ft{flex-wrap:wrap;padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+  .modal>.ft .btn{flex:1 1 auto}
+  #modals{padding:0}
+
+  /* punto de venta */
+  #pos{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
+  #posleft{border-right:0}
+  #poscats{padding:9px 10px}
+  #poscats button{padding:8px 13px;font-size:13.5px}
+  #possearch{padding:9px 10px 0}
+  #posgrid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:9px;padding:10px;
+    padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  .pcard{min-height:104px;padding:9px}
+  .pcard .nm{font-size:12.5px}.pcard .pr{font-size:14px}
+  .pcard .foto{height:62px}
+  #posbar{display:flex}
+  #poscart{position:fixed;left:0;right:0;bottom:0;top:auto;height:88vh;z-index:66;
+    border-radius:16px 16px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.3);
+    transform:translateY(100%);transition:transform .22s ease-out}
+  #poscart.abierto{transform:translateY(0)}
+  #carthd{padding-top:14px}
+  #cartcerrar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;
+    background:var(--line2);font-size:18px;color:var(--ink2)}
+  #carttot{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  .citem{padding:11px 8px}
+  .qty button{width:34px;height:34px;font-size:18px}
+  .qty span{min-width:32px;font-size:14px}
+}
+@media (max-width:420px){
+  #posgrid{grid-template-columns:1fr 1fr}
+  .kpis{grid-template-columns:1fr!important}
 }
 @media print{body *{visibility:hidden}}
 </style>
@@ -305,7 +376,8 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
   </aside>
   <main id="main">
     <header id="topbar">
-      <div><h1 id="ttl">Punto de venta</h1><div class="sub" id="tsub"></div></div>
+      <button id="navtoggle" aria-label="Menú">☰</button>
+      <div style="min-width:0"><h1 id="ttl">Punto de venta</h1><div class="sub" id="tsub"></div></div>
       <div class="spacer"></div>
       <div id="topact" class="row"></div>
       <button id="sync" title="Estado de sincronización"><span class="dot"></span><span id="synctx">Local</span></button>
@@ -315,6 +387,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
   </main>
 </div>
 
+<div id="scrim"></div>
 <div id="modals"></div>
 <div id="toasts"></div>
 <iframe id="tikframe"></iframe>
@@ -343,6 +416,8 @@ function fdate(v,withTime){ if(!v) return '—'; const d=new Date(v);
   const s=d.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
   return withTime? s+' '+d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : s; }
 function ftime(v){ return v? new Date(v).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '—'; }
+function fcorta(v){ if(!v) return '—'; const d=new Date(v);
+  return d.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
 function agoMin(v){ return Math.max(0,Math.round((Date.now()-new Date(v).getTime())/60000)); }
 function debounce(fn,ms){let t;return function(){clearTimeout(t);const a=arguments;t=setTimeout(()=>fn.apply(null,a),ms||220);};}
 
@@ -1077,7 +1152,8 @@ function movTes(cuentaId,tipo,monto,concepto,categoria,refTipo,refId,ter){
   const m={id:uid('mv'),fecha:now(),cuentaId:cuentaId,tipo:tipo,monto:round(Math.abs(monto),2),
     concepto:concepto||'',categoria:categoria||'',refTipo:refTipo||'',refId:refId||'',
     terceroId:(ter&&ter.id)||'', terceroNombre:(ter&&ter.nombre)||'',
-    usuarioId:S.user?S.user.id:'', turnoId:S.turno?S.turno.id:''};
+    usuarioId:S.user?S.user.id:'', turnoId:(turnoDeCaja(cuentaId)||S.turno||{}).id||''};
+  if(cajaCerrada(cuentaId)){ m.fueraTurno=1; m.soporte=_soporteCaja||''; }
   put('movimientos',m); return m;
 }
 function saldoCuenta(id){
@@ -1168,9 +1244,55 @@ function efectivoTurno(id){          // entradas y salidas de la caja de ese tur
   return round(e,2);
 }
 
+/* ---- control de caja: cerrada no entra ni sale plata ---- */
+function esCuentaCaja(id){ const c=byId('cuentas',id); return !!(c && c.tipo==='caja'); }
+/* un turno viejo sin caja asignada cubre cualquier caja (compatibilidad) */
+function turnoDeCaja(id){ return S.turnos.find(t=>t.estado==='abierto' && (t.cuentaId===id || !t.cuentaId))||null; }
+function cajaCerrada(id){ return esCuentaCaja(id) && !turnoDeCaja(id); }
+function saldoCierreAnterior(id){ return saldoCuenta(id); }
+let _soporteCaja='';
+/* con soporte ya dado no se vuelve a preguntar (evita repetir el aviso) */
+function bloqueaCaja(id){ return !_soporteCaja && cajaCerrada(id); }
+/* Corre fn solo si esa cuenta admite movimiento. Si la caja está cerrada,
+   el admin puede hacerlo pero tiene que decir con qué recibo. */
+function conCaja(cuentaId,fn,texto){
+  if(!bloqueaCaja(cuentaId)) return fn();
+  if(!puedeEditar()){
+    toast('La caja está cerrada y ya quedó cuadrada. Para mover efectivo pídele al administrador que la abra.','warn',6000);
+    return; }
+  mSoporteCaja(cuentaId,texto,sop=>{ _soporteCaja=sop; try{ fn(); } finally { _soporteCaja=''; } });
+}
+function mSoporteCaja(cuentaId,texto,cb){
+  modal({title:'La caja está cerrada',size:'slim',
+    body:'<div class="card" style="background:var(--warn-soft);margin-bottom:12px"><div class="bd">'+
+      '<b>🔒 '+esc(nameOf('cuentas',cuentaId))+'</b> ya se cerró y quedó cuadrada.<br>'+
+      '<span class="tiny">Con la caja cerrada no debería entrar ni salir plata. Solo se registra si hay un '+
+      '<b>recibo o soporte</b> que lo respalde; el movimiento queda marcado como <b>fuera de turno</b> '+
+      'y le aparece en la próxima apertura.</span></div></div>'+
+      (texto? '<div class="tline"><span>Movimiento</span><span class="v">'+esc(texto)+'</span></div>':'')+
+      '<div class="f" style="margin-top:10px"><label>N° de recibo o soporte *</label>'+
+        '<input id="sp" placeholder="Recibo 0012, factura 4451, consignación…" autocomplete="off"></div>'+
+      '<div class="f" style="margin-top:8px"><label>Motivo</label>'+
+        '<input id="mo" placeholder="Por qué se registra con la caja cerrada"></div>',
+    footer:'<button class="btn" data-x>Cancelar</button>'+
+      '<button class="btn danger" id="ok">Registrar con soporte</button>',
+    onOpen:m=>{ $('#ok',m).onclick=()=>{
+      const sp=$('#sp',m).value.trim();
+      if(!sp) return toast('Escribe el número del recibo o soporte','warn');
+      const mo=$('#mo',m).value.trim();
+      closeModal(); cb(sp+(mo? ' · '+mo : '')); }; }});
+}
+function movsFueraDeTurno(cuentaId){
+  const ult=S.turnos.filter(t=>t.cuentaId===cuentaId&&t.estado==='cerrado'&&t.cierre)
+    .sort((a,b)=>String(b.cierre).localeCompare(String(a.cierre)))[0];
+  const desde=ult? ult.cierre : '';
+  return S.movimientos.filter(m=>m.cuentaId===cuentaId && m.fueraTurno && (!desde||String(m.fecha)>desde))
+    .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+}
+
 /* ---- permisos ---- */
 const PERMS={ admin:'*',
-  cajero:['pos','mesas','ventas','compras','cartera','tesoreria','turnos','clientes','inventario','reportes'],
+  cajero:['pos','mesas','ventas','compras','cartera','tesoreria','turnos','caja','clientes','inventario','reportes'],
   mesero:['pos','mesas'] };
 function can(v){
   if(v==='super') return !!(S.user && S.user._super && esSuper());
@@ -1262,7 +1384,7 @@ const VIEWS=[
   {g:'Finanzas'},
   {k:'cartera',   n:'Cartera',    i:'💳'},
   {k:'tesoreria', n:'Tesorería',  i:'🏦'},
-  {k:'turnos',    n:'Caja/Turnos',i:'⏱️'},
+  {k:'caja',      n:'Caja',       i:'💵'},
   {g:'Gestión'},
   {k:'clientes', n:'Clientes y proveedores', i:'👥'},
   {k:'contabilidad', n:'Contabilidad', i:'🧮'},
@@ -1273,7 +1395,7 @@ const VIEWS=[
 ];
 const TITLES={pos:'Punto de venta',mesas:'Mesas y comandas',ventas:'Ventas',compras:'Compras',
   inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',
-  turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes',ajustes:'Ajustes'};
+  caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes',ajustes:'Ajustes'};
 
 function buildNav(){
   const n=$('#nav'); let h='';
@@ -1289,7 +1411,7 @@ function buildNav(){
        '<span class="ic">'+v.i+'</span><span class="tx">'+esc(v.n)+'</span>'+badge+'</a>';
   });
   n.innerHTML=h;
-  $$('#nav a').forEach(a=> a.onclick=e=>{e.preventDefault();go(a.dataset.nav);});
+  $$('#nav a').forEach(a=> a.onclick=e=>{e.preventDefault();cerrarTodo();go(a.dataset.nav);});
 }
 function go(v){
   if(!can(v)) { toast('No tienes permiso para esta sección','warn'); return; }
@@ -1305,13 +1427,35 @@ function render(){
     $('#topact').innerHTML='<span class="pill '+es.pill+'" title="Suscripción">⏳ '+esc(es.t)+'</span>';
   buildNav(); paintSync();
   const fn=({pos:viewPOS,mesas:viewMesas,ventas:viewVentas,compras:viewCompras,inventario:viewInventario,
-    productos:viewProductos,cartera:viewCartera,tesoreria:viewTesoreria,turnos:viewTurnos,
+    productos:viewProductos,cartera:viewCartera,tesoreria:viewTesoreria,turnos:viewCaja,caja:viewCaja,
     clientes:viewClientes,reportes:viewReportes,ajustes:viewAjustes,super:viewSuper,
     contabilidad:viewContabilidad})[S.view];
   vw.scrollTop=0;
   if(fn) fn(vw); else vw.innerHTML='<div class="empty">Sección no disponible</div>';
 }
 function topact(html){ $('#topact').innerHTML=html; }
+
+/* ------- navegación y carrito en teléfono ------- */
+function esMovil(){ return window.matchMedia('(max-width:860px)').matches; }
+function carritoAbierto(){ const pc=$('#poscart'); return !!(pc && pc.classList.contains('abierto')); }
+function navAbierto(){ const sb=$('#sidebar'); return !!(sb && sb.classList.contains('abierto')); }
+function abrirNav(v){
+  const sb=$('#sidebar'), sc=$('#scrim'); if(!sb||!sc) return;
+  const abrir = v===undefined? !navAbierto() : !!v;
+  sb.classList.toggle('abierto',abrir);
+  sc.classList.toggle('on', abrir || carritoAbierto());
+}
+function abrirCarrito(v){
+  const pc=$('#poscart'), sc=$('#scrim'); if(!pc) return;
+  const abrir = v===undefined? !carritoAbierto() : !!v;
+  pc.classList.toggle('abierto',abrir);
+  if(sc) sc.classList.toggle('on', abrir || navAbierto());
+}
+function cerrarTodo(){ abrirNav(false); abrirCarrito(false);
+  const sc=$('#scrim'); if(sc) sc.classList.remove('on'); }
+$('#navtoggle').onclick=()=>abrirNav();
+$('#scrim').onclick=cerrarTodo;
+window.addEventListener('resize',()=>{ if(!esMovil()) cerrarTodo(); });
 function sub(t){ $('#tsub').textContent=t||''; }
 
 
@@ -1444,6 +1588,129 @@ function exportarExcel(archivo,hojas){
   document.body.appendChild(a); a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},600);
   toast('Excel descargado','ok');
+}
+
+
+/* ======================= LEER ARCHIVOS .XLSX ==========================
+   Descomprime el ZIP con DecompressionStream (va en el navegador, sin
+   librerías) y arma las filas de cada hoja. También acepta CSV.
+   ==================================================================== */
+async function inflarRaw(buf){
+  const ds=new DecompressionStream('deflate-raw');
+  const stream=new Blob([buf]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function zipLeer(ab){
+  const d=new DataView(ab), u8=new Uint8Array(ab);
+  /* buscar el fin del directorio central */
+  let eo=-1;
+  for(let i=u8.length-22;i>=0 && i>u8.length-66000;i--){
+    if(d.getUint32(i,true)===0x06054b50){ eo=i; break; }
+  }
+  if(eo<0) throw new Error('El archivo no parece un Excel válido');
+  const n=d.getUint16(eo+10,true);
+  let p=d.getUint32(eo+16,true);
+  const out=new Map(), dec=new TextDecoder();
+  for(let k=0;k<n;k++){
+    if(d.getUint32(p,true)!==0x02014b50) break;
+    const metodo=d.getUint16(p+10,true);
+    const tamComp=d.getUint32(p+20,true);
+    const ln=d.getUint16(p+28,true), le=d.getUint16(p+30,true), lc=d.getUint16(p+32,true);
+    const off=d.getUint32(p+42,true);
+    const nombre=dec.decode(u8.subarray(p+46,p+46+ln));
+    /* cabecera local para saber dónde empiezan los datos */
+    const lln=d.getUint16(off+26,true), lle=d.getUint16(off+28,true);
+    const ini=off+30+lln+lle;
+    out.set(nombre,{metodo:metodo, datos:u8.subarray(ini,ini+tamComp)});
+    p+=46+ln+le+lc;
+  }
+  return out;
+}
+async function zipTexto(zip,nombre){
+  const e=zip.get(nombre); if(!e) return null;
+  const bytes = e.metodo===0? e.datos : await inflarRaw(e.datos);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+function colNum(ref){                       // "BC12" -> 54 (índice 0)
+  const m=String(ref||'').match(/^([A-Z]+)/); if(!m) return 0;
+  let n=0; for(const ch of m[1]) n=n*26+(ch.charCodeAt(0)-64);
+  return n-1;
+}
+async function leerXlsx(file){
+  const ab=await file.arrayBuffer();
+  const zip=await zipLeer(ab);
+  const par=new DOMParser();
+  /* cadenas compartidas */
+  const shTxt=await zipTexto(zip,'xl/sharedStrings.xml');
+  const shared=[];
+  if(shTxt){
+    const doc=par.parseFromString(shTxt,'application/xml');
+    Array.from(doc.getElementsByTagName('si')).forEach(si=>{
+      shared.push(Array.from(si.getElementsByTagName('t')).map(t=>t.textContent).join(''));
+    });
+  }
+  /* nombre de hoja -> archivo */
+  const wbTxt=await zipTexto(zip,'xl/workbook.xml');
+  const relTxt=await zipTexto(zip,'xl/_rels/workbook.xml.rels');
+  if(!wbTxt) throw new Error('El archivo no tiene hojas');
+  const wb=par.parseFromString(wbTxt,'application/xml');
+  const rels={};
+  if(relTxt){ const rd=par.parseFromString(relTxt,'application/xml');
+    Array.from(rd.getElementsByTagName('Relationship')).forEach(r=>{
+      rels[r.getAttribute('Id')]=r.getAttribute('Target'); }); }
+  const hojas={};
+  const nodos=Array.from(wb.getElementsByTagName('sheet'));
+  for(let i=0;i<nodos.length;i++){
+    const sh=nodos[i];
+    const nom=sh.getAttribute('name');
+    const rid=sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+    let destino=rels[rid]||('worksheets/sheet'+(i+1)+'.xml');
+    destino=String(destino).replace(/^\//,'').replace(/^xl\//,'');
+    const txt=await zipTexto(zip,'xl/'+destino);
+    if(!txt) continue;
+    const doc=par.parseFromString(txt,'application/xml');
+    const filas=[];
+    Array.from(doc.getElementsByTagName('row')).forEach(row=>{
+      const f=[];
+      Array.from(row.getElementsByTagName('c')).forEach(c=>{
+        const idx=colNum(c.getAttribute('r'));
+        const t=c.getAttribute('t');
+        let v='';
+        if(t==='inlineStr'){ v=Array.from(c.getElementsByTagName('t')).map(x=>x.textContent).join(''); }
+        else { const vn=c.getElementsByTagName('v')[0]; const raw=vn? vn.textContent:'';
+          if(t==='s') v=shared[Number(raw)]!==undefined? shared[Number(raw)]:'';
+          else if(t==='b') v = raw==='1'?'TRUE':'FALSE';
+          else v=raw; }
+        f[idx]=v;
+      });
+      filas.push(f);
+    });
+    hojas[nom]=filas;
+  }
+  return hojas;
+}
+function leerCsvTexto(txt){
+  const sep = (txt.split('\n')[0].match(/;/g)||[]).length >= (txt.split('\n')[0].match(/,/g)||[]).length ? ';' : ',';
+  const filas=[]; let f=[], cel='', dentro=false;
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(dentro){
+      if(ch==='"'){ if(txt[i+1]==='"'){ cel+='"'; i++; } else dentro=false; }
+      else cel+=ch;
+    } else if(ch==='"') dentro=true;
+    else if(ch===sep){ f.push(cel); cel=''; }
+    else if(ch==='\n'){ f.push(cel); filas.push(f); f=[]; cel=''; }
+    else if(ch!=='\r') cel+=ch;
+  }
+  if(cel.length||f.length){ f.push(cel); filas.push(f); }
+  return filas;
+}
+async function leerTabla(file){
+  if(/\.csv$/i.test(file.name)){
+    const txt=await file.text();
+    return {'Hoja1': leerCsvTexto(txt.replace(/^﻿/,''))};
+  }
+  return await leerXlsx(file);
 }
 
 /* ===================== BUSCADOR TIPO GOOGLE + ALTA RÁPIDA =============
@@ -1663,6 +1930,7 @@ function cartAdd(pid){
   const ex=S.cart.items.find(i=>i.productoId===pid && !i.nota);
   if(ex) ex.cant++; else S.cart.items.push({id:uid('it'),productoId:pid,nombre:p.nombre,precio:Number(p.precio)||0,cant:1,nota:''});
   paintCart(); persistComanda();
+  if(esMovil() && navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
 }
 function cartQty(itId,d){
   const it=S.cart.items.find(i=>i.id===itId); if(!it) return;
@@ -1674,7 +1942,7 @@ function cartDel(itId){ S.cart.items=S.cart.items.filter(i=>i.id!==itId); paintC
 
 function viewPOS(vw){
   if(!S.cart) S.cart=newCart();
-  topact('<button class="btn sm" id="tabierto">'+(S.turno?'⏱️ Turno abierto':'⏱️ Abrir caja')+'</button>');
+  topact(can('caja')? '<button class="btn sm" id="tabierto">'+(S.turno?'⏱️ Caja abierta':'🔒 Abrir caja')+'</button>':'');
   vw.innerHTML =
    '<div id="pos">'+
      '<div id="posleft">'+
@@ -1685,8 +1953,11 @@ function viewPOS(vw){
      '<div id="poscart">'+
        '<div id="carthd"></div><div id="cartitems"></div><div id="carttot"></div>'+
      '</div>'+
+     '<div id="posbar"><span class="n" id="pb_n">0</span><span>Ver pedido</span>'+
+       '<span class="t" id="pb_t"></span></div>'+
    '</div>';
-  $('#tabierto').onclick=()=>go('turnos');
+  $('#posbar').onclick=()=>abrirCarrito(true);
+  if($('#tabierto')) $('#tabierto').onclick=()=>go('caja');
   const q=$('#pq');
   q.oninput=debounce(()=>{ S.posQ=q.value; paintGrid(); },140);
   paintCats(); paintGrid(); paintCart();
@@ -1727,7 +1998,12 @@ function paintCart(){
       '<div class="b" style="font-size:14px">'+(mesa? '🍽️ Mesa '+esc(mesa.nombre) : c.tipo==='domicilio'?'🛵 Domicilio':'🧾 Mostrador')+'</div>'+
       '<div class="tiny muted">'+t.uds+' unidades · '+c.items.length+' líneas</div></div>'+
       '<button class="btn ghost sm" id="cmesa" title="Cambiar destino">🔀</button>'+
-      '<button class="btn ghost sm" id="cclear" title="Vaciar">🗑️</button>';
+      '<button class="btn ghost sm" id="cclear" title="Vaciar">🗑️</button>'+
+      '<button id="cartcerrar" title="Cerrar">✕</button>';
+  if($('#cartcerrar')) $('#cartcerrar').onclick=()=>abrirCarrito(false);
+  const pbn=$('#pb_n'), pbt=$('#pb_t');
+  if(pbn){ pbn.textContent=t.uds; pbt.textContent=money(t.total);
+    $('#posbar').style.opacity = t.uds? '1':'.75'; }
   $('#cmesa').onclick=mDestino; $('#cclear').onclick=()=>{ if(!c.items.length) return;
     confirmar('¿Vaciar el carrito?',()=>{ c.items=[]; paintCart(); persistComanda(); },true); };
 
@@ -1856,7 +2132,7 @@ function mDestino(){
 function mCobrar(){
   const c=S.cart, t=cartTot(c);
   if(!t.total) return;
-  if(!S.turno){ toast('Abre la caja antes de cobrar','warn'); go('turnos'); return; }
+  if(!S.turno){ toast('La caja está cerrada. Ábrela antes de cobrar.','warn'); go('caja'); return; }
   let pagos=[], medio='efectivo', plazo=30;
   const qa=[1000,2000,5000,10000,20000,50000,100000];
 
@@ -1989,7 +2265,7 @@ function registrarVenta(o){
   (v.pagos||[]).forEach(p=> movTes(p.cuentaId||cuentaDeMedio(p.medio),'ingreso',p.monto,'Venta '+v.no,'venta','venta',v.id,
     terceroDe('cliente',v.clienteId)));
   if(c.comandaId){ const cm=byId('comandas',c.comandaId); if(cm){ cm.estado='cerrada'; cm.ventaId=v.id; put('comandas',cm); } }
-  S.cart=newCart();
+  S.cart=newCart(); abrirCarrito(false);
   toast(original? 'Venta '+v.no+' corregida · '+money(v.total) : 'Venta '+v.no+' registrada · '+money(v.total),'ok');
   if(o.imprimir!==false) imprimirVenta(v);
   if(S.view==='pos'){ paintCart(); paintGrid(); buildNav(); } else render();
@@ -2386,6 +2662,7 @@ function abrirMesa(mesaId){
   if(cm){ S.cart.comandaId=cm.id; S.cart.items=cm.items; S.cart.clienteId=cm.clienteId||'';
     S.cart.descuento=cm.descuento||0; S.cart.propinaPct=cm.propinaPct||0; }
   go('pos');
+  if(esMovil() && cm) setTimeout(()=>abrirCarrito(true),120);
 }
 function edMesa(m){
   const ed=m||{id:uid('m'),nombre:'',zona:'Salón',capacidad:4,activo:true};
@@ -2935,6 +3212,8 @@ function edCompra(orig){
         if(!items.length) return toast('Agrega ítems a la compra','warn');
         if(!cbPv.valor()) return toast('Busca o crea el proveedor','warn');
         const t=calc();
+        if(!credito && bloqueaCaja($('#ct',m).value))
+          return conCaja($('#ct',m).value,()=>$('#ok',m).click(),'Pago de compra por '+money(t.total));
         let parcial=false;
         if(orig) parcial=deshacerCompra(orig);
         const cp={id: orig? orig.id : uid('cp'), no: orig? orig.no : nextNo('compra','C-'),
@@ -3151,6 +3430,8 @@ function edOtroDoc(tipo){
           vence:dateAdd(fecha,Math.max(0,toN($('#dp',m).value))), estado:'pendiente',
           nota:$('#dn',m).value.trim(), usuarioId:S.user?S.user.id:''};
         if($('#dm',m).checked){ d.cuentaId=$('#dq',m).value; d.medioPago=$('#dme',m).value; }
+        if(d.cuentaId && bloqueaCaja(d.cuentaId))
+          return conCaja(d.cuentaId,()=>$('#ok',m).click(),'Desembolso de '+money(d.total));
         put('otrosdocs',d);
         if(d.cuentaId)
           movTes(d.cuentaId, esC?'egreso':'ingreso', d.total,
@@ -3209,6 +3490,8 @@ function mAbono(tipo,doc){
         const v=toN($('#mt',m).value);
         if(v<=0) return toast('Monto inválido','warn');
         if(v>saldo+0.5) return toast('El monto supera el saldo','warn');
+        if(bloqueaCaja($('#ct',m).value))
+          return conCaja($('#ct',m).value,()=>$('#ok',m).click(),(esC?'Cobro':'Pago')+' de '+money(v));
         const a={id:uid('ab'),fecha:now(),tipo:tipo,docId:doc.id,terceroId:tercero,
           terceroNombre:doc.esOtro?(doc.terceroNombre||''):'', monto:v,
           medio:$('#me',m).value,cuentaId:$('#ct',m).value,nota:$('#nt',m).value,
@@ -3431,94 +3714,333 @@ function mMovimiento(){
       $('#ok',m).onclick=()=>{
         const t=$('#t',m).value, v=toN($('#mt',m).value), c1=$('#c1',m).value, co=$('#co',m).value.trim();
         if(v<=0) return toast('Monto inválido','warn');
-        if(t==='traslado'){ const c2=$('#c2',m).value;
-          if(c1===c2) return toast('Las cuentas deben ser distintas','warn');
-          movTes(c1,'egreso',v,'Traslado a '+nameOf('cuentas',c2),'traslado','','');
-          movTes(c2,'ingreso',v,'Traslado desde '+nameOf('cuentas',c1),'traslado','','');
-        } else {
-          const cta=byId('cuentas',c1);
-          const tid=cbT.valor();
-          const ter=tid? {id:tid, nombre:(listaTerceros().find(x=>x.id===tid)||{}).nombre||''} : null;
-          movTes(c1,t,v,co||'Movimiento manual', (cta&&cta.tipo==='caja')?'caja-manual':$('#cat',m).value,'','',ter);
-        }
-        closeModal(); render(); toast('Movimiento registrado','ok');
+        const c2 = t==='traslado'? $('#c2',m).value : '';
+        if(t==='traslado' && c1===c2) return toast('Las cuentas deben ser distintas','warn');
+        const guardar=()=>{
+          if(t==='traslado'){
+            movTes(c1,'egreso',v,'Traslado a '+nameOf('cuentas',c2),'traslado','','');
+            movTes(c2,'ingreso',v,'Traslado desde '+nameOf('cuentas',c1),'traslado','','');
+          } else {
+            const cta=byId('cuentas',c1);
+            const tid=cbT.valor();
+            const ter=tid? {id:tid, nombre:(listaTerceros().find(x=>x.id===tid)||{}).nombre||''} : null;
+            movTes(c1,t,v,co||'Movimiento manual', (cta&&cta.tipo==='caja')?'caja-manual':$('#cat',m).value,'','',ter);
+          }
+          closeModal(); render(); toast('Movimiento registrado','ok');
+        };
+        const bloquea = bloqueaCaja(c1)? c1 : (bloqueaCaja(c2)? c2 : '');
+        if(bloquea) conCaja(bloquea,guardar,(t==='traslado'?'Traslado':(t==='ingreso'?'Ingreso':'Egreso'))+' de '+money(v));
+        else guardar();
       };
     }});
 }
 
-/* =============================== TURNOS =============================== */
-function viewTurnos(vw){
-  const t=S.turno;
-  const hist=S.turnos.slice().sort((a,b)=>b.apertura.localeCompare(a.apertura));
-  let box;
-  if(t){
-    const D=detalleTurno(t);
-    box='<div class="card" style="margin-bottom:14px"><div class="hd"><h3>Turno abierto</h3>'+
-      '<span class="pill ok">Desde '+ftime(t.apertura)+'</span>'+
-      (t.cuentaId? '<span class="pill">💵 '+esc(nameOf('cuentas',t.cuentaId))+'</span>':'')+
-      '<div class="spacer"></div>'+
-      '<button class="btn sm" id="mov">+ Entrada/salida de caja</button>'+
-      '<button class="btn danger" id="cerrar">Cerrar caja</button></div><div class="bd">'+
-      '<div class="kpis">'+
-        kpi('Base inicial',money(t.base),'en efectivo','')+
-        kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas','brand')+
-        kpi('Efectivo para contar',money(D.esperado),'esto es lo único del arqueo','ok')+
-        kpi('Cajero',esc(nameOf('usuarios',t.usuarioId)),'','')+
-      '</div>'+
-      '<div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">'+
-        '<div class="card"><div class="hd"><h3>💵 Efectivo</h3><span class="pill ok">se cuenta al cerrar</span></div>'+
-          '<div class="bd">'+
-          '<div class="tline"><span>Base inicial</span><span class="v">'+money(t.base)+'</span></div>'+
-          '<div class="tline"><span>Ventas en efectivo</span><span class="v">'+money(D.ventaEfe)+'</span></div>'+
-          (D.otrosIng? '<div class="tline"><span>Otras entradas</span><span class="v">'+money(D.otrosIng)+'</span></div>':'')+
-          (D.salidas? '<div class="tline" style="color:var(--bad)"><span>Salidas de caja</span><span class="v">−'+money(D.salidas)+'</span></div>':'')+
-          '<div class="tline big"><span>Debe haber</span><span class="v">'+money(D.esperado)+'</span></div>'+
-          '</div></div>'+
-        '<div class="card"><div class="hd"><h3>🏦 Lo demás</h3><span class="pill">no se cuenta</span></div>'+
-          '<div class="bd">'+
-          MEDIOS.filter(x=>x.k!=='efectivo').map(md=>'<div class="tline"><span>'+md.e+' '+md.n+'</span>'+
-            '<span class="v">'+money(D.porMedio[md.k]||0)+'</span></div>').join('')+
-          (D.bancos.length? '<hr style="border:0;border-top:1px dashed var(--line);margin:9px 0">'+
-            D.bancos.map(bk=>'<div class="tline"><span>'+esc(bk.nombre)+'</span><span class="v">'+
-              money(bk.ing-bk.egr)+'</span></div>').join(''):'')+
-          '<div class="hintx" style="margin-top:10px">Queda registrado para que cuadres contra el extracto '+
-          'del banco y el datáfono cuando quieras.</div>'+
-          '</div></div>'+
-      '</div></div></div>';
-  } else {
-    box='<div class="card" style="margin-bottom:14px"><div class="bd" style="text-align:center;padding:30px">'+
-      '<div style="font-size:40px">⏱️</div><h3 style="margin:8px 0">No hay caja abierta</h3>'+
-      '<p class="muted" style="margin:0 0 16px">Abre la caja para poder registrar ventas.</p>'+
-      '<button class="btn pri lg" id="abrir">Abrir caja</button></div></div>';
-  }
-  vw.innerHTML=box+'<div class="card"><div class="hd"><h3>Historial de turnos</h3></div><div class="bd p0">'+tbl([
-    {t:'Apertura',f:x=>fdate(x.apertura,true)},
-    {t:'Cierre',f:x=>x.cierre?fdate(x.cierre,true):'<span class="pill ok">abierto</span>'},
-    {t:'Cajero',f:x=>esc(nameOf('usuarios',x.usuarioId))},
-    {t:'Caja',f:x=>x.cuentaId? esc(nameOf('cuentas',x.cuentaId)):'<span class="muted">—</span>'},
-    {t:'Base',num:1,f:x=>money(x.base)},
-    {t:'Ventas',num:1,f:x=>money(sum(ventasDeTurno(x.id),v=>v.total))},
-    {t:'Efectivo esperado',num:1,f:x=>money(x.estado==='abierto'? (x.base+efectivoTurno(x.id)) : x.esperado)},
-    {t:'Contado',num:1,f:x=>x.estado==='abierto'?'—':money(x.contado)},
-    {t:'Diferencia',num:1,f:x=>{ if(x.estado==='abierto') return '—';
-      const d=x.diferencia||0; return '<b style="color:'+(Math.abs(d)<1?'var(--ok)':'var(--bad)')+'">'+money(d)+'</b>';}},
-    {t:'',f:x=>'<div class="row" style="gap:3px"><button class="btn ghost sm" data-rt="'+x.id+'" title="Reimprimir el cierre">🖨️</button>'+
-      '<button class="btn ghost sm" data-vt="'+x.id+'" title="Ver detalle">👁️</button></div>'}
-  ],hist,{empty:'Sin turnos registrados',icon:'⏱️'})+'</div></div>';
-  $$('[data-rt]',$('#view')).forEach(b=>b.onclick=()=>{ const t=byId('turnos',b.dataset.rt);
-    imprimirCierre(t,null,null,true); toast('Cierre enviado a impresión','ok'); });
-  $$('[data-vt]',$('#view')).forEach(b=>b.onclick=()=>verTurno(byId('turnos',b.dataset.vt)));
-  if($('#abrir')) $('#abrir').onclick=mAbrirCaja;
-  if($('#cerrar')) $('#cerrar').onclick=mCerrarCaja;
-  if($('#mov')) $('#mov').onclick=mMovimiento;
+/* ================================ CAJA ================================
+   El recorrido del dinero en un solo lugar: una pestaña por cuenta con
+   TODO el movimiento desde el primer día y el saldo corrido, los cierres
+   del día marcados en la misma línea de tiempo, y el control de que con
+   la caja cerrada no entra ni sale plata sin un recibo que lo respalde.
+   ==================================================================== */
+let _cajaTab='resumen';
+let _cajaF={desde:'',hasta:'',q:''};
+
+/* movimientos + cierres de una cuenta, en orden, con saldo acumulado */
+function recorrido(cuentaId,desde,hasta){
+  const c=byId('cuentas',cuentaId);
+  if(!c) return {filas:[],antes:0,saldo:0,cuenta:null};
+  const ev=S.movimientos.filter(m=>m.cuentaId===cuentaId).map(m=>({m:m,fecha:m.fecha}));
+  S.turnos.filter(t=>t.cuentaId===cuentaId && t.estado==='cerrado' && t.cierre)
+    .forEach(t=>ev.push({c:t,fecha:t.cierre}));
+  ev.sort((a,b)=>{ const r=String(a.fecha).localeCompare(String(b.fecha));
+    return r!==0? r : (a.c?1:-1); });        // el cierre va después de sus movimientos
+  let saldo=round(Number(c.saldoInicial)||0,2), antes=saldo;
+  const filas=[];
+  ev.forEach(x=>{
+    if(x.m) saldo=round(saldo+(x.m.tipo==='ingreso'? x.m.monto : -x.m.monto),2);
+    const d=dISO(x.fecha);
+    if(desde && d<desde){ antes=saldo; return; }
+    if(hasta && d>hasta) return;
+    filas.push({m:x.m,c:x.c,fecha:x.fecha,saldo:saldo});
+  });
+  return {filas:filas,antes:antes,saldo:saldo,cuenta:c};
 }
+function origenMov(m){
+  const o={venta:'venta',compra:'compra',cxc:'cartera',cxp:'cartera',cierre:'cierre',apertura:'apertura'}[m.refTipo];
+  return o||(m.categoria==='traslado'?'traslado':'manual');
+}
+
+function viewCaja(vw){
+  const cts=S.cuentas.filter(c=>c.activo!==false)
+    .sort((a,b)=> a.tipo===b.tipo? String(a.nombre).localeCompare(String(b.nombre)) : (a.tipo==='caja'?-1:1));
+  if(_cajaTab!=='resumen' && _cajaTab!=='cierres' && !cts.some(c=>c.id===_cajaTab)) _cajaTab='resumen';
+  const t=S.turno;
+  topact((can('caja')? (t? '<button class="btn danger sm" id="tcerrar">🔒 Cerrar caja</button>'
+                         : '<button class="btn pri sm" id="tabrir">Abrir caja</button>')
+                     : '')+
+         (esMovil()? '' : '<button class="btn sm" id="tmov">+ Movimiento</button>'));
+  vw.innerHTML='<div id="ctabs"></div><div id="cbody"></div>';
+  const tabs=[['resumen','📋 Resumen']]
+    .concat(cts.map(c=>[c.id,(c.tipo==='caja'?'💵 ':'🏦 ')+c.nombre]))
+    .concat([['cierres','🔒 Cierres']]);
+  $('#ctabs').appendChild(tabsBar(tabs,_cajaTab,k=>{ _cajaTab=k; pinta(); }));
+  if($('#tabrir')) $('#tabrir').onclick=mAbrirCaja;
+  if($('#tcerrar')) $('#tcerrar').onclick=mCerrarCaja;
+  if($('#tmov')) $('#tmov').onclick=mMovimiento;
+  pinta();
+
+  function pinta(){
+    $$('#ctabs .tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===_cajaTab));
+    if(_cajaTab==='resumen') return pintaResumen();
+    if(_cajaTab==='cierres') return pintaCierres();
+    pintaCuenta(_cajaTab);
+  }
+
+  /* -------------------- resumen -------------------- */
+  function pintaResumen(){
+    const cajas=cts.filter(c=>c.tipo==='caja'), bancos=cts.filter(c=>c.tipo!=='caja');
+    const hoy=todayISO(), mh=S.movimientos.filter(m=>dISO(m.fecha)===hoy);
+    const ing=sum(mh.filter(m=>m.tipo==='ingreso'),m=>m.monto);
+    const egr=sum(mh.filter(m=>m.tipo==='egreso'),m=>m.monto);
+    let h='';
+    if(t){
+      const D=detalleTurno(t);
+      h+='<div class="card" style="margin-bottom:14px"><div class="hd"><h3>Caja abierta</h3>'+
+        '<span class="pill ok">Desde '+ftime(t.apertura)+'</span>'+
+        (t.cuentaId? '<span class="pill">💵 '+esc(nameOf('cuentas',t.cuentaId))+'</span>':'')+
+        '<span class="pill">'+esc(nameOf('usuarios',t.usuarioId))+'</span>'+
+        '<div class="spacer"></div>'+
+        '<button class="btn sm" id="rmov">+ Entrada/salida</button>'+
+        '<button class="btn danger sm" id="rcerrar">Cerrar caja</button></div><div class="bd">'+
+        '<div class="kpis">'+
+          kpi('Abrió con',money(t.base),'saldo del cierre anterior','')+
+          kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas','brand')+
+          kpi('Efectivo que debe haber',money(D.esperado),'esto es lo único que se cuenta','ok')+
+          kpi('Movido hoy',money(D.ventaEfe+D.otrosIng-D.salidas),'entradas menos salidas','')+
+        '</div></div></div>';
+    } else {
+      h+='<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><div class="bd" style="text-align:center;padding:26px">'+
+        '<div style="font-size:38px">🔒</div><h3 style="margin:8px 0">La caja está cerrada</h3>'+
+        '<p class="muted" style="margin:0 0 14px">Con la caja cerrada no entra ni sale plata. '+
+        'Ábrela para poder vender y mover efectivo.</p>'+
+        (can('caja')? '<button class="btn pri lg" id="rabrir">Abrir caja</button>':'')+'</div></div>';
+    }
+    h+='<div class="kpis" style="margin-bottom:14px">'+
+        kpi('Efectivo en cajas',money(sum(cajas,c=>saldoCuenta(c.id))),cajas.length+' caja(s)','ok')+
+        kpi('En bancos y otros',money(sum(bancos,c=>saldoCuenta(c.id))),bancos.length+' cuenta(s)','brand')+
+        kpi('Entradas de hoy',money(ing),'','ok')+
+        kpi('Salidas de hoy',money(egr),'','bad')+
+      '</div>';
+    h+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(235px,1fr))">'+
+      cts.map(c=>{
+        const ab=c.tipo==='caja'? turnoDeCaja(c.id):null;
+        const fuera=c.tipo==='caja'? movsFueraDeTurno(c.id).length:0;
+        return '<div class="card" style="cursor:pointer" data-ct="'+c.id+'"><div class="bd">'+
+        '<div class="row"><span style="font-size:20px">'+(c.tipo==='caja'?'💵':'🏦')+'</span>'+
+        '<div style="flex:1"><b>'+esc(c.nombre)+'</b><div class="tiny muted">'+esc(c.tipo)+'</div></div>'+
+        (c.tipo==='caja'? '<span class="pill '+(ab?'ok':'warn')+'">'+(ab?'abierta':'cerrada')+'</span>':'')+
+        '</div>'+
+        '<div style="font-size:21px;font-weight:750;margin-top:8px" class="mono">'+money(saldoCuenta(c.id))+'</div>'+
+        (fuera? '<div class="tiny" style="color:var(--bad);margin-top:4px">⚠ '+fuera+' movimiento(s) con la caja cerrada</div>':'')+
+        '<div class="tiny muted" style="margin-top:4px">Ver el recorrido →</div>'+
+      '</div></div>';}).join('')+'</div>';
+    $('#cbody').innerHTML=h;
+    if($('#rabrir')) $('#rabrir').onclick=mAbrirCaja;
+    if($('#rcerrar')) $('#rcerrar').onclick=mCerrarCaja;
+    if($('#rmov')) $('#rmov').onclick=mMovimiento;
+    $$('[data-ct]',$('#view')).forEach(b=>b.onclick=()=>{ _cajaTab=b.dataset.ct; pinta(); });
+  }
+
+  /* ------------ recorrido de una cuenta ------------ */
+  function pintaCuenta(cid){
+    const c=byId('cuentas',cid);
+    const R=recorrido(cid,_cajaF.desde,_cajaF.hasta);
+    let filas=R.filas;
+    if(_cajaF.q){
+      const q=_cajaF.q;
+      filas=filas.filter(f=> f.c? false : buscaTokens([f.m.concepto||'',nombreTercero(f.m),f.m.categoria||'',
+        String(f.m.monto),nameOf('usuarios',f.m.usuarioId),f.m.soporte||'',origenMov(f.m)].join(' '),q));
+    }
+    const ent=sum(filas.filter(f=>f.m&&f.m.tipo==='ingreso'),f=>f.m.monto);
+    const sal=sum(filas.filter(f=>f.m&&f.m.tipo==='egreso'),f=>f.m.monto);
+    const ab=c.tipo==='caja'? turnoDeCaja(cid):null;
+    const fuera=c.tipo==='caja'? movsFueraDeTurno(cid):[];
+    $('#cbody').innerHTML=
+      '<div class="card" style="margin-bottom:14px"><div class="bd">'+
+        '<div class="row wrap" style="align-items:flex-start">'+
+          '<div style="flex:1;min-width:210px">'+
+            '<div class="row" style="gap:8px"><span style="font-size:24px">'+(c.tipo==='caja'?'💵':'🏦')+'</span>'+
+            '<div><b style="font-size:16px">'+esc(c.nombre)+'</b>'+
+            (c.tipo==='caja'? ' <span class="pill '+(ab?'ok':'warn')+'">'+(ab?'abierta':'cerrada')+'</span>':'')+
+            '<div class="tiny muted">Saldo de hoy en esta cuenta</div></div></div>'+
+            '<div class="mono" style="font-size:30px;font-weight:800;margin-top:6px">'+money(saldoCuenta(cid))+'</div>'+
+          '</div>'+
+          '<div class="row wrap" style="gap:6px">'+
+            (c.tipo==='caja'&&can('caja')? (ab? '<button class="btn danger sm" id="ccerrar">Cerrar caja</button>'
+                                              : '<button class="btn pri sm" id="cabrir">Abrir caja</button>'):'')+
+            '<button class="btn sm" id="cmov">+ Movimiento</button>'+
+            '<button class="btn sm" id="cxls">📊 Excel</button>'+
+          '</div>'+
+        '</div>'+
+        (fuera.length? '<div class="card" style="background:var(--bad-soft);margin-top:11px"><div class="bd">'+
+          '<b>⚠ '+fuera.length+' movimiento(s) registrados con la caja cerrada</b>'+
+          '<div class="tiny" style="margin-top:4px">Todos tienen recibo de soporte. Se los recuerdo al volver a abrir.</div>'+
+          '</div></div>':'')+
+        '<hr style="border:0;border-top:1px solid var(--line);margin:12px 0">'+
+        '<div class="row wrap">'+
+          '<div style="flex:1;min-width:230px"><input id="cq" placeholder="🔍 Buscar concepto, tercero, valor, recibo…" value="'+esc(_cajaF.q)+'" autocomplete="off"></div>'+
+          '<div class="f" style="flex:1 1 130px;min-width:0"><label>Desde</label><input type="date" id="cd1" value="'+esc(_cajaF.desde)+'"></div>'+
+          '<div class="f" style="flex:1 1 130px;min-width:0"><label>Hasta</label><input type="date" id="cd2" value="'+esc(_cajaF.hasta)+'"></div>'+
+          '<button class="btn sm" id="ctodo">Desde el principio</button>'+
+          '<button class="btn sm" id="cmes">Este mes</button>'+
+          '<button class="btn sm" id="choy">Hoy</button>'+
+        '</div>'+
+        '<div class="row wrap" style="margin-top:10px;gap:16px">'+
+          '<span class="tiny muted">Entradas <b style="color:var(--ok)">'+money(ent)+'</b></span>'+
+          '<span class="tiny muted">Salidas <b style="color:var(--bad)">'+money(sal)+'</b></span>'+
+          '<span class="tiny muted">Movimientos <b>'+filas.filter(f=>f.m).length+'</b></span>'+
+        '</div>'+
+      '</div></div>'+
+      '<div class="card"><div class="hd"><h3>Recorrido de la cuenta</h3>'+
+        '<span class="pill">'+(_cajaF.desde||_cajaF.hasta? 'del periodo':'desde el primer día')+'</span></div>'+
+        '<div class="bd p0">'+tablaRecorrido(R,filas,c)+'</div></div>';
+
+    $('#cq').oninput=e=>{ _cajaF.q=e.target.value; const v=e.target.value;
+      clearTimeout(window._ctm); window._ctm=setTimeout(()=>{ pintaCuenta(cid);
+        const i=$('#cq'); if(i){ i.focus(); i.setSelectionRange(v.length,v.length); } },220); };
+    $('#cd1').onchange=e=>{ _cajaF.desde=e.target.value; pintaCuenta(cid); };
+    $('#cd2').onchange=e=>{ _cajaF.hasta=e.target.value; pintaCuenta(cid); };
+    $('#ctodo').onclick=()=>{ _cajaF.desde=''; _cajaF.hasta=''; pintaCuenta(cid); };
+    $('#cmes').onclick=()=>{ _cajaF.desde=todayISO().slice(0,8)+'01'; _cajaF.hasta=todayISO(); pintaCuenta(cid); };
+    $('#choy').onclick=()=>{ _cajaF.desde=todayISO(); _cajaF.hasta=todayISO(); pintaCuenta(cid); };
+    if($('#cabrir')) $('#cabrir').onclick=mAbrirCaja;
+    if($('#ccerrar')) $('#ccerrar').onclick=mCerrarCaja;
+    $('#cmov').onclick=mMovimiento;
+    $('#cxls').onclick=()=>excelRecorrido(c,R,filas);
+    $$('[data-rm]',$('#view')).forEach(b=>b.onclick=()=>{ comprobanteMov(byId('movimientos',b.dataset.rm),true);
+      toast('Comprobante enviado a impresión','ok'); });
+    $$('[data-em]',$('#view')).forEach(b=>b.onclick=()=>edMovimiento(byId('movimientos',b.dataset.em)));
+    $$('[data-rc]',$('#view')).forEach(b=>b.onclick=()=>{ imprimirCierre(byId('turnos',b.dataset.rc),null,null,true);
+      toast('Cierre enviado a impresión','ok'); });
+  }
+
+  function tablaRecorrido(R,filas,c){
+    if(!filas.length) return '<div class="empty"><span class="ico">💵</span>'+
+      (_cajaF.desde||_cajaF.hasta? 'Sin movimientos en este periodo':'Todavía no hay movimientos en esta cuenta')+
+      '<div class="tiny muted" style="margin-top:6px">Saldo: <b>'+money(R.antes)+'</b></div></div>';
+    let h='<div class="tblwrap"><table class="tbl"><thead><tr>'+
+      '<th>Fecha</th><th>Concepto</th><th>Tercero</th><th>Origen</th>'+
+      '<th class="num">Entrada</th><th class="num">Salida</th><th class="num">Saldo</th><th></th>'+
+      '</tr></thead><tbody>';
+    h+='<tr><td colspan="6" style="font-weight:650">'+
+       (_cajaF.desde? 'Saldo al '+fdate(_cajaF.desde) : 'Saldo inicial de la cuenta')+
+       '</td><td class="num sal">'+money(R.antes)+'</td><td></td></tr>';
+    filas.forEach(f=>{
+      if(f.c){
+        const t=f.c, dif=Number(t.diferencia)||0;
+        h+='<tr class="rcierre"><td style="white-space:nowrap">'+fcorta(t.cierre)+' '+ftime(t.cierre)+'</td>'+
+          '<td colspan="3">🔒 CIERRE DE CAJA · '+esc(nameOf('usuarios',t.usuarioId))+
+          ' · contado '+money(t.contado)+
+          (Math.abs(dif)>=0.5? ' · <span style="color:var(--bad)">'+(dif>0?'sobrante ':'faltante ')+money(Math.abs(dif))+'</span>'
+                             : ' · <span style="color:var(--ok)">cuadró</span>')+
+          (t.nota? ' · '+esc(t.nota):'')+'</td>'+
+          '<td class="num">—</td><td class="num">—</td>'+
+          '<td class="num sal">'+money(f.saldo)+'</td>'+
+          '<td><button class="btn ghost sm" data-rc="'+t.id+'" title="Reimprimir el cierre">🖨️</button></td></tr>';
+        return;
+      }
+      const m=f.m;
+      h+='<tr'+(m.fueraTurno?' class="rfuera"':'')+'>'+
+        '<td style="white-space:nowrap"><div>'+fcorta(m.fecha)+'</div><div class="tiny muted">'+ftime(m.fecha)+'</div></td>'+
+        '<td>'+esc(m.concepto||'—')+
+          (m.fueraTurno? '<div class="tiny" style="color:var(--bad)">⚠ fuera de turno'+
+            (m.soporte? ' · '+esc(m.soporte):'')+'</div>':'')+
+          '<div class="tiny muted">'+esc(m.categoria||'otros')+'</div></td>'+
+        '<td>'+esc(nombreTercero(m)||'—')+'</td>'+
+        '<td><span class="pill">'+esc(origenMov(m))+'</span></td>'+
+        '<td class="num">'+(m.tipo==='ingreso'? '<b style="color:var(--ok)">'+money(m.monto)+'</b>':'<span class="muted">—</span>')+'</td>'+
+        '<td class="num">'+(m.tipo==='egreso'? '<b style="color:var(--bad)">'+money(m.monto)+'</b>':'<span class="muted">—</span>')+'</td>'+
+        '<td class="num sal">'+money(f.saldo)+'</td>'+
+        '<td><div class="row" style="gap:3px">'+
+          '<button class="btn ghost sm" data-rm="'+m.id+'" title="Reimprimir comprobante">🖨️</button>'+
+          (puedeEditar()? '<button class="btn ghost sm" data-em="'+m.id+'" title="Editar">✎</button>':'')+
+        '</div></td></tr>';
+    });
+    h+='<tr class="rcierre"><td colspan="6" style="font-weight:750">SALDO FINAL</td>'+
+       '<td class="num sal" style="font-size:15px">'+money(filas.length? filas[filas.length-1].saldo : R.antes)+'</td><td></td></tr>';
+    return h+'</tbody></table></div>';
+  }
+
+  function excelRecorrido(c,R,filas){
+    const f=[[{v:'Recorrido de '+c.nombre,t:'titulo'}],
+      [(_cajaF.desde||_cajaF.hasta)? ('Del '+(_cajaF.desde||'inicio')+' al '+(_cajaF.hasta||todayISO())):'Desde el primer día'],[],
+      ['Fecha','Hora','Concepto','Tercero','Categoría','Origen','Soporte','Usuario','Entrada','Salida','Saldo'].map(x=>({v:x,b:1}))];
+    f.push([(_cajaF.desde?'Saldo al '+_cajaF.desde:'Saldo inicial'),'','','','','','','','','',{v:R.antes}]);
+    filas.forEach(x=>{
+      if(x.c){ const t=x.c;
+        f.push([dISO(t.cierre),ftime(t.cierre),'CIERRE DE CAJA · contado '+t.contado+' · diferencia '+(t.diferencia||0),
+          nameOf('usuarios',t.usuarioId),'cierre','cierre','','','','',{v:x.saldo}]); return; }
+      const m=x.m;
+      f.push([dISO(m.fecha),ftime(m.fecha),m.concepto||'',nombreTercero(m),m.categoria||'',origenMov(m),
+        m.soporte||'',nameOf('usuarios',m.usuarioId),
+        m.tipo==='ingreso'?m.monto:'', m.tipo==='egreso'?m.monto:'', {v:x.saldo}]);
+    });
+    const ent=sum(filas.filter(x=>x.m&&x.m.tipo==='ingreso'),x=>x.m.monto);
+    const sal=sum(filas.filter(x=>x.m&&x.m.tipo==='egreso'),x=>x.m.monto);
+    f.push([]); f.push([{v:'TOTALES',b:1},'','','','','','','',{v:ent},{v:sal},
+      {v:filas.length? filas[filas.length-1].saldo : R.antes}]);
+    exportarExcel('recorrido_'+normTxt(c.nombre).replace(/[^a-z0-9]+/g,'_'),
+      [{nombre:'Recorrido',filas:f,anchos:[11,8,34,20,14,11,18,16,13,13,14]}]);
+  }
+
+  /* -------------------- cierres -------------------- */
+  function pintaCierres(){
+    const hist=S.turnos.slice().sort((a,b)=>String(b.apertura).localeCompare(String(a.apertura)));
+    const cerr=hist.filter(x=>x.estado==='cerrado');
+    const dif=sum(cerr,x=>Math.abs(Number(x.diferencia)||0));
+    $('#cbody').innerHTML=
+      '<div class="kpis" style="margin-bottom:14px">'+
+        kpi('Cierres hechos',cerr.length,'','')+
+        kpi('Descuadre acumulado',money(dif),'suma de las diferencias',dif<1?'ok':'bad')+
+        kpi('Cajas abiertas ahora',S.turnos.filter(x=>x.estado==='abierto').length,'','')+
+      '</div>'+
+      '<div class="card"><div class="hd"><h3>Historial de cierres</h3>'+
+        '<div class="spacer"></div><button class="btn sm" id="cixls">📊 Excel</button></div><div class="bd p0">'+tbl([
+        {t:'Apertura',f:x=>fdate(x.apertura,true)},
+        {t:'Cierre',f:x=>x.cierre?fdate(x.cierre,true):'<span class="pill ok">abierta</span>'},
+        {t:'Cajero',f:x=>esc(nameOf('usuarios',x.usuarioId))},
+        {t:'Caja',f:x=>x.cuentaId? esc(nameOf('cuentas',x.cuentaId)):'<span class="muted">—</span>'},
+        {t:'Abrió con',num:1,f:x=>money(x.base)},
+        {t:'Ventas',num:1,f:x=>money(x.estado==='abierto'? sum(ventasDeTurno(x.id),v=>v.total) : (x.ventas||0))},
+        {t:'Debía haber',num:1,f:x=>money(x.estado==='abierto'? (x.base+efectivoTurno(x.id)) : x.esperado)},
+        {t:'Contado',num:1,f:x=>x.estado==='abierto'?'—':money(x.contado)},
+        {t:'Diferencia',num:1,f:x=>{ if(x.estado==='abierto') return '—';
+          const d=x.diferencia||0; return '<b style="color:'+(Math.abs(d)<1?'var(--ok)':'var(--bad)')+'">'+money(d)+'</b>';}},
+        {t:'',f:x=>'<div class="row" style="gap:3px"><button class="btn ghost sm" data-rt="'+x.id+'" title="Reimprimir el cierre">🖨️</button>'+
+          '<button class="btn ghost sm" data-vt="'+x.id+'" title="Ver detalle">👁️</button></div>'}
+      ],hist,{empty:'Todavía no se ha cerrado ninguna caja',icon:'🔒'})+'</div></div>';
+    $$('[data-rt]',$('#view')).forEach(b=>b.onclick=()=>{ imprimirCierre(byId('turnos',b.dataset.rt),null,null,true);
+      toast('Cierre enviado a impresión','ok'); });
+    $$('[data-vt]',$('#view')).forEach(b=>b.onclick=()=>verTurno(byId('turnos',b.dataset.vt)));
+    $('#cixls').onclick=()=>{
+      const f=[[{v:'Cierres de caja',t:'titulo'}],[],
+        ['Apertura','Cierre','Cajero','Caja','Abrió con','Ventas','Debía haber','Contado','Diferencia','Observaciones'].map(x=>({v:x,b:1}))];
+      hist.forEach(x=>f.push([fdate(x.apertura,true),x.cierre?fdate(x.cierre,true):'abierta',
+        nameOf('usuarios',x.usuarioId),nameOf('cuentas',x.cuentaId),x.base||0,
+        x.estado==='abierto'? sum(ventasDeTurno(x.id),v=>v.total):(x.ventas||0),
+        x.estado==='abierto'? (x.base+efectivoTurno(x.id)):(x.esperado||0),
+        x.estado==='abierto'?'':(x.contado||0), x.estado==='abierto'?'':(x.diferencia||0), x.nota||'']));
+      exportarExcel('cierres_de_caja',[{nombre:'Cierres',filas:f,anchos:[17,17,18,18,13,13,13,13,12,30]}]);
+    };
+  }
+}
+
 function verTurno(t){
   if(!t) return;
   const D=datosCierre(t);
   modal({title:'Turno del '+fdate(t.apertura,true), size:'wide',
     body:'<div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;align-items:start">'+
       '<div class="card"><div class="hd"><h3>💵 Efectivo</h3></div><div class="bd">'+
-      '<div class="tline"><span>Base inicial</span><span class="v">'+money(t.base)+'</span></div>'+
+      '<div class="tline"><span>Abrió con (saldo anterior)</span><span class="v">'+money(t.base)+'</span></div>'+
       '<div class="tline"><span>Ventas en efectivo</span><span class="v">'+money(D.ventaEfe)+'</span></div>'+
       (D.otrosIng? '<div class="tline"><span>Otras entradas</span><span class="v">'+money(D.otrosIng)+'</span></div>':'')+
       (D.salidas? '<div class="tline"><span>Salidas</span><span class="v">−'+money(D.salidas)+'</span></div>':'')+
@@ -3543,22 +4065,63 @@ function verTurno(t){
 function mAbrirCaja(){
   const cajas=cajasDisponibles();
   if(!cajas.length) return toast('Primero crea una caja en Tesorería ▸ + Cuenta','warn',5000);
+  let cta=cajas[0].id;
   modal({title:'Abrir caja',size:'slim',
-    body:(cajas.length>1? '<div class="f" style="margin-bottom:10px"><label>¿Cuál caja?</label><select id="cj">'+
-        cajas.map(c=>'<option value="'+c.id+'">'+esc(c.nombre)+' · '+money(saldoCuenta(c.id))+'</option>').join('')+
-        '</select></div>':'')+
-      '<div class="f"><label>Base inicial en efectivo</label><input id="b" type="number" step="any" value="0"></div>'+
-      '<div class="hintx" style="margin-top:8px">Cajero: <b>'+esc(S.user?S.user.nombre:'')+'</b>'+
-      (cajas.length>1?'':' · Caja: <b>'+esc(cajas[0].nombre)+'</b>')+'</div>',
-    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Abrir</button>',
-    onOpen:m=>{ $('#ok',m).onclick=()=>{
-      const cta=$('#cj',m)? $('#cj',m).value : cajas[0].id;
-      if(S.turnos.some(t=>t.estado==='abierto'&&t.cuentaId===cta))
-        return toast('Esa caja ya tiene un turno abierto','warn');
-      const t={id:uid('t'),apertura:now(),cierre:'',usuarioId:S.user?S.user.id:'',cuentaId:cta,
-        base:toN($('#b',m).value), estado:'abierto',esperado:0,contado:0,diferencia:0,nota:''};
-      put('turnos',t); S.turno=t; closeModal(); render();
-      toast('Caja abierta · '+nameOf('cuentas',cta),'ok'); }; }});
+    body:'<div id="abox"></div>',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Confirmar apertura</button>',
+    onOpen:m=>{
+      const pinta=()=>{
+        const saldo=saldoCuenta(cta);
+        const ult=S.turnos.filter(t=>t.cuentaId===cta&&t.estado==='cerrado'&&t.cierre)
+          .sort((a,b)=>String(b.cierre).localeCompare(String(a.cierre)))[0];
+        const fuera=movsFueraDeTurno(cta);
+        $('#abox',m).innerHTML=
+          (cajas.length>1? '<div class="f" style="margin-bottom:12px"><label>¿Cuál caja?</label><select id="cj">'+
+            cajas.map(c=>'<option value="'+c.id+'"'+(c.id===cta?' selected':'')+'>'+esc(c.nombre)+'</option>').join('')+
+            '</select></div>':'')+
+          '<div class="card" style="background:var(--panel2)"><div class="bd" style="text-align:center;padding:18px 14px">'+
+            '<div class="tiny muted" style="text-transform:uppercase;letter-spacing:.7px">Abres con</div>'+
+            '<div class="mono" style="font-size:34px;font-weight:800;margin:4px 0;color:var(--ok)">'+money(saldo)+'</div>'+
+            '<div class="tiny muted">'+(ult? 'Es lo que quedó contado en el cierre del '+fdate(ult.cierre,true)
+                                            : 'Saldo que trae la caja')+'</div>'+
+          '</div></div>'+
+          (fuera.length? '<div class="card" style="background:var(--bad-soft);margin-top:10px"><div class="bd">'+
+            '<b>⚠ '+fuera.length+' movimiento'+(fuera.length>1?'s':'')+' con la caja cerrada</b>'+
+            '<div class="tiny" style="margin-top:5px">'+fuera.slice(0,4).map(x=>
+              (x.tipo==='ingreso'?'+ ':'− ')+money(x.monto)+' · '+esc(x.concepto||'')+
+              (x.soporte? ' <span class="muted">('+esc(x.soporte)+')</span>':'')).join('<br>')+
+            (fuera.length>4? '<br>y '+(fuera.length-4)+' más':'')+
+            '</div><div class="tiny muted" style="margin-top:6px">Ya están sumados o restados en el saldo de arriba.</div>'+
+            '</div></div>':'')+
+          '<label class="row tiny" style="margin-top:12px;gap:7px"><input type="checkbox" id="aj">'+
+            ' Al contar hay diferencia (ajustar el saldo)</label>'+
+          '<div class="f hide" id="ajb" style="margin-top:8px"><label>Efectivo realmente contado</label>'+
+            '<input id="rc" type="number" step="any" value="'+saldo+'">'+
+            '<div class="hintx" style="margin-top:5px">Se registra la diferencia como sobrante o faltante '+
+            'para que el libro quede igual a la plata que hay.</div></div>';
+        if($('#cj',m)) $('#cj',m).onchange=e=>{ cta=e.target.value; pinta(); };
+        $('#aj',m).onchange=e=>$('#ajb',m).classList.toggle('hide',!e.target.checked);
+      };
+      pinta();
+      $('#ok',m).onclick=()=>{
+        if(S.turnos.some(t=>t.estado==='abierto'&&t.cuentaId===cta))
+          return toast('Esa caja ya tiene un turno abierto','warn');
+        let saldo=saldoCuenta(cta);
+        if($('#aj',m) && $('#aj',m).checked){
+          const real=toN($('#rc',m).value), dif=round(real-saldo,2);
+          if(Math.abs(dif)>=0.5){
+            movTes(cta, dif>0?'ingreso':'egreso', Math.abs(dif),
+              (dif>0?'Sobrante':'Faltante')+' al abrir la caja','ajuste de caja','apertura','');
+            saldo=real;
+          }
+        }
+        const t={id:uid('t'),apertura:now(),cierre:'',usuarioId:S.user?S.user.id:'',cuentaId:cta,
+          base:round(saldo,2), saldoApertura:round(saldo,2), estado:'abierto',
+          esperado:0,contado:0,diferencia:0,nota:''};
+        put('turnos',t); S.turno=t; closeModal(); render();
+        toast('Caja abierta con '+money(saldo)+' · '+nameOf('cuentas',cta),'ok',4000);
+      };
+    }});
 }
 function mCerrarCaja(){
   const t=S.turno; if(!t) return;
@@ -3569,7 +4132,7 @@ function mCerrarCaja(){
       '<div>'+
         '<div class="card" style="background:var(--panel2);margin-bottom:12px"><div class="bd">'+
         '<b style="font-size:12.5px">SOLO SE CUENTA EL EFECTIVO</b>'+
-        '<div class="tline" style="margin-top:8px"><span>Base inicial</span><span class="v">'+money(t.base)+'</span></div>'+
+        '<div class="tline" style="margin-top:8px"><span>Abrió con (saldo anterior)</span><span class="v">'+money(t.base)+'</span></div>'+
         '<div class="tline"><span>Ventas en efectivo</span><span class="v">'+money(D.ventaEfe)+'</span></div>'+
         (D.otrosIng? '<div class="tline"><span>Otras entradas</span><span class="v">'+money(D.otrosIng)+'</span></div>':'')+
         (D.salidas? '<div class="tline" style="color:var(--bad)"><span>Salidas de caja</span><span class="v">−'+money(D.salidas)+'</span></div>':'')+
@@ -3618,9 +4181,16 @@ function mCerrarCaja(){
       $('#impc',m).onclick=()=>imprimirCierre(t,D,toN($('#c',m).value));
       $('#ok',m).onclick=()=>{
         t.contado=toN($('#c',m).value); t.esperado=esperado; t.diferencia=round(t.contado-esperado,2);
+        /* la plata contada manda: la diferencia queda registrada para que el
+           recorrido de la caja siga igual a lo que hay en el cajón.
+           Se registra ANTES de marcar el turno como cerrado, para que no salga
+           como movimiento fuera de turno. */
+        if(Math.abs(t.diferencia)>=0.5 && t.cuentaId)
+          movTes(t.cuentaId, t.diferencia>0?'ingreso':'egreso', Math.abs(t.diferencia),
+            (t.diferencia>0?'Sobrante':'Faltante')+' en el cierre de caja','ajuste de caja','cierre',t.id);
         t.cierre=now(); t.estado='cerrado'; t.nota=$('#n',m).value;
         t.ventas=D.totalVentas; t.ventaEfectivo=D.ventaEfe; t.salidas=D.salidas;
-        t.otrosMedios=D.porMedio; t.bancos=D.bancos;
+        t.otrosMedios=D.porMedio; t.bancos=D.bancos; t.saldoCierre=t.contado;
         put('turnos',t); S.turno=null; closeModal(); render();
         if(S.cfg.impTicket!==false) imprimirCierre(t,D,t.contado);
         toast('Turno cerrado · diferencia '+money(t.diferencia), Math.abs(t.diferencia)<1?'ok':'warn');
@@ -3650,7 +4220,7 @@ function imprimirCierre(t,D,contado,copia){
     ['Apertura', fdate(t.apertura,true)],
     ['Cierre', t.cierre? fdate(t.cierre,true) : fdate(now(),true)],
     'EFECTIVO',
-    ['Base inicial', money(t.base)],
+    ['Abrio con', money(t.base)],
     ['Ventas en efectivo', money(D.ventaEfe)],
     D.otrosIng? ['Otras entradas', money(D.otrosIng)] : null,
     D.salidas? ['Salidas', '-'+money(D.salidas)] : null,
@@ -3669,6 +4239,251 @@ function imprimirCierre(t,D,contado,copia){
     {firma:'Recibido por'}
   ]),{copia:copia});
   abrirImpresion(h,'cierre',S.cfg.impresoraTicket);
+}
+
+
+/* ===================== IMPORTAR DESDE EXCEL ===========================
+   Plantilla descargable + carga masiva de catálogo. Empareja por nombre:
+   si ya existe lo actualiza, si no lo crea.
+   ==================================================================== */
+const PLANTILLA=[
+  {hoja:'Categorias', campos:['nombre','icono','orden'],
+   ej:[['Hamburguesas','🍔',1],['Bebidas','🥤',2],['Postres','🍰',3]]},
+  {hoja:'Ingredientes', campos:['nombre','unidad','costo','stock_inicial','stock_minimo'],
+   ej:[['Carne de res','g',28,5000,1000],['Pan de hamburguesa','und',1200,60,12],['Queso','g',26,1500,300]]},
+  {hoja:'Productos', campos:['nombre','categoria','precio','icono','costo_sin_receta'],
+   ej:[['Hamburguesa clásica','Hamburguesas',22000,'🍔',''],['Gaseosa','Bebidas',5000,'🥤','']]},
+  {hoja:'Recetas', campos:['producto','ingrediente','cantidad'],
+   ej:[['Hamburguesa clásica','Carne de res',150],['Hamburguesa clásica','Pan de hamburguesa',1],
+       ['Hamburguesa clásica','Queso',30]]},
+  {hoja:'Clientes', campos:['nombre','documento','telefono','cupo'],
+   ej:[['Juan Pérez','1020304050','3001234567',300000]]},
+  {hoja:'Proveedores', campos:['nombre','nit','contacto','telefono'],
+   ej:[['Distribuidora La 80','900123456','Carnes','3101234567']]},
+  {hoja:'Mesas', campos:['nombre','zona','puestos'],
+   ej:[['A1','Salón',4],['A2','Salón',4],['T1','Terraza',6]]},
+  {hoja:'Cuentas', campos:['nombre','tipo','medio','saldo_inicial'],
+   ej:[['Caja general','caja','efectivo',0],['Nequi','banco','transferencia',0],
+       ['Datáfono','banco','tarjeta',0]]}
+];
+function descargarPlantilla(){
+  const hojas=[{nombre:'Instrucciones', anchos:[70], filas:[
+    [{v:'CÓMO LLENAR ESTA PLANTILLA',t:'titulo'}],[],
+    [{v:'1. Cada hoja es un tipo de dato. Llena solo las que necesites.',b:0}],
+    ['2. NO cambies la primera fila (los títulos de las columnas).'],
+    ['3. Borra las filas de ejemplo antes de subir el archivo.'],
+    ['4. Si un nombre ya existe en el sistema, se actualiza; si no, se crea.'],
+    ['5. En Productos, la columna "categoria" debe coincidir con un nombre de la hoja Categorias.'],
+    ['6. En Recetas, "producto" e "ingrediente" deben coincidir con los nombres de esas hojas.'],
+    ['7. Las cantidades van en la misma unidad del ingrediente (gramos, ml, unidades).'],
+    ['8. No importa si escribes con tildes o mayúsculas: el sistema compara sin distinguir.'],[],
+    [{v:'Orden recomendado: Categorías → Ingredientes → Productos → Recetas',b:1}],[],
+    [{v:'Generado por '+(S.cfg.nombre||'POS')+' el '+fdate(now(),true)}]
+  ]}];
+  PLANTILLA.forEach(p=>{
+    hojas.push({nombre:p.hoja, anchos:p.campos.map(()=>20),
+      filas:[p.campos.map(c=>({v:c,b:1}))].concat(p.ej.map(r=>r.slice()))});
+  });
+  exportarExcel('plantilla_importacion',hojas);
+}
+
+function normCab(t){ return normTxt(t).replace(/[^a-z0-9]/g,''); }
+function mapaCab(fila,campos){
+  const m={};
+  (fila||[]).forEach((c,i)=>{ const n=normCab(c);
+    campos.forEach(campo=>{ if(normCab(campo)===n && m[campo]===undefined) m[campo]=i; }); });
+  return m;
+}
+function buscaPorNombre(coll,nombre){
+  const n=normTxt(nombre).trim();
+  return S[coll].find(x=>normTxt(x.nombre).trim()===n)||null;
+}
+function analizarImport(hojas){
+  const plan={categorias:[],ingredientes:[],productos:[],recetas:[],clientes:[],proveedores:[],mesas:[],cuentas:[]};
+  const avisos=[];
+  const hoja=(nom)=>{ const k=Object.keys(hojas).find(h=>normCab(h)===normCab(nom)); return k? hojas[k]:null; };
+  const filas=(def)=>{
+    const h=hoja(def.hoja); if(!h||h.length<2) return [];
+    const m=mapaCab(h[0],def.campos);
+    const faltan=def.campos.filter(c=>m[c]===undefined && c==='nombre');
+    if(faltan.length){ avisos.push('La hoja '+def.hoja+' no tiene la columna "nombre"'); return []; }
+    const out=[];
+    for(let i=1;i<h.length;i++){
+      const r=h[i]||[]; const o={};
+      def.campos.forEach(c=>{ o[c]= m[c]!==undefined? String(r[m[c]]==null?'':r[m[c]]).trim() : ''; });
+      if(Object.values(o).every(v=>!v)) continue;
+      out.push(o);
+    }
+    return out;
+  };
+  PLANTILLA.forEach(def=>{
+    const rs=filas(def);
+    rs.forEach(o=>{
+      if(def.hoja==='Categorias'){ if(!o.nombre) return;
+        plan.categorias.push({nombre:o.nombre, emoji:o.icono||'🍽️', orden:toN(o.orden)||0}); }
+      else if(def.hoja==='Ingredientes'){ if(!o.nombre) return;
+        plan.ingredientes.push({nombre:o.nombre, unidad:o.unidad||'und', costo:toN(o.costo),
+          stock:toN(o.stock_inicial), stockMin:toN(o.stock_minimo)}); }
+      else if(def.hoja==='Productos'){ if(!o.nombre) return;
+        plan.productos.push({nombre:o.nombre, categoria:o.categoria||'', precio:toN(o.precio),
+          emoji:o.icono||'🍽️', costoManual:toN(o.costo_sin_receta)}); }
+      else if(def.hoja==='Recetas'){ if(!o.producto||!o.ingrediente) return;
+        plan.recetas.push({producto:o.producto, ingrediente:o.ingrediente, cantidad:toN(o.cantidad)}); }
+      else if(def.hoja==='Clientes'){ if(!o.nombre) return;
+        plan.clientes.push({nombre:o.nombre, doc:o.documento||'', telefono:o.telefono||'', limite:toN(o.cupo)}); }
+      else if(def.hoja==='Proveedores'){ if(!o.nombre) return;
+        plan.proveedores.push({nombre:o.nombre, nit:o.nit||'', contacto:o.contacto||'', telefono:o.telefono||''}); }
+      else if(def.hoja==='Mesas'){ if(!o.nombre) return;
+        plan.mesas.push({nombre:o.nombre, zona:o.zona||'Salón', capacidad:toN(o.puestos)||4}); }
+      else if(def.hoja==='Cuentas'){ if(!o.nombre) return;
+        plan.cuentas.push({nombre:o.nombre, tipo:(normTxt(o.tipo)==='banco'?'banco':'caja'),
+          medio:(['efectivo','tarjeta','transferencia'].indexOf(normTxt(o.medio))>=0? normTxt(o.medio):'efectivo'),
+          saldoInicial:toN(o.saldo_inicial)}); }
+    });
+  });
+  /* validaciones cruzadas */
+  plan.productos.forEach(p=>{ if(p.categoria && !buscaPorNombre('categorias',p.categoria) &&
+      !plan.categorias.some(c=>normTxt(c.nombre)===normTxt(p.categoria)))
+    avisos.push('El producto "'+p.nombre+'" apunta a la categoría "'+p.categoria+'", que no existe ni viene en el archivo'); });
+  plan.recetas.forEach(r=>{
+    const hayP=buscaPorNombre('productos',r.producto)||plan.productos.some(p=>normTxt(p.nombre)===normTxt(r.producto));
+    const hayI=buscaPorNombre('ingredientes',r.ingrediente)||plan.ingredientes.some(g=>normTxt(g.nombre)===normTxt(r.ingrediente));
+    if(!hayP) avisos.push('La receta menciona el producto "'+r.producto+'", que no existe');
+    if(!hayI) avisos.push('La receta menciona el ingrediente "'+r.ingrediente+'", que no existe');
+  });
+  return {plan:plan, avisos:Array.from(new Set(avisos)).slice(0,20)};
+}
+function aplicarImport(plan){
+  const res={creados:0, actualizados:0, detalle:{}};
+  const cuenta=(k,nuevo)=>{ res.detalle[k]=res.detalle[k]||{c:0,a:0};
+    if(nuevo){res.detalle[k].c++; res.creados++;} else {res.detalle[k].a++; res.actualizados++;} };
+
+  plan.categorias.forEach(o=>{ const ex=buscaPorNombre('categorias',o.nombre);
+    const d=ex||{id:uid('c'),activo:true};
+    d.nombre=o.nombre; d.emoji=o.emoji; d.orden=o.orden||d.orden||0; d.activo=true;
+    put('categorias',d); cuenta('Categorías',!ex); });
+
+  plan.ingredientes.forEach(o=>{ const ex=buscaPorNombre('ingredientes',o.nombre);
+    const d=ex||{id:uid('g'),activo:true,stock:0,costo:0};
+    d.nombre=o.nombre; d.unidad=o.unidad; d.stockMin=o.stockMin; d.activo=true;
+    if(!ex) d.costo=o.costo;
+    put('ingredientes',d);
+    if(!ex && o.stock>0) movInv(d.id,'entrada',o.stock,o.costo,'importacion','','Carga inicial desde Excel');
+    cuenta('Ingredientes',!ex); });
+
+  plan.productos.forEach(o=>{ const ex=buscaPorNombre('productos',o.nombre);
+    const cat=o.categoria? buscaPorNombre('categorias',o.categoria):null;
+    const d=ex||{id:uid('p'),activo:true,receta:[],orden:0};
+    d.nombre=o.nombre; d.precio=o.precio; d.emoji=o.emoji;
+    d.costoManual=o.costoManual||0; d.activo=true;
+    if(cat) d.categoriaId=cat.id;
+    put('productos',d); cuenta('Productos',!ex); });
+
+  /* las recetas se rearman completas por producto */
+  const porProd={};
+  plan.recetas.forEach(r=>{ const p=buscaPorNombre('productos',r.producto), g=buscaPorNombre('ingredientes',r.ingrediente);
+    if(!p||!g||!r.cantidad) return;
+    (porProd[p.id]=porProd[p.id]||[]).push({ingredienteId:g.id,cantidad:r.cantidad}); });
+  Object.keys(porProd).forEach(pid=>{ const p=byId('productos',pid); if(!p) return;
+    p.receta=porProd[pid]; put('productos',p);
+    res.detalle['Recetas']=res.detalle['Recetas']||{c:0,a:0}; res.detalle['Recetas'].a++; });
+
+  plan.clientes.forEach(o=>{ const ex=buscaPorNombre('clientes',o.nombre);
+    const d=ex||{id:uid('cl'),activo:true};
+    Object.assign(d,{nombre:o.nombre,doc:o.doc,telefono:o.telefono,limite:o.limite,activo:true});
+    put('clientes',d); cuenta('Clientes',!ex); });
+
+  plan.proveedores.forEach(o=>{ const ex=buscaPorNombre('proveedores',o.nombre);
+    const d=ex||{id:uid('pr'),activo:true};
+    Object.assign(d,{nombre:o.nombre,nit:o.nit,contacto:o.contacto,telefono:o.telefono,activo:true});
+    put('proveedores',d); cuenta('Proveedores',!ex); });
+
+  plan.mesas.forEach(o=>{ const ex=buscaPorNombre('mesas',o.nombre);
+    const d=ex||{id:uid('m'),activo:true};
+    Object.assign(d,{nombre:o.nombre,zona:o.zona,capacidad:o.capacidad,activo:true});
+    put('mesas',d); cuenta('Mesas',!ex); });
+
+  plan.cuentas.forEach(o=>{ const ex=buscaPorNombre('cuentas',o.nombre);
+    const d=ex||{id:uid('ct'),activo:true};
+    Object.assign(d,{nombre:o.nombre,tipo:o.tipo,medio:o.medio,activo:true});
+    if(!ex) d.saldoInicial=o.saldoInicial;
+    put('cuentas',d); cuenta('Cuentas',!ex); });
+
+  migrarAPeps();
+  return res;
+}
+
+function mImportar(){
+  const neg=S.cfg.fbNegocio? (S.cfg.nombre||S.cfg.fbNegocio) : (S.cfg.nombre||'este equipo');
+  modal({title:'Importar desde Excel', size:'wide', focus:false,
+    body:'<p class="hintx" style="margin-top:0">Se va a cargar sobre <b>'+esc(neg)+'</b>. '+
+      'Lo que ya exista con el mismo nombre se actualiza; lo nuevo se crea. Nada se borra.</p>'+
+      '<div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'+
+      '<div class="card" style="border-color:var(--brand)"><div class="bd">'+
+        '<div style="font-size:24px">⬇️</div><b>1. Descarga la plantilla</b>'+
+        '<p class="hintx" style="margin:6px 0 10px">Trae una hoja por cada tipo de dato, con ejemplos y las '+
+        'instrucciones adentro.</p>'+
+        '<button class="btn pri blk" id="im_plant">Descargar plantilla de Excel</button>'+
+      '</div></div>'+
+      '<div class="card"><div class="bd">'+
+        '<div style="font-size:24px">⬆️</div><b>2. Súbela llena</b>'+
+        '<p class="hintx" style="margin:6px 0 10px">Acepta .xlsx y .csv. Primero te muestro qué encontró y '+
+        'tú confirmas.</p>'+
+        '<button class="btn blk" id="im_pick">Elegir archivo</button>'+
+        '<input type="file" id="im_file" accept=".xlsx,.csv" hidden>'+
+      '</div></div></div>'+
+      '<div id="im_prev"></div>',
+    footer:'<button class="btn" data-x>Cerrar</button><button class="btn ok hide" id="im_ok">Importar</button>'});
+  $('#im_plant').onclick=descargarPlantilla;
+  $('#im_pick').onclick=()=>$('#im_file').click();
+  let planActual=null;
+  $('#im_file').onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    $('#im_prev').innerHTML='<div class="hintx">Leyendo '+esc(f.name)+'…</div>';
+    try{
+      const hojas=await leerTabla(f);
+      const {plan,avisos}=analizarImport(hojas);
+      planActual=plan;
+      const cuentas=[['Categorías',plan.categorias.length],['Ingredientes',plan.ingredientes.length],
+        ['Productos',plan.productos.length],['Líneas de receta',plan.recetas.length],
+        ['Clientes',plan.clientes.length],['Proveedores',plan.proveedores.length],
+        ['Mesas',plan.mesas.length],['Cuentas',plan.cuentas.length]].filter(x=>x[1]>0);
+      const total=cuentas.reduce((t,x)=>t+x[1],0);
+      $('#im_prev').innerHTML=
+        '<div class="card"><div class="hd"><h3>Esto encontré en el archivo</h3>'+
+          '<span class="pill '+(total?'ok':'bad')+'">'+total+' filas</span></div><div class="bd">'+
+          (cuentas.length? '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">'+
+            cuentas.map(c=>'<div class="card" style="background:var(--panel2)"><div class="bd">'+
+              '<div class="tiny muted">'+esc(c[0])+'</div>'+
+              '<div class="b" style="font-size:19px">'+c[1]+'</div></div></div>').join('')+'</div>'
+            : '<div class="empty">No encontré filas. ¿Usaste la plantilla y borraste los ejemplos?</div>')+
+          (avisos.length? '<div style="margin-top:12px"><b class="tiny" style="color:var(--warn)">Revisa esto:</b>'+
+            '<ul class="hintx" style="margin:6px 0 0;padding-left:18px">'+
+            avisos.map(a=>'<li>'+esc(a)+'</li>').join('')+'</ul></div>':'')+
+        '</div></div>';
+      $('#im_ok').classList.toggle('hide',!total);
+    }catch(err){
+      planActual=null;
+      $('#im_prev').innerHTML='<div class="card"><div class="bd"><b style="color:var(--bad)">No pude leer el archivo</b>'+
+        '<div class="hintx" style="margin-top:6px">'+esc(err.message||err)+'</div>'+
+        '<div class="hintx" style="margin-top:6px">Guárdalo como <b>.xlsx</b> desde Excel y vuelve a intentar.</div></div></div>';
+      $('#im_ok').classList.add('hide');
+    }
+    e.target.value='';
+  };
+  $('#im_ok').onclick=()=>{
+    if(!planActual) return;
+    confirmar('¿Cargar estos datos en '+neg+'?',()=>{
+      const r=aplicarImport(planActual);
+      closeModal(); render();
+      modal({title:'Importación terminada', size:'slim',
+        body:'<div class="kpis" style="margin-bottom:12px">'+
+          kpi('Creados',r.creados,'','ok')+kpi('Actualizados',r.actualizados,'','')+'</div>'+
+          Object.keys(r.detalle).map(k=>'<div class="tline"><span>'+esc(k)+'</span>'+
+            '<span class="v">'+r.detalle[k].c+' nuevos · '+r.detalle[k].a+' actualizados</span></div>').join('')+
+          '<div class="hintx" style="margin-top:12px">Si estás conectado a la nube, ya va subiendo en segundo plano.</div>'});
+    });
+  };
 }
 
 /* ===================== COMPROBANTES REIMPRIMIBLES =====================
@@ -4714,8 +5529,9 @@ function viewAjustes(vw){
         '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">'+
         '<div class="card"><div class="hd"><h3>Respaldo</h3></div><div class="bd">'+
           '<p class="hintx">Descarga un archivo con toda la información guardada en este dispositivo, o restaura desde uno anterior.</p>'+
-          '<div class="row"><button class="btn pri" id="d_exp">⬇️ Descargar respaldo</button>'+
-          '<button class="btn" id="d_imp">⬆️ Restaurar</button></div>'+
+          '<div class="row wrap"><button class="btn pri" id="d_exp">⬇️ Descargar respaldo</button>'+
+          '<button class="btn" id="d_imp">⬆️ Restaurar</button>'+
+          '<button class="btn" id="d_xls">📥 Importar desde Excel</button></div>'+
           '<input type="file" id="d_file" accept=".json" class="hide">'+
         '</div></div>'+
         '<div class="card"><div class="hd"><h3>Contenido local</h3></div><div class="bd p0">'+tbl([
@@ -4733,6 +5549,7 @@ function viewAjustes(vw){
         toast('Respaldo descargado','ok');
       };
       $('#d_imp').onclick=()=>$('#d_file').click();
+      $('#d_xls').onclick=mImportar;
       $('#d_file').onchange=e=>{
         const f=e.target.files[0]; if(!f) return;
         const rd=new FileReader();
@@ -4966,12 +5783,14 @@ async function cargarDirectorio(){
 function viewSuper(vw){
   sub('Conectado como '+(FB.email||''));
   topact('<button class="btn sm" id="s_ref">↻ Actualizar</button>'+
+         '<button class="btn sm" id="s_imp">📥 Importar Excel</button>'+
          '<button class="btn sm" id="s_cta">+ Cuenta</button>'+
          '<button class="btn pri sm" id="s_neg">+ Restaurante</button>');
   vw.innerHTML='<div id="sbody"><div class="empty"><span class="ico">⏳</span>Cargando…</div></div>';
   $('#s_ref').onclick=()=>viewSuper(vw);
   $('#s_neg').onclick=()=>edNegocio(null);
   $('#s_cta').onclick=()=>edCuentaNube(null);
+  $('#s_imp').onclick=mImportar;
   cargarDirectorio().then(()=>{
     const cuentasDe=id=>S.cuentasNube.filter(c=>c.negocioId===id&&c.rol!=='superadmin');
     const est=S.negocios.map(estadoNegocio);
