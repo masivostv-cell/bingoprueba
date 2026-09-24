@@ -285,7 +285,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
       <button class="btn pri lg blk" id="lg_in">Entrar</button>
       <p id="lg_err" class="hide" style="color:#ef5f5f;font-size:12.5px;margin:11px 0 0"></p>
       <div class="row" style="margin-top:14px;justify-content:center;gap:6px">
-        <button class="btn ghost sm" id="lg_help" style="color:#8b94a5">¿No puedes entrar?</button>
+        <button class="btn ghost sm" id="lg_help" style="color:#8b94a5">¿Quieres tu acceso?</button>
         <button class="btn ghost sm" id="lg_diag" style="color:#8b94a5">Revisar conexión</button>
       </div>
     </div>
@@ -444,7 +444,7 @@ const DEFCFG={ id:'cfg', nombre:'Mi Restaurante', nit:'', direccion:'', telefono
   /* impresión */
   impComanda:true, impTicket:true, ordenImp:'comanda', pausaImp:1800,
   comandaAncho:80, comandaPrecios:false, modoImp:'silencioso', letra:1.15,
-  impresoraComanda:'', impresoraTicket:'',
+  impresoraComanda:'', impresoraTicket:'', waSoporte:'573204491926',
   /* nube */
   fbApiKey:'AIzaSyAxCG0jyAb3NJUNjoV0bLTxiZfkm1_bN2o',
   fbProjectId:'restaurante-8f3f9',
@@ -1059,9 +1059,18 @@ function saldoCuenta(id){
   S.movimientos.forEach(m=>{ if(m.cuentaId!==id) return; s += m.tipo==='ingreso'? m.monto : -m.monto; });
   return round(s,2);
 }
+function cuentasDeMedio(medio){
+  const act=S.cuentas.filter(c=>c.activo!==false);
+  const propias=act.filter(c=>c.medio===medio);
+  return propias.length? propias : act;
+}
 function cuentaDeMedio(medio){
-  const c=S.cuentas.find(x=>x.medio===medio) || S.cuentas.find(x=>x.tipo==='caja') || S.cuentas[0];
-  return c? c.id : '';
+  const l=cuentasDeMedio(medio);
+  return l.length? l[0].id : (S.cuentas[0]? S.cuentas[0].id : '');
+}
+function opcionesCuenta(medio,sel){
+  return cuentasDeMedio(medio).map(c=>'<option value="'+c.id+'"'+(c.id===sel?' selected':'')+'>'+
+    (c.tipo==='caja'?'💵 ':'🏦 ')+esc(c.nombre)+' · '+money(saldoCuenta(c.id))+'</option>').join('');
 }
 const MEDIOS=[{k:'efectivo',n:'Efectivo',e:'💵'},{k:'tarjeta',n:'Tarjeta',e:'💳'},
   {k:'transferencia',n:'Transferencia',e:'📲'},{k:'credito',n:'Crédito',e:'🧾'}];
@@ -1076,14 +1085,47 @@ function saldoCliente(id){ return round(sum(cxc().filter(v=>v.clienteId===id),sa
 function diasVencido(doc){ if(!doc.vence) return 0; const d=Math.floor((Date.now()-new Date(doc.vence+'T23:59:59').getTime())/86400000); return d>0?d:0; }
 
 /* ---- turnos ---- */
-function turnoAbierto(){ return S.turnos.find(t=>t.estado==='abierto') || null; }
+function turnoAbierto(){
+  const mios=S.turnos.filter(t=>t.estado==='abierto');
+  if(!mios.length) return null;
+  if(S.user){ const m=mios.find(t=>t.usuarioId===S.user.id); if(m) return m; }
+  return mios[0];
+}
 function ventasDeTurno(id){ return S.ventas.filter(v=>v.turnoId===id && v.estado!=='anulada'); }
-function efectivoTurno(id){          // todo lo que entró y salió de cuentas tipo caja en el turno
+/* el arqueo es SOLO de efectivo; lo de bancos queda aparte para cuadrarlo después */
+function detalleTurno(t){
+  if(!t) return null;
+  const vs=ventasDeTurno(t.id);
+  const porMedio={};
+  vs.forEach(v=>{
+    if(v.credito) porMedio.credito=(porMedio.credito||0)+round((v.total||0)-sum(v.pagos||[],p=>p.monto),2);
+    (v.pagos||[]).forEach(p=>{ porMedio[p.medio]=(porMedio[p.medio]||0)+p.monto; });
+  });
+  const movs=S.movimientos.filter(m=>m.turnoId===t.id);
+  const enCaja=m=>{ const c=byId('cuentas',m.cuentaId);
+    return c && c.tipo==='caja' && (!t.cuentaId || m.cuentaId===t.cuentaId); };
+  const cm=movs.filter(enCaja);
+  const ventaEfe=sum(cm.filter(m=>m.tipo==='ingreso' && m.refTipo==='venta'),m=>m.monto);
+  const otrosIng=sum(cm.filter(m=>m.tipo==='ingreso' && m.refTipo!=='venta'),m=>m.monto);
+  const salidas =sum(cm.filter(m=>m.tipo==='egreso'),m=>m.monto);
+  const esperado=round((Number(t.base)||0)+ventaEfe+otrosIng-salidas,2);
+  const bancos={};
+  movs.filter(m=>{const c=byId('cuentas',m.cuentaId);return c&&c.tipo!=='caja';}).forEach(m=>{
+    bancos[m.cuentaId]=bancos[m.cuentaId]||{nombre:nameOf('cuentas',m.cuentaId),ing:0,egr:0};
+    if(m.tipo==='ingreso') bancos[m.cuentaId].ing+=m.monto; else bancos[m.cuentaId].egr+=m.monto;
+  });
+  return {vs,porMedio,ventaEfe,otrosIng,salidas,esperado,
+    bancos:Object.values(bancos), totalVentas:sum(vs,v=>v.total||0)};
+}
+function cajasDisponibles(){ return S.cuentas.filter(c=>c.activo!==false && c.tipo==='caja'); }
+function efectivoTurno(id){          // entradas y salidas de la caja de ese turno
+  const t=byId('turnos',id);
   let e=0;
   S.movimientos.forEach(m=>{
     if(m.turnoId!==id) return;
     const c=byId('cuentas',m.cuentaId);
     if(!c || c.tipo!=='caja') return;
+    if(t && t.cuentaId && m.cuentaId!==t.cuentaId) return;   // solo la caja del turno
     e += m.tipo==='ingreso'? m.monto : -m.monto;
   });
   return round(e,2);
@@ -1793,6 +1835,7 @@ function mCobrar(){
             '<div class="f"><label>Cliente</label><div id="cl"></div></div>'+
             '<div class="f"><label>Plazo (días)</label><input id="plz" type="number" value="30" min="0"></div>'+
           '</div><div class="hintx" id="clinfo" style="margin-top:6px"></div></div>'+
+        '<div class="f" id="ctabox" style="margin-bottom:10px"><label>Entra a</label><select id="cta"></select></div>'+
         '<div class="f" style="margin-bottom:10px"><label>Monto recibido</label>'+
           '<input id="mto" type="number" step="any" style="font-size:22px;font-weight:700;padding:12px" value="'+t.total+'"></div>'+
         '<div class="quickamt" id="qa">'+qa.map(v=>'<button data-q="'+v+'">'+money(v)+'</button>').join('')+
@@ -1823,7 +1866,9 @@ function mCobrar(){
     $('#plist',m).innerHTML = pagos.length? pagos.map((p,i)=>{
       const md=MEDIOS.find(x=>x.k===p.medio)||{};
       return '<div class="row" style="padding:7px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">'+
-        '<span>'+(md.e||'')+' '+esc(md.n||p.medio)+'</span><span class="spacer"></span>'+
+        '<span>'+(md.e||'')+' '+esc(md.n||p.medio)+
+          (p.cuentaId? ' <span class="tiny muted">→ '+esc(nameOf('cuentas',p.cuentaId))+'</span>':'')+
+        '</span><span class="spacer"></span>'+
         '<b class="mono">'+money(p.monto)+'</b><button class="btn ghost sm" data-r="'+i+'">✕</button></div>';
     }).join(''):'';
     $$('[data-r]',m).forEach(b=> b.onclick=()=>{ pagos.splice(+b.dataset.r,1); refresh(); });
@@ -1835,6 +1880,11 @@ function mCobrar(){
     $$('[data-me]',m).forEach(b=> b.classList.toggle('on',b.dataset.me===k));
     $('#credbox',m).classList.toggle('hide',k!=='credito');
     $('#qa',m).classList.toggle('hide',k!=='efectivo');
+    const cb=$('#ctabox',m);
+    if(k==='credito'){ cb.classList.add('hide'); }
+    else { const l=cuentasDeMedio(k);
+      $('#cta',m).innerHTML=opcionesCuenta(k, l[0]?l[0].id:'');
+      cb.classList.toggle('hide', l.length<2); }
     if(k==='credito'){ const cl=cbCl? byId('clientes',cbCl.valor()):null;
       $('#clinfo',m).innerHTML = cl? 'Saldo actual: <b>'+money(saldoCliente(cl.id))+'</b> · Cupo: '+money(cl.limite||0)
                                    : '<span class="muted">Busca el cliente o créalo escribiendo su nombre</span>'; }
@@ -1851,12 +1901,12 @@ function mCobrar(){
   $('#addp',m).onclick=()=>{
     const v=toN($('#mto',m).value); if(v<=0) return toast('Monto inválido','warn');
     if(medio==='credito') return toast('El crédito no requiere pago; confirma la venta','warn');
-    pagos.push({medio:medio,monto:v}); refresh();
+    pagos.push({medio:medio,monto:v,cuentaId:($('#cta',m)||{}).value||cuentaDeMedio(medio)}); refresh();
   };
   function autoPago(){                       // si no agregó el pago, tomar el monto escrito
     if(medio==='credito') return;
     const v=toN($('#mto',m).value);
-    if(falta()>0.5 && v>0){ pagos.push({medio:medio,monto:v}); refresh(); }
+    if(falta()>0.5 && v>0){ pagos.push({medio:medio,monto:v,cuentaId:($('#cta',m)||{}).value||cuentaDeMedio(medio)}); refresh(); }
   }
   $('#mto',m).onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#addp',m).click(); } };
   $('#ok',m).onclick=()=>{
@@ -1896,7 +1946,7 @@ function registrarVenta(o){
   if(original){ firmar(v); v.creadoPor=original.usuarioId; v.usuarioId=original.usuarioId;
     v.turnoId=original.turnoId||v.turnoId; }
   put('ventas',v);
-  (v.pagos||[]).forEach(p=> movTes(cuentaDeMedio(p.medio),'ingreso',p.monto,'Venta '+v.no,'venta','venta',v.id));
+  (v.pagos||[]).forEach(p=> movTes(p.cuentaId||cuentaDeMedio(p.medio),'ingreso',p.monto,'Venta '+v.no,'venta','venta',v.id));
   if(c.comandaId){ const cm=byId('comandas',c.comandaId); if(cm){ cm.estado='cerrada'; cm.ventaId=v.id; put('comandas',cm); } }
   S.cart=newCart();
   toast(original? 'Venta '+v.no+' corregida · '+money(v.total) : 'Venta '+v.no+' registrada · '+money(v.total),'ok');
@@ -1909,7 +1959,7 @@ function anularVenta(v){
   confirmar('¿Anular la venta '+v.no+'? Se devolverán los ingredientes al inventario.',()=>{
     v.estado='anulada'; put('ventas',v);
     reponerVenta(v);
-    (v.pagos||[]).forEach(p=> movTes(cuentaDeMedio(p.medio),'egreso',p.monto,'Anulación venta '+v.no,'anulacion','venta',v.id));
+    (v.pagos||[]).forEach(p=> movTes(p.cuentaId||cuentaDeMedio(p.medio),'egreso',p.monto,'Anulación venta '+v.no,'anulacion','venta',v.id));
     toast('Venta anulada','ok'); render();
   },true);
 }
@@ -2770,8 +2820,11 @@ function edCompra(orig){
       '<div id="credb" class="hide grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px">'+
         '<div class="f"><label>Plazo (días)</label><input id="plz" type="number" value="30"></div>'+
         '<div class="f"><label>&nbsp;</label><div class="hintx" id="vinfo"></div></div></div>'+
-      '<div id="pagob" class="f" style="margin-bottom:12px"><label>Pagar desde</label><select id="ct">'+
-        selOpts(S.cuentas.filter(c=>c.activo),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
+      '<div id="pagob" class="grid" style="grid-template-columns:1fr 1.4fr;margin-bottom:12px">'+
+        '<div class="f"><label>Forma de pago</label><select id="fp">'+
+          MEDIOS.filter(x=>x.k!=='credito').map(x=>'<option value="'+x.k+'"'+
+            ((orig&&orig.medioPago===x.k)?' selected':'')+'>'+x.e+' '+x.n+'</option>').join('')+'</select></div>'+
+        '<div class="f"><label>Sale de</label><select id="ct"></select></div></div>'+
       '<div class="row" style="margin-bottom:8px"><b>Ítems</b><span class="spacer"></span>'+
         '<button class="btn sm" id="addi">+ Ingrediente</button></div>'+
       '<div id="rows"></div>'+
@@ -2813,6 +2866,9 @@ function edCompra(orig){
           $('[data-x2]',row).onclick=()=>{items.splice(i,1);paintRows();calc();};
         });
       }
+      const pintaCtas=()=>{ const k=$('#fp',m).value;
+        $('#ct',m).innerHTML=opcionesCuenta(k,(orig&&orig.cuentaId)||cuentaDeMedio(k)); };
+      $('#fp',m).onchange=pintaCtas; pintaCtas();
       const cbPv=combo($('#pv',m),{lista:S.proveedores.filter(p=>p.activo), valor:(orig&&orig.proveedorId)||'',
         placeholder:'Buscar proveedor…',
         sub:x=>[x.nit,x.telefono].filter(Boolean).join(' · '), crear:CREAR_PROVEEDOR});
@@ -2836,11 +2892,13 @@ function edCompra(orig){
           proveedorId:cbPv.valor(), factura:$('#fa',m).value.trim(), items:items.slice(),
           subtotal:t.sub, impuesto:t.iva, total:t.total, credito:credito,
           vence: credito? dateAdd($('#fe',m).value||todayISO(),toN($('#plz',m).value)):'',
-          estado: credito?'pendiente':'pagada', cuentaId: credito?'':$('#ct',m).value,
+          estado: credito?'pendiente':'pagada',
+          medioPago: credito?'':$('#fp',m).value, cuentaId: credito?'':$('#ct',m).value,
           usuarioId:S.user?S.user.id:''};
         put('compras',cp);
         items.forEach(i=> movInv(i.ingredienteId,'entrada',i.cantidad,i.costoUnit,'compra',cp.id,'Compra '+cp.no));
         if(!credito) movTes(cp.cuentaId,'egreso',cp.total,'Compra '+cp.no+' · '+nameOf('proveedores',cp.proveedorId),'compra','compra',cp.id);
+        if(!credito && !cp.cuentaId) toast('Ojo: la compra quedó sin cuenta de salida','warn',5000);
         if(orig) firmar(cp), put('compras',cp);
         closeModal(); render();
         toast(orig? ('Compra '+cp.no+' corregida'+(parcial?' · parte ya se había vendido':''))
@@ -2856,7 +2914,9 @@ function verCompra(c){
       '<div><div class="tiny muted">Proveedor</div><b>'+esc(nameOf('proveedores',c.proveedorId))+'</b></div>'+
       '<div><div class="tiny muted">Fecha</div><b>'+fdate(c.fecha)+'</b></div>'+
       '<div><div class="tiny muted">Factura</div><b>'+esc(c.factura||'—')+'</b></div>'+
-      '<div><div class="tiny muted">Estado</div><b>'+(saldoCompra(c)>0.5?'Pendiente':'Pagada')+'</b></div></div>'+
+      '<div><div class="tiny muted">Estado</div><b>'+(saldoCompra(c)>0.5?'Pendiente':'Pagada')+'</b>'+
+        (c.cuentaId? '<div class="tiny muted">'+esc(nameOf('cuentas',c.cuentaId))+
+          (c.medioPago? ' · '+esc(c.medioPago):'')+'</div>':'')+'</div></div>'+
       tbl([{t:'Ingrediente',f:i=>esc(nameOf('ingredientes',i.ingredienteId))},
         {t:'Cantidad',num:1,f:i=>num(i.cantidad,3)},
         {t:'Costo unit.',num:1,f:i=>money(i.costoUnit)},
@@ -3154,18 +3214,24 @@ function viewTesoreria(vw){
   paint();
 }
 function edCuenta(c){
-  const ed=c||{id:uid('ct'),nombre:'',tipo:'caja',medio:'efectivo',saldoInicial:0,activo:true};
-  modal({title:c?'Editar cuenta':'Nueva cuenta',size:'slim',
+  const ed=c||{id:uid('ct'),nombre:'',tipo:'banco',medio:'transferencia',saldoInicial:0,activo:true};
+  modal({title:c?'Editar cuenta':'Nueva caja o banco',size:'slim',
     body:'<div class="f" style="margin-bottom:10px"><label>Nombre</label><input id="n" value="'+esc(ed.nombre)+'"></div>'+
       '<div class="grid" style="grid-template-columns:1fr 1fr">'+
-      '<div class="f"><label>Tipo</label><select id="t"><option value="caja"'+(ed.tipo==='caja'?' selected':'')+'>Caja</option>'+
-        '<option value="banco"'+(ed.tipo==='banco'?' selected':'')+'>Banco</option></select></div>'+
+      '<div class="f"><label>Tipo</label><select id="t"><option value="caja"'+(ed.tipo==='caja'?' selected':'')+'>Caja (efectivo)</option>'+
+        '<option value="banco"'+(ed.tipo==='banco'?' selected':'')+'>Banco / datáfono</option></select></div>'+
       '<div class="f"><label>Medio asociado</label><select id="m">'+MEDIOS.filter(x=>x.k!=='credito').map(x=>
         '<option value="'+x.k+'"'+(ed.medio===x.k?' selected':'')+'>'+x.n+'</option>').join('')+'</select></div></div>'+
-      '<div class="f" style="margin-top:10px"><label>Saldo inicial</label><input id="s" type="number" step="any" value="'+(ed.saldoInicial||0)+'"></div>',
+      '<div class="f" style="margin-top:10px"><label>Saldo inicial</label><input id="s" type="number" step="any" value="'+(ed.saldoInicial||0)+'"></div>'+
+      (c? '<label class="row tiny" style="margin-top:10px;gap:7px"><input type="checkbox" id="a" '+
+          (ed.activo!==false?'checked':'')+'> Activa (si la apagas deja de aparecer al cobrar)</label>':'')+
+      '<div class="hintx" style="margin-top:10px">Puedes crear <b>cuantas cajas y bancos necesites</b>. '+
+      'El <i>medio asociado</i> es el que se propone al cobrar o al pagar; si hay varias con el mismo medio, '+
+      'la app te deja escoger en el momento.</div>',
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
     onOpen:m=>{ $('#ok',m).onclick=()=>{ ed.nombre=$('#n',m).value.trim()||'Cuenta'; ed.tipo=$('#t',m).value;
       ed.medio=$('#m',m).value; ed.saldoInicial=toN($('#s',m).value);
+      if($('#a',m)) ed.activo=$('#a',m).checked;
       put('cuentas',ed); closeModal(); render(); toast('Cuenta guardada','ok'); }; }});
 }
 function mMovimiento(){
@@ -3207,25 +3273,38 @@ function viewTurnos(vw){
   const hist=S.turnos.slice().sort((a,b)=>b.apertura.localeCompare(a.apertura));
   let box;
   if(t){
-    const vs=ventasDeTurno(t.id);
-    const efe=efectivoTurno(t.id);
-    const esperado=round((Number(t.base)||0)+efe,2);
-    const porMedio={};
-    vs.forEach(v=>(v.pagos||[]).forEach(p=>{porMedio[p.medio]=(porMedio[p.medio]||0)+p.monto;}));
+    const D=detalleTurno(t);
     box='<div class="card" style="margin-bottom:14px"><div class="hd"><h3>Turno abierto</h3>'+
-      '<span class="pill ok">Desde '+ftime(t.apertura)+'</span><div class="spacer"></div>'+
+      '<span class="pill ok">Desde '+ftime(t.apertura)+'</span>'+
+      (t.cuentaId? '<span class="pill">💵 '+esc(nameOf('cuentas',t.cuentaId))+'</span>':'')+
+      '<div class="spacer"></div>'+
       '<button class="btn sm" id="mov">+ Entrada/salida de caja</button>'+
       '<button class="btn danger" id="cerrar">Cerrar caja</button></div><div class="bd">'+
       '<div class="kpis">'+
-        kpi('Base inicial',money(t.base),'','')+
-        kpi('Ventas del turno',money(sum(vs,v=>v.total)),vs.length+' facturas','brand')+
-        kpi('Efectivo en caja',money(esperado),'base + entradas − salidas','ok')+
+        kpi('Base inicial',money(t.base),'en efectivo','')+
+        kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas','brand')+
+        kpi('Efectivo para contar',money(D.esperado),'esto es lo único del arqueo','ok')+
         kpi('Cajero',esc(nameOf('usuarios',t.usuarioId)),'','')+
       '</div>'+
-      '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-top:14px">'+
-        MEDIOS.map(md=>'<div class="card" style="background:var(--panel2)"><div class="bd">'+
-          '<div class="tiny muted">'+md.e+' '+md.n+'</div>'+
-          '<div class="b mono" style="font-size:17px">'+money(porMedio[md.k]||0)+'</div></div></div>').join('')+
+      '<div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">'+
+        '<div class="card"><div class="hd"><h3>💵 Efectivo</h3><span class="pill ok">se cuenta al cerrar</span></div>'+
+          '<div class="bd">'+
+          '<div class="tline"><span>Base inicial</span><span class="v">'+money(t.base)+'</span></div>'+
+          '<div class="tline"><span>Ventas en efectivo</span><span class="v">'+money(D.ventaEfe)+'</span></div>'+
+          (D.otrosIng? '<div class="tline"><span>Otras entradas</span><span class="v">'+money(D.otrosIng)+'</span></div>':'')+
+          (D.salidas? '<div class="tline" style="color:var(--bad)"><span>Salidas de caja</span><span class="v">−'+money(D.salidas)+'</span></div>':'')+
+          '<div class="tline big"><span>Debe haber</span><span class="v">'+money(D.esperado)+'</span></div>'+
+          '</div></div>'+
+        '<div class="card"><div class="hd"><h3>🏦 Lo demás</h3><span class="pill">no se cuenta</span></div>'+
+          '<div class="bd">'+
+          MEDIOS.filter(x=>x.k!=='efectivo').map(md=>'<div class="tline"><span>'+md.e+' '+md.n+'</span>'+
+            '<span class="v">'+money(D.porMedio[md.k]||0)+'</span></div>').join('')+
+          (D.bancos.length? '<hr style="border:0;border-top:1px dashed var(--line);margin:9px 0">'+
+            D.bancos.map(bk=>'<div class="tline"><span>'+esc(bk.nombre)+'</span><span class="v">'+
+              money(bk.ing-bk.egr)+'</span></div>').join(''):'')+
+          '<div class="hintx" style="margin-top:10px">Queda registrado para que cuadres contra el extracto '+
+          'del banco y el datáfono cuando quieras.</div>'+
+          '</div></div>'+
       '</div></div></div>';
   } else {
     box='<div class="card" style="margin-bottom:14px"><div class="bd" style="text-align:center;padding:30px">'+
@@ -3237,6 +3316,7 @@ function viewTurnos(vw){
     {t:'Apertura',f:x=>fdate(x.apertura,true)},
     {t:'Cierre',f:x=>x.cierre?fdate(x.cierre,true):'<span class="pill ok">abierto</span>'},
     {t:'Cajero',f:x=>esc(nameOf('usuarios',x.usuarioId))},
+    {t:'Caja',f:x=>x.cuentaId? esc(nameOf('cuentas',x.cuentaId)):'<span class="muted">—</span>'},
     {t:'Base',num:1,f:x=>money(x.base)},
     {t:'Ventas',num:1,f:x=>money(sum(ventasDeTurno(x.id),v=>v.total))},
     {t:'Efectivo esperado',num:1,f:x=>money(x.estado==='abierto'? (x.base+efectivoTurno(x.id)) : x.esperado)},
@@ -3249,39 +3329,130 @@ function viewTurnos(vw){
   if($('#mov')) $('#mov').onclick=mMovimiento;
 }
 function mAbrirCaja(){
+  const cajas=cajasDisponibles();
+  if(!cajas.length) return toast('Primero crea una caja en Tesorería ▸ + Cuenta','warn',5000);
   modal({title:'Abrir caja',size:'slim',
-    body:'<div class="f"><label>Base inicial en efectivo</label><input id="b" type="number" step="any" value="0"></div>'+
-      '<div class="hintx" style="margin-top:8px">Cajero: <b>'+esc(S.user?S.user.nombre:'')+'</b></div>',
+    body:(cajas.length>1? '<div class="f" style="margin-bottom:10px"><label>¿Cuál caja?</label><select id="cj">'+
+        cajas.map(c=>'<option value="'+c.id+'">'+esc(c.nombre)+' · '+money(saldoCuenta(c.id))+'</option>').join('')+
+        '</select></div>':'')+
+      '<div class="f"><label>Base inicial en efectivo</label><input id="b" type="number" step="any" value="0"></div>'+
+      '<div class="hintx" style="margin-top:8px">Cajero: <b>'+esc(S.user?S.user.nombre:'')+'</b>'+
+      (cajas.length>1?'':' · Caja: <b>'+esc(cajas[0].nombre)+'</b>')+'</div>',
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Abrir</button>',
     onOpen:m=>{ $('#ok',m).onclick=()=>{
-      const t={id:uid('t'),apertura:now(),cierre:'',usuarioId:S.user?S.user.id:'',base:toN($('#b',m).value),
-        estado:'abierto',esperado:0,contado:0,diferencia:0,nota:''};
-      put('turnos',t); S.turno=t; closeModal(); render(); toast('Caja abierta','ok'); }; }});
+      const cta=$('#cj',m)? $('#cj',m).value : cajas[0].id;
+      if(S.turnos.some(t=>t.estado==='abierto'&&t.cuentaId===cta))
+        return toast('Esa caja ya tiene un turno abierto','warn');
+      const t={id:uid('t'),apertura:now(),cierre:'',usuarioId:S.user?S.user.id:'',cuentaId:cta,
+        base:toN($('#b',m).value), estado:'abierto',esperado:0,contado:0,diferencia:0,nota:''};
+      put('turnos',t); S.turno=t; closeModal(); render();
+      toast('Caja abierta · '+nameOf('cuentas',cta),'ok'); }; }});
 }
 function mCerrarCaja(){
   const t=S.turno; if(!t) return;
-  const efe=efectivoTurno(t.id), esperado=round((Number(t.base)||0)+efe,2);
-  const vs=ventasDeTurno(t.id);
-  modal({title:'Cerrar caja',
-    body:'<div class="card" style="background:var(--panel2);margin-bottom:14px"><div class="bd">'+
-      '<div class="tline"><span>Base inicial</span><span class="v">'+money(t.base)+'</span></div>'+
-      '<div class="tline"><span>Ventas en efectivo</span><span class="v">'+money(efe)+'</span></div>'+
-      '<div class="tline big"><span>Efectivo esperado</span><span class="v">'+money(esperado)+'</span></div></div></div>'+
-      '<div class="f"><label>Efectivo contado</label><input id="c" type="number" step="any" style="font-size:20px;font-weight:700;padding:11px" value="'+esperado+'"></div>'+
-      '<div class="tline big" id="dif" style="margin:10px 0"><span>Diferencia</span><span class="v">'+money(0)+'</span></div>'+
-      '<div class="f"><label>Observaciones</label><textarea id="n" rows="2"></textarea></div>',
-    footer:'<button class="btn" data-x>Cancelar</button><button class="btn danger" id="ok">Cerrar turno</button>',
+  const D=detalleTurno(t), esperado=D.esperado;
+  const den=[100000,50000,20000,10000,5000,2000,1000,500,200,100,50];
+  modal({title:'Cerrar caja'+(t.cuentaId? ' · '+nameOf('cuentas',t.cuentaId):''), size:'wide',
+    body:'<div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;align-items:start">'+
+      '<div>'+
+        '<div class="card" style="background:var(--panel2);margin-bottom:12px"><div class="bd">'+
+        '<b style="font-size:12.5px">SOLO SE CUENTA EL EFECTIVO</b>'+
+        '<div class="tline" style="margin-top:8px"><span>Base inicial</span><span class="v">'+money(t.base)+'</span></div>'+
+        '<div class="tline"><span>Ventas en efectivo</span><span class="v">'+money(D.ventaEfe)+'</span></div>'+
+        (D.otrosIng? '<div class="tline"><span>Otras entradas</span><span class="v">'+money(D.otrosIng)+'</span></div>':'')+
+        (D.salidas? '<div class="tline" style="color:var(--bad)"><span>Salidas de caja</span><span class="v">−'+money(D.salidas)+'</span></div>':'')+
+        '<div class="tline big"><span>Debe haber en caja</span><span class="v">'+money(esperado)+'</span></div>'+
+        '</div></div>'+
+        '<div class="f"><label>Efectivo contado</label>'+
+          '<input id="c" type="number" step="any" style="font-size:22px;font-weight:700;padding:12px" value="'+esperado+'"></div>'+
+        '<div class="tline big" id="dif" style="margin:10px 0"><span>Diferencia</span><span class="v">'+money(0)+'</span></div>'+
+        '<div class="f"><label>Observaciones</label><textarea id="n" rows="2" placeholder="Si hay diferencia, explica por qué"></textarea></div>'+
+      '</div>'+
+      '<div>'+
+        '<div class="card" style="margin-bottom:12px"><div class="hd"><h3>Contar billetes</h3>'+
+          '<div class="spacer"></div><button class="btn sm" id="usar">Usar este total</button></div><div class="bd">'+
+          '<div class="hintx" style="margin-bottom:8px">Opcional: escribe cuántos de cada uno y te suma.</div>'+
+          den.map(d=>'<div class="row" style="gap:8px;margin-bottom:5px">'+
+            '<span style="width:78px;text-align:right" class="mono tiny">'+money(d)+'</span>'+
+            '<input type="number" min="0" data-den="'+d+'" style="width:66px" placeholder="0">'+
+            '<span class="spacer"></span><span class="mono tiny" data-sub="'+d+'">—</span></div>').join('')+
+          '<div class="tline big" style="margin-top:8px"><span>Conteo</span><span class="v" id="conteo">'+money(0)+'</span></div>'+
+        '</div></div>'+
+        '<div class="card"><div class="hd"><h3>No entra al conteo</h3></div><div class="bd">'+
+          MEDIOS.filter(x=>x.k!=='efectivo').map(md=>'<div class="tline"><span>'+md.e+' '+md.n+'</span>'+
+            '<span class="v">'+money(D.porMedio[md.k]||0)+'</span></div>').join('')+
+          (D.bancos.length? '<hr style="border:0;border-top:1px dashed var(--line);margin:9px 0">'+
+            D.bancos.map(bk=>'<div class="tline"><span>'+esc(bk.nombre)+'</span><span class="v">'+
+              money(bk.ing-bk.egr)+'</span></div>').join(''):'')+
+          '<div class="hintx" style="margin-top:9px">Estos valores quedan guardados en el turno. El saldo de cada '+
+          'banco lo sigues viendo en Tesorería para cuadrarlo contra el extracto.</div>'+
+        '</div></div>'+
+      '</div></div>',
+    footer:'<button class="btn" data-x>Cancelar</button>'+
+      '<button class="btn" id="impc">🖨️ Imprimir cierre</button>'+
+      '<button class="btn danger" id="ok">Cerrar turno</button>',
     onOpen:m=>{
       const upd=()=>{ const d=round(toN($('#c',m).value)-esperado,2);
-        $('#dif',m).innerHTML='<span>Diferencia</span><span class="v" style="color:'+(Math.abs(d)<1?'var(--ok)':'var(--bad)')+'">'+money(d)+'</span>'; };
+        $('#dif',m).innerHTML='<span>Diferencia</span><span class="v" style="color:'+
+          (Math.abs(d)<1?'var(--ok)':'var(--bad)')+'">'+money(d)+'</span>'; };
       $('#c',m).oninput=upd; upd();
+      const recontar=()=>{ let tot=0;
+        $$('[data-den]',m).forEach(i=>{ const d=Number(i.dataset.den), n=toN(i.value);
+          const sub=d*n; tot+=sub;
+          $('[data-sub="'+d+'"]',m).textContent = n? money(sub):'—'; });
+        $('#conteo',m).textContent=money(tot); return tot; };
+      $$('[data-den]',m).forEach(i=>i.oninput=recontar);
+      $('#usar',m).onclick=()=>{ $('#c',m).value=recontar(); upd(); };
+      $('#impc',m).onclick=()=>imprimirCierre(t,D,toN($('#c',m).value));
       $('#ok',m).onclick=()=>{
         t.contado=toN($('#c',m).value); t.esperado=esperado; t.diferencia=round(t.contado-esperado,2);
-        t.cierre=now(); t.estado='cerrado'; t.nota=$('#n',m).value; t.ventas=sum(vs,v=>v.total);
+        t.cierre=now(); t.estado='cerrado'; t.nota=$('#n',m).value;
+        t.ventas=D.totalVentas; t.ventaEfectivo=D.ventaEfe; t.salidas=D.salidas;
+        t.otrosMedios=D.porMedio; t.bancos=D.bancos;
         put('turnos',t); S.turno=null; closeModal(); render();
+        if(S.cfg.impTicket!==false) imprimirCierre(t,D,t.contado);
         toast('Turno cerrado · diferencia '+money(t.diferencia), Math.abs(t.diferencia)<1?'ok':'warn');
       };
     }});
+}
+function imprimirCierre(t,D,contado){
+  const c=S.cfg, w=Number(c.ticketAncho)||80;
+  const L=(a,b)=>'<div class="l"><span>'+esc(a)+'</span><span>'+b+'</span></div>';
+  const dif=round((Number(contado)||0)-D.esperado,2);
+  const h='<html><head><meta charset="utf-8"><style>'+
+    '@page{size:'+w+'mm auto;margin:2.5mm}'+
+    'body{font:'+px(12)+'/1.42 Arial,Helvetica,sans-serif;color:#000;margin:0;width:'+(w-6)+'mm;font-weight:500}'+
+    'h1{font-size:'+px(17)+';margin:0;text-align:center;font-weight:bold}'+
+    'h2{font-size:'+px(12.5)+';margin:9px 0 3px;border-bottom:1.5px solid #000;font-weight:bold}'+
+    '.c{text-align:center}.l{display:flex;justify-content:space-between;gap:6px;padding:1px 0}'+
+    '.l span:last-child{white-space:nowrap}.b{font-weight:bold}'+
+    '.big{font-size:'+px(16)+';font-weight:bold;margin:3px 0}'+
+    'hr{border:0;border-top:1px dashed #000;margin:5px 0}'+
+    '.fir{margin-top:26px;border-top:1px solid #000;text-align:center;font-size:'+px(10.5)+'}'+
+    '</style></head><body>'+
+    '<h1>'+esc(c.nombre||'')+'</h1><div class="c">CIERRE DE CAJA</div>'+
+    '<div class="c">'+(t.cuentaId? esc(nameOf('cuentas',t.cuentaId)):'')+'</div><hr>'+
+    L('Cajero',esc(nameOf('usuarios',t.usuarioId)))+
+    L('Apertura',fdate(t.apertura,true))+
+    L('Cierre',fdate(now(),true))+
+    '<h2>EFECTIVO</h2>'+
+    L('Base inicial',money(t.base))+
+    L('Ventas en efectivo',money(D.ventaEfe))+
+    (D.otrosIng? L('Otras entradas',money(D.otrosIng)):'')+
+    (D.salidas? L('Salidas',' -'+money(D.salidas)):'')+
+    '<div class="l big"><span>ESPERADO</span><span>'+money(D.esperado)+'</span></div>'+
+    '<div class="l big"><span>CONTADO</span><span>'+money(contado)+'</span></div>'+
+    '<div class="l big"><span>DIFERENCIA</span><span>'+money(dif)+'</span></div>'+
+    '<h2>NO SE CUENTA</h2>'+
+    MEDIOS.filter(x=>x.k!=='efectivo').map(md=>L(md.n,money(D.porMedio[md.k]||0))).join('')+
+    '<h2>VENTAS</h2>'+
+    L('Facturas',D.vs.length)+
+    '<div class="l b"><span>TOTAL VENDIDO</span><span>'+money(D.totalVentas)+'</span></div>'+
+    (t.nota? '<hr><div>Obs: '+esc(t.nota)+'</div>':'')+
+    '<div class="fir">Firma del cajero</div>'+
+    '<div class="fir">Recibido por</div>'+
+    '</body></html>';
+  abrirImpresion(h,'cierre',S.cfg.impresoraTicket);
 }
 
 
@@ -3948,6 +4119,10 @@ function viewAjustes(vw){
             '<div class="f"><label>NIT</label><input id="g_nit" value="'+esc(c.nit||'')+'"></div>'+
             '<div class="f"><label>Teléfono</label><input id="g_telefono" value="'+esc(c.telefono||'')+'"></div></div>'+
           '<div class="f" style="margin-bottom:12px"><label>Dirección</label><input id="g_direccion" value="'+esc(c.direccion||'')+'"></div>'+
+          '<div class="f" style="margin-bottom:12px"><label>WhatsApp de soporte</label>'+
+            '<input id="g_waSoporte" value="'+esc(c.waSoporte||'573204491926')+'" placeholder="573204491926">'+
+            '<div class="hintx" style="margin-top:4px">A este número va el botón «¿Quieres tu acceso?» de la '+
+            'pantalla de ingreso. Con indicativo del país y sin espacios.</div></div>'+
           '<div class="f"><label>Logo del restaurante</label><div id="imglogo"></div></div>'+
         '</div></div>'+
         '<div class="card"><div class="hd"><h3>Moneda e impuestos</h3></div><div class="bd">'+
@@ -4037,6 +4212,7 @@ function viewAjustes(vw){
       $('#save').onclick=()=>{
         ['nombre','nit','telefono','direccion','simbolo','ticketPie','impresoraComanda','impresoraTicket']
           .forEach(k=> c[k]=$('#g_'+k).value.trim());
+        c.waSoporte=($('#g_waSoporte').value||'').replace(/\D/g,'')||'573204491926';
         c.modoImp=$('#g_modoImp').value; c.ordenImp=$('#g_ordenImp').value;
         c.pausaImp=Math.max(600,toN($('#g_pausaImp').value)||1800);
         c.comandaAncho=Number($('#g_comandaAncho').value);
@@ -4291,7 +4467,9 @@ async function diagnosticoNube(){
       '<b style="flex:0 0 150px">'+esc(l[1])+'</b><span class="tiny muted">'+esc(l[2])+'</span></div>').join(''); };
   modal({title:'Diagnóstico de la nube',
     body:'<div id="diagout"><div class="hintx">Probando…</div></div>',
-    footer:'<button class="btn" data-x>Cerrar</button>'});
+    footer:'<button class="btn danger" id="dg_res">Problemas con este equipo</button>'+
+      '<div class="spacer"></div><button class="btn" data-x>Cerrar</button>'});
+  $('#dg_res').onclick=()=>{ closeModal(); mRecuperarAcceso(); };
   try{
     await paso('Cómo se abrió',async()=>{
       if(location.protocol==='file:') return 'como archivo local (file://) · puede bloquear Firebase';
@@ -4719,6 +4897,7 @@ function paintLogin(){
     ? 'Entra con la cuenta que te entregaron'
     : 'Entra con tu correo y tu clave';
   $('#lg_help').classList.toggle('hide',false);
+  $('#lg_help').textContent = hayLegado()? 'Recuperar el acceso de este equipo' : '¿Quieres tu acceso?';
   lgError('');
   if(hayLegado()) lgError('Este equipo tiene usuarios de la versión anterior, que entraban con PIN. '+
     'Toca "¿No puedes entrar?" para ponerles correo y clave.');
@@ -4924,7 +5103,16 @@ function mRecuperarAcceso(){
   $('#rc_borrar').onclick=()=>confirmar('Se borrará TODO lo guardado en este equipo y la app quedará en blanco. ¿Seguro?',
     ()=>{ closeModal(); toast('Borrando…'); borrarTodoLocal(); }, true);
 }
-$('#lg_help').onclick=mRecuperarAcceso;
+function numeroSoporte(){ return String(S.cfg.waSoporte||'573204491926').replace(/\D/g,''); }
+function pedirAcceso(){
+  const neg=S.cfg.nombre||'';
+  const txt='Hola, quiero solicitar acceso al sistema POS'+
+    (neg && neg!=='Mi Restaurante' && neg!=='POS Restaurante' ? ' de '+neg : '')+'. ¿Me ayudas?';
+  const url='https://wa.me/'+numeroSoporte()+'?text='+encodeURIComponent(txt);
+  const w=window.open(url,'_blank','noopener');
+  if(!w) location.href=url;
+}
+$('#lg_help').onclick=()=>{ if(hayLegado()) mRecuperarAcceso(); else pedirAcceso(); };
 $('#lg_in').onclick=ingresar;
 $('#lg_pass').onkeydown=e=>{ if(e.key==='Enter') ingresar(); };
 $('#lg_mail').onkeydown=e=>{ if(e.key==='Enter') $('#lg_pass').focus(); };
