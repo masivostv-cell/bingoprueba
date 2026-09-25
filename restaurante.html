@@ -42,7 +42,7 @@ input[type=checkbox]{width:auto}
 .hide{display:none!important}
 
 /* ---------- shell ---------- */
-#app{display:grid;grid-template-columns:214px 1fr;height:100vh}
+#app{display:grid;grid-template-columns:214px 1fr;height:100vh;height:100dvh;overflow:hidden}
 #sidebar{background:var(--sb);color:var(--sb-ink);display:flex;flex-direction:column;overflow:hidden}
 .brand{padding:16px 16px 12px;display:flex;gap:10px;align-items:center;color:#fff}
 .brand .logo{width:32px;height:32px;border-radius:9px;background:var(--brand);display:grid;place-items:center;font-size:17px;flex:0 0 auto}
@@ -146,19 +146,22 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 .tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
 
 /* ---------- POS ---------- */
-#pos{display:grid;grid-template-columns:1fr 372px;height:100%;min-height:0}
-#posleft{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+#pos{display:grid;grid-template-columns:1fr 372px;grid-template-rows:minmax(0,1fr);height:100%;min-height:0;overflow:hidden}
+#posleft{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border-right:1px solid var(--line)}
 #poscats{display:flex;gap:7px;padding:12px 14px;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--panel);flex:0 0 auto}
 #poscats button{padding:7px 14px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap}
 #poscats button.on{background:var(--brand);border-color:var(--brand);color:#fff}
 #possearch{padding:10px 14px 0;flex:0 0 auto}
-#posgrid{flex:1;overflow-y:auto;padding:12px 14px;display:grid;gap:11px;
+#posgrid{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 14px;display:grid;gap:11px;
   grid-template-columns:repeat(auto-fill,minmax(132px,1fr));align-content:start}
 .pcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);padding:11px;cursor:pointer;
   display:flex;flex-direction:column;gap:6px;transition:.11s;box-shadow:var(--sh);position:relative;text-align:left;min-height:118px}
 .pcard:hover{border-color:var(--brand);transform:translateY(-2px);box-shadow:var(--sh2)}
 .pcard:active{transform:scale(.975)}
-.pcard .em{font-size:27px;line-height:1}
+/* el emoji ocupa el mismo alto que una foto, para que todas las fichas
+   queden parejas tengan o no imagen */
+.pcard .em{font-size:27px;line-height:1;height:82px;display:grid;place-items:center;
+  border-radius:9px;background:var(--panel2)}
 .pcard .nm{font-size:13px;font-weight:650;line-height:1.25;flex:1}
 .pcard .pr{font-size:14.5px;font-weight:750;color:var(--brand);font-variant-numeric:tabular-nums}
 .pcard .st{position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px}
@@ -166,9 +169,11 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 .pcard .st.no{background:var(--bad-soft);color:var(--bad)}
 .pcard .st.low{background:var(--warn-soft);color:var(--warn)}
 
-#poscart{display:flex;flex-direction:column;background:var(--panel);min-width:0}
+/* el carrito nunca crece más que la pantalla: la lista se desplaza por dentro y
+   el total con el botón de cobrar quedan siempre pegados abajo, a la vista */
+#poscart{display:flex;flex-direction:column;background:var(--panel);min-width:0;min-height:0;overflow:hidden}
 #carthd{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex:0 0 auto}
-#cartitems{flex:1;overflow-y:auto;padding:8px 10px}
+#cartitems{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 10px;overscroll-behavior:contain}
 .citem{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:9px 8px;border-radius:9px;border:1px solid transparent}
 .citem:hover{background:var(--panel2);border-color:var(--line)}
 .citem+.citem{border-top:1px solid var(--line2)}
@@ -179,7 +184,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 .qty button{width:26px;height:26px;display:grid;place-items:center;font-size:15px;font-weight:700;color:var(--ink2)}
 .qty button:hover{background:var(--line2)}
 .qty span{min-width:26px;text-align:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
-#carttot{border-top:1px solid var(--line);padding:12px 14px;flex:0 0 auto;background:var(--panel2)}
+#carttot{border-top:1px solid var(--line);padding:12px 14px;flex:0 0 auto;background:var(--panel2);box-shadow:0 -6px 14px rgba(0,0,0,.05)}
 .tline{display:flex;justify-content:space-between;font-size:13px;padding:2.5px 0;color:var(--ink2)}
 .tline.big{font-size:20px;font-weight:750;color:var(--ink);padding-top:8px;margin-top:6px;border-top:1px dashed var(--line)}
 .tline .v{font-variant-numeric:tabular-nums;font-weight:650}
@@ -240,11 +245,13 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 #tikframe,.printframe{position:fixed;width:0;height:0;border:0;left:-9999px}
 .imgprev{width:92px;height:92px;border-radius:12px;border:1px solid var(--line);overflow:hidden;
   background:var(--panel2);display:grid;place-items:center;flex:0 0 auto}
-.imgprev img{width:100%;height:100%;object-fit:cover;display:block}
+.imgprev img{width:100%;height:100%;object-fit:contain;display:block;background:var(--panel2)}
 .imgprev.vacia span{font-size:10.5px;color:var(--muted)}
-.pcard .foto{width:100%;height:74px;border-radius:9px;object-fit:cover;display:block;background:var(--panel2)}
-.brand .logoimg{width:32px;height:32px;border-radius:9px;object-fit:cover;flex:0 0 auto}
-#login .logoimg{width:60px;height:60px;border-radius:17px;object-fit:cover;margin:0 auto 14px;display:block}
+/* la foto se ve COMPLETA: nada de recortarle los bordes al plato */
+.pcard .foto{width:100%;height:82px;border-radius:9px;object-fit:contain;display:block;
+  background:var(--panel2);padding:3px;box-sizing:border-box}
+.brand .logoimg{width:32px;height:32px;border-radius:9px;object-fit:contain;flex:0 0 auto}
+#login .logoimg{width:60px;height:60px;border-radius:17px;object-fit:contain;margin:0 auto 14px;display:block}
 .cbx{position:relative}
 .cbx-in{width:100%;padding-right:28px}
 .cbx-x{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;
@@ -330,6 +337,8 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
   #posgrid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:9px;padding:10px;
     padding-bottom:calc(84px + env(safe-area-inset-bottom))}
   .pcard{min-height:104px;padding:9px}
+  .pcard .foto,.pcard .em{height:66px}
+  .pcard .em{font-size:23px}
   .pcard .nm{font-size:12.5px}.pcard .pr{font-size:14px}
   .pcard .foto{height:62px}
   #posbar{display:flex}
@@ -3444,7 +3453,7 @@ function viewProductos(vw){
     const ps=filtra(todos,q,[x=>x.nombre,x=>nameOf('categorias',x.categoriaId)]);
     $('#pbody').innerHTML=barraBusca('Buscar producto o categoría…',q)+'<div class="card"><div class="bd p0">'+tbl([
       {t:'',w:'52px',f:p=>{const u=urlImg(p.id);
-        return u? '<img src="'+u+'" style="width:36px;height:36px;border-radius:8px;object-fit:cover;display:block">'
+        return u? '<img src="'+u+'" style="width:36px;height:36px;border-radius:8px;object-fit:contain;display:block;background:var(--panel2)">'
                 : '<span style="font-size:20px">'+(p.emoji||'🍽️')+'</span>';}},
       {t:'Producto',f:p=>'<b>'+esc(p.nombre)+'</b>'+(p.activo?'':' <span class="pill bad">inactivo</span>')},
       {t:'Categoría',f:p=>esc(nameOf('categorias',p.categoriaId))},
