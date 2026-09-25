@@ -116,6 +116,13 @@ table.tbl th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-sp
   padding:9px 12px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:0;z-index:1;font-weight:700}
 table.tbl td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
 table.tbl tbody tr:hover{background:var(--panel2)}
+#pruebabar{display:flex;align-items:center;gap:10px;padding:9px 16px;background:repeating-linear-gradient(
+  45deg,var(--warn-soft),var(--warn-soft) 12px,transparent 12px,transparent 24px);
+  border-bottom:2px solid var(--warn);color:var(--warn);font-size:13px;flex:0 0 auto}
+#pruebabar.hide{display:none}
+#pruebabar .ic{font-size:18px}
+#pruebabar b{letter-spacing:.6px}
+@media (max-width:860px){ #pruebabar{font-size:12px;padding:8px 12px} }
 table.tbl tr.rcierre td{background:var(--warn-soft);font-weight:700;border-bottom:1px solid var(--warn)}
 table.tbl tr.rfuera td{background:var(--bad-soft)}
 table.tbl td.sal{font-variant-numeric:tabular-nums;font-weight:700}
@@ -383,6 +390,11 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
       <button id="sync" title="Estado de sincronización"><span class="dot"></span><span id="synctx">Local</span></button>
       <button class="btn ghost sm" id="btntheme" title="Tema">🌙</button>
     </header>
+    <div id="pruebabar" class="hide">
+      <span class="ic">🧪</span>
+      <div style="flex:1;min-width:0"><b>MODO PRUEBA</b> — <span id="pbtx"></span></div>
+      <button class="btn sm" id="pbsalir">Salir del modo prueba</button>
+    </div>
     <section id="view"></section>
   </main>
 </div>
@@ -645,12 +657,13 @@ function fsParse(v){
 function fsDoc(fields){ const o={}; Object.keys(fields||{}).forEach(k=>{ o[k]=fsParse(fields[k]); }); return o; }
 
 /* la configuración del dispositivo nunca viaja a la nube */
-const CFG_LOCAL=['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho'];
+const CFG_LOCAL=['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho','prueba'];
 function cfgParaNube(){ const o={}; Object.keys(S.cfg).forEach(k=>{ if(CFG_LOCAL.indexOf(k)<0) o[k]=S.cfg[k]; }); o.id='cfg'; return o; }
 
 /* ------------------------- cola de envío (outbox) ------------------- */
 let syncing=false, syncErr=0, lastSync=null, lastPull=null, pulling=false;
 function enqueue(entidad,op,payload){
+  if(S.cfg.prueba) return;                      // en modo prueba NADA sale del equipo
   if(!S.cfg.fbOn) return;                       // en modo local la cola no crece
   if(entidad==='config') payload=cfgParaNube();
   const item={id:uid('q'),ts:now(),entidad:entidad,op:op,payload:payload,intentos:0,error:''};
@@ -663,6 +676,7 @@ function scheduleSync(ms){ if(_st) return; _st=setTimeout(()=>{_st=null;flushOut
 
 async function flushOutbox(manual){
   if(syncing) return;
+  if(S.cfg.prueba){ if(manual) toast('Está en modo prueba: nada se sube a la nube','warn',4000); return; }
   if(!S.cfg.fbOn){ paintSync(); if(manual) toast('Activa la nube en Ajustes','warn'); return; }
   if(!FB.listo() && !(await fbRestaurarSesion())){ paintSync();
     if(manual) toast('Inicia sesión en la nube (Ajustes ▸ Nube)','warn'); return; }
@@ -720,6 +734,7 @@ function aplicarRemoto(coll,o){
 }
 async function pullCloud(manual){
   if(pulling) return 0;
+  if(S.cfg.prueba){ if(manual) toast('Está en modo prueba: no se baja nada de la nube','warn',4000); return 0; }
   if(!S.cfg.fbOn){ if(manual) toast('Activa la nube en Ajustes','warn'); return 0; }
   if(!FB.listo() && !(await fbRestaurarSesion())){ if(manual) toast('Inicia sesión en la nube','warn'); return 0; }
   if(!navigator.onLine){ if(manual) toast('Sin conexión','warn'); return 0; }
@@ -817,6 +832,7 @@ function paintSync(){
   const el=$('#sync'), tx=$('#synctx'); if(!el) return;
   const n=S.outbox.length;
   el.className='';
+  if(S.cfg.prueba){ el.classList.add('pend'); tx.textContent='🧪 Prueba'; return; }
   if(!S.cfg.fbOn){ el.classList.add('off'); tx.textContent = 'Local'; }
   else if(!FB.listo()){ el.classList.add('err'); tx.textContent='Sin sesión'+(n?' · '+n:''); }
   else if(syncing||pulling){ el.classList.add('busy'); tx.textContent= syncing?'Enviando…':'Recibiendo…'; }
@@ -825,8 +841,8 @@ function paintSync(){
   else { el.classList.add('okx'); tx.textContent='Nube ✓'; }
 }
 window.addEventListener('online',()=>{ if(S.cfg.autoSync){ scheduleSync(300); pullCloud(); } });
-setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && S.outbox.length) flushOutbox(); }, 15000);
-setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && !document.hidden) pullCloud(); },
+setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && !S.cfg.prueba && S.outbox.length) flushOutbox(); }, 15000);
+setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && !S.cfg.prueba && !document.hidden) pullCloud(); },
             Math.max(5,Number(DEFCFG.pullSeg)||12)*1000);
 
 /* --------------------------------- UI ------------------------------- */
@@ -1000,18 +1016,50 @@ function maxPorReceta(p){
   return m===Infinity?Infinity:Math.max(0,m);
 }
 
-/* ------------- inventario valuado por PEPS (FIFO) -------------------
-   Cada compra crea una "capa" con su propio costo. Cada venta consume
-   las capas más antiguas primero, y el costo real de esas capas es el
-   que queda grabado en la venta.
+/* ---------- inventario al COSTO PROMEDIO PONDERADO ------------------
+   El costo de un ingrediente es el promedio real de lo que hay AHORA en
+   bodega: el valor total del inventario dividido entre las unidades que
+   quedan. Cada compra vuelve a promediar lo que ya había con lo nuevo.
+   Las "capas" se conservan para poder deshacer una compra y para el
+   historial, pero todas quedan al mismo costo: el promedio vigente.
+   Cada capa guarda además 'costoBase', que es lo que costó de verdad esa
+   entrada, para poder recalcular bien el promedio si se borra.
    ------------------------------------------------------------------ */
 function capasDe(gid){
   return S.capas.filter(c=>c.ingredienteId===gid && (Number(c.restante)||0)>0.000001)
     .sort((a,b)=> String(a.fecha).localeCompare(String(b.fecha)) || String(a.id).localeCompare(String(b.id)));
 }
-function costoPeps(gid){ const c=capasDe(gid)[0]; return c? (Number(c.costoUnit)||0) : 0; }
+/* el costo real de lo que hay en este momento */
+function costoProm(gid){
+  const cs=capasDe(gid);
+  const q=round(sum(cs,c=>Number(c.restante)||0),4);
+  if(q<=0.000001) return 0;
+  return round(sum(cs,c=>(Number(c.restante)||0)*(Number(c.costoUnit)||0))/q,6);
+}
+const costoPeps=costoProm;                       // compatibilidad con lo ya escrito
+/* deja todas las capas del ingrediente al mismo costo: el promedio vigente.
+   Se llama cada vez que entra mercancía o se corrige una entrada. */
+function nivelarCosto(gid,menosCant,menosValor){
+  const cs=capasDe(gid);
+  if(!cs.length) return 0;
+  let q=round(sum(cs,c=>Number(c.restante)||0)-(Number(menosCant)||0),4);
+  let v=round(sum(cs,c=>(Number(c.restante)||0)*(Number(c.costoUnit)||0))-(Number(menosValor)||0),4);
+  if(q<=0.000001) return 0;
+  if(v<0) v=0;
+  const avg=round(v/q,6);
+  cs.forEach(c=>{ if(round(Number(c.costoUnit)||0,6)!==avg){ c.costoUnit=avg; put('capas',c); } });
+  return avg;
+}
+/* deja el costo del ingrediente igual al promedio de sus capas */
+function refrescarCosto(gid){
+  const g=byId('ingredientes',gid); if(!g) return 0;
+  const c=costoProm(gid)||ultimoCosto(gid);
+  if(round(Number(g.costo)||0,4)!==round(c,4)){ g.costo=round(c,4); put('ingredientes',g); }
+  return round(c,4);
+}
 function ultimoCosto(gid){
   const act=capasDe(gid)[0]; if(act) return Number(act.costoUnit)||0;
+  /* sin existencias: vale lo que costó la última entrada */
   const todas=S.capas.filter(c=>c.ingredienteId===gid);
   if(todas.length){ todas.sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
     return Number(todas[0].costoUnit)||0; }
@@ -1026,14 +1074,15 @@ function nuevaCapa(gid,cantidad,costoUnit,refTipo,refId,fecha){
      en vez de crear otra: una venta de 10 platos no deja 10 capitas */
   if(refTipo && refId){
     const ult=S.capas.filter(x=>x.ingredienteId===gid && x.refTipo===refTipo && x.refId===refId
-      && round(Number(x.costoUnit)||0,4)===cu).pop();
+      && round(Number(x.costoBase!=null? x.costoBase : x.costoUnit)||0,4)===cu).pop();
     if(ult){ ult.cantidad=round((Number(ult.cantidad)||0)+cantidad,4);
       ult.restante=round((Number(ult.restante)||0)+cantidad,4);
+      if(ult.costoBase==null) ult.costoBase=cu;
       put('capas',ult); return ult; }
   }
   const c={id:uid('cp'),ingredienteId:gid,fecha:fecha||now(),
     cantidad:round(cantidad,4), restante:round(cantidad,4),
-    costoUnit:cu, refTipo:refTipo||'', refId:refId||''};
+    costoUnit:cu, costoBase:cu, refTipo:refTipo||'', refId:refId||''};
   put('capas',c); return c;
 }
 function consumirPeps(gid,cantidad,refTipo,refId){
@@ -1057,18 +1106,20 @@ function movInv(ingredienteId,tipo,cantidad,costoUnit,refTipo,refId,nota){
   let delta=0, costoMov=0;
   if(tipo==='entrada'){
     const cu=(costoUnit===null||costoUnit===undefined||costoUnit==='')? ultimoCosto(ingredienteId) : Number(costoUnit)||0;
-    nuevaCapa(ingredienteId,c,cu,refTipo,refId,nota==='Reversión por anulación'?null:null);
+    nuevaCapa(ingredienteId,c,cu,refTipo,refId,null);
+    nivelarCosto(ingredienteId);             // lo que había + lo que entró = nuevo promedio
     delta=c; costoMov=round(c*cu,2);
   } else if(tipo==='salida'){
     costoMov=consumirPeps(ingredienteId,c,refTipo,refId); delta=-c;
   } else {                                   // ajuste: c es el conteo real
     delta=round(c-antes,4);
-    if(delta>0){ const cu=ultimoCosto(ingredienteId); nuevaCapa(ingredienteId,delta,cu,refTipo,refId);
+    if(delta>0){ const cu=costoProm(ingredienteId)||ultimoCosto(ingredienteId);
+      nuevaCapa(ingredienteId,delta,cu,refTipo,refId); nivelarCosto(ingredienteId);
       costoMov=round(delta*cu,2); }
     else if(delta<0){ costoMov=consumirPeps(ingredienteId,-delta,refTipo,refId); }
   }
   g.stock=round(antes+delta,4);
-  g.costo=costoPeps(ingredienteId)||ultimoCosto(ingredienteId);
+  g.costo=round(costoProm(ingredienteId)||ultimoCosto(ingredienteId),4);
   put('ingredientes',g);
   const m={id:uid('mi'),fecha:now(),ingredienteId:ingredienteId,tipo:tipo,
     cantidad:round(delta,4), costoTotal:round(costoMov,2),
@@ -1112,8 +1163,9 @@ function reponerVenta(v){
     const prim=capasDe(x.ingredienteId)[0];
     const fecha=new Date((prim? new Date(prim.fecha).getTime() : Date.now())-1000).toISOString();
     nuevaCapa(x.ingredienteId,x.cantidad,cu,'venta-anulada',v.id,fecha);
+    nivelarCosto(x.ingredienteId);
     g.stock=round((Number(g.stock)||0)+x.cantidad,4);
-    g.costo=costoPeps(x.ingredienteId)||ultimoCosto(x.ingredienteId);
+    g.costo=round(costoProm(x.ingredienteId)||ultimoCosto(x.ingredienteId),4);
     put('ingredientes',g);
     put('movinv',{id:uid('mi'),fecha:now(),ingredienteId:x.ingredienteId,tipo:'entrada',
       cantidad:round(x.cantidad,4),costoTotal:round(x.costo,2),costoUnit:cu,saldo:g.stock,
@@ -1121,12 +1173,19 @@ function reponerVenta(v){
   });
 }
 
-/* crea la capa inicial de ingredientes que vienen de antes del PEPS */
+/* Crea la capa inicial de los ingredientes que venían de antes y deja todo
+   al costo promedio: es la migración desde el costeo anterior. */
 function migrarAPeps(){
   S.ingredientes.forEach(g=>{
     const st=Number(g.stock)||0;
     if(st>0.000001 && !S.capas.some(c=>c.ingredienteId===g.id))
       nuevaCapa(g.id,st,Number(g.costo)||0,'inicial','','');
+  });
+  S.ingredientes.forEach(g=>{
+    S.capas.filter(c=>c.ingredienteId===g.id && c.costoBase==null)
+      .forEach(c=>{ c.costoBase=Number(c.costoUnit)||0; put('capas',c); });
+    nivelarCosto(g.id);
+    refrescarCosto(g.id);
   });
 }
 
@@ -1218,8 +1277,23 @@ const MEDIOS=[{k:'efectivo',n:'Efectivo',e:'💵'},{k:'tarjeta',n:'Tarjeta',e:'�
 
 /* ---- cartera ---- */
 function abonadoDe(docId){ return round(sum(S.abonos.filter(a=>a.docId===docId),a=>a.monto),2); }
-function saldoVenta(v){ return round((v.total||0)-abonadoDe(v.id),2); }
-function saldoCompra(c){ return round((c.total||0)-abonadoDe(c.id),2); }
+/* Lo que se pagó en el mismo momento de registrar el documento. Una compra
+   o una venta de contado NO deja saldo: ya salió (o entró) la plata. Solo lo
+   que quedó a crédito va a cartera. */
+function pagadoAlRegistrar(d){ return round(sum((d&&d.pagos)||[],p=>p.monto),2); }
+function saldoVenta(v){
+  if(!v || !v.credito) return 0;
+  return round((v.total||0)-pagadoAlRegistrar(v)-abonadoDe(v.id),2);
+}
+function saldoCompra(c){
+  if(!c || !c.credito) return 0;
+  return round((c.total||0)-abonadoDe(c.id),2);
+}
+/* pagos que se registraron por error sobre un documento que ya estaba pagado */
+function pagosDobles(d){
+  if(!d || d.credito) return [];
+  return S.abonos.filter(a=>a.docId===d.id);
+}
 function saldoDoc(d){ return round((d.total||0)-abonadoDe(d.id),2); }
 function docCartera(id){ return byId('ventas',id)||byId('compras',id)||byId('otrosdocs',id); }
 function coleccionDoc(d){ return d.esOtro? 'otrosdocs' : (d.proveedorId!==undefined? 'compras':'ventas'); }
@@ -1463,7 +1537,7 @@ function render(){
   const sus=S.suscripcion, es=sus?estadoNegocio(sus):null;
   if(es && (es.k==='porvencer'||es.k==='vencido') && !(S.user&&S.user._super))
     $('#topact').innerHTML='<span class="pill '+es.pill+'" title="Suscripción">⏳ '+esc(es.t)+'</span>';
-  buildNav(); paintSync();
+  buildNav(); paintSync(); pintarPrueba();
   const fn=({pos:viewPOS,mesas:viewMesas,ventas:viewVentas,compras:viewCompras,inventario:viewInventario,
     productos:viewProductos,cartera:viewCartera,tesoreria:viewTesoreria,turnos:viewCaja,caja:viewCaja,
     clientes:viewClientes,reportes:viewReportes,ajustes:viewAjustes,super:viewSuper,
@@ -1491,6 +1565,7 @@ function abrirCarrito(v){
 }
 function cerrarTodo(){ abrirNav(false); abrirCarrito(false);
   const sc=$('#scrim'); if(sc) sc.classList.remove('on'); }
+$('#pbsalir').onclick=()=>salirModoPrueba();
 $('#navtoggle').onclick=()=>abrirNav();
 $('#scrim').onclick=cerrarTodo;
 window.addEventListener('resize',()=>{ if(!esMovil()) cerrarTodo(); });
@@ -2312,9 +2387,20 @@ function mCobrar(){
   let pagos=[], medio='efectivo', plazo=30;
   const qa=[1000,2000,5000,10000,20000,50000,100000];
 
+  /* 'monto' es lo que se le abona a la venta; 'recibido' es el billete que
+     entregó el cliente. El vuelto es la diferencia y NO entra a la caja. */
   function pagado(){ return round(sum(pagos,p=>p.monto),2); }
+  function recibido(){ return round(sum(pagos,p=>p.recibido!=null? p.recibido : p.monto),2); }
   function falta(){ return round(Math.max(0,t.total-pagado()),2); }
-  function cambio(){ return round(Math.max(0,pagado()-t.total),2); }
+  function cambio(){ return round(Math.max(0,recibido()-t.total),2); }
+  function agregarPago(v){
+    const f=falta();
+    if(f<=0.5){ toast('La venta ya está cubierta','warn'); return false; }
+    const aplica=round(Math.min(v,f),2);
+    pagos.push({medio:medio, monto:aplica, recibido:round(v,2),
+      cuentaId:($('#cta',m)||{}).value||cuentaDeMedio(medio)});
+    return true;
+  }
 
   const m=modal({title:'Cobrar '+money(t.total), size:'wide', focus:false,
     body:'<div class="grid" style="grid-template-columns:1fr 300px;align-items:start">'+
@@ -2333,6 +2419,8 @@ function mCobrar(){
         '<div class="quickamt" id="qa">'+qa.map(v=>'<button data-q="'+v+'">'+money(v)+'</button>').join('')+
           '<button data-q="exacto">Falta</button></div>'+
         '<button class="btn ok blk" id="addp" style="margin-top:12px">+ Agregar pago</button>'+
+        '<div class="hintx" style="margin-top:8px">¿Paga con dos medios? Agregue la parte que le dan en '+
+        'efectivo, cambie arriba a transferencia o tarjeta y agregue el resto. Cada parte entra a su propia cuenta.</div>'+
         '<div id="plist" style="margin-top:12px"></div>'+
       '</div>'+
       '<div class="card"><div class="bd">'+
@@ -2343,7 +2431,7 @@ function mCobrar(){
         '<div class="tline big"><span>Total</span><span class="v">'+money(t.total)+'</span></div>'+
         '<hr style="border:0;border-top:1px dashed var(--line);margin:12px 0">'+
         '<div class="tline"><span>Pagado</span><span class="v" id="spag">'+money(0)+'</span></div>'+
-        '<div class="tline" style="color:var(--bad)"><span>Falta</span><span class="v" id="sfal">'+money(t.total)+'</span></div>'+
+        '<div class="tline" style="color:var(--bad)"><span>Falta</span><span class="v" id="sfal" style="font-size:16px;font-weight:750">'+money(t.total)+'</span></div>'+
         '<div class="tline" style="color:var(--ok);font-size:17px;font-weight:700"><span>Cambio</span><span class="v" id="scam">'+money(0)+'</span></div>'+
         '<label class="row tiny" style="margin-top:14px;gap:7px"><input type="checkbox" id="pt" '+
           ((S.cfg.impComanda!==false||S.cfg.impTicket!==false)?'checked':'')+'> Imprimir '+
@@ -2357,9 +2445,11 @@ function mCobrar(){
     $('#scam',m).textContent=money(cambio());
     $('#plist',m).innerHTML = pagos.length? pagos.map((p,i)=>{
       const md=MEDIOS.find(x=>x.k===p.medio)||{};
+      const vuelto=round((p.recibido!=null?p.recibido:p.monto)-p.monto,2);
       return '<div class="row" style="padding:7px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">'+
         '<span>'+(md.e||'')+' '+esc(md.n||p.medio)+
           (p.cuentaId? ' <span class="tiny muted">→ '+esc(nameOf('cuentas',p.cuentaId))+'</span>':'')+
+          (vuelto>0.5? '<div class="tiny muted">recibí '+money(p.recibido)+' · vuelto '+money(vuelto)+'</div>':'')+
         '</span><span class="spacer"></span>'+
         '<b class="mono">'+money(p.monto)+'</b><button class="btn ghost sm" data-r="'+i+'">✕</button></div>';
     }).join(''):'';
@@ -2393,12 +2483,12 @@ function mCobrar(){
   $('#addp',m).onclick=()=>{
     const v=toN($('#mto',m).value); if(v<=0) return toast('Monto inválido','warn');
     if(medio==='credito') return toast('El crédito no requiere pago; confirma la venta','warn');
-    pagos.push({medio:medio,monto:v,cuentaId:($('#cta',m)||{}).value||cuentaDeMedio(medio)}); refresh();
+    if(agregarPago(v)) refresh();
   };
   function autoPago(){                       // si no agregó el pago, tomar el monto escrito
     if(medio==='credito') return;
     const v=toN($('#mto',m).value);
-    if(falta()>0.5 && v>0){ pagos.push({medio:medio,monto:v,cuentaId:($('#cta',m)||{}).value||cuentaDeMedio(medio)}); refresh(); }
+    if(falta()>0.5 && v>0){ agregarPago(v); refresh(); }
   }
   $('#mto',m).onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#addp',m).click(); } };
   $('#ok',m).onclick=()=>{
@@ -2423,7 +2513,7 @@ function registrarVenta(o){
   const original = c.editandoId? byId('ventas',c.editandoId) : null;
   if(original) deshacerVenta(original);              // se recalcula todo desde cero
   const vid = original? original.id : uid('v');
-  /* el costo sale del consumo real de capas PEPS, no de un promedio */
+  /* el costo que se graba es el promedio real del inventario en este momento */
   const items=c.items.map(i=>({productoId:i.productoId,nombre:i.nombre,precio:i.precio,
     cant:i.cant,nota:i.nota,costo:0,costoTotal:0}));
   const cons=consumirItems(items,'venta',vid);
@@ -2479,7 +2569,7 @@ const anularVenta=borrarVenta;
 
 /* ================== EDICIÓN DE DOCUMENTOS (solo admin) ================
    Editar una venta o una compra no es cambiar un texto: hay que deshacer
-   lo que hizo en inventario (capas PEPS) y en caja, y volver a aplicarlo
+   lo que hizo en inventario (capas y costo promedio) y en caja, y volver a aplicarlo
    con los datos nuevos. Todo queda firmado con quién y cuándo.
    ==================================================================== */
 function puedeEditar(){ return !!(S.user && (S.user.rol==='admin' || S.user._super)); }
@@ -2506,8 +2596,9 @@ function devolverConsumo(v,motivo){
     const prim=capasDe(x.ingredienteId)[0];
     const fecha=new Date((prim? new Date(prim.fecha).getTime() : Date.now())-1000).toISOString();
     nuevaCapa(x.ingredienteId,x.cantidad,cu,motivo||'reverso',v.id,fecha);
+    nivelarCosto(x.ingredienteId);
     g.stock=round((Number(g.stock)||0)+x.cantidad,4);
-    g.costo=costoPeps(x.ingredienteId)||ultimoCosto(x.ingredienteId);
+    g.costo=round(costoProm(x.ingredienteId)||ultimoCosto(x.ingredienteId),4);
     put('ingredientes',g);
   });
 }
@@ -2524,9 +2615,13 @@ function deshacerCompra(c){
     const g=byId('ingredientes',cap.ingredienteId);
     const quita=Math.max(0,Number(cap.restante)||0);
     if(quita < (Number(cap.cantidad)||0)-0.000001) parcial=true;
-    if(g){ g.stock=round((Number(g.stock)||0)-quita,4); put('ingredientes',g); }
+    /* el valor que se va es el que costó de verdad esa compra, no el
+       promedio; así el promedio de lo que queda vuelve a ser el correcto */
+    const base=Number(cap.costoBase!=null? cap.costoBase : cap.costoUnit)||0;
     remove('capas',cap.id);
-    if(g){ g.costo=costoPeps(g.id)||ultimoCosto(g.id); put('ingredientes',g); }
+    if(g){ g.stock=round((Number(g.stock)||0)-quita,4); put('ingredientes',g); }
+    nivelarCosto(cap.ingredienteId, 0, round(quita*base - quita*(Number(cap.costoUnit)||0),4));
+    if(g){ g.costo=round(costoProm(g.id)||ultimoCosto(g.id),4); put('ingredientes',g); }
   });
   borrarDerivados('',c.id);
   return parcial;
@@ -2826,8 +2921,12 @@ function ticketHTML(v){
   const mesa=v.mesaId? byId('mesas',v.mesaId):null;
   const rows=(v.items||[]).map(i=>'<tr><td class="q">'+esc(i.cant)+'</td><td>'+esc(i.nombre)+
     (i.nota?'<div class="nt">* '+esc(i.nota)+'</div>':'')+'</td><td class="r">'+money(i.precio*i.cant)+'</td></tr>').join('');
+  const recib=round(sum(v.pagos||[],p=>p.recibido!=null? p.recibido : p.monto),2);
+  const vuelto=round(Math.max(0,recib-(v.total||0)),2);
   const pagos=(v.pagos||[]).map(p=>{const md=MEDIOS.find(x=>x.k===p.medio)||{};
-    return '<div class="l"><span>'+esc(md.n||p.medio)+'</span><span>'+money(p.monto)+'</span></div>';}).join('');
+    return '<div class="l"><span>'+esc(md.n||p.medio)+'</span><span>'+money(p.monto)+'</span></div>';}).join('')+
+    (vuelto>0.5? '<div class="l"><span>Recibido</span><span>'+money(recib)+'</span></div>'+
+                 '<div class="l b"><span>CAMBIO</span><span>'+money(vuelto)+'</span></div>':'');
   return '<html><head><meta charset="utf-8"><style>'+
    '@page{size:'+w+'mm auto;margin:2.5mm}'+
    '*{-webkit-print-color-adjust:exact}'+
@@ -3095,7 +3194,7 @@ function viewProductos(vw){
       {t:'Producto',f:p=>'<b>'+esc(p.nombre)+'</b>'+(p.activo?'':' <span class="pill bad">inactivo</span>')},
       {t:'Categoría',f:p=>esc(nameOf('categorias',p.categoriaId))},
       {t:'Receta',f:p=> p.receta&&p.receta.length? '<span class="pill info">'+p.receta.length+' ingr.</span>':'<span class="pill">sin receta</span>'},
-      {t:'Costo PEPS',num:1,f:p=>money(costoProducto(p))},
+      {t:'Costo promedio',num:1,f:p=>money(costoProducto(p))},
       {t:'Precio',num:1,f:p=>'<b>'+money(p.precio)+'</b>'},
       {t:'Margen',num:1,f:p=>{const m=margen(p);return '<span class="pill '+(m>=50?'ok':m>=25?'warn':'bad')+'">'+m+'%</span>';}},
       {t:'Disp.',num:1,f:p=>{const d=maxPorReceta(p);return d===Infinity?'<span class="muted">∞</span>':
@@ -3137,7 +3236,7 @@ function edProducto(p){
           '<div class="f"><label>Precio de venta</label><input id="pr" type="number" step="any" value="'+(ed.precio||0)+'"></div>'+
           '<div class="f"><label>Costo sin receta</label><input id="cm" type="number" step="any" value="'+(ed.costoManual||0)+'"></div></div>'+
         '<div class="card" style="background:var(--panel2)"><div class="bd">'+
-          '<div class="tline"><span>Costo receta (PEPS actual)</span><span class="v" id="rc">—</span></div>'+
+          '<div class="tline"><span>Costo receta (promedio actual)</span><span class="v" id="rc">—</span></div>'+
           '<div class="tline"><span>Utilidad</span><span class="v" id="ru">—</span></div>'+
           '<div class="tline b"><span>Margen</span><span class="v" id="rm">—</span></div></div></div>'+
         '<div class="f" style="margin-top:12px"><label>Foto del plato</label><div id="imgp"></div></div>'+
@@ -3172,7 +3271,7 @@ function edProducto(p){
           '<div class="hintx">Sin ingredientes. Se usará el costo manual.</div>';
         $$('.recipe-row',m).forEach(row=>{ const i=+row.dataset.i;
           combo($('[data-g]',row),{lista:S.ingredientes.filter(x=>x.activo), valor:ed.receta[i].ingredienteId,
-            placeholder:'Buscar ingrediente…', sub:x=>'costo '+money(costoPeps(x.id)||x.costo)+' / '+x.unidad,
+            placeholder:'Buscar ingrediente…', sub:x=>'costo '+money(costoProm(x.id)||x.costo)+' / '+x.unidad,
             crear:CREAR_INGREDIENTE,
             onPick:(id,obj)=>{ ed.receta[i].ingredienteId=id;
               $('[data-u]',row).textContent=(obj&&obj.unidad)||''; calc(); }});
@@ -3204,7 +3303,7 @@ function viewInventario(vw){
   let tab='stock', q='';
   topact('<button class="btn sm" id="aj">⚖️ Ajuste</button><button class="btn pri sm" id="add">+ Ingrediente</button>');
   vw.innerHTML='<div id="itabs"></div><div id="ibody"></div>';
-  $('#itabs').appendChild(tabsBar([['stock','Existencias'],['capas','Capas PEPS'],['mov','Movimientos']],tab,t=>{tab=t;paint();}));
+  $('#itabs').appendChild(tabsBar([['stock','Existencias'],['capas','Entradas'],['mov','Movimientos']],tab,t=>{tab=t;paint();}));
   $('#add').onclick=()=>edIngrediente(null);
   $('#aj').onclick=mAjuste;
   function paint(){
@@ -3227,7 +3326,7 @@ function viewInventario(vw){
       const cs=S.capas.slice().sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha))).slice(0,500);
       $('#ibody').innerHTML=
         '<div class="hintx" style="margin-bottom:12px">Cada compra abre una capa con su costo. '+
-        'Las ventas consumen siempre la capa más antigua que quede con saldo (PEPS).</div>'+
+        'Todas quedan al mismo costo: el promedio de lo que hay en bodega en este momento.</div>'+
         '<div class="card"><div class="bd p0">'+tbl([
         {t:'Ingrediente',f:c=>'<b>'+esc(nameOf('ingredientes',c.ingredienteId))+'</b>'},
         {t:'Entró',f:c=>fdate(c.fecha,true)},
@@ -3248,7 +3347,7 @@ function viewInventario(vw){
     $('#ibody').innerHTML=
       '<div class="kpis" style="margin-bottom:14px">'+
         kpi('Ingredientes',gs.length,'','')+
-        kpi('Valor del inventario',money(valor),'valuado por PEPS','brand')+
+        kpi('Valor del inventario',money(valor),'al costo promedio','brand')+
         kpi('Bajo mínimo',bajo.length,bajo.length?'requieren compra':'todo en orden',bajo.length?'bad':'ok')+
       '</div>'+
       barraBusca('Buscar ingrediente…',q)+
@@ -3258,9 +3357,9 @@ function viewInventario(vw){
         {t:'Stock',num:1,f:g=>{const b=(Number(g.stock)||0)<=(Number(g.stockMin)||0);
           return '<b style="color:'+(b?'var(--bad)':'inherit')+'">'+num(g.stock,2)+'</b>';}},
         {t:'Mínimo',num:1,f:g=>num(g.stockMin,2)},
-        {t:'Costo PEPS',num:1,f:g=>money(costoPeps(g.id)||g.costo)},
+        {t:'Costo promedio',num:1,f:g=>money(costoProm(g.id)||g.costo)},
         {t:'Capas',num:1,f:g=>capasDe(g.id).length},
-        {t:'Valor PEPS',num:1,f:g=>money(valorInv(g.id))},
+        {t:'Valor',num:1,f:g=>money(valorInv(g.id))},
         {t:'Usado en',num:1,f:g=>S.productos.filter(p=>(p.receta||[]).some(r=>r.ingredienteId===g.id)).length},
         {t:'',f:g=>'<button class="btn ghost sm" data-e="'+g.id+'">✎</button>'}
       ],gs,{empty:q?'Nada coincide con «'+esc(q)+'»':'Sin ingredientes',icon:'🥫'})+'</div></div>';
@@ -3277,7 +3376,7 @@ function edIngrediente(g){
     body:'<div class="f" style="margin-bottom:10px"><label>Nombre</label><input id="n" value="'+esc(ed.nombre)+'"></div>'+
       '<div class="grid" style="grid-template-columns:1fr 1fr 1fr">'+
       '<div class="f"><label>Unidad</label><input id="u" value="'+esc(ed.unidad)+'" placeholder="g, ml, und"></div>'+
-      '<div class="f"><label>Costo unitario'+(g?' (PEPS)':'')+'</label><input id="c" type="number" step="any" value="'+(ed.costo||0)+'" '+(g?'disabled title="Lo calculan las capas PEPS"':'')+'></div>'+
+      '<div class="f"><label>Costo unitario'+(g?' (promedio)':'')+'</label><input id="c" type="number" step="any" value="'+(ed.costo||0)+'" '+(g?'disabled title="Lo calcula el promedio de lo que hay en bodega"':'')+'></div>'+
       '<div class="f"><label>Stock mínimo</label><input id="sm" type="number" step="any" value="'+(ed.stockMin||0)+'"></div></div>'+
       (g?'<div class="hintx" style="margin-top:10px">Stock actual: <b>'+num(ed.stock,3)+' '+esc(ed.unidad)+
         '</b> en '+capasDe(ed.id).length+' capa(s), valuado en <b>'+money(valorInv(ed.id))+
@@ -3521,6 +3620,7 @@ function edCompra(orig){
 function verCompra(c){
   if(!c) return;
   const ab=S.abonos.filter(a=>a.docId===c.id);
+  const dobles=pagosDobles(c);
   modal({title:'Compra '+c.no,size:'wide',
     body:'<div class="grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">'+
       '<div><div class="tiny muted">Proveedor</div><b>'+esc(nameOf('proveedores',c.proveedorId))+'</b></div>'+
@@ -3539,7 +3639,15 @@ function verCompra(c){
       '<div class="tline big"><span>Total</span><span class="v">'+money(c.total)+'</span></div>'+
       (ab.length?'<div class="tline"><span>Abonado</span><span class="v">'+money(abonadoDe(c.id))+'</span></div>':'')+
       (saldoCompra(c)>0.5?'<div class="tline" style="color:var(--bad)"><span>Saldo</span><span class="v">'+money(saldoCompra(c))+'</span></div>':'')+
-      '</div>',
+      '</div>'+
+      (dobles.length? '<div class="card" style="background:var(--bad-soft);margin-top:12px"><div class="bd">'+
+        '<b>⚠ Esta compra se pagó dos veces</b>'+
+        '<div class="tiny" style="margin-top:5px">Ya había salido la plata cuando la registró de contado, y además '+
+        'le quedaron '+dobles.length+' pago(s) por '+money(sum(dobles,a=>a.monto))+' registrados encima. '+
+        'Puedo quitar esos pagos de más y devolver la plata a la cuenta.</div>'+
+        '<button class="btn danger sm" id="fixdoble" style="margin-top:9px">Quitar el pago repetido</button>'+
+        '</div></div>':'')+
+      '',
     footer:(saldoCompra(c)>0.5?'<button class="btn ok" id="pg">💵 Registrar pago</button>':'')+
       '<button class="btn" id="imp">🖨️ Comprobante</button>'+
       (puedeEditar()&&c.estado!=='anulada'?'<button class="btn" id="edt">✎ Editar</button>'+
@@ -3550,6 +3658,7 @@ function verCompra(c){
       if($('#imp',m)) $('#imp',m).onclick=()=>comprobanteCompra(c,true);
       if($('#edt',m)) $('#edt',m).onclick=()=>{closeModal();edCompra(c);};
       if($('#anu',m)) $('#anu',m).onclick=()=>{closeModal();anularCompra(c);};
+      if($('#fixdoble',m)) $('#fixdoble',m).onclick=()=>{ closeModal(); quitarPagosDobles(c); };
     }});
 }
 
@@ -5140,7 +5249,7 @@ function mResumenVentas(d1,d2){
 }
 
 /* =========================== CONTABILIDAD ============================
-   Estado de resultados por rango de fecha, con el costo real PEPS que
+   Estado de resultados por rango de fecha, con el costo promedio real que
    quedó grabado en cada venta. Las compras NO son gasto: entran al
    inventario y se vuelven costo cuando el plato se vende.
    =================================================================== */
@@ -5269,7 +5378,7 @@ function viewContabilidad(vw){
     $('#cbody').innerHTML=
       '<div class="kpis" style="margin-bottom:14px">'+
         kpi('Ventas netas',money(r.ventasNetas),r.vs.length+' facturas','brand')+
-        kpi('Costo de ventas',money(r.costo),'PEPS real','')+
+        kpi('Costo de ventas',money(r.costo),'costo promedio real','')+
         kpi('Utilidad bruta',money(r.bruta),mrg+'% margen','ok')+
         kpi('Gastos',money(r.totalGastos),r.gastos.length+' movimientos','bad')+
         kpi('Utilidad neta',money(r.neta),mrgN+'% sobre ventas',r.neta>=0?'ok':'bad')+
@@ -5408,7 +5517,7 @@ function imprimirInforme(r){
     (r.propinas?fila('Propinas','−'+money(r.propinas)):'')+
     (r.impuestos?fila('Impuestos','−'+money(r.impuestos)):'')+
     fila('Ventas netas',money(r.ventasNetas))+
-    fila('Costo de ventas (PEPS)','−'+money(r.costo))+
+    fila('Costo de ventas','−'+money(r.costo))+
     '<tr class="tot"><td>Utilidad bruta</td><td class="r">'+money(r.bruta)+'</td></tr>'+
     r.porGasto.map(g=>fila(g.nombre,'−'+money(g.valor))).join('')+
     fila('Total gastos','−'+money(r.totalGastos))+
@@ -5884,32 +5993,46 @@ function viewAjustes(vw){
         '</div></div>'+
         '<div class="card"><div class="hd"><h3>Contenido local</h3></div><div class="bd p0">'+tbl([
           {t:'Tabla',f:r=>esc(r.n)},{t:'Registros',num:1,f:r=>r.v}],counts,{empty:'—'})+'</div></div>'+
+        (ventasConVuelto().length? '<div class="card" style="border-color:var(--bad)"><div class="hd"><h3>⚠ Revisión</h3></div><div class="bd">'+
+          '<p class="hintx">Encontré <b>'+ventasConVuelto().length+' venta(s)</b> donde quedó guardado el billete '+
+          'completo que entregó el cliente en vez del valor de la venta, así que la caja tiene '+
+          '<b>'+money(round(sum(ventasConVuelto(),v=>sum(v.pagos||[],p=>p.monto)-(v.total||0)),2))+'</b> de más.</p>'+
+          '<button class="btn danger" id="d_vuelto">Corregir los vueltos</button>'+
+        '</div></div>':'')+
+        (S.cfg.prueba? '<div class="card" style="border-color:var(--warn)"><div class="hd"><h3>🧪 Modo prueba activo</h3></div><div class="bd">'+
+          '<p class="hintx">Está jugando con <b>'+esc(S.cfg.prueba.origen||'un respaldo')+'</b> desde el '+
+          fdate(S.cfg.prueba.desde,true)+'. Nada de esto se guarda en la nube.</p>'+
+          '<div class="tline"><span>Su restaurante real</span><span class="v">'+esc(S.cfg.prueba.nombre||'—')+'</span></div>'+
+          '<div class="tline"><span>La nube volverá</span><span class="v">'+(S.cfg.prueba.fbOn?'conectada':'apagada')+'</span></div>'+
+          '<button class="btn pri" id="d_salirp" style="margin-top:11px">Salir y volver a lo real</button>'+
+        '</div></div>':'')+
         '<div class="card"><div class="hd"><h3>Zona peligrosa</h3></div><div class="bd">'+
           '<p class="hintx">Estas acciones no se pueden deshacer.</p>'+
           '<div class="row wrap"><button class="btn" id="d_seed">Cargar datos de ejemplo</button>'+
           '<button class="btn danger" id="d_mov">Borrar solo movimientos</button>'+
           '<button class="btn danger" id="d_all">Borrar todo</button></div>'+
         '</div></div></div>';
+      if($('#d_salirp')) $('#d_salirp').onclick=salirModoPrueba;
+      if($('#d_vuelto')) $('#d_vuelto').onclick=repararVueltos;
       $('#d_exp').onclick=()=>{
-        const dump={version:1,fecha:now(),cfg:S.cfg,meta:S.meta};
+        const cfg=Object.assign({},S.cfg); delete cfg.prueba;
+        const dump={version:1,fecha:now(),cfg:cfg,meta:S.meta};
         COLL.forEach(k=>dump[k]=S[k]);
-        download('respaldo_pos_'+todayISO()+'.json',JSON.stringify(dump),'application/json');
-        toast('Respaldo descargado','ok');
+        download((S.cfg.prueba?'respaldo_PRUEBA_':'respaldo_pos_')+todayISO()+'.json',
+          JSON.stringify(dump),'application/json');
+        toast(S.cfg.prueba? 'Respaldo de la prueba descargado':'Respaldo descargado','ok');
       };
       $('#d_imp').onclick=()=>$('#d_file').click();
       $('#d_xls').onclick=mImportar;
       $('#d_file').onchange=e=>{
         const f=e.target.files[0]; if(!f) return;
         const rd=new FileReader();
-        rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
-          confirmar('Esto reemplazará todos los datos actuales. ¿Continuar?',()=>{
-            S.cfg=Object.assign({},DEFCFG,d.cfg||{}); saveCfg();
-            S.meta=d.meta||{id:'meta',cons:{}}; saveMeta();
-            COLL.forEach(k=>{ S[k]=(d[k]||[]); S[k].forEach(o=>idbPut(k,o)); });
-            flushIDB(); S.turno=turnoAbierto(); render(); toast('Respaldo restaurado','ok');
-          },true);
-        }catch(err){ toast('Archivo inválido','bad'); } };
+        rd.onload=()=>{ let d=null;
+          try{ d=JSON.parse(rd.result); }catch(err){ return toast('Archivo inválido','bad'); }
+          mRestaurar(d,f.name);
+        };
         rd.readAsText(f);
+        e.target.value='';
       };
       $('#d_seed').onclick=()=>confirmar('¿Cargar el catálogo de ejemplo? Se agrega a lo que ya existe y crea tres usuarios de prueba.',
         ()=>{ seed(); render();
@@ -5940,7 +6063,16 @@ function edUsuario(u){
         '<div class="f"><label>'+(nuevo?'Clave':'Nueva clave (opcional)')+'</label><input id="c1" type="password"></div>'+
         '<div class="f"><label>Repetir</label><input id="c2" type="password"></div></div>'+
       '<label class="row tiny" style="margin-top:10px;gap:7px"><input type="checkbox" id="a" '+(ed.activo?'checked':'')+'> Activo</label>'+
-      (nuevo?'':'<div class="hintx" style="margin-top:8px">Deja las claves en blanco para no cambiarla.</div>'),
+      (nuevo?'':'<div class="hintx" style="margin-top:8px">Deja las claves en blanco para no cambiarla.</div>')+
+      (S.cfg.fbOn? '<div class="card" style="background:var(--panel2);margin-top:12px"><div class="bd">'+
+        (nuevo || !ed.uidNube
+          ? '<label class="row tiny" style="gap:7px"><input type="checkbox" id="nube" checked>'+
+            ' <span><b>Que pueda entrar desde cualquier equipo</b><br>'+
+            '<span class="muted">Le creo la cuenta en la nube. Si no, solo podrá entrar en equipos '+
+            'donde usted ya haya abierto el programa.</span></span></label>'
+          : '<b>✓ Ya puede entrar desde cualquier equipo</b>'+
+            '<div class="tiny muted" style="margin-top:3px">Tiene cuenta en la nube.</div>')+
+        '</div></div>':''),
     footer:(u&&puedeBorrar()?'<button class="btn danger" id="del">Eliminar</button>':'')+
       '<div class="spacer"></div><button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
     onOpen:m=>{
@@ -5956,7 +6088,27 @@ function edUsuario(u){
           await fijarClave(ed,c1);
         }
         ed.email=em; ed.rol=$('#r',m).value; ed.activo=$('#a',m).checked;
-        put('usuarios',ed); closeModal(); render(); toast('Usuario guardado','ok');
+        put('usuarios',ed);
+        const quiereNube = $('#nube',m) && $('#nube',m).checked && c1;
+        closeModal(); render();
+        if(!quiereNube) return toast('Usuario guardado','ok');
+        const b=toast('Creando la cuenta en la nube…','warn',9000);
+        try{
+          await darAccesoNube(ed,c1);
+          avisoAcceso(ed,c1,true);
+        }catch(e){
+          const msg=String(e.message||e);
+          let motivo='No pude crear la cuenta en la nube: '+fbErr(e);
+          if(msg.indexOf('EMAIL_EXISTS')>=0)
+            motivo='Ese correo ya tiene cuenta en Firebase. Si es de esta persona, pídale al superadministrador '+
+                   'que la asocie a este restaurante desde el panel de Restaurantes.';
+          else if(msg.indexOf('PERMISSION')>=0 || msg.indexOf('permiso')>=0 || msg.indexOf('403')>=0)
+            motivo='Las reglas de Firestore todavía no dejan que el administrador registre a su personal. '+
+                   'Copie y publique de nuevo las reglas desde Ajustes ▸ Nube.';
+          else if(msg==='SIN_NEGOCIO') motivo='Este equipo no tiene restaurante asignado en la nube.';
+          else if(msg==='SIN_SESION') motivo='No hay sesión de nube iniciada en este equipo.';
+          avisoAcceso(ed,c1,false,motivo);
+        }
       };
       if($('#del',m)) $('#del',m).onclick=()=>{
         if(S.usuarios.filter(x=>x.rol==='admin'&&x.activo).length<=1 && ed.rol==='admin')
@@ -6077,6 +6229,36 @@ async function fbResetPass(email){
      body:JSON.stringify({requestType:'PASSWORD_RESET',email:email})});
 }
 function esSuper(){ return !!(S.perfil && S.perfil.rol==='superadmin'); }
+function negocioActual(){ return (S.perfil&&S.perfil.negocioId)||S.cfg.fbNegocio||''; }
+/* Le crea la cuenta en la nube a un mesero o cajero, para que pueda entrar
+   desde CUALQUIER equipo sin que el administrador tenga que abrirlo primero. */
+async function darAccesoNube(u,clave){
+  if(!S.cfg.fbOn) throw new Error('SIN_NUBE');
+  const neg=negocioActual();
+  if(!neg) throw new Error('SIN_NEGOCIO');
+  if(!FB.listo() && !(await fbRestaurarSesion())) throw new Error('SIN_SESION');
+  const cta=await fbCrearCuenta(u.email,clave);
+  await fbSet('usuariosNube/'+cta.uid,{id:cta.uid,uid:cta.uid,email:u.email,
+    nombre:u.nombre||u.email, rol:u.rol||'cajero', negocioId:neg, activo:u.activo!==false});
+  u.uidNube=cta.uid; put('usuarios',u);
+  return cta;
+}
+function avisoAcceso(u,clave,ok,motivo){
+  modal({title: ok? 'Usuario listo para entrar' : 'Usuario guardado',size:'slim',
+    body:'<div class="card" style="background:var(--panel2)"><div class="bd">'+
+      '<div class="tline"><span>Nombre</span><span class="v">'+esc(u.nombre)+'</span></div>'+
+      '<div class="tline"><span>Rol</span><span class="v">'+esc(u.rol)+'</span></div>'+
+      '<div class="tline"><span>Correo</span><span class="v">'+esc(u.email)+'</span></div>'+
+      (clave? '<div class="tline"><span>Clave</span><span class="v">'+esc(clave)+'</span></div>':'')+
+      '</div></div>'+
+      (ok? '<div class="card" style="background:var(--ok-soft,var(--panel2));margin-top:11px"><div class="bd">'+
+           '<b>✓ Puede entrar desde cualquier teléfono o computador</b>'+
+           '<div class="tiny" style="margin-top:4px">No hace falta que usted abra el programa primero: '+
+           'con ese correo y esa clave la app le baja el restaurante sola.</div></div></div>'
+         : '<div class="card" style="background:var(--warn-soft);margin-top:11px"><div class="bd">'+
+           '<b>⚠ Por ahora solo puede entrar en equipos donde usted ya haya abierto</b>'+
+           '<div class="tiny" style="margin-top:4px">'+esc(motivo||'')+'</div></div></div>')});
+}
 function guardarPerfil(){ try{ localStorage.setItem('pos_perfil',JSON.stringify(S.perfil||null)); }catch(e){} }
 function cargarPerfilLocal(){ try{ S.perfil=JSON.parse(localStorage.getItem('pos_perfil')||'null'); }catch(e){ S.perfil=null; } }
 
@@ -6393,6 +6575,231 @@ function usuarioPorCorreo(em){ return S.usuarios.find(u=>u.activo&&norm(u.email)
 
 function hayLegado(){ return S.usuarios.length>0 && !S.usuarios.some(u=>u.clave); }
 function leerSesionFB(){ try{ return JSON.parse(localStorage.getItem('pos_fb')||'null'); }catch(e){ return null; } }
+/* Ventas viejas donde se guardó como pago el billete completo que entregó
+   el cliente en vez de lo que valía la venta: la caja quedó inflada con el
+   vuelto. Se detectan y se corrigen, incluido el movimiento de tesorería. */
+function ventasConVuelto(){
+  return S.ventas.filter(v=>v.estado!=='anulada' &&
+    round(sum(v.pagos||[],p=>p.monto),2) > round((v.total||0)+0.5,2));
+}
+function repararVueltos(){
+  if(!puedeEditar()) return pedirAlAdmin('corregir cobros');
+  const vs=ventasConVuelto();
+  if(!vs.length) return toast('No hay cobros con el vuelto mal registrado','ok',3500);
+  const sobra=round(sum(vs,v=>sum(v.pagos||[],p=>p.monto)-(v.total||0)),2);
+  confirmar('Encontré '+vs.length+' venta(s) donde quedó guardado el billete completo en vez del valor de la venta. '+
+    'En total la caja tiene '+money(sobra)+' de más. ¿Lo corrijo? Se ajustan las ventas y los movimientos de caja.',()=>{
+    const usados={};
+    vs.forEach(v=>{
+      let resta=round(v.total||0,2);
+      (v.pagos||[]).forEach(p=>{
+        const antes=round(p.monto,2);
+        const aplica=round(Math.min(antes,Math.max(0,resta)),2);
+        if(p.recibido==null) p.recibido=antes;
+        p.monto=aplica; resta=round(resta-aplica,2);
+        if(Math.abs(aplica-antes)<0.005) return;
+        const mv=S.movimientos.find(x=>x.refTipo==='venta' && x.refId===v.id && !usados[x.id]
+          && Math.abs(x.monto-antes)<0.5);
+        if(mv){ usados[mv.id]=1;
+          if(aplica<=0.5) remove('movimientos',mv.id);
+          else { mv.monto=aplica; put('movimientos',mv); } }
+      });
+      put('ventas',v);
+    });
+    render(); toast('Listo: quité '+money(sobra)+' que eran vueltos, no ventas','ok',6000);
+  },true);
+}
+
+/* Quita los pagos que se registraron sobre un documento que ya estaba
+   pagado de contado, y devuelve esa plata a la cuenta de donde salió. */
+function quitarPagosDobles(d){
+  if(!d) return;
+  if(!puedeEditar()) return pedirAlAdmin('corregir pagos');
+  const dobles=pagosDobles(d);
+  if(!dobles.length) return toast('Este documento no tiene pagos repetidos','warn');
+  const tot=round(sum(dobles,a=>a.monto),2);
+  confirmar('¿Quitar '+dobles.length+' pago(s) por '+money(tot)+' que se registraron de más en '+
+    (d.no||'este documento')+'? La plata vuelve a la cuenta.',()=>{
+    dobles.forEach(a=>{
+      const m=S.movimientos.find(x=>x.refId===d.id && (x.refTipo==='cxp'||x.refTipo==='cxc')
+        && Math.abs(x.monto-a.monto)<0.5);
+      if(m) remove('movimientos',m.id);
+      remove('abonos',a.id);
+    });
+    d.estado='pagada'; put(coleccionDoc(d),d);
+    render(); toast('Listo: quité '+money(tot)+' que estaban de más','ok',5000);
+  },true);
+}
+
+/* Al abrir un respaldo primero se pregunta QUÉ quiere hacer con él:
+   probarlo sin riesgo, o reemplazar la información de verdad. */
+function mRestaurar(d,archivo){
+  const cuenta=COLL.reduce((t,k)=>t+((d[k]||[]).length),0);
+  const nombre=(d.cfg&&d.cfg.nombre)||'(sin nombre)';
+  const esOtro = d.cfg && S.cfg.nombre && normTxt(d.cfg.nombre)!==normTxt(S.cfg.nombre);
+  const hoy=COLL.reduce((t,k)=>t+S[k].length,0);
+  modal({title:'¿Qué hago con este respaldo?',size:'wide',
+    body:'<div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
+      '<div class="card"><div class="bd">'+
+        '<div class="tiny muted">EL ARCHIVO</div><b style="font-size:15px">'+esc(nombre)+'</b>'+
+        '<div class="tiny muted" style="margin-top:3px">'+esc(archivo||'')+'</div>'+
+        '<div class="tline" style="margin-top:8px"><span>Registros</span><span class="v">'+cuenta+'</span></div>'+
+        (d.fecha? '<div class="tline"><span>Del</span><span class="v">'+fdate(d.fecha,true)+'</span></div>':'')+
+      '</div></div>'+
+      '<div class="card"><div class="bd">'+
+        '<div class="tiny muted">LO QUE HAY AHORA EN ESTE EQUIPO</div><b style="font-size:15px">'+esc(S.cfg.nombre||'—')+'</b>'+
+        '<div class="tiny muted" style="margin-top:3px">'+(S.cfg.fbOn?'conectado a la nube':'solo en este equipo')+'</div>'+
+        '<div class="tline" style="margin-top:8px"><span>Registros</span><span class="v">'+hoy+'</span></div>'+
+      '</div></div>'+
+      '</div>'+
+      (esOtro? '<div class="card" style="background:var(--warn-soft);margin-bottom:12px"><div class="bd">'+
+        '<b>⚠ Este respaldo es de otro restaurante</b>'+
+        '<div class="tiny" style="margin-top:4px">Si lo restaura de verdad, reemplaza la información de '+
+        '<b>'+esc(S.cfg.nombre||'este equipo')+'</b>. Para mirarlo o hacer pruebas, use el modo prueba.</div>'+
+        '</div></div>':'')+
+      '<div class="card" style="border-color:var(--ok);margin-bottom:10px"><div class="bd">'+
+        '<div class="row" style="align-items:flex-start;gap:11px">'+
+          '<div style="font-size:26px">🧪</div>'+
+          '<div style="flex:1"><b>Probar sin dañar nada</b> <span class="pill ok">recomendado</span>'+
+          '<div class="tiny muted" style="margin-top:4px">Carga el respaldo solo en este equipo y '+
+          '<b>desconecta la nube</b> mientras dure la prueba: no sube nada, no baja nada y no toca ningún '+
+          'restaurante. Su información real se guarda y vuelve intacta cuando salga.</div></div>'+
+          '<button class="btn pri" id="r_prueba">Probar</button>'+
+        '</div></div></div>'+
+      '<div class="card" style="border-color:var(--bad)"><div class="bd">'+
+        '<div class="row" style="align-items:flex-start;gap:11px">'+
+          '<div style="font-size:26px">⚠️</div>'+
+          '<div style="flex:1"><b>Restaurar de verdad</b>'+
+          '<div class="tiny muted" style="margin-top:4px">Reemplaza la información de este equipo con la del '+
+          'respaldo'+(S.cfg.fbOn? ' y, al sincronizar, también la de la nube':'')+'. Úselo solo cuando esté '+
+          'recuperando su propio restaurante.</div></div>'+
+          '<button class="btn danger" id="r_real">Reemplazar</button>'+
+        '</div></div></div>',
+    footer:'<button class="btn" data-x>Cancelar</button>',
+    onOpen:m=>{
+      $('#r_prueba',m).onclick=()=>{ closeModal(); entrarModoPrueba(d, nombre); };
+      $('#r_real',m).onclick=()=>{ closeModal();
+        confirmar('Va a REEMPLAZAR la información de «'+(S.cfg.nombre||'este equipo')+'» con la de «'+nombre+'». '+
+          (S.cfg.fbOn? 'Como la nube está conectada, el cambio también se subirá. ':'')+
+          'Esto no se puede deshacer. ¿Seguro?',()=>{
+          const previo=datosActuales();
+          try{ download('antes_de_restaurar_'+todayISO()+'.json',JSON.stringify(previo),'application/json'); }catch(e){}
+          cargarDatos(d,{conservar:['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema']});
+          saveCfg(); render();
+          toast('Respaldo restaurado · le descargué una copia de lo que había','ok',6000);
+        },true); };
+    }});
+}
+
+/* ===================== MODO PRUEBA (banco de pruebas) =================
+   Carga un respaldo — el de otro restaurante, uno viejo, el que sea — y
+   deja jugar con él SIN tocar la nube y SIN perder lo que había. Todo lo
+   real se guarda antes en el equipo y vuelve intacto al salir.
+   ==================================================================== */
+function datosActuales(){
+  const d={version:1,fecha:now(),cfg:S.cfg,meta:S.meta,outbox:S.outbox.slice()};
+  COLL.forEach(k=>d[k]=S[k]);
+  return d;
+}
+function cargarDatos(d,opts){
+  opts=opts||{};
+  const cfgViejo=S.cfg;
+  const nuevo=Object.assign({},DEFCFG,d.cfg||{});
+  delete nuevo.prueba;                      // la marca de prueba nunca viaja en un archivo
+  (opts.conservar||[]).forEach(k=>{ nuevo[k]=cfgViejo[k]; });
+  S.cfg=nuevo; S.cfg.id='cfg'; idbPut('config',S.cfg); applyCfg();
+  S.meta=d.meta||{id:'meta',cons:{}}; saveMeta();
+  COLL.forEach(k=>{
+    (S[k]||[]).forEach(o=>idbDel(k,o.id));           // fuera lo que había
+    S[k]=(d[k]||[]).slice();
+    S[k].forEach(o=>idbPut(k,o));
+  });
+  S.outbox.forEach(o=>idbDel('outbox',o.id));
+  S.outbox=(opts.outbox||[]).slice();
+  S.outbox.forEach(o=>idbPut('outbox',o));
+  flushIDB();
+  S.cart=null; S.turno=turnoAbierto();
+  /* si el usuario con el que estaba adentro no existe en estos datos,
+     que vuelva a entrar con los de aquí */
+  if(S.user && !S.user._super && !byId('usuarios',S.user.id)) logout();
+}
+function guardarSnap(nombre,datos){
+  return new Promise(res=>{
+    let ok=true;
+    try{ idbPut('meta',{id:nombre, json:JSON.stringify(datos), fecha:now()}); flushIDB(); }
+    catch(e){ ok=false; }
+    setTimeout(()=>res(ok),120);
+  });
+}
+async function leerSnap(nombre){
+  try{
+    const todo=await idbAll('meta');
+    const r=(todo||[]).find(x=>x&&x.id===nombre);
+    return r && r.json? JSON.parse(r.json) : null;
+  }catch(e){ return null; }
+}
+function borrarSnap(nombre){ try{ idbDel('meta',nombre); }catch(e){} }
+
+async function entrarModoPrueba(d,origen){
+  const previo=datosActuales();
+  const marca={desde:now(), origen:origen||'un respaldo', fbOn:!!S.cfg.fbOn,
+    negocio:S.cfg.fbNegocio||'', nombre:S.cfg.nombre||''};
+  /* el respaldo del estado real se guarda en el equipo Y se le descarga,
+     para que no dependa de nada */
+  await guardarSnap('snapAntesPrueba',previo);
+  try{ download('antes_de_la_prueba_'+todayISO()+'.json',JSON.stringify(previo),'application/json'); }catch(e){}
+  cargarDatos(d,{conservar:['fbApiKey','fbProjectId','fbNegocio','autoSync','pullSeg','tema','ticketAncho']});
+  S.cfg.prueba=marca; S.cfg.fbOn=false; S.cfg.id='cfg'; idbPut('config',S.cfg); applyCfg();
+  pintarPrueba(); render(); paintSync();
+  modal({title:'🧪 Ya está en modo prueba',size:'slim',
+    body:'<div class="card" style="background:var(--warn-soft)"><div class="bd">'+
+      '<b>Nada de lo que haga aquí sale del equipo.</b>'+
+      '<div class="tiny" style="margin-top:6px">La nube quedó desconectada mientras dure la prueba: '+
+      'no sube, no baja y no toca la información de ningún restaurante.</div></div></div>'+
+      '<div class="tline" style="margin-top:11px"><span>Probando con</span><span class="v">'+esc(S.cfg.nombre||'—')+'</span></div>'+
+      '<div class="tline"><span>Su información real</span><span class="v">guardada</span></div>'+
+      '<div class="hintx" style="margin-top:10px">Cuando termine, toque <b>Salir del modo prueba</b> en la '+
+      'barra amarilla de arriba y todo vuelve como estaba. También le descargué un respaldo de lo real, por si acaso.</div>',
+    footer:'<button class="btn pri" data-x>Entendido</button>'});
+}
+async function salirModoPrueba(){
+  if(!S.cfg.prueba) return;
+  const marca=S.cfg.prueba;
+  const previo=await leerSnap('snapAntesPrueba');
+  if(!previo){
+    return modal({title:'No encuentro el respaldo de lo real',size:'slim',
+      body:'<p>No pude recuperar la información que había antes de la prueba en este equipo.</p>'+
+        (marca.fbOn? '<p class="hintx">Como la nube estaba conectada, puedo borrar lo de la prueba y '+
+          'volver a bajar todo desde Firebase, que es la copia buena.</p>'
+                   : '<p class="hintx">Restaure a mano el archivo <b>antes_de_la_prueba…json</b> que le descargué al empezar.</p>'),
+      footer:'<button class="btn" data-x>Cancelar</button>'+
+        (marca.fbOn? '<button class="btn danger" id="nube">Borrar la prueba y bajar de la nube</button>':''),
+      onOpen:m=>{ if($('#nube',m)) $('#nube',m).onclick=async()=>{
+        COLL.forEach(k=>{ S[k].forEach(o=>idbDel(k,o.id)); S[k]=[]; });
+        S.meta={id:'meta',cons:{}}; saveMeta();
+        delete S.cfg.prueba; S.cfg.fbOn=true; S.cfg.id='cfg'; idbPut('config',S.cfg);
+        closeModal(); pintarPrueba(); toast('Bajando todo desde la nube…','ok');
+        await pullCloud(true); render(); }; }});
+  }
+  confirmar('¿Salir del modo prueba? Se borra todo lo que hizo probando y vuelve su información real.',async()=>{
+    cargarDatos(previo,{outbox:previo.outbox||[]});
+    delete S.cfg.prueba;
+    S.cfg.fbOn = !!marca.fbOn;
+    S.cfg.id='cfg'; idbPut('config',S.cfg); applyCfg();
+    borrarSnap('snapAntesPrueba');
+    pintarPrueba(); render(); paintSync();
+    toast('Listo: volvió su información real','ok',4000);
+    if(S.cfg.fbOn){ setTimeout(()=>pullCloud(), 700); }
+  },true);
+}
+function pintarPrueba(){
+  const b=$('#pruebabar'); if(!b) return;
+  const p=S.cfg.prueba;
+  b.classList.toggle('hide',!p);
+  if(p) $('#pbtx').textContent='Está jugando con '+(p.origen||'un respaldo')+
+    '. Nada se guarda en la nube y su información real está a salvo. Empezó '+fdate(p.desde,true)+'.';
+}
+
 function borrarTodoLocal(){
   ['pos_user','pos_fb','pos_perfil'].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
   try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf('pos_')===0) localStorage.removeItem(k); }); }catch(e){}
@@ -6403,11 +6810,13 @@ function lgError(msg){ const e=$('#lg_err'); if(!e) return; e.textContent=msg||'
 function lgSacudir(){ const bx=$('#login .box'); if(bx){ bx.classList.add('shake'); setTimeout(()=>bx.classList.remove('shake'),320); } }
 
 function paintLogin(){
-  $('#lgname').textContent=S.cfg.nombre||'POS Restaurante';
+  pintarPrueba();
+  $('#lgname').textContent=(S.cfg.prueba?'🧪 ':'')+(S.cfg.nombre||'POS Restaurante');
   const vacio = !S.usuarios.length && !leerSesionFB();
-  $('#lgsub').textContent = vacio
-    ? 'Entra con la cuenta que te entregaron'
-    : 'Entra con tu correo y tu clave';
+  $('#lgsub').textContent = S.cfg.prueba
+    ? 'MODO PRUEBA · entra con los usuarios de este respaldo'
+    : (vacio ? 'Entra con la cuenta que te entregaron'
+             : 'Entra con tu correo y tu clave');
   $('#lg_help').classList.toggle('hide',false);
   $('#lg_help').textContent = hayLegado()? 'Recuperar el acceso de este equipo' : '¿Quieres tu acceso?';
   lgError('');
@@ -6686,7 +7095,9 @@ async function boot(){
   S.turno=turnoAbierto();
   cargarPerfilLocal();
   migrarAPeps();
-  applyCfg(); paintSync(); paintLogin();
+  applyCfg(); paintSync(); pintarPrueba(); paintLogin();
+  if(S.cfg.prueba) toast('🧪 Este equipo sigue en modo prueba con «'+
+    (S.cfg.prueba.origen||'un respaldo')+'». Nada se guarda en la nube.','warn',8000);
 
   let last=null; try{ last=localStorage.getItem('pos_user'); }catch(e){}
   const u=last? byId('usuarios',last):null;
@@ -6751,11 +7162,30 @@ service cloud.firestore {
              && ficha(negocioId).data.venceMs > request.time.toMillis();
     }
 
-    // Directorio de cuentas: cada quien lee la suya, solo el superadmin escribe.
+    // administrador de su propio restaurante
+    function soyAdminDe(negocioId) {
+      return conCuenta()
+             && perfil() != null
+             && perfil().data.activo == true
+             && perfil().data.negocioId == negocioId
+             && perfil().data.rol == 'admin';
+    }
+
+    // Directorio de cuentas. Cada quien lee la suya. El superadmin manda, y el
+    // administrador de un restaurante puede dar de alta a SU personal (nunca a
+    // otro restaurante y nunca como superadmin).
     match /usuariosNube/{uid} {
-      allow get:   if conCuenta() && (request.auth.uid == uid || esSuper());
-      allow list:  if esSuper();
-      allow write: if esSuper();
+      allow get:    if conCuenta() && (request.auth.uid == uid || esSuper()
+                       || soyAdminDe(resource.data.negocioId));
+      allow list:   if esSuper();
+      allow create: if esSuper()
+                       || (soyAdminDe(request.resource.data.negocioId)
+                           && request.resource.data.rol in ['admin','cajero','mesero']);
+      allow update: if esSuper()
+                       || (soyAdminDe(resource.data.negocioId)
+                           && request.resource.data.negocioId == resource.data.negocioId
+                           && request.resource.data.rol in ['admin','cajero','mesero']);
+      allow delete: if esSuper();
     }
 
     // Ficha y suscripcion del restaurante: solo el superadmin la modifica.
