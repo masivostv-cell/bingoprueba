@@ -116,6 +116,11 @@ table.tbl th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-sp
   padding:9px 12px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:0;z-index:1;font-weight:700}
 table.tbl td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
 table.tbl tbody tr:hover{background:var(--panel2)}
+.estchip{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;
+  background:var(--ok-soft,var(--panel2));border:1px solid var(--ok);font-size:12px;font-weight:650;color:var(--ok)}
+.estchip.pend{background:var(--bad-soft);border-color:var(--bad);color:var(--bad);animation:latir 1.4s infinite}
+.estchip.hide{display:none}
+@keyframes latir{0%,100%{opacity:1}50%{opacity:.55}}
 #pruebabar{display:flex;align-items:center;gap:10px;padding:9px 16px;background:repeating-linear-gradient(
   45deg,var(--warn-soft),var(--warn-soft) 12px,transparent 12px,transparent 24px);
   border-bottom:2px solid var(--warn);color:var(--warn);font-size:13px;flex:0 0 auto}
@@ -387,6 +392,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
       <div style="min-width:0"><h1 id="ttl">Punto de venta</h1><div class="sub" id="tsub"></div></div>
       <div class="spacer"></div>
       <div id="topact" class="row"></div>
+      <button id="estchip" class="estchip hide" title="Estación de impresión"></button>
       <button id="sync" title="Estado de sincronización"><span class="dot"></span><span id="synctx">Local</span></button>
       <button class="btn ghost sm" id="btntheme" title="Tema">🌙</button>
     </header>
@@ -517,7 +523,8 @@ const S={
   mesas:[], comandas:[], ventas:[], compras:[], abonos:[], cuentas:[], movimientos:[], turnos:[],
   movinv:[], capas:[], imagenes:[], otrosdocs:[], outbox:[], meta:{},
   user:null, turno:null, cart:null, view:'pos', posCat:'all', posQ:'',
-  perfil:null, negocios:[], cuentasNube:[], suscripcion:null
+  perfil:null, negocios:[], cuentasNube:[], suscripcion:null,
+  impresoras:[], impresoraDef:''
 };
 const SUPERADMIN='jorgemanuelp92@hotmail.com';
 const COLL=['usuarios','categorias','ingredientes','productos','proveedores','clientes','mesas','comandas',
@@ -530,6 +537,7 @@ const DEFCFG={ id:'cfg', nombre:'Mi Restaurante', nit:'', direccion:'', telefono
   ticketAncho:80, ticketPie:'¡Gracias por su visita!', tema:'light',
   /* impresión */
   impComanda:true, impTicket:true, ordenImp:'comanda', pausaImp:1800,
+  estacion:false, estacionAuto:true, estacionSonido:true,
   comandaAncho:80, comandaPrecios:false, modoImp:'silencioso', letra:1.15,
   impresoraComanda:'', impresoraTicket:'', waSoporte:'573204491926',
   /* nube */
@@ -657,7 +665,8 @@ function fsParse(v){
 function fsDoc(fields){ const o={}; Object.keys(fields||{}).forEach(k=>{ o[k]=fsParse(fields[k]); }); return o; }
 
 /* la configuración del dispositivo nunca viaja a la nube */
-const CFG_LOCAL=['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho','prueba'];
+const CFG_LOCAL=['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho','prueba',
+  'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp'];
 function cfgParaNube(){ const o={}; Object.keys(S.cfg).forEach(k=>{ if(CFG_LOCAL.indexOf(k)<0) o[k]=S.cfg[k]; }); o.id='cfg'; return o; }
 
 /* ------------------------- cola de envío (outbox) ------------------- */
@@ -763,6 +772,7 @@ async function pullCloud(manual){
     S.turno=turnoAbierto();
     pulling=false; paintSync();
     if(cambios){ toast(cambios+' cambio(s) recibidos de otra terminal','ok'); if(S.user) render(); }
+    if(esEstacion() && S.user) setTimeout(revisarCocina,300);
     else if(manual) toast('Todo al día','ok');
   }catch(e){
     pulling=false; syncErr++; paintSync();
@@ -844,6 +854,91 @@ window.addEventListener('online',()=>{ if(S.cfg.autoSync){ scheduleSync(300); pu
 setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && !S.cfg.prueba && S.outbox.length) flushOutbox(); }, 15000);
 setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && !S.cfg.prueba && !document.hidden) pullCloud(); },
             Math.max(5,Number(DEFCFG.pullSeg)||12)*1000);
+
+/* ==================== ESTACIÓN DE COCINA =============================
+   Los meseros toman el pedido en el teléfono, pero la impresora está en el
+   PC. Entonces el PC queda de "estación": vigila los pedidos que van
+   llegando de los teléfonos y los imprime solo. El teléfono no imprime
+   nada; solo deja el pedido marcado como pendiente para la cocina.
+   ==================================================================== */
+function esEstacion(){ return !!S.cfg.estacion; }
+function comandasPendientes(){
+  return S.comandas.filter(cm=>cm.estado==='abierta' && pendientesComanda(cm).uds>0)
+    .sort((a,b)=>String(a.cocinaMs||a.apertura||'').localeCompare(String(b.cocinaMs||b.apertura||'')));
+}
+function unidadesPendientes(){ return sum(comandasPendientes(),cm=>pendientesComanda(cm).uds); }
+function docComanda(cm,d){
+  const mesa=cm.mesaId? byId('mesas',cm.mesaId):null;
+  const dest=mesa? mesa.nombre : 'MOSTRADOR';
+  const soloBaja=!d.nuevos.length && !d.cambios.length && d.bajas.length;
+  return comandaHTML({no:(soloBaja?'ANULA · ':d.yaEnviado?'AGREGADO · ':'PEDIDO · ')+dest,
+    fecha:now(), tipo:cm.tipo||(mesa?'mesa':'mostrador'), mesaId:cm.mesaId||'',
+    usuarioId:cm.meseroId||'', items:d.nuevos, cambios:d.cambios, bajas:d.bajas,
+    adicional:d.yaEnviado, nota:cm.nota});
+}
+/* imprime lo que falta de esa comanda y lo deja marcado para que nadie lo repita */
+function imprimirPendiente(cm){
+  if(!cm) return false;
+  const d=pendientesComanda(cm);
+  if(!d.nuevos.length && !d.cambios.length && !d.bajas.length) return false;
+  encolarImp(docComanda(cm,d),'comanda',S.cfg.impresoraComanda);
+  marcarEnviado(cm);
+  cm.impresoMs=Date.now();
+  cm.impresoEn=S.cfg.terminal||'';
+  delete cm.cocinaMs;
+  put('comandas',cm);
+  if(S.cart && S.cart.comandaId===cm.id){       // el carrito abierto se entera
+    S.cart.items.forEach(i=>{ const o=(cm.items||[]).find(x=>x.id===i.id);
+      if(o){ i.env=o.env; i.envNota=o.envNota; } });
+    S.cart.bajas=[]; if(S.view==='pos') paintCart();
+  }
+  return true;
+}
+let _cocinaUltimo=0;
+function revisarCocina(){
+  if(!esEstacion() || S.cfg.estacionAuto===false) return 0;
+  const l=comandasPendientes(); let n=0, uds=0;
+  l.forEach(cm=>{ const d=pendientesComanda(cm); if(imprimirPendiente(cm)){ n++; uds+=d.uds; } });
+  if(n){
+    campanaCocina();
+    toast('🖨️ '+n+' pedido(s) nuevo(s) · '+uds+' unidad(es) enviados a la impresora','ok',5000);
+    if(S.view==='cocina'||S.view==='mesas') render(); else { buildNav(); }
+  }
+  pintarEstacion();
+  return n;
+}
+function campanaCocina(){
+  if(S.cfg.estacionSonido===false) return;
+  try{
+    const A=window.AudioContext||window.webkitAudioContext; if(!A) return;
+    const ac=new A(); const t0=ac.currentTime;
+    [[880,0],[1175,0.18],[1568,0.36]].forEach(n=>{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.frequency.value=n[0];
+      g.gain.setValueAtTime(0.0001,t0+n[1]);
+      g.gain.exponentialRampToValueAtTime(0.25,t0+n[1]+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+n[1]+0.22);
+      o.connect(g); g.connect(ac.destination); o.start(t0+n[1]); o.stop(t0+n[1]+0.25);
+    });
+    setTimeout(()=>{ try{ac.close();}catch(e){} },1200);
+  }catch(e){}
+}
+/* No hace falta quedarse en la pantalla de Cocina: mientras la app esté
+   abierta en este equipo (en cualquier sección), los pedidos se imprimen. */
+setInterval(()=>{ if(esEstacion()) revisarCocina(); }, 6000);
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && esEstacion()){ pullCloud(); setTimeout(revisarCocina,600); } });
+function pintarEstacion(){
+  const el=$('#estchip'); if(!el) return;
+  const on=esEstacion();
+  el.classList.toggle('hide',!on);
+  if(!on) return;
+  const n=comandasPendientes().length;
+  el.className='estchip'+(n?' pend':'');
+  el.innerHTML='🖨️ '+(n? n+' por imprimir' : 'Cocina lista');
+  el.title = n? 'Hay '+n+' pedido(s) esperando impresión' :
+    'Este equipo imprime los pedidos que mandan los meseros';
+}
 
 /* --------------------------------- UI ------------------------------- */
 function toast(msg,kind,ms){
@@ -1404,7 +1499,7 @@ function movsFueraDeTurno(cuentaId){
 
 /* ---- permisos ---- */
 const PERMS={ admin:'*',
-  cajero:['pos','mesas','ventas','compras','cartera','tesoreria','turnos','caja','clientes','inventario','reportes'],
+  cajero:['pos','mesas','cocina','ventas','compras','cartera','tesoreria','turnos','caja','clientes','inventario','reportes'],
   mesero:['pos','mesas'] };
 function can(v){
   if(v==='super') return !!(S.user && S.user._super && esSuper());
@@ -1488,6 +1583,7 @@ const VIEWS=[
   {g:'Operación'},
   {k:'pos',    n:'Punto de venta', i:'🧾'},
   {k:'mesas',  n:'Mesas',          i:'🍽️'},
+  {k:'cocina', n:'Cocina',         i:'👨‍🍳'},
   {k:'ventas', n:'Ventas',         i:'📈'},
   {g:'Compras e inventario'},
   {k:'compras',    n:'Compras',     i:'📦'},
@@ -1506,7 +1602,7 @@ const VIEWS=[
   {k:'super', n:'Restaurantes', i:'🏢'}
 ];
 const TITLES={pos:'Punto de venta',mesas:'Mesas y comandas',ventas:'Ventas',compras:'Compras',
-  inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',
+  inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',cocina:'Cocina · pedidos que llegan',
   caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes',ajustes:'Ajustes'};
 
 function buildNav(){
@@ -1516,6 +1612,7 @@ function buildNav(){
     if(!can(v.k)) return;
     let badge='';
     if(v.k==='mesas'){ const c=S.comandas.filter(x=>x.estado==='abierta').length; if(c) badge='<span class="badge">'+c+'</span>'; }
+    if(v.k==='cocina'){ const c=comandasPendientes().length; if(c) badge='<span class="badge">'+c+'</span>'; }
     if(v.k==='cartera'){ const c=cxc().length; if(c) badge='<span class="badge">'+c+'</span>'; }
     if(v.k==='inventario'){ const c=S.ingredientes.filter(g=>g.activo&&(Number(g.stock)||0)<=(Number(g.stockMin)||0)).length;
       if(c) badge='<span class="badge">'+c+'</span>'; }
@@ -1537,9 +1634,9 @@ function render(){
   const sus=S.suscripcion, es=sus?estadoNegocio(sus):null;
   if(es && (es.k==='porvencer'||es.k==='vencido') && !(S.user&&S.user._super))
     $('#topact').innerHTML='<span class="pill '+es.pill+'" title="Suscripción">⏳ '+esc(es.t)+'</span>';
-  buildNav(); paintSync(); pintarPrueba();
+  buildNav(); paintSync(); pintarPrueba(); pintarEstacion();
   const fn=({pos:viewPOS,mesas:viewMesas,ventas:viewVentas,compras:viewCompras,inventario:viewInventario,
-    productos:viewProductos,cartera:viewCartera,tesoreria:viewTesoreria,turnos:viewCaja,caja:viewCaja,
+    productos:viewProductos,cartera:viewCartera,tesoreria:viewTesoreria,turnos:viewCaja,caja:viewCaja,cocina:viewCocina,
     clientes:viewClientes,reportes:viewReportes,ajustes:viewAjustes,super:viewSuper,
     contabilidad:viewContabilidad})[S.view];
   vw.scrollTop=0;
@@ -2021,7 +2118,7 @@ function tabsBar(items,active,cb){
 }
 
 /* ================================= POS ================================ */
-function newCart(o){ return Object.assign({comandaId:null,mesaId:null,tipo:'mostrador',items:[],bajas:[],
+function newCart(o){ return Object.assign({comandaId:null,mesaId:null,tipo:'mostrador',items:[],bajas:[],cocinaMs:null,
   clienteId:'',descuento:0,propinaPct:S.cfg.propinaAuto?(Number(S.cfg.propina)||0):0,nota:''},o||{}); }
 function cartTot(c){
   c=c||S.cart; if(!c) return {sub:0,desc:0,base:0,neto:0,imp:0,prop:0,total:0,uds:0,costo:0};
@@ -2223,6 +2320,17 @@ function enviarACocina(){
     return toast('La cocina ya tiene todo este pedido','warn',3500);
   const mesa=c.mesaId? byId('mesas',c.mesaId):null;
   const dest=mesa? mesa.nombre : 'MOSTRADOR';
+  /* Si este equipo NO es el que tiene la impresora, no se imprime aquí:
+     el pedido queda marcado y el PC de la cocina lo saca solo. */
+  if(!esEstacion() && S.cfg.fbOn){
+    c.cocinaMs=Date.now();
+    if(c.mesaId){ persistComanda(true);
+      guardarPedido('📨 Pedido enviado a cocina · guardado en '); }
+    else { persistComanda(); paintCart();
+      toast('📨 Pedido enviado a la cocina','ok',3500); }
+    if(S.cfg.autoSync) scheduleSync(200);
+    return;
+  }
   const soloBaja=!d.nuevos.length && !d.cambios.length && d.bajas.length;
   encolarImp(comandaHTML({no:(soloBaja?'ANULA · ':d.yaEnviado?'AGREGADO · ':'PEDIDO · ')+dest, fecha:now(),
     tipo:c.tipo, mesaId:c.mesaId||'', usuarioId:S.user?S.user.id:'',
@@ -2257,7 +2365,7 @@ function persistComanda(force){
   if(!c.items.length) return;
   const cm={ id:c.comandaId||uid('cm'), mesaId:c.mesaId,
     items:c.items.map(i=>Object.assign({},i)), clienteId:c.clienteId,
-    bajas:(c.bajas||[]).slice(),
+    bajas:(c.bajas||[]).slice(), cocinaMs:c.cocinaMs||null, tipo:c.tipo||'mesa',
     descuento:c.descuento, propinaPct:c.propinaPct, nota:c.nota, estado:'abierta',
     meseroId:S.user?S.user.id:'', apertura:(c.comandaId&&byId('comandas',c.comandaId)||{}).apertura||now() };
   c.comandaId=cm.id; put('comandas',cm);
@@ -2740,6 +2848,120 @@ function borrarCompra(c){
 const anularCompra=borrarCompra;
 
 
+/* ============================== COCINA ================================
+   La pantalla del PC que tiene la impresora: ve llegar los pedidos de los
+   teléfonos y los saca solo. También sirve de tablero para la cocina.
+   ==================================================================== */
+function viewCocina(vw){
+  const pend=comandasPendientes();
+  const abiertas=S.comandas.filter(c=>c.estado==='abierta')
+    .sort((a,b)=>String(b.apertura||'').localeCompare(String(a.apertura||'')));
+  sub(pend.length? pend.length+' pedido(s) esperando impresión' : 'Todo al día');
+  topact('<button class="btn sm" id="k_ref">↻ Revisar ahora</button>'+
+    (pend.length? '<button class="btn pri sm" id="k_todo">🖨️ Imprimir los '+pend.length+'</button>':''));
+  const destino=cm=>{ const m=cm.mesaId? byId('mesas',cm.mesaId):null;
+    return m? (esDomicilio(m)? '🛵 '+m.nombre : '🍽️ Mesa '+m.nombre) : '🧾 Mostrador'; };
+
+  vw.innerHTML=
+    '<div class="card" style="margin-bottom:14px;border-color:'+(esEstacion()?'var(--ok)':'var(--warn)')+'"><div class="bd">'+
+      '<div class="row wrap" style="align-items:flex-start;gap:12px">'+
+        '<div style="font-size:30px">'+(esEstacion()?'🖨️':'📱')+'</div>'+
+        '<div style="flex:1;min-width:230px">'+
+          '<b style="font-size:15px">'+(esEstacion()
+            ? 'Este equipo es la estación de impresión'
+            : 'Este equipo NO imprime las comandas')+'</b>'+
+          '<div class="tiny muted" style="margin-top:4px">'+(esEstacion()
+            ? 'Los pedidos que manden los meseros desde el teléfono se imprimen aquí solos. '+
+              'Deje esta pestaña abierta en el PC de la impresora.'
+            : 'Enciéndalo en el PC que tiene la impresora conectada. Solo UNO debe tenerlo activo, '+
+              'o el pedido saldría dos veces.')+'</div>'+
+          '<div class="row wrap" style="margin-top:10px;gap:14px">'+
+            '<label class="row tiny" style="gap:7px"><input type="checkbox" id="k_est"'+(esEstacion()?' checked':'')+
+              '> <b>Esta es la estación de impresión</b></label>'+
+            '<label class="row tiny" style="gap:7px"><input type="checkbox" id="k_auto"'+
+              (S.cfg.estacionAuto!==false?' checked':'')+'> Imprimir apenas llegue</label>'+
+            '<label class="row tiny" style="gap:7px"><input type="checkbox" id="k_snd"'+
+              (S.cfg.estacionSonido!==false?' checked':'')+'> Sonar al llegar</label>'+
+          '</div>'+
+        '</div>'+
+        '<div class="kpis" style="flex:1 1 300px;min-width:260px">'+
+          kpi('Esperando',pend.length,unidadesPendientes()+' unidad(es)',pend.length?'bad':'ok')+
+          kpi('Mesas abiertas',abiertas.length,'','')+
+        '</div>'+
+      '</div>'+
+      (!S.cfg.fbOn? '<div class="card" style="background:var(--warn-soft);margin-top:11px"><div class="bd">'+
+        '<b>⚠ La nube está apagada</b><div class="tiny" style="margin-top:4px">Los pedidos de los teléfonos '+
+        'llegan por la nube. Enciéndala en Ajustes ▸ Nube para que esto funcione.</div></div></div>':'')+
+    '</div></div>'+
+    '<div class="card"><div class="hd"><h3>Pedidos por imprimir</h3>'+
+      (pend.length? '<span class="pill bad">'+pend.length+'</span>':'<span class="pill ok">ninguno</span>')+
+      '</div><div class="bd">'+
+      (pend.length? '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">'+
+        pend.map(cm=>{ const d=pendientesComanda(cm);
+          return '<div class="card" style="border-color:var(--bad)"><div class="bd">'+
+            '<div class="row"><b style="font-size:15px;flex:1">'+esc(destino(cm))+'</b>'+
+              '<span class="pill bad">'+d.uds+' und</span></div>'+
+            '<div class="tiny muted" style="margin-top:2px">'+esc(nameOf('usuarios',cm.meseroId))+
+              ' · hace '+agoMin(cm.cocinaMs? new Date(cm.cocinaMs).toISOString() : cm.apertura)+' min'+
+              (d.yaEnviado? ' · <b>agregado</b>':'')+'</div>'+
+            '<div style="margin-top:8px">'+
+              d.nuevos.map(i=>'<div class="tline"><span><b>'+i.cant+'</b> × '+esc(i.nombre)+
+                (i.nota? '<div class="tiny muted">'+esc(i.nota)+'</div>':'')+'</span></div>').join('')+
+              d.cambios.map(i=>'<div class="tline" style="color:var(--warn)"><span>✎ '+i.cant+' × '+esc(i.nombre)+
+                (i.nota? ' · '+esc(i.nota):'')+'</span></div>').join('')+
+              d.bajas.map(i=>'<div class="tline" style="color:var(--bad)"><span>✕ anular '+i.cant+' × '+
+                esc(i.nombre)+'</span></div>').join('')+
+            '</div>'+
+            '<button class="btn pri sm blk" data-k="'+cm.id+'" style="margin-top:9px">🖨️ Imprimir</button>'+
+            '<button class="btn sm blk" data-ok="'+cm.id+'" style="margin-top:5px">Ya lo tienen · no imprimir</button>'+
+          '</div></div>';
+        }).join('')+'</div>'
+      : '<div class="empty"><span class="ico">✅</span>No hay pedidos esperando</div>')+
+    '</div></div>'+
+    '<div class="card" style="margin-top:14px"><div class="hd"><h3>Mesas abiertas</h3></div><div class="bd p0">'+
+      tbl([
+        {t:'Destino',f:cm=>'<b>'+esc(destino(cm))+'</b>'},
+        {t:'Mesero',f:cm=>esc(nameOf('usuarios',cm.meseroId))},
+        {t:'Abierta',f:cm=>fdate(cm.apertura,true)+' <span class="tiny muted">hace '+agoMin(cm.apertura)+' min</span>'},
+        {t:'Items',num:1,f:cm=>sum(cm.items||[],i=>i.cant)},
+        {t:'En cocina',num:1,f:cm=>sum(cm.items||[],i=>Number(i.env)||0)},
+        {t:'Valor',num:1,f:cm=>money(round(sum(cm.items||[],i=>i.precio*i.cant)-(cm.descuento||0),2))},
+        {t:'Estado',f:cm=>{ const d=pendientesComanda(cm);
+          return d.uds>0? '<span class="pill bad">falta imprimir</span>'
+               : (cm.impresoMs? '<span class="pill ok">impresa</span>':'<span class="pill">sin pedir</span>'); }},
+        {t:'',f:cm=>'<div class="row" style="gap:3px">'+
+          '<button class="btn ghost sm" data-ab="'+cm.id+'" title="Abrir el pedido">👁️</button>'+
+          '<button class="btn ghost sm" data-re="'+cm.id+'" title="Reimprimir todo el pedido">🖨️</button></div>'}
+      ],abiertas,{empty:'No hay mesas abiertas',icon:'🍽️'})+
+    '</div></div>';
+
+  $('#k_est').onchange=e=>{ S.cfg.estacion=e.target.checked; saveCfg();
+    toast(e.target.checked? 'Listo: este equipo imprime los pedidos que lleguen'
+                          : 'Este equipo ya no imprime los pedidos','ok',4000);
+    if(e.target.checked) setTimeout(revisarCocina,400);
+    render(); };
+  $('#k_auto').onchange=e=>{ S.cfg.estacionAuto=e.target.checked; saveCfg(); };
+  $('#k_snd').onchange=e=>{ S.cfg.estacionSonido=e.target.checked; saveCfg(); if(e.target.checked) campanaCocina(); };
+  $('#k_ref').onclick=async()=>{ await pullCloud(true);
+    const n=esEstacion()? revisarCocina():0;
+    if(!n) toast(comandasPendientes().length? 'Hay pedidos esperando: toca Imprimir':'Todo al día','ok'); render(); };
+  if($('#k_todo')) $('#k_todo').onclick=()=>{
+    let n=0; comandasPendientes().forEach(cm=>{ if(imprimirPendiente(cm)) n++; });
+    toast(n+' pedido(s) enviados a la impresora','ok'); render(); };
+  $$('[data-k]',vw).forEach(b=>b.onclick=()=>{ if(imprimirPendiente(byId('comandas',b.dataset.k)))
+    toast('Pedido enviado a la impresora','ok'); render(); });
+  $$('[data-ok]',vw).forEach(b=>b.onclick=()=>{ const cm=byId('comandas',b.dataset.ok);
+    confirmar('¿Marcar este pedido como entregado a la cocina sin imprimirlo?',()=>{
+      marcarEnviado(cm); cm.impresoMs=Date.now(); put('comandas',cm);
+      render(); toast('Marcado como entregado','ok'); }); });
+  $$('[data-ab]',vw).forEach(b=>b.onclick=()=>{ const cm=byId('comandas',b.dataset.ab);
+    if(cm.mesaId) abrirMesa(cm.mesaId); else toast('Ese pedido es de mostrador','warn'); });
+  $$('[data-re]',vw).forEach(b=>b.onclick=()=>{ const cm=byId('comandas',b.dataset.re);
+    encolarImp(docComanda(cm,{nuevos:(cm.items||[]).map(i=>Object.assign({},i)),cambios:[],bajas:[],
+      yaEnviado:false,uds:sum(cm.items||[],i=>i.cant)}),'comanda',S.cfg.impresoraComanda);
+    toast('Pedido completo reimpreso','ok'); });
+}
+
 /* ============================ IMPRESIÓN ==============================
    Dos documentos distintos: la COMANDA que va a cocina (sin precios,
    letra grande) y el TICKET de venta. Se imprimen en cadena.
@@ -2748,7 +2970,9 @@ const anularCompra=borrarCompra;
    =================================================================== */
 function abrirImpresion(html,tipo,impresora){
   if(S.cfg.modoImp==='qz'){
-    if(window.qz) return qzImprimir(html,impresora,tipo);
+    if(window.qz || _qzCarga) return qzImprimir(html,impresora,tipo);
+    cargarQZ().then(ok=>{ if(ok) qzImprimir(html,impresora,tipo); });
+    if(!window.qz) return;
     toast('QZ Tray no está abierto en este equipo; se usa el diálogo del navegador','warn',5000);
   }
   let f=document.getElementById('fr_'+tipo);
@@ -2759,7 +2983,7 @@ function abrirImpresion(html,tipo,impresora){
 }
 async function qzImprimir(html,impresora,tipo){
   try{
-    if(!qz.websocket.isActive()) await qz.websocket.connect();
+    await qzConectar();
     const nombre=impresora||null;
     const cfg=nombre? qz.configs.create(nombre) : qz.configs.create(await qz.printers.getDefault());
     await qz.print(cfg,[{type:'html',format:'plain',data:html}]);
@@ -2814,10 +3038,40 @@ function mImpresionAuto(){
   $('#ia_copy').onclick=()=>{ const t=$('#ia_cmd'); t.select();
     try{ document.execCommand('copy'); toast('Copiado','ok'); }catch(e){} };
 }
+/* QZ Tray es el puentecito que deja mandar cada documento a una impresora
+   distinta y preguntar cuáles hay instaladas. Se carga solo cuando hace falta. */
+let _qzCarga=null;
+function cargarQZ(){
+  if(window.qz) return Promise.resolve(true);
+  if(_qzCarga) return _qzCarga;
+  const fuentes=['qz-tray.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/qz-tray/2.2.4/qz-tray.js',
+    'https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js'];
+  _qzCarga=new Promise(res=>{
+    let i=0;
+    const probar=()=>{
+      if(i>=fuentes.length){ _qzCarga=null; return res(false); }
+      const sc=document.createElement('script');
+      sc.src=fuentes[i++];
+      sc.onload=()=>res(!!window.qz);
+      sc.onerror=()=>{ sc.remove(); probar(); };
+      document.head.appendChild(sc);
+    };
+    probar();
+  });
+  return _qzCarga;
+}
+async function qzConectar(){
+  if(!(await cargarQZ())) throw new Error('NO_QZ_JS');
+  if(!qz.websocket.isActive()) await qz.websocket.connect({retries:1,delay:1});
+  return true;
+}
 async function qzListarImpresoras(){
-  if(!window.qz) throw new Error('QZ Tray no está abierto en este equipo');
-  if(!qz.websocket.isActive()) await qz.websocket.connect();
-  return await qz.printers.find();
+  await qzConectar();
+  const l=await qz.printers.find();
+  S.impresoras=Array.isArray(l)? l : (l? [l]:[]);
+  try{ S.impresoraDef=await qz.printers.getDefault(); }catch(e){}
+  return S.impresoras;
 }
 
 /* ------------------------- comanda de cocina ------------------------ */
@@ -3030,6 +3284,7 @@ function abrirMesa(mesaId){
   if(cm){ S.cart.comandaId=cm.id;
     S.cart.items=(cm.items||[]).map(i=>Object.assign({},i));   // copia: no tocar la comanda guardada
     S.cart.bajas=(cm.bajas||[]).slice();
+    S.cart.cocinaMs=cm.cocinaMs||null;
     S.cart.clienteId=cm.clienteId||'';
     S.cart.descuento=cm.descuento||0; S.cart.propinaPct=cm.propinaPct||0; S.cart.nota=cm.nota||''; }
   go('pos');
@@ -5759,17 +6014,27 @@ function viewAjustes(vw){
         '</div></div>'+
         '<div class="card"><div class="hd"><h3>Impresión</h3>'+
           '<div class="spacer"></div><button class="btn sm" id="g_prueba">Probar</button></div><div class="bd">'+
+          '<div class="card" style="background:'+(S.cfg.estacion?'var(--ok-soft,var(--panel2))':'var(--panel2)')+
+            ';margin-bottom:12px"><div class="bd">'+
+            '<label class="row tiny" style="gap:8px"><input type="checkbox" id="g_estacion"'+
+              (S.cfg.estacion?' checked':'')+'> <span><b>'+(S.cfg.estacion?'🖨️ ':'')+
+              'Este equipo imprime los pedidos que mandan los meseros</b><br>'+
+              '<span class="muted">Enciéndalo en el PC que tiene la impresora. Los meseros guardan desde el '+
+              'teléfono y las comandas salen aquí solas. Solo UN equipo debe tenerlo activo.</span></span></label>'+
+            '<button class="btn sm" id="g_vercocina" style="margin-top:9px">👨‍🍳 Ver la pantalla de Cocina</button>'+
+          '</div></div>'+
           '<div class="f" style="margin-bottom:10px"><label>Cómo imprime este equipo</label><select id="g_modoImp">'+
             [['dialogo','Diálogo del navegador (eliges impresora cada vez)'],
              ['silencioso','Silencioso a la impresora predeterminada (Chrome en modo kiosco)'],
              ['qz','Dos impresoras con QZ Tray (requiere instalarlo)']].map(x=>
               '<option value="'+x[0]+'"'+(c.modoImp===x[0]?' selected':'')+'>'+esc(x[1])+'</option>').join('')+
             '</select></div>'+
+          '<div class="row wrap" style="margin-bottom:8px;gap:8px">'+
+            '<button class="btn sm" id="g_buscarimp">🔍 Buscar las impresoras de este equipo</button>'+
+            '<span class="hintx" id="g_impest"></span></div>'+
           '<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
-            '<div class="f"><label>Impresora de comandas</label>'+
-              '<input id="g_impresoraComanda" value="'+esc(c.impresoraComanda||'')+'" placeholder="Cocina EPSON TM-T20"></div>'+
-            '<div class="f"><label>Impresora de ventas</label>'+
-              '<input id="g_impresoraTicket" value="'+esc(c.impresoraTicket||'')+'" placeholder="Caja POS-58"></div></div>'+
+            '<div class="f"><label>👨‍🍳 Impresora de la COCINA</label><div id="g_selCom"></div></div>'+
+            '<div class="f"><label>🧾 Impresora de VENTAS (la suya)</label><div id="g_selTik"></div></div></div>'+
           '<div id="g_qzinfo" class="hintx" style="margin-bottom:10px"></div>'+
           '<div class="row wrap" style="margin-bottom:12px">'+
             '<button class="btn" id="g_auto">⚡ Quitar la vista previa</button>'+
@@ -5804,20 +6069,77 @@ function viewAjustes(vw){
         '</div></div></div>'+
         '<div class="row" style="margin-top:14px"><button class="btn pri" id="save">Guardar cambios</button></div>';
       cajaImagen($('#imglogo'), 'logo', IMG_PRESET.logo, ()=>{ applyCfg(); paintLogin(); });
+      let _valCom=c.impresoraComanda||'', _valTik=c.impresoraTicket||'';
+      function selImpresora(cont,valor,ponVal,quien){
+        const l=S.impresoras||[];
+        if(!l.length){
+          cont.innerHTML='<input value="'+esc(valor)+'" placeholder="'+esc(quien)+'">'+
+            '<div class="hintx" style="margin-top:4px">Toque «Buscar las impresoras» para escogerla de una lista.</div>';
+          $('input',cont).oninput=e=>ponVal(e.target.value.trim());
+          return;
+        }
+        const extra = valor && l.indexOf(valor)<0;
+        cont.innerHTML='<select>'+
+          '<option value="">— la predeterminada de Windows —</option>'+
+          l.map(n=>'<option value="'+esc(n)+'"'+(n===valor?' selected':'')+'>'+esc(n)+
+            (n===S.impresoraDef? ' (predeterminada)':'')+'</option>').join('')+
+          (extra? '<option value="'+esc(valor)+'" selected>'+esc(valor)+' (no la encontré ahora)</option>':'')+
+          '</select>';
+        $('select',cont).onchange=e=>ponVal(e.target.value);
+      }
+      function pintaSel(){
+        selImpresora($('#g_selCom'),_valCom,v=>{_valCom=v;},'Cocina EPSON TM-T20');
+        selImpresora($('#g_selTik'),_valTik,v=>{_valTik=v;},'Caja POS-58');
+        $('#g_impest').innerHTML = (S.impresoras||[]).length
+          ? '<b style="color:var(--ok)">✓ '+S.impresoras.length+' impresora(s) encontradas</b>'
+          : 'Todavía no he mirado qué impresoras tiene este equipo.';
+      }
+      pintaSel();
+      $('#g_buscarimp').onclick=async()=>{
+        const b=$('#g_buscarimp'); b.disabled=true; b.textContent='Buscando…';
+        try{
+          await qzListarImpresoras();
+          pintaSel(); pintaQz();
+          toast('Encontré '+S.impresoras.length+' impresora(s)','ok');
+          if($('#g_modoImp').value!=='qz'){
+            $('#g_modoImp').value='qz'; pintaQz();
+            toast('Cambié el modo a "dos impresoras" para que pueda separarlas','ok',5000);
+          }
+        }catch(e){
+          const m=String(e.message||e);
+          modal({title:'Para escoger la impresora hace falta QZ Tray',size:'slim',
+            body:'<p>El navegador, por seguridad, <b>no deja que una página vea las impresoras</b> del equipo. '+
+              'Para poder escogerlas de una lista y mandar la comanda a una y el ticket a otra se usa '+
+              '<b>QZ Tray</b>, un programita gratuito que se instala una vez en este PC.</p>'+
+              '<div class="card" style="background:var(--panel2)"><div class="bd">'+
+              '<b>Cómo se hace</b><div class="tiny" style="margin-top:5px">'+
+              '1. Descargue QZ Tray de <b>qz.io/download</b> e instálelo en este PC.<br>'+
+              '2. Ábralo (queda como un iconito al lado del reloj).<br>'+
+              '3. Vuelva aquí y toque otra vez «Buscar las impresoras».<br>'+
+              '4. La primera vez le va a preguntar si permite la conexión: diga que sí.</div></div></div>'+
+              '<div class="hintx" style="margin-top:10px">Mientras tanto puede seguir con el modo '+
+              '<b>silencioso</b>: todo sale a la impresora predeterminada de Windows, sin vista previa.</div>'+
+              (m==='NO_QZ_JS'? '<div class="hintx" style="margin-top:8px">(No pude cargar el componente de QZ; '+
+                'revise que el equipo tenga internet.)</div>':'')});
+        }
+        b.disabled=false; b.textContent='🔍 Buscar las impresoras de este equipo';
+      };
       const pintaQz=()=>{ const modo=$('#g_modoImp').value; const box=$('#g_qzinfo');
-        if(modo==='qz'){ box.innerHTML='Escribe el nombre exacto de cada impresora como aparece en Windows. '+
-            '<button class="btn sm" id="g_qzlist" style="margin-left:6px">Ver impresoras</button>';
-          $('#g_qzlist').onclick=async()=>{ try{ const l=await qzListarImpresoras();
-              modal({title:'Impresoras detectadas',size:'slim',
-                body:'<p class="hintx">Copia el nombre exacto y pégalo arriba.</p>'+
-                  l.map(n=>'<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line2)"><code>'+esc(n)+'</code></div>').join('')});
-            }catch(e){ toast(String(e.message||e),'bad',6000); } }; }
+        if(modo==='qz') box.innerHTML='Cada documento va a su propia impresora. Necesita <b>QZ Tray</b> abierto '+
+            'en este equipo'+((S.impresoras||[]).length? ' — <b style="color:var(--ok)">ya lo detecté</b>.':'.');
         else if(modo==='silencioso') box.innerHTML='Sale directo a la impresora <b>predeterminada</b> de Windows, sin '+
-            'vista previa, siempre que abras la app con el acceso directo de abajo. Las dos impresiones van a la misma impresora.';
+            'vista previa, siempre que abras la app con el acceso directo de abajo. '+
+            '<b>Las dos impresiones van a la misma impresora</b>: para separarlas, usa el modo de dos impresoras.';
         else box.innerHTML='Cada impresión abre el diálogo de Chrome y tú eliges la impresora. '+
-            'Los nombres de arriba solo sirven de recordatorio.';
+            'Lo de arriba solo sirve de recordatorio.';
       };
       $('#g_modoImp').onchange=pintaQz; pintaQz();
+      if($('#g_estacion')) $('#g_estacion').onchange=e=>{ S.cfg.estacion=e.target.checked; saveCfg();
+        toast(e.target.checked? 'Listo: este equipo imprime lo que manden los meseros'
+                              : 'Este equipo ya no imprime los pedidos','ok',4000);
+        if(e.target.checked) setTimeout(revisarCocina,400); render(); };
+      if($('#g_vercocina')) $('#g_vercocina').onclick=()=>go('cocina');
+      if(window.qz) qzListarImpresoras().then(()=>{pintaSel();pintaQz();}).catch(()=>{});
       $('#g_auto').onclick=mImpresionAuto;
       $('#g_prueba').onclick=()=>{
         const demo={id:'demo',no:'PRUEBA',fecha:now(),tipo:'mesa',mesaId:(S.mesas[0]||{}).id||'',
@@ -5827,8 +6149,9 @@ function viewAjustes(vw){
         imprimirVenta(demo); toast('Enviando prueba a impresión','ok');
       };
       $('#save').onclick=()=>{
-        ['nombre','nit','telefono','direccion','simbolo','ticketPie','impresoraComanda','impresoraTicket']
+        ['nombre','nit','telefono','direccion','simbolo','ticketPie']
           .forEach(k=> c[k]=$('#g_'+k).value.trim());
+        c.impresoraComanda=_valCom; c.impresoraTicket=_valTik;
         c.waSoporte=($('#g_waSoporte').value||'').replace(/\D/g,'')||'573204491926';
         c.modoImp=$('#g_modoImp').value; c.ordenImp=$('#g_ordenImp').value;
         c.pausaImp=Math.max(600,toN($('#g_pausaImp').value)||1800);
