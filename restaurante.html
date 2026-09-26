@@ -504,6 +504,17 @@ function _q(store,o){
   if(MODE!=='idb'){ const m=lsLoad(store); o.op==='put'? m.set(o.id,o.obj) : m.delete(o.id); }
   if(!_wt) _wt=setTimeout(flushIDB,200);
 }
+function esCuota(e){
+  const m=String((e&&(e.name||e.message))||'');
+  return /Quota|quota|NS_ERROR_DOM_QUOTA|exceeded|excedid/i.test(m);
+}
+let _avisoCuota=0;
+function avisarCuota(){
+  if(Date.now()-_avisoCuota < 60000) return;      // no repetir cada segundo
+  _avisoCuota=Date.now();
+  toast('⚠ El navegador se quedó sin espacio en este equipo','bad',9000);
+  if(typeof mSinEspacio==='function') setTimeout(mSinEspacio,500);
+}
 function flushIDB(){
   _wt=null; if(!_wq.size) return;
   const batch=_wq; _wq=new Map();
@@ -512,16 +523,23 @@ function flushIDB(){
     if(!names.length) return;
     try{
       const tx=_db.transaction(names,'readwrite');
+      tx.onabort=tx.onerror=ev=>{ const er=ev&&ev.target&&ev.target.error;
+        if(esCuota(er)) avisarCuota(); };
       names.forEach(n=>{ const os=tx.objectStore(n);
-        batch.get(n).forEach(o=>{ try{ o.op==='put'? os.put(o.obj) : os.delete(o.id); }catch(e){} }); });
-    }catch(e){ MODE='ls'; }
+        batch.get(n).forEach(o=>{ try{ const rq=o.op==='put'? os.put(o.obj) : os.delete(o.id);
+          if(rq) rq.onerror=ev=>{ if(esCuota(ev&&ev.target&&ev.target.error)) avisarCuota(); };
+        }catch(e){ if(esCuota(e)) avisarCuota(); } }); });
+    }catch(e){ if(esCuota(e)) avisarCuota(); else MODE='ls'; }
     return;
   }
   if(MODE==='mem') return;
   try{
     Array.from(batch.keys()).forEach(st=>
       localStorage.setItem(lsKey(st), JSON.stringify(Array.from(lsLoad(st).values()))));
-  }catch(e){ MODE='mem'; console.warn('Sin almacenamiento persistente',e); }
+  }catch(e){
+    if(esCuota(e)){ avisarCuota(); return; }
+    MODE='mem'; console.warn('Sin almacenamiento persistente',e);
+  }
 }
 window.addEventListener('beforeunload',flushIDB);
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) flushIDB(); });
@@ -2171,7 +2189,8 @@ function cartDel(itId){
 function bajaComanda(it,cant){
   const n=Math.min(Math.max(0,cant), it.env||0);
   if(!n || !S.cart) return;
-  S.cart.bajas=(S.cart.bajas||[]).concat([{nombre:it.nombre,cant:n,nota:it.nota||''}]);
+  S.cart.bajas=(S.cart.bajas||[]).concat([{nombre:it.nombre,cant:n,nota:it.nota||'',
+    vaCocina:vaAComanda(it)}]);
   it.env=(it.env||0)-n;
 }
 
@@ -2210,8 +2229,7 @@ function paintGrid(){
   let ps=S.productos.filter(p=>p.activo);
   if(S.posCat!=='all') ps=ps.filter(p=>p.categoriaId===S.posCat);
   if(q) ps=ps.filter(p=>p.nombre.toLowerCase().indexOf(q)>=0);
-  const ord=c=>{const x=byId('categorias',c);return x?(x.orden||0):99;};
-  ps.sort((a,b)=> ord(a.categoriaId)-ord(b.categoriaId) || (a.orden||0)-(b.orden||0) || a.nombre.localeCompare(b.nombre));
+  ps.sort(compararProductos);
   if(!ps.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1"><span class="ico">🔎</span>Sin productos</div>'; return; }
   el.innerHTML=ps.map(p=>{
     const d=maxPorReceta(p);
@@ -2259,7 +2277,8 @@ function paintCart(){
     return '<div class="citem" data-i="'+i.id+'">'+
       '<div><div class="nm">'+(p&&p.emoji?p.emoji+' ':'')+esc(i.nombre)+'</div>'+
       '<div class="un">'+money(i.precio)+' c/u'+(i.nota?' · <i>'+esc(i.nota)+'</i>':'')+
-      ((i.env||0)>0? ' · <span style="color:var(--ok)">🍳 '+i.env+' en cocina</span>':'')+
+      (!vaAComanda(i)? ' · <span class="muted">no va a cocina</span>' :
+        ((i.env||0)>0? ' · <span style="color:var(--ok)">🍳 '+i.env+' en cocina</span>':''))+
       ((i.env||0)>0 && (i.nota||'')!==(i.envNota||'')? ' · <span style="color:var(--warn)">nota cambiada</span>':'')+
       '</div></div>'+
       '<div class="tt">'+money(i.precio*i.cant)+'</div>'+
@@ -2300,6 +2319,20 @@ function paintCart(){
 
 /* Qué le falta saber a la cocina de este pedido: lo que se agregó después
    de la última comanda, las notas que cambiaron y lo que se quitó. */
+/* No todo va a la cocina: las bebidas y lo que ya viene listo se sirven de
+   una y no necesitan comanda. Se decide por categoría (Ajustes ▸ Impresión)
+   y, si hace falta, por producto. */
+function vaAComanda(it){
+  const p=it && byId('productos',it.productoId);
+  if(!p) return true;                            // algo sin ficha: mejor que salga
+  if(p.sinComanda) return false;
+  const c=byId('categorias',p.categoriaId);
+  return !(c && c.comanda===false);
+}
+function categoriaVaAComanda(c){ return !(c && c.comanda===false); }
+function hayFiltroComanda(){ return S.categorias.some(c=>c.comanda===false)
+  || S.productos.some(p=>p.sinComanda); }
+
 function pendientesComanda(c){
   c=c||S.cart;
   const vacio={nuevos:[],cambios:[],bajas:[],yaEnviado:false,uds:0};
@@ -2307,13 +2340,15 @@ function pendientesComanda(c){
   const nuevos=[], cambios=[];
   let yaEnviado=!!(c.bajas&&c.bajas.length);
   (c.items||[]).forEach(i=>{
+    if(!vaAComanda(i)) return;                   // esa categoría no va a cocina
     const env=Number(i.env)||0;
     if(env>0) yaEnviado=true;
     if(i.cant>env) nuevos.push(Object.assign({},i,{cant:i.cant-env}));
     else if(env>0 && (i.nota||'')!==(i.envNota||'')) cambios.push(Object.assign({},i));
   });
-  return {nuevos:nuevos, cambios:cambios, bajas:(c.bajas||[]).slice(), yaEnviado:yaEnviado,
-          uds:sum(nuevos,i=>i.cant)+sum(cambios,i=>i.cant)+sum(c.bajas||[],i=>i.cant)};
+  const bajas=(c.bajas||[]).filter(x=>x.vaCocina!==false);
+  return {nuevos:nuevos, cambios:cambios, bajas:bajas, yaEnviado:yaEnviado,
+          uds:sum(nuevos,i=>i.cant)+sum(cambios,i=>i.cant)+sum(bajas,i=>i.cant)};
 }
 function marcarEnviado(c){
   c=c||S.cart; if(!c) return;
@@ -2966,8 +3001,10 @@ function viewCocina(vw){
   $$('[data-ab]',vw).forEach(b=>b.onclick=()=>{ const cm=byId('comandas',b.dataset.ab);
     if(cm.mesaId) abrirMesa(cm.mesaId); else toast('Ese pedido es de mostrador','warn'); });
   $$('[data-re]',vw).forEach(b=>b.onclick=()=>{ const cm=byId('comandas',b.dataset.re);
-    encolarImp(docComanda(cm,{nuevos:(cm.items||[]).map(i=>Object.assign({},i)),cambios:[],bajas:[],
-      yaEnviado:false,uds:sum(cm.items||[],i=>i.cant)}),'comanda',S.cfg.impresoraComanda);
+    const coci=(cm.items||[]).filter(vaAComanda).map(i=>Object.assign({},i));
+    if(!coci.length) return toast('Este pedido no tiene nada que vaya a la cocina','warn',4000);
+    encolarImp(docComanda(cm,{nuevos:coci,cambios:[],bajas:[],
+      yaEnviado:false,uds:sum(coci,i=>i.cant)}),'comanda',S.cfg.impresoraComanda);
     toast('Pedido completo reimpreso','ok'); });
 }
 
@@ -3161,7 +3198,12 @@ function imprimirVenta(v,forzar,pend){
       if(!pend.nuevos.length && !pend.cambios.length && !pend.bajas.length) saltar=true;
       else doc=Object.assign({},v,{items:pend.nuevos,cambios:pend.cambios,
              bajas:pend.bajas,adicional:true});
+    } else if(hayFiltroComanda()){
+      const coci=(v.items||[]).filter(vaAComanda);       // fuera lo que no va a cocina
+      if(!coci.length) saltar=true; else doc=Object.assign({},v,{items:coci});
     }
+    if(saltar && forzar==='comanda')
+      toast('Esta venta no tiene nada que vaya a la cocina','warn',4000);
     if(!saltar) tareas.push([comandaHTML(doc,forzar==='comanda'),'comanda',S.cfg.impresoraComanda]);
   }
   if(quiereTik) tareas.push([ticketHTML(v),'ticket',S.cfg.impresoraTicket]);
@@ -3430,6 +3472,33 @@ function viewVentas(vw){
 }
 
 /* ============================= PRODUCTOS ============================== */
+/* El orden lo pone el dueño: cada producto lleva un número y así salen en
+   el punto de venta. Los que no tengan número van de últimos, alfabéticos. */
+function ordProd(p){ const n=Number(p&&p.orden); return (n&&n>0)? n : 9999; }
+function ordCat(id){ const c=byId('categorias',id); const n=Number(c&&c.orden); return (n&&n>0)? n : 999; }
+function compararProductos(a,b){
+  return ordCat(a.categoriaId)-ordCat(b.categoriaId)
+      || ordProd(a)-ordProd(b)
+      || String(a.nombre||'').localeCompare(String(b.nombre||''));
+}
+function productosDeCategoria(catId){
+  return S.productos.filter(p=>p.categoriaId===catId).sort(compararProductos);
+}
+/* renumera 1,2,3… dentro de la categoría para que no queden huecos */
+function renumerarCategoria(catId){
+  productosDeCategoria(catId).forEach((p,i)=>{ const n=i+1;
+    if(Number(p.orden)!==n){ p.orden=n; put('productos',p); } });
+}
+function moverProducto(id,dir){
+  const p=byId('productos',id); if(!p) return;
+  renumerarCategoria(p.categoriaId);
+  const l=productosDeCategoria(p.categoriaId);
+  const i=l.findIndex(x=>x.id===id), j=i+dir;
+  if(i<0 || j<0 || j>=l.length) return;
+  const a=l[i], b=l[j], t=a.orden; a.orden=b.orden; b.orden=t;
+  put('productos',a); put('productos',b);
+}
+
 function viewProductos(vw){
   let tab='prod', q='';
   topact('<button class="btn pri sm" id="add">+ Nuevo</button>');
@@ -3449,9 +3518,24 @@ function viewProductos(vw){
       $$('[data-e]',$('#view')).forEach(b=>b.onclick=()=>edCategoria(byId('categorias',b.dataset.e)));
       return;
     }
-    const todos=S.productos.slice().sort((a,b)=> (nameOf('categorias',a.categoriaId)+a.nombre).localeCompare(nameOf('categorias',b.categoriaId)+b.nombre));
+    const todos=S.productos.slice().sort(compararProductos);
     const ps=filtra(todos,q,[x=>x.nombre,x=>nameOf('categorias',x.categoriaId)]);
-    $('#pbody').innerHTML=barraBusca('Buscar producto o categoría…',q)+'<div class="card"><div class="bd p0">'+tbl([
+    const orden = !q;                       // las flechas solo con la lista completa
+    $('#pbody').innerHTML=barraBusca('Buscar producto o categoría…',q)+
+      '<div class="card" style="margin-bottom:12px;background:var(--panel2)"><div class="bd">'+
+        '<div class="row wrap" style="gap:10px;align-items:center">'+
+          '<b style="font-size:12.5px">🔢 El orden del menú lo pone usted</b>'+
+          '<span class="hintx" style="flex:1;min-width:230px">Cada producto lleva un número dentro de su '+
+          'categoría; así salen en el punto de venta. Use las flechas o escriba el número al editarlo.</span>'+
+          '<button class="btn sm" id="p_renum">Renumerar 1, 2, 3…</button>'+
+        '</div></div></div>'+
+      '<div class="card"><div class="bd p0">'+tbl([
+      {t:'N°',w:'86px',f:p=> orden
+        ? '<div class="row" style="gap:2px;align-items:center">'+
+          '<b class="mono" style="width:22px;text-align:right">'+(Number(p.orden)>0? p.orden:'—')+'</b>'+
+          '<button class="btn ghost sm" data-sube="'+p.id+'" title="Subir">▲</button>'+
+          '<button class="btn ghost sm" data-baja="'+p.id+'" title="Bajar">▼</button></div>'
+        : '<b class="mono">'+(Number(p.orden)>0? p.orden:'—')+'</b>'},
       {t:'',w:'52px',f:p=>{const u=urlImg(p.id);
         return u? '<img src="'+u+'" style="width:36px;height:36px;border-radius:8px;object-fit:contain;display:block;background:var(--panel2)">'
                 : '<span style="font-size:20px">'+(p.emoji||'🍽️')+'</span>';}},
@@ -3469,6 +3553,13 @@ function viewProductos(vw){
       el.oninput=debounce(()=>{ q=el.value; const pos=el.selectionStart; paint();
         const n2=$('#bq'); n2.focus(); n2.setSelectionRange(pos,pos); },160); }
     $$('[data-e]',$('#view')).forEach(b=>b.onclick=()=>edProducto(byId('productos',b.dataset.e)));
+    $$('[data-sube]',$('#view')).forEach(b=>b.onclick=()=>{ moverProducto(b.dataset.sube,-1); paint(); });
+    $$('[data-baja]',$('#view')).forEach(b=>b.onclick=()=>{ moverProducto(b.dataset.baja,1); paint(); });
+    $('#p_renum').onclick=()=>confirmar('¿Renumerar todos los productos 1, 2, 3… dentro de cada categoría? '+
+      'Se conserva el orden que tienen ahora.',()=>{
+      S.categorias.forEach(c=>renumerarCategoria(c.id));
+      renumerarCategoria('');
+      paint(); toast('Listo: productos renumerados','ok'); });
   }
   paint();
 }
@@ -3479,10 +3570,14 @@ function edCategoria(c){
       '<div class="f"><label>Icono</label><input id="e" value="'+esc(ed.emoji)+'" maxlength="4"></div>'+
       '<div class="f"><label>Nombre</label><input id="n" value="'+esc(ed.nombre)+'"></div></div>'+
       '<div class="f" style="margin-top:10px"><label>Orden</label><input id="o" type="number" value="'+(ed.orden||0)+'"></div>'+
-      '<label class="row tiny" style="margin-top:10px;gap:7px"><input type="checkbox" id="a" '+(ed.activo?'checked':'')+'> Activa</label>',
+      '<label class="row tiny" style="margin-top:10px;gap:7px"><input type="checkbox" id="a" '+(ed.activo?'checked':'')+'> Activa</label>'+
+      '<label class="row tiny" style="margin-top:7px;gap:7px"><input type="checkbox" id="k" '+(categoriaVaAComanda(ed)?'checked':'')+
+        '> Va a la comanda de cocina</label>'+
+      '<div class="hintx" style="margin-top:6px">Destíldelo para lo que se sirve de una, como las bebidas.</div>',
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
     onOpen:m=>{ $('#ok',m).onclick=()=>{ ed.nombre=$('#n',m).value.trim(); if(!ed.nombre) return toast('Nombre requerido','warn');
       ed.emoji=$('#e',m).value.trim()||'🍽️'; ed.orden=toN($('#o',m).value); ed.activo=$('#a',m).checked;
+      ed.comanda=$('#k',m)? $('#k',m).checked : true;
       put('categorias',ed); closeModal(); render(); toast('Categoría guardada','ok'); }; }});
 }
 function edProducto(p){
@@ -3499,12 +3594,18 @@ function edProducto(p){
         '<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
           '<div class="f"><label>Precio de venta</label><input id="pr" type="number" step="any" value="'+(ed.precio||0)+'"></div>'+
           '<div class="f"><label>Costo sin receta</label><input id="cm" type="number" step="any" value="'+(ed.costoManual||0)+'"></div></div>'+
+        '<div class="f" style="margin-bottom:10px"><label>N° de orden en el menú</label>'+
+          '<input id="or" type="number" min="0" step="1" value="'+(Number(ed.orden)||0)+'" style="max-width:130px">'+
+          '<div class="hintx" style="margin-top:4px">El 1 sale de primero dentro de su categoría. '+
+          'En 0 va de último, por orden alfabético.</div></div>'+
         '<div class="card" style="background:var(--panel2)"><div class="bd">'+
           '<div class="tline"><span>Costo receta (promedio actual)</span><span class="v" id="rc">—</span></div>'+
           '<div class="tline"><span>Utilidad</span><span class="v" id="ru">—</span></div>'+
           '<div class="tline b"><span>Margen</span><span class="v" id="rm">—</span></div></div></div>'+
         '<div class="f" style="margin-top:12px"><label>Foto del plato</label><div id="imgp"></div></div>'+
         '<label class="row tiny" style="margin-top:10px;gap:7px"><input type="checkbox" id="ac" '+(ed.activo?'checked':'')+'> Activo (visible en el POS)</label>'+
+        '<label class="row tiny" style="margin-top:7px;gap:7px"><input type="checkbox" id="sc" '+(ed.sinComanda?'checked':'')+
+          '> Este producto NO va a la comanda de cocina</label>'+
       '</div>'+
       '<div>'+
         '<div class="row" style="margin-bottom:8px"><b>Receta (descuenta inventario)</b><span class="spacer"></span>'+
@@ -3553,6 +3654,8 @@ function edProducto(p){
         ed.nombre=$('#nm',m).value.trim(); if(!ed.nombre) return toast('Nombre requerido','warn');
         ed.emoji=$('#em',m).value.trim()||'🍽️'; ed.categoriaId=cbCt.valor();
         ed.precio=toN($('#pr',m).value); ed.costoManual=toN($('#cm',m).value); ed.activo=$('#ac',m).checked;
+        ed.sinComanda=$('#sc',m)? $('#sc',m).checked : !!ed.sinComanda;
+        ed.orden=Math.max(0,toN($('#or',m).value));
         ed.receta=ed.receta.filter(r=>r.ingredienteId&&r.cantidad>0);
         put('productos',ed); closeModal(); render(); toast('Producto guardado','ok');
       };
@@ -4716,10 +4819,12 @@ function viewCaja(vw){
         {t:'Diferencia',num:1,f:x=>{ if(x.estado==='abierto') return '—';
           const d=x.diferencia||0; return '<b style="color:'+(Math.abs(d)<1?'var(--ok)':'var(--bad)')+'">'+money(d)+'</b>';}},
         {t:'',f:x=>'<div class="row" style="gap:3px"><button class="btn ghost sm" data-rt="'+x.id+'" title="Reimprimir el cierre">🖨️</button>'+
+          '<button class="btn ghost sm" data-wt="'+x.id+'" title="Texto para WhatsApp">📋</button>'+
           '<button class="btn ghost sm" data-vt="'+x.id+'" title="Ver detalle">👁️</button></div>'}
       ],hist,{empty:'Todavía no se ha cerrado ninguna caja',icon:'🔒'})+'</div></div>';
     $$('[data-rt]',$('#view')).forEach(b=>b.onclick=()=>{ imprimirCierre(byId('turnos',b.dataset.rt),null,null,true);
       toast('Cierre enviado a impresión','ok'); });
+    $$('[data-wt]',$('#view')).forEach(b=>b.onclick=()=>mandarCierreWA(byId('turnos',b.dataset.wt)));
     $$('[data-vt]',$('#view')).forEach(b=>b.onclick=()=>verTurno(byId('turnos',b.dataset.vt)));
     $('#cixls').onclick=()=>{
       const f=[[{v:'Cierres de caja',t:'titulo'}],[],
@@ -4759,8 +4864,10 @@ function verTurno(t){
       (t.nota? '<div class="hintx" style="margin-top:10px">Obs: '+esc(t.nota)+'</div>':'')+
       '</div></div></div>',
     footer:'<button class="btn" data-x>Cerrar</button>'+
+      '<button class="btn" id="wt">📋 WhatsApp</button>'+
       '<button class="btn pri" id="rt">🖨️ Reimprimir cierre</button>',
-    onOpen:m=>{ $('#rt',m).onclick=()=>{ imprimirCierre(t,D,t.contado,true); toast('Enviado a impresión','ok'); }; }});
+    onOpen:m=>{ $('#rt',m).onclick=()=>{ imprimirCierre(t,D,t.contado,true); toast('Enviado a impresión','ok'); };
+      $('#wt',m).onclick=()=>{ closeModal(); mandarCierreWA(t,D,t.contado); }; }});
 }
 function mAbrirCaja(){
   const cajas=cajasDisponibles();
@@ -4864,6 +4971,7 @@ function mCerrarCaja(){
         '</div></div>'+
       '</div></div>',
     footer:'<button class="btn" data-x>Cancelar</button>'+
+      '<button class="btn" id="wac">📋 WhatsApp</button>'+
       '<button class="btn" id="impc">🖨️ Imprimir cierre</button>'+
       '<button class="btn danger" id="ok">Cerrar turno</button>',
     onOpen:m=>{
@@ -4879,6 +4987,9 @@ function mCerrarCaja(){
       $$('[data-den]',m).forEach(i=>i.oninput=recontar);
       $('#usar',m).onclick=()=>{ $('#c',m).value=recontar(); upd(); };
       $('#impc',m).onclick=()=>imprimirCierre(t,D,toN($('#c',m).value));
+      /* copia sin cerrar el arqueo: la vista completa sale al confirmar */
+      $('#wac',m).onclick=()=>copiarTexto(textoCierre(t,D,toN($('#c',m).value)),
+        'Cierre copiado · pégalo en el grupo de WhatsApp');
       $('#ok',m).onclick=()=>{
         t.contado=toN($('#c',m).value); t.esperado=esperado; t.diferencia=round(t.contado-esperado,2);
         /* la plata contada manda: la diferencia queda registrada para que el
@@ -4894,6 +5005,7 @@ function mCerrarCaja(){
         put('turnos',t); S.turno=null; closeModal(); render();
         if(S.cfg.impTicket!==false) imprimirCierre(t,D,t.contado);
         toast('Turno cerrado · diferencia '+money(t.diferencia), Math.abs(t.diferencia)<1?'ok':'warn');
+        setTimeout(()=>mandarCierreWA(t,D,t.contado),700);
       };
     }});
 }
@@ -4908,6 +5020,132 @@ function datosCierre(t){
     if(t.esperado!=null) D.esperado=t.esperado;
   }
   return D;
+}
+/* Todo lo del día en un texto listo para pegar en el grupo de WhatsApp:
+   un resumen, no venta por venta. Qué se vendió, cuánta plata, por dónde
+   entró, qué salió y con cuánto quedó cada caja. */
+function textoCierre(t,D,contado){
+  if(!t) return '';
+  D=D||datosCierre(t);
+  contado = contado!=null? contado : (t.contado||0);
+  const dif=round((Number(contado)||0)-D.esperado,2);
+  const vs=(D.vs||[]).filter(v=>v.estado!=='anulada');
+  const ini=t.apertura, fin=t.cierre||now();
+  const dentro=m=>String(m.fecha)>=String(ini) && String(m.fecha)<=String(fin);
+  const anuladas={}; S.ventas.forEach(v=>{ if(v.estado==='anulada') anuladas[v.id]=1; });
+  const ms=S.movimientos.filter(m=>dentro(m) && !(m.refTipo==='venta' && anuladas[m.refId]));
+  const L=(a,b)=>a+': '+b+'\n';
+  const cta=S.cuentas.filter(c=>c.activo!==false);
+
+  /* productos vendidos, agrupados */
+  const prods={};
+  vs.forEach(v=>(v.items||[]).forEach(i=>{ const k=i.nombre;
+    prods[k]=prods[k]||{n:k,uds:0,val:0}; prods[k].uds+=i.cant; prods[k].val+=i.precio*i.cant; }));
+  const top=Object.values(prods).sort((a,b)=>b.val-a.val);
+  const uds=sum(top,p=>p.uds);
+
+  /* categorías */
+  const cats={};
+  vs.forEach(v=>(v.items||[]).forEach(i=>{ const pr=byId('productos',i.productoId);
+    const k=pr? nameOf('categorias',pr.categoriaId):'Otros';
+    cats[k]=(cats[k]||0)+i.precio*i.cant; }));
+  const porCat=Object.keys(cats).map(k=>({n:k,v:cats[k]})).sort((a,b)=>b.v-a.v);
+
+  /* gastos del turno */
+  const gastos=ms.filter(esGasto);
+  const gcat={};
+  gastos.forEach(m=>{ const k=m.categoria||'otros'; gcat[k]=(gcat[k]||0)+m.monto; });
+  const porGasto=Object.keys(gcat).map(k=>({n:k,v:gcat[k]})).sort((a,b)=>b.v-a.v);
+  /* otras entradas que no son ventas */
+  const otras=ms.filter(m=>m.tipo==='ingreso' && m.refTipo!=='venta' && m.categoria!=='traslado');
+
+  const medios=D.porMedio||{};
+  let x='*'+String(S.cfg.nombre||'POS').toUpperCase()+'*\n';
+  x+='*CIERRE DE CAJA*\n';
+  x+=fdate(ini,true)+'  →  '+fdate(fin,true)+'\n';
+  x+='Cajero: '+nameOf('usuarios',t.usuarioId)+'\n';
+  if(t.cuentaId) x+='Caja: '+nameOf('cuentas',t.cuentaId)+'\n';
+
+  x+='\n*VENTAS DEL DÍA: '+money(D.totalVentas)+'*\n';
+  x+=L('Facturas',vs.length);
+  x+=L('Unidades vendidas',num(uds,0));
+  x+=L('Ticket promedio',money(vs.length? D.totalVentas/vs.length:0));
+
+  x+='\n*CÓMO PAGARON*\n';
+  MEDIOS.forEach(md=>{ const v=medios[md.k]||0; if(v) x+=L(md.n,money(v)); });
+
+  if(porCat.length){ x+='\n*POR CATEGORÍA*\n';
+    porCat.forEach(c=>{ x+='• '+c.n+': '+money(c.v)+'\n'; }); }
+
+  if(top.length){ x+='\n*QUÉ SE VENDIÓ*\n';
+    top.forEach(p=>{ x+='• '+num(p.uds,0)+' × '+p.n+' — '+money(p.val)+'\n'; }); }
+
+  x+='\n*EFECTIVO (arqueo)*\n';
+  x+=L('Abrió con',money(t.base));
+  x+=L('Ventas en efectivo',money(D.ventaEfe));
+  if(D.otrosIng) x+=L('Otras entradas',money(D.otrosIng));
+  if(D.salidas) x+=L('Salidas de caja','-'+money(D.salidas));
+  x+='*Debía haber: '+money(D.esperado)+'*\n';
+  x+='*Contado: '+money(contado)+'*\n';
+  x+='*'+(Math.abs(dif)<1? 'Cuadró ✅' : (dif>0? 'Sobrante: '+money(dif) : 'Faltante: '+money(Math.abs(dif))))+'*\n';
+  if(t.nota) x+='Obs: '+t.nota+'\n';
+
+  if(otras.length){ x+='\n*OTROS INGRESOS*\n';
+    otras.forEach(m=>{ x+='• '+(m.concepto||m.categoria||'ingreso')+
+      (nombreTercero(m)? ' ('+nombreTercero(m)+')':'')+': '+money(m.monto)+'\n'; }); }
+
+  x+='\n*GASTOS DEL TURNO: '+money(sum(gastos,m=>m.monto))+'*\n';
+  if(!gastos.length) x+='(ninguno)\n';
+  else porGasto.forEach(g=>{ x+='• '+g.n+': '+money(g.v)+'\n'; });
+
+  if(D.bancos && D.bancos.length){ x+='\n*MOVIMIENTO EN BANCOS*\n';
+    D.bancos.forEach(bk=>{ x+='• '+bk.nombre+': '+money(bk.ing-bk.egr)+'\n'; }); }
+
+  x+='\n*CON CUÁNTO QUEDÓ CADA CUENTA*\n';
+  cta.forEach(c=>{ x+=(c.tipo==='caja'?'💵 ':'🏦 ')+c.nombre+': '+money(saldoCuenta(c.id))+'\n'; });
+
+  const cxcSaldo=round(sum(cxc(),d=>saldoDoc(d)||saldoVenta(d)||0),2);
+  if(cxcSaldo>0.5) x+='\n*Por cobrar (cartera): '+money(cxcSaldo)+'*\n';
+
+  if(verCostos()){
+    const costo=sum(vs,v=>v.costo||0);
+    const util=round(D.totalVentas-costo-sum(gastos,m=>m.monto),2);
+    x+='\n*RESULTADO*\n';
+    x+=L('Costo de lo vendido',money(costo));
+    x+=L('Gastos',money(sum(gastos,m=>m.monto)));
+    x+='*Utilidad del turno: '+money(util)+'*\n';
+  }
+  x+='\n_Generado '+fdate(now(),true)+'_';
+  return x;
+}
+async function copiarTexto(t,aviso){
+  let ok=false;
+  try{ await navigator.clipboard.writeText(t); ok=true; }catch(e){
+    try{ const ta=document.createElement('textarea'); ta.value=t;
+      ta.style.cssText='position:fixed;left:-9999px'; document.body.appendChild(ta);
+      ta.select(); ok=document.execCommand('copy'); ta.remove(); }catch(e2){}
+  }
+  if(ok){ toast(aviso||'Copiado · pégalo en el grupo de WhatsApp','ok',4500); return true; }
+  modal({title:'Copia este texto',size:'slim',
+    body:'<textarea rows="18" style="font-family:ui-monospace,monospace;font-size:11.5px">'+esc(t)+'</textarea>'+
+      '<div class="hintx" style="margin-top:8px">Selecciona todo y cópialo.</div>'});
+  setTimeout(()=>{ const ta=$('#modals textarea'); if(ta){ ta.focus(); ta.select(); } },80);
+  return false;
+}
+function mandarCierreWA(t,D,contado){
+  const txt=textoCierre(t,D,contado);
+  modal({title:'Cierre para el grupo',size:'wide',
+    body:'<div class="hintx" style="margin-bottom:8px">Así queda el mensaje. Cópielo y péguelo en WhatsApp.</div>'+
+      '<textarea id="wa_t" rows="20" style="font-family:ui-monospace,monospace;font-size:11.5px;white-space:pre">'+
+      esc(txt)+'</textarea>',
+    footer:'<button class="btn" data-x>Cerrar</button>'+
+      '<button class="btn" id="wa_ws">📲 Abrir WhatsApp</button>'+
+      '<button class="btn pri" id="wa_cp">📋 Copiar</button>',
+    onOpen:m=>{
+      $('#wa_cp',m).onclick=()=>copiarTexto($('#wa_t',m).value);
+      $('#wa_ws',m).onclick=()=>{ copiarTexto($('#wa_t',m).value,'Copiado · escoge el grupo y pega');
+        window.open('https://wa.me/?text='+encodeURIComponent($('#wa_t',m).value),'_blank'); };
+    }});
 }
 function imprimirCierre(t,D,contado,copia){
   if(!t) return;
@@ -4951,8 +5189,8 @@ const PLANTILLA=[
    ej:[['Hamburguesas','🍔',1],['Bebidas','🥤',2],['Postres','🍰',3]]},
   {hoja:'Ingredientes', campos:['nombre','unidad','costo','stock_inicial','stock_minimo'],
    ej:[['Carne de res','g',28,5000,1000],['Pan de hamburguesa','und',1200,60,12],['Queso','g',26,1500,300]]},
-  {hoja:'Productos', campos:['nombre','categoria','precio','icono','costo_sin_receta'],
-   ej:[['Hamburguesa clásica','Hamburguesas',22000,'🍔',''],['Gaseosa','Bebidas',5000,'🥤','']]},
+  {hoja:'Productos', campos:['nombre','categoria','precio','icono','costo_sin_receta','orden'],
+   ej:[['Hamburguesa clásica','Hamburguesas',22000,'🍔','',1],['Gaseosa','Bebidas',5000,'🥤','',1]]},
   {hoja:'Recetas', campos:['producto','ingrediente','cantidad'],
    ej:[['Hamburguesa clásica','Carne de res',150],['Hamburguesa clásica','Pan de hamburguesa',1],
        ['Hamburguesa clásica','Queso',30]]},
@@ -4974,6 +5212,7 @@ function descargarPlantilla(){
     ['3. Borra las filas de ejemplo antes de subir el archivo.'],
     ['4. Si un nombre ya existe en el sistema, se actualiza; si no, se crea.'],
     ['5. En Productos, la columna "categoria" debe coincidir con un nombre de la hoja Categorias.'],
+    ['   La columna "orden" es el puesto en el menú dentro de su categoría: 1 sale de primero. Déjala en blanco y va de último.'],
     ['6. En Recetas, "producto" e "ingrediente" deben coincidir con los nombres de esas hojas.'],
     ['7. Las cantidades van en la misma unidad del ingrediente (gramos, ml, unidades).'],
     ['8. No importa si escribes con tildes o mayúsculas: el sistema compara sin distinguir.'],[],
@@ -5026,7 +5265,7 @@ function analizarImport(hojas){
           stock:toN(o.stock_inicial), stockMin:toN(o.stock_minimo)}); }
       else if(def.hoja==='Productos'){ if(!o.nombre) return;
         plan.productos.push({nombre:o.nombre, categoria:o.categoria||'', precio:toN(o.precio),
-          emoji:o.icono||'🍽️', costoManual:toN(o.costo_sin_receta)}); }
+          emoji:o.icono||'🍽️', costoManual:toN(o.costo_sin_receta), orden:toN(o.orden)}); }
       else if(def.hoja==='Recetas'){ if(!o.producto||!o.ingrediente) return;
         plan.recetas.push({producto:o.producto, ingrediente:o.ingrediente, cantidad:toN(o.cantidad)}); }
       else if(def.hoja==='Clientes'){ if(!o.nombre) return;
@@ -5076,6 +5315,7 @@ function aplicarImport(plan){
     const d=ex||{id:uid('p'),activo:true,receta:[],orden:0};
     d.nombre=o.nombre; d.precio=o.precio; d.emoji=o.emoji;
     d.costoManual=o.costoManual||0; d.activo=true;
+    if(o.orden>0) d.orden=o.orden;                 // el número que traiga el Excel manda
     if(cat) d.categoriaId=cat.id;
     put('productos',d); cuenta('Productos',!ex); });
 
@@ -5970,12 +6210,15 @@ function download(name,content,mime){
   document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},400);
 }
 function exportCSV(d1,d2){
-  const rows=[['Fecha','Factura','Tipo','Mesa','Cliente','Cajero','Producto','Cantidad','Precio','Total linea','Costo linea','Medio','Estado']];
+  const vc=verCostos();
+  const rows=[['Fecha','Factura','Tipo','Mesa','Cliente','Cajero','Producto','Cantidad','Precio','Total linea']
+    .concat(vc?['Costo linea']:[]).concat(['Medio','Estado'])];
   S.ventas.filter(v=>dISO(v.fecha)>=d1&&dISO(v.fecha)<=d2).forEach(v=>{
     const medio=v.credito?'credito':(v.pagos||[]).map(p=>p.medio).join('+');
     v.items.forEach(i=> rows.push([fdate(v.fecha,true),v.no,v.tipo,nameOf('mesas',v.mesaId),
       v.clienteId?nameOf('clientes',v.clienteId):'',nameOf('usuarios',v.usuarioId),i.nombre,i.cant,i.precio,
-      round(i.precio*i.cant,2),round((i.costo||0)*i.cant,2),medio,v.estado]));
+      round(i.precio*i.cant,2)]
+      .concat(vc?[round((i.costo||0)*i.cant,2)]:[]).concat([medio,v.estado])));
   });
   download('ventas_'+d1+'_'+d2+'.csv', rows.map(r=>r.map(csvEsc).join(';')).join('\n'));
   toast('CSV descargado','ok');
@@ -6038,6 +6281,17 @@ function viewAjustes(vw){
              ['qz','Dos impresoras con QZ Tray (requiere instalarlo)']].map(x=>
               '<option value="'+x[0]+'"'+(c.modoImp===x[0]?' selected':'')+'>'+esc(x[1])+'</option>').join('')+
             '</select></div>'+
+          '<div class="card" style="background:var(--panel2);margin-bottom:12px"><div class="bd">'+
+            '<b style="font-size:12.5px">👨‍🍳 Qué va a la comanda de cocina</b>'+
+            '<div class="hintx" style="margin:4px 0 9px">Destilde las categorías que no necesitan comanda '+
+            '(las bebidas, por ejemplo, se sirven de una). Lo que quede sin marcar no se imprime, '+
+            'pero se cobra y descuenta del inventario igual.</div>'+
+            '<div id="g_cats" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px"></div>'+
+            '<div class="row wrap" style="margin-top:9px;gap:7px">'+
+              '<button class="btn sm" id="g_cattodas">Marcar todas</button>'+
+              '<button class="btn sm" id="g_catning">Desmarcar todas</button>'+
+              '<span class="hintx" id="g_catres"></span></div>'+
+          '</div></div>'+
           '<div class="row wrap" style="margin-bottom:8px;gap:8px">'+
             '<button class="btn sm" id="g_buscarimp">🔍 Buscar las impresoras de este equipo</button>'+
             '<span class="hintx" id="g_impest"></span></div>'+
@@ -6078,6 +6332,35 @@ function viewAjustes(vw){
         '</div></div></div>'+
         '<div class="row" style="margin-top:14px"><button class="btn pri" id="save">Guardar cambios</button></div>';
       cajaImagen($('#imglogo'), 'logo', IMG_PRESET.logo, ()=>{ applyCfg(); paintLogin(); });
+      /* categorías que van (o no) a la comanda */
+      function pintaCats(){
+        const cats=S.categorias.filter(x=>x.activo!==false)
+          .sort((a,b)=>(Number(a.orden)||0)-(Number(b.orden)||0)||String(a.nombre).localeCompare(String(b.nombre)));
+        const box=$('#g_cats');
+        if(!cats.length){ box.innerHTML='<span class="hintx">Todavía no ha creado categorías.</span>';
+          $('#g_catres').textContent=''; return; }
+        box.innerHTML=cats.map(x=>'<label class="row tiny" style="gap:7px;padding:5px 7px;border-radius:8px;'+
+          'border:1px solid var(--line);background:var(--panel)">'+
+          '<input type="checkbox" data-cat="'+esc(x.id)+'"'+(categoriaVaAComanda(x)?' checked':'')+'>'+
+          '<span>'+(x.emoji||'🍽️')+' '+esc(x.nombre)+'</span></label>').join('');
+        const van=cats.filter(categoriaVaAComanda).length;
+        $('#g_catres').innerHTML = van===cats.length
+          ? 'Todas van a cocina'
+          : '<b>'+van+' de '+cats.length+'</b> van a cocina · '+(cats.length-van)+' no imprimen';
+        $$('[data-cat]',box).forEach(ch=>ch.onchange=e=>{
+          const cat=byId('categorias',e.target.dataset.cat); if(!cat) return;
+          cat.comanda=e.target.checked; put('categorias',cat); pintaCats();
+          toast((cat.emoji||'')+' '+cat.nombre+(e.target.checked?' sí va a cocina':' ya no imprime comanda'),'ok',3000);
+        });
+      }
+      function todasCats(v){
+        S.categorias.filter(x=>x.activo!==false).forEach(x=>{ x.comanda=v; put('categorias',x); });
+        pintaCats(); toast(v?'Todas van a cocina':'Ninguna categoría imprime comanda','ok');
+      }
+      pintaCats();
+      $('#g_cattodas').onclick=()=>todasCats(true);
+      $('#g_catning').onclick=()=>todasCats(false);
+
       let _valCom=c.impresoraComanda||'', _valTik=c.impresoraTicket||'';
       function selImpresora(cont,valor,ponVal,quien){
         const l=S.impresoras||[];
@@ -6338,6 +6621,15 @@ function viewAjustes(vw){
           '<div class="tline"><span>La nube volverá</span><span class="v">'+(S.cfg.prueba.fbOn?'conectada':'apagada')+'</span></div>'+
           '<button class="btn pri" id="d_salirp" style="margin-top:11px">Salir y volver a lo real</button>'+
         '</div></div>':'')+
+        '<div class="card"><div class="hd"><h3>Espacio de este equipo</h3></div><div class="bd">'+
+          '<p class="hintx">Todo vive en la nube; lo de aquí es una copia para trabajar rápido y sin internet. '+
+          'Si el navegador se llena y sale «cuota excedida», vacíe esta copia y vuelva a entrar.</p>'+
+          '<div class="tline"><span>Usado</span><span class="v" id="d_esp">…</span></div>'+
+          '<div class="tline"><span>Registros guardados</span><span class="v">'+
+            COLL.reduce((t,k)=>t+S[k].length,0)+'</span></div>'+
+          '<div class="tline"><span>Pendientes por subir</span><span class="v">'+S.outbox.length+'</span></div>'+
+          '<button class="btn danger" id="d_limpiar" style="margin-top:11px">🧹 Vaciar y volver a bajar de la nube</button>'+
+        '</div></div>'+
         '<div class="card"><div class="hd"><h3>Zona peligrosa</h3></div><div class="bd">'+
           '<p class="hintx">Estas acciones no se pueden deshacer.</p>'+
           '<div class="row wrap"><button class="btn" id="d_seed">Cargar datos de ejemplo</button>'+
@@ -6346,6 +6638,11 @@ function viewAjustes(vw){
         '</div></div></div>';
       if($('#d_salirp')) $('#d_salirp').onclick=salirModoPrueba;
       if($('#d_vuelto')) $('#d_vuelto').onclick=repararVueltos;
+      if($('#d_esp')) espacioUsado().then(e=>{ const el=$('#d_esp'); if(!el) return;
+        el.innerHTML = e? (pesoTexto(e.usado)+(e.tope? ' de '+pesoTexto(e.tope)+
+          ' <span class="pill '+(e.pct>=80?'bad':e.pct>=60?'warn':'ok')+'">'+e.pct+'%</span>':''))
+                        : 'no disponible'; });
+      if($('#d_limpiar')) $('#d_limpiar').onclick=mSinEspacio;
       $('#d_exp').onclick=()=>{
         const cfg=Object.assign({},S.cfg); delete cfg.prueba;
         const dump={version:1,fecha:now(),cfg:cfg,meta:S.meta};
@@ -7132,6 +7429,74 @@ function pintarPrueba(){
     '. Nada se guarda en la nube y su información real está a salvo. Empezó '+fdate(p.desde,true)+'.';
 }
 
+/* ================= ESPACIO DEL NAVEGADOR ============================
+   Cuando el equipo lleva meses trabajando, el navegador puede llenarse y
+   empieza a dar "cuota excedida". Como TODO está en la nube, basta con
+   vaciar lo de este equipo y volver a bajarlo limpio.
+   ================================================================== */
+async function espacioUsado(){
+  try{ if(navigator.storage && navigator.storage.estimate){
+    const e=await navigator.storage.estimate();
+    return {usado:e.usage||0, tope:e.quota||0,
+      pct: e.quota? Math.round((e.usage/e.quota)*100):0};
+  } }catch(e){}
+  return null;
+}
+function pesoTexto(n){
+  if(!n) return '0 KB';
+  return n>=1048576? (n/1048576).toFixed(1)+' MB' : Math.round(n/1024)+' KB';
+}
+/* borra los datos de este equipo pero conserva la conexión a la nube */
+function limpiarEquipo(recargar){
+  const guardar={};
+  ['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho',
+   'terminal','estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket',
+   'modoImp','comandaAncho','letra','nombre','simbolo','decimales'].forEach(k=>{
+     if(S.cfg[k]!==undefined) guardar[k]=S.cfg[k]; });
+  const sesion=(()=>{ try{ return localStorage.getItem('pos_fb'); }catch(e){ return null; } })();
+  const perfil=(()=>{ try{ return localStorage.getItem('pos_perfil'); }catch(e){ return null; } })();
+  try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf('pos_')===0) localStorage.removeItem(k); }); }catch(e){}
+  try{ localStorage.setItem('pos_limpieza',JSON.stringify(guardar)); }catch(e){}
+  if(sesion) try{ localStorage.setItem('pos_fb',sesion); }catch(e){}
+  if(perfil) try{ localStorage.setItem('pos_perfil',perfil); }catch(e){}
+  try{ indexedDB.deleteDatabase(DBNAME); }catch(e){}
+  if(recargar!==false) setTimeout(()=>location.reload(),500);
+}
+async function mSinEspacio(){
+  const e=await espacioUsado();
+  const pend=S.outbox.length;
+  modal({title:'El navegador se quedó sin espacio',size:'slim',
+    body:'<div class="card" style="background:var(--warn-soft)"><div class="bd">'+
+      '<b>⚠ Este equipo ya no puede guardar más</b>'+
+      '<div class="tiny" style="margin-top:5px">Su información <b>no se pierde</b>: está en la nube. '+
+      'Lo que hay que hacer es vaciar lo guardado en este computador y volverlo a bajar limpio.</div>'+
+      '</div></div>'+
+      (e? '<div class="tline" style="margin-top:11px"><span>Espacio usado</span><span class="v">'+
+          pesoTexto(e.usado)+(e.tope? ' de '+pesoTexto(e.tope)+' ('+e.pct+'%)':'')+'</span></div>':'')+
+      '<div class="tline"><span>Cambios sin subir</span><span class="v">'+pend+'</span></div>'+
+      (pend? '<div class="card" style="background:var(--bad-soft);margin-top:10px"><div class="bd">'+
+        '<b>Ojo: hay '+pend+' cambio(s) que todavía no han subido</b>'+
+        '<div class="tiny" style="margin-top:4px">Primero súbalos o descargue el respaldo; si limpia ahora, '+
+        'esos cambios se pierden.</div></div></div>':'')+
+      '<div class="hintx" style="margin-top:11px">Después de limpiar, entre otra vez con su correo y la app '+
+      'vuelve a bajar todo el restaurante.</div>',
+    footer:'<button class="btn" data-x>Ahora no</button>'+
+      '<button class="btn" id="q_resp">⬇️ Respaldo</button>'+
+      (pend? '<button class="btn" id="q_sub">⬆️ Subir pendientes</button>':'')+
+      '<button class="btn danger" id="q_lim">🧹 Limpiar este equipo</button>',
+    onOpen:m=>{
+      $('#q_resp',m).onclick=()=>{ const cfg=Object.assign({},S.cfg); delete cfg.prueba;
+        const d={version:1,fecha:now(),cfg:cfg,meta:S.meta}; COLL.forEach(k=>d[k]=S[k]);
+        download('respaldo_antes_de_limpiar_'+todayISO()+'.json',JSON.stringify(d),'application/json');
+        toast('Respaldo descargado','ok'); };
+      if($('#q_sub',m)) $('#q_sub',m).onclick=async()=>{ await flushOutbox(true);
+        toast(S.outbox.length? 'Todavía quedan '+S.outbox.length:'Listo, todo subido', S.outbox.length?'warn':'ok'); };
+      $('#q_lim',m).onclick=()=>{ closeModal();
+        confirmar('¿Vaciar la información guardada en ESTE equipo? La nube no se toca y al volver a entrar '+
+          'se descarga todo otra vez.',()=>{ toast('Limpiando…','ok'); limpiarEquipo(true); },true); };
+    }});
+}
+
 function borrarTodoLocal(){
   ['pos_user','pos_fb','pos_perfil'].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
   try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf('pos_')===0) localStorage.removeItem(k); }); }catch(e){}
@@ -7188,10 +7553,15 @@ async function ingresar(){
         const cambio = pf.negocioId && S.cfg.fbNegocio!==pf.negocioId;
         if(cambio || !S.meta.pull || !Object.keys(S.meta.pull).length) await entrarANegocio(pf.negocioId,null);
         else await pullCloud();
-        /* deja su acceso guardado en el local para que después entre sin internet */
+        /* deja su acceso guardado en el local para que después entre sin internet.
+           OJO: el rol es el que diga la nube (mesero, cajero o admin), nunca
+           se asciende a nadie por entrar desde otro equipo. */
+        const rolNube = ['admin','cajero','mesero'].indexOf(pf.rol)>=0? pf.rol : 'cajero';
         let u=usuarioPorCorreo(em);
-        if(!u){ u={id:uid('u'),nombre:pf.nombre||em,email:em,rol:'admin',activo:true}; }
-        u.rol='admin'; u.activo=true;
+        if(!u){ u={id:uid('u'),nombre:pf.nombre||em,email:em,rol:rolNube,activo:true}; }
+        u.rol=rolNube; u.activo=true;
+        if(pf.nombre && !u.nombre) u.nombre=pf.nombre;
+        u.uidNube=pf.uid||pf.id||u.uidNube||'';
         await fijarClave(u,pw); put('usuarios',u);
         paintLogin(); login(u); terminar(); return;
       }catch(e){
@@ -7371,7 +7741,19 @@ $('#lg_pass').onkeydown=e=>{ if(e.key==='Enter') ingresar(); };
 $('#lg_mail').onkeydown=e=>{ if(e.key==='Enter') $('#lg_pass').focus(); };
 $('#lg_diag').onclick=diagnosticoNube;
 
+/* Si la nube dice que esa persona es mesero o cajero, ese es su rol aunque
+   en este equipo hubiera quedado guardado otro. Nadie sube de rango solo. */
+function corregirRol(u){
+  if(!u || u._super) return u;
+  const pf=S.perfil;
+  if(pf && pf.email && norm(pf.email)===norm(u.email||'') &&
+     ['admin','cajero','mesero'].indexOf(pf.rol)>=0 && u.rol!==pf.rol){
+    u.rol=pf.rol; put('usuarios',u);
+  }
+  return u;
+}
 function login(u){
+  u=corregirRol(u);
   S.user=u;
   try{ localStorage.setItem('pos_user',u.id); }catch(e){}
   $('#login').classList.add('hide');
@@ -7396,9 +7778,38 @@ $('#btnuser').onclick=()=>{
       esc((S.user?S.user.nombre:'?').slice(0,2).toUpperCase())+'</div>'+
       '<div><b>'+esc(S.user?S.user.nombre:'')+'</b><div class="tiny muted">'+esc(S.user?S.user.rol:'')+'</div></div></div>'+
       '<div class="tline"><span>Turno</span><span class="v">'+(S.turno?'Abierto desde '+ftime(S.turno.apertura):'Sin abrir')+'</span></div>'+
-      '<div class="tline"><span>Pendientes de envío</span><span class="v">'+S.outbox.length+'</span></div>',
+      '<div class="tline"><span>Pendientes de envío</span><span class="v">'+S.outbox.length+'</span></div>'+
+      '<div class="tline"><span>Espacio del navegador</span><span class="v" id="u_esp">…</span></div>'+
+      '<div class="card" style="background:var(--panel2);margin-top:12px"><div class="bd">'+
+        '<label class="row tiny" style="gap:8px"><input type="checkbox" id="u_lim">'+
+        ' <span><b>Limpiar este equipo al salir</b><br><span class="muted">Vacía lo guardado aquí y al volver '+
+        'a entrar se descarga todo de la nube. Úselo si le sale «cuota excedida» o si va lento.</span></span></label>'+
+      '</div></div>',
     footer:'<button class="btn" data-x>Cerrar</button><button class="btn danger" id="lo">Cerrar sesión</button>',
-    onOpen:m=>{ $('#lo',m).onclick=()=>{closeModal();logout();}; }});
+    onOpen:m=>{
+      espacioUsado().then(e=>{ const el=$('#u_esp',m); if(!el) return;
+        el.innerHTML = e? (pesoTexto(e.usado)+(e.tope? ' de '+pesoTexto(e.tope)+
+          ' <span class="pill '+(e.pct>=80?'bad':e.pct>=60?'warn':'ok')+'">'+e.pct+'%</span>':''))
+                        : 'no disponible'; });
+      $('#lo',m).onclick=()=>{
+        const limpiar=$('#u_lim',m).checked;
+        closeModal();
+        if(!limpiar) return logout();
+        const pend=S.outbox.length;
+        confirmar(pend
+          ? 'Hay '+pend+' cambio(s) sin subir. Voy a intentar subirlos y después limpio este equipo. ¿Sigo?'
+          : '¿Cerrar sesión y vaciar lo guardado en este equipo? La nube no se toca; al volver a entrar se '+
+            'descarga todo otra vez.',
+          async()=>{
+            if(pend){ toast('Subiendo pendientes…','ok'); try{ await flushOutbox(true); }catch(e){} }
+            if(S.outbox.length){
+              return confirmar('Todavía quedan '+S.outbox.length+' cambio(s) sin subir. Si limpio ahora se pierden. '+
+                '¿Limpio de todas formas?',()=>{ toast('Limpiando…','ok'); limpiarEquipo(true); },true);
+            }
+            toast('Limpiando este equipo…','ok'); limpiarEquipo(true);
+          },true);
+      };
+    }});
 };
 $('#sync').onclick=()=>{ if(can('ajustes')){ _ajTab='sync'; S.view='ajustes'; render(); }
   else toast(S.outbox.length? S.outbox.length+' cambios en cola':(S.cfg.fbOn?'Todo sincronizado':'Modo local')); };
@@ -7422,6 +7833,9 @@ async function boot(){
   await openDB();
   const cfgRows=await idbAll('config');
   S.cfg=Object.assign({},DEFCFG,cfgRows[0]||{});
+  try{ const lim=localStorage.getItem('pos_limpieza');
+    if(lim){ S.cfg=Object.assign(S.cfg,JSON.parse(lim)||{}); localStorage.removeItem('pos_limpieza');
+      S.cfg.id='cfg'; idbPut('config',S.cfg); } }catch(e){}
   const metaRows=await idbAll('meta'); S.meta=metaRows[0]||{id:'meta',cons:{}};
   await Promise.all(COLL.concat(['outbox']).map(async k=>{ S[k]=await idbAll(k); }));
   S.turno=turnoAbierto();
