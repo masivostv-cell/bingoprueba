@@ -1424,7 +1424,16 @@ function pagosDobles(d){
   if(!d || d.credito) return [];
   return S.abonos.filter(a=>a.docId===d.id);
 }
-function saldoDoc(d){ return round((d.total||0)-abonadoDe(d.id),2); }
+/* Saldo real de un documento de cartera. Lo que el cliente pagó en el mismo
+   momento de la venta ya entró a la caja, así que no puede seguir figurando
+   como deuda: antes una venta de 9.000 con 4.500 de contado aparecía
+   debiendo los 9.000 completos. */
+function saldoDoc(d){
+  if(!d) return 0;
+  if(d.esOtro) return round((d.total||0)-abonadoDe(d.id),2);
+  if(d.proveedorId!==undefined) return saldoCompra(d);
+  return saldoVenta(d);
+}
 function docCartera(id){ return byId('ventas',id)||byId('compras',id)||byId('otrosdocs',id); }
 function coleccionDoc(d){ return d.esOtro? 'otrosdocs' : (d.proveedorId!==undefined? 'compras':'ventas'); }
 function terceroDoc(d){
@@ -1434,6 +1443,10 @@ function terceroDoc(d){
   return d.clienteId? nameOf('clientes',d.clienteId):'—';
 }
 function otrosCartera(tipo){ return S.otrosdocs.filter(d=>d.tipo===tipo && d.estado!=='anulado' && saldoDoc(d)>0.5); }
+/* lo que quedó fiado en una venta: eso NO entró a la caja, se va a cartera */
+function fiadoDe(v){ return (v && v.credito)
+  ? round((v.total||0)-round(sum(v.pagos||[],p=>p.monto),2),2) : 0; }
+function recaudadoDe(v){ return round((v&&v.total||0)-fiadoDe(v),2); }
 function cxc(){ return S.ventas.filter(v=>v.estado!=='anulada'&&v.credito&&saldoVenta(v)>0.5).concat(otrosCartera('cxc')); }
 function cxp(){ return S.compras.filter(c=>c.estado!=='anulada'&&c.credito&&saldoCompra(c)>0.5).concat(otrosCartera('cxp')); }
 function saldoCliente(id){ return round(sum(cxc().filter(v=>v.clienteId===id),saldoDoc),2); }
@@ -1453,7 +1466,7 @@ function detalleTurno(t){
   const vs=ventasDeTurno(t.id);
   const porMedio={};
   vs.forEach(v=>{
-    if(v.credito) porMedio.credito=(porMedio.credito||0)+round((v.total||0)-sum(v.pagos||[],p=>p.monto),2);
+    { const f=fiadoDe(v); if(f) porMedio.credito=(porMedio.credito||0)+f; }
     (v.pagos||[]).forEach(p=>{ porMedio[p.medio]=(porMedio[p.medio]||0)+p.monto; });
   });
   const movs=S.movimientos.filter(m=>m.turnoId===t.id);
@@ -3425,7 +3438,7 @@ function viewVentas(vw){
     const vs=datos();
     const ok=vs.filter(v=>v.estado!=='anulada');
     const tot=sum(ok,v=>v.total), cst=sum(ok,v=>v.costo||0);
-    const med={}; ok.forEach(v=>{ if(v.credito) med.credito=(med.credito||0)+v.total;
+    const med={}; ok.forEach(v=>{ const f=fiadoDe(v); if(f) med.credito=(med.credito||0)+f;
       (v.pagos||[]).forEach(p=>med[p.medio]=(med[p.medio]||0)+p.monto); });
     $('#vbody').innerHTML=
       '<div class="kpis" style="margin-bottom:14px">'+
@@ -4641,7 +4654,8 @@ function viewCaja(vw){
         '<button class="btn danger sm" id="rcerrar">Cerrar caja</button></div><div class="bd">'+
         '<div class="kpis">'+
           kpi('Abrió con',money(t.base),'saldo del cierre anterior','')+
-          kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas','brand')+
+          kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas'+
+            (round(sum(D.vs,v=>fiadoDe(v)),2)>0.5? ' · '+money(round(sum(D.vs,v=>fiadoDe(v)),2))+' fiados':''),'brand')+
           kpi('Efectivo que debe haber',money(D.esperado),'esto es lo único que se cuenta','ok')+
           kpi('Movido en el turno',money(D.ventaEfe+D.otrosIng-D.salidas),'entradas menos salidas','')+
         '</div></div></div>';
@@ -5132,13 +5146,19 @@ function textoCierre(t,D,contado,comoCierre){
   if(t.cuentaId) x+='Caja: '+nameOf('cuentas',t.cuentaId)+'\n';
   x+='_Es todo lo de ESTE turno, así pase de la medianoche._\n';
 
-  x+='\n*VENTAS DEL TURNO: '+money(D.totalVentas)+'*\n';
+  const fiado=round(sum(vs,v=>fiadoDe(v)),2);
+  const recaudado=round(D.totalVentas-fiado,2);
+
+  x+='\n*VENTAS DEL TURNO: '+money(D.totalVentas)+'*  (facturado)\n';
   x+=L('Facturas',vs.length);
   x+=L('Unidades vendidas',num(uds,0));
   x+=L('Ticket promedio',money(vs.length? D.totalVentas/vs.length:0));
 
   x+='\n*CÓMO PAGARON*\n';
-  MEDIOS.forEach(md=>{ const v=medios[md.k]||0; if(v) x+=L(md.n,money(v)); });
+  MEDIOS.forEach(md=>{ const v=medios[md.k]||0; if(!v) return;
+    x+=L(md.k==='credito'? '🧾 Fiado (NO entró plata)' : md.e+' '+md.n, money(v)); });
+  x+='*PLATA QUE SÍ ENTRÓ: '+money(recaudado)+'*\n';
+  if(fiado>0.5) x+='_Quedaron '+money(fiado)+' fiados: eso no está en la caja, está en cartera._\n';
 
   if(porCat.length){ x+='\n*POR CATEGORÍA*\n';
     porCat.forEach(c=>{ x+='• '+c.n+': '+money(c.v)+'\n'; }); }
@@ -5195,7 +5215,7 @@ function textoCierre(t,D,contado,comoCierre){
   else x+='   (sin cuentas de banco)\n';
   x+='*TOTAL EN CAJAS Y BANCOS: '+money(round(tCjaC+tBcoC,2))+'*\n';
 
-  const cxcSaldo=round(sum(cxc(),d=>saldoDoc(d)||saldoVenta(d)||0),2);
+  const cxcSaldo=round(sum(cxc(),saldoDoc),2);
   if(cxcSaldo>0.5) x+='\n*Por cobrar (cartera): '+money(cxcSaldo)+'*\n';
 
   if(verCostos()){
@@ -5243,6 +5263,7 @@ function imprimirCierre(t,D,contado,copia){
   D=D||datosCierre(t);
   contado = contado!=null? contado : (t.contado||0);
   const dif=round((Number(contado)||0)-D.esperado,2);
+  const fiadoT=round(sum(D.vs||[],v=>fiadoDe(v)),2);
   const h=docTicket('CIERRE DE CAJA',[
     t.cuentaId? ['Caja', esc(nameOf('cuentas',t.cuentaId))] : null,
     ['Cajero', esc(nameOf('usuarios',t.usuarioId))],
@@ -5257,7 +5278,8 @@ function imprimirCierre(t,D,contado,copia){
     {k:'CONTADO', v:money(contado), big:true},
     {k:'DIFERENCIA', v:money(dif), big:true},
     'NO SE CUENTA'
-  ].concat(MEDIOS.filter(x=>x.k!=='efectivo').map(md=>[md.n, money((D.porMedio||{})[md.k]||0)]))
+  ].concat(MEDIOS.filter(x=>x.k!=='efectivo').map(md=>
+      [md.k==='credito'? 'Fiado (no entro)' : md.n, money((D.porMedio||{})[md.k]||0)]))
    .concat((()=>{ const pc=(D.porCuenta||[]).filter(a=>a.n>0||a.esLaDelTurno);
      if(!pc.length) return [];
      let l=['POR CAJA / CUENTA'];
@@ -5275,6 +5297,8 @@ function imprimirCierre(t,D,contado,copia){
     'VENTAS',
     ['Facturas', (D.vs||[]).length],
     {k:'TOTAL VENDIDO', v:money(D.totalVentas), b:true},
+    fiadoT>0.5? ['Menos fiado', '-'+money(fiadoT)] : null,
+    fiadoT>0.5? {k:'PLATA QUE ENTRO', v:money(round(D.totalVentas-fiadoT,2)), b:true} : null,
     t.nota? {texto:'Obs: '+t.nota} : null,
     {firma:'Firma del cajero'},
     {firma:'Recibido por'}
@@ -5663,7 +5687,7 @@ function resumenVentas(d1,d2){
   const ms=S.movimientos.filter(m=>dISO(m.fecha)>=d1 && dISO(m.fecha)<=d2 && !deVentaAnulada(m));
   const medios={efectivo:0,tarjeta:0,transferencia:0,credito:0};
   vs.forEach(v=>{
-    if(v.credito){ medios.credito+=round(v.total-round(sum((v.pagos||[]),p=>p.monto),2),2); }
+    medios.credito+=fiadoDe(v);
     (v.pagos||[]).forEach(p=>{ medios[p.medio]=(medios[p.medio]||0)+p.monto; });
   });
   const total=sum(vs,v=>v.total||0);
@@ -5681,7 +5705,8 @@ function resumenVentas(d1,d2){
   const porUsuario={};
   vs.forEach(v=>{ const k=nameOf('usuarios',v.usuarioId);
     porUsuario[k]=porUsuario[k]||{nombre:k,n:0,valor:0}; porUsuario[k].n++; porUsuario[k].valor+=v.total; });
-  return {d1,d2,vs,anul,ms,medios,total,costo,
+  const fiado=round(sum(vs,v=>fiadoDe(v)),2);
+  return {d1,d2,vs,anul,ms,medios,total,costo, fiado, recaudado:round(total-fiado,2),
     utilidad:round(total-sum(vs,v=>v.propina||0)-sum(vs,v=>v.impuesto||0)-costo,2),
     descuentos:sum(vs,v=>v.descuento||0), propinas:sum(vs,v=>v.propina||0), impuestos:sum(vs,v=>v.impuesto||0),
     ing,egr,saldo:round(ing-egr,2), cajaIng,cajaEgr, cajaNeto:round(cajaIng-cajaEgr,2),
@@ -5767,14 +5792,16 @@ function textoResumen(d1,d2){
   const li=(a,b)=>a+': '+b;
   let t='*'+(S.cfg.nombre||'POS').toUpperCase()+'*\n';
   t+='Resumen de ventas · '+(mismoDia? fdate(d1) : fdate(d1)+' al '+fdate(d2))+'\n\n';
-  t+='*VENTAS: '+money(r.total)+'*\n';
+  t+='*VENTAS: '+money(r.total)+'*  (facturado)\n';
   t+=li('Facturas',r.vs.length)+'\n';
   t+=li('Ticket promedio',money(r.vs.length? r.total/r.vs.length:0))+'\n\n';
   t+='*Cómo pagaron*\n';
-  if(r.medios.efectivo) t+=li('Efectivo',money(r.medios.efectivo))+'\n';
-  if(r.medios.tarjeta) t+=li('Tarjeta',money(r.medios.tarjeta))+'\n';
-  if(r.medios.transferencia) t+=li('Transferencia',money(r.medios.transferencia))+'\n';
-  if(r.medios.credito) t+=li('Crédito (por cobrar)',money(r.medios.credito))+'\n';
+  if(r.medios.efectivo) t+=li('💵 Efectivo',money(r.medios.efectivo))+'\n';
+  if(r.medios.tarjeta) t+=li('💳 Tarjeta',money(r.medios.tarjeta))+'\n';
+  if(r.medios.transferencia) t+=li('📲 Transferencia',money(r.medios.transferencia))+'\n';
+  if(r.medios.credito) t+=li('🧾 Fiado (NO entró plata)',money(r.medios.credito))+'\n';
+  t+='*PLATA QUE SÍ ENTRÓ: '+money(r.recaudado)+'*\n';
+  if(r.fiado>0.5) t+='_Quedaron '+money(r.fiado)+' fiados: eso no está en caja, está en cartera._\n';
   if(r.descuentos) t+=li('Descuentos','-'+money(r.descuentos))+'\n';
   if(r.propinas) t+=li('Propinas',money(r.propinas))+'\n';
   const cjs=(r.cuentas||[]).filter(c=>c.tipo==='caja');
@@ -5947,7 +5974,7 @@ function calcConta(d1,d2){
   const porProveedor=Object.values(prov).sort((a,b)=>b.valor-a.valor);
 
   const medios={};
-  vs.forEach(v=>{ if(v.credito) medios['credito']=(medios['credito']||0)+v.total;
+  vs.forEach(v=>{ const f=fiadoDe(v); if(f) medios['credito']=(medios['credito']||0)+f;
     (v.pagos||[]).forEach(p=>medios[p.medio]=(medios[p.medio]||0)+p.monto); });
 
   const caja={ing:sum(ms.filter(m=>m.tipo==='ingreso'),m=>m.monto),
@@ -6276,7 +6303,7 @@ function viewReportes(vw){
     vs.forEach(v=>v.items.forEach(i=>{ const p=byId('productos',i.productoId); const c=p?nameOf('categorias',p.categoriaId):'Otros';
       cats[c]=(cats[c]||0)+i.precio*i.cant; }));
     /* medios */
-    const med={}; vs.forEach(v=>{ if(v.credito) med['credito']=(med['credito']||0)+v.total;
+    const med={}; vs.forEach(v=>{ const f=fiadoDe(v); if(f) med['credito']=(med['credito']||0)+f;
       (v.pagos||[]).forEach(p=>med[p.medio]=(med[p.medio]||0)+p.monto); });
     /* horas */
     const hrs={}; vs.forEach(v=>{ const h=new Date(v.fecha).getHours(); hrs[h]=(hrs[h]||0)+v.total; });
@@ -6579,8 +6606,10 @@ function viewAjustes(vw){
       };
     }
     else if(tab==='users'){
+      const puedeNu=puedeCrearUsuarios();
       $('#abody').innerHTML='<div class="card"><div class="hd"><h3>Usuarios</h3><div class="spacer"></div>'+
-        '<button class="btn pri sm" id="nu">+ Usuario</button></div><div class="bd p0">'+tbl([
+        (puedeNu? '<button class="btn pri sm" id="nu">+ Usuario</button>'
+                : '<span class="pill">los crea el proveedor</span>')+'</div><div class="bd p0">'+tbl([
         {t:'Usuario',f:u=>'<b>'+esc(u.nombre)+'</b>'},
         {t:'Correo',f:u=>esc(u.email||'—')},
         {t:'Rol',f:u=>'<span class="pill '+(u.rol==='admin'?'brand':u.rol==='cajero'?'info':'')+'">'+esc(u.rol)+'</span>'},
@@ -6589,8 +6618,16 @@ function viewAjustes(vw){
         {t:'',f:u=>'<button class="btn ghost sm" data-e="'+u.id+'">✎</button>'}
       ],S.usuarios,{empty:'Sin usuarios'})+'</div></div>'+
       '<div class="hintx" style="margin-top:10px">Cada persona entra con su propio correo y clave. '+
-      'Roles: <b>admin</b> acceso total · <b>cajero</b> operación y finanzas · <b>mesero</b> solo POS y mesas.</div>';
-      $('#nu').onclick=()=>edUsuario(null);
+      'Roles: <b>admin</b> acceso total · <b>cajero</b> operación y finanzas · <b>mesero</b> solo POS y mesas.</div>'+
+      (puedeNu? '' :
+      '<div class="card" style="margin-top:12px;background:var(--panel2)"><div class="bd">'+
+        '<b>🔒 El personal nuevo lo crea el proveedor del sistema</b>'+
+        '<p class="hintx" style="margin:6px 0 0">Aquí usted puede cambiarle el nombre o la clave a su gente, '+
+        'activarla o desactivarla. Para agregar una persona nueva o cambiarle el rol, pídaselo al proveedor: '+
+        'él le crea la cuenta y esa persona entra desde cualquier equipo.'+
+        (S.cfg.waSoporte? ' <a href="https://wa.me/'+esc(S.cfg.waSoporte)+'" target="_blank">Escribirle por WhatsApp</a>':'')+
+        '</p></div></div>');
+      if($('#nu')) $('#nu').onclick=()=>edUsuario(null);
       $$('[data-e]',$('#view')).forEach(b=>b.onclick=()=>edUsuario(byId('usuarios',b.dataset.e)));
     }
     else if(tab==='sync'){
@@ -6699,6 +6736,9 @@ function viewAjustes(vw){
             toast('Conectado como '+pf.rol,'ok');
             if(pf.rol==='superadmin'){ loginSuper(); return; }
             if(pf.negocioId && c.fbNegocio!==pf.negocioId){ await entrarANegocio(pf.negocioId,null); return; }
+            /* también por aquí queda activado el equipo y verificada la licencia */
+            try{ const fi=await fbGet('negocios/'+(pf.negocioId||c.fbNegocio));
+              if(fi){ S.suscripcion=fi; guardarLicencia(fi,pf.negocioId||c.fbNegocio); } }catch(e){}
             render();
             const primera=!S.meta.pull || !Object.keys(S.meta.pull).length;
             if(primera) mPrimerEnlace(); else { pullCloud(); scheduleSync(300); }
@@ -6808,12 +6848,15 @@ function viewAjustes(vw){
 }
 function edUsuario(u){
   const nuevo=!u;
+  const mando=puedeCrearUsuarios();
+  if(nuevo && !mando) return toast('Las cuentas nuevas las crea el proveedor del sistema. Pídaselo a él.','warn',6000);
   const ed=u||{id:uid('u'),nombre:'',email:'',rol:'cajero',activo:true};
   modal({title:nuevo?'Nuevo usuario':'Editar usuario',
     body:'<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
       '<div class="f"><label>Nombre</label><input id="n" value="'+esc(ed.nombre)+'"></div>'+
-      '<div class="f"><label>Rol</label><select id="r">'+['admin','cajero','mesero'].map(r=>
-        '<option value="'+r+'"'+(ed.rol===r?' selected':'')+'>'+r+'</option>').join('')+'</select></div></div>'+
+      '<div class="f"><label>Rol</label><select id="r"'+(mando?'':' disabled')+'>'+['admin','cajero','mesero'].map(r=>
+        '<option value="'+r+'"'+(ed.rol===r?' selected':'')+'>'+r+'</option>').join('')+'</select>'+
+        (mando?'':'<span class="tiny muted">solo lo cambia el proveedor</span>')+'</div></div>'+
       '<div class="f" style="margin-bottom:10px"><label>Correo</label>'+
         '<input id="e" type="email" value="'+esc(ed.email||'')+'" placeholder="mesero@mirestaurante.com"></div>'+
       '<div class="grid" style="grid-template-columns:1fr 1fr">'+
@@ -6830,7 +6873,7 @@ function edUsuario(u){
           : '<b>✓ Ya puede entrar desde cualquier equipo</b>'+
             '<div class="tiny muted" style="margin-top:3px">Tiene cuenta en la nube.</div>')+
         '</div></div>':''),
-    footer:(u&&puedeBorrar()?'<button class="btn danger" id="del">Eliminar</button>':'')+
+    footer:(u&&mando?'<button class="btn danger" id="del">Eliminar</button>':'')+
       '<div class="spacer"></div><button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
     onOpen:m=>{
       $('#ok',m).onclick=async()=>{
@@ -6844,7 +6887,8 @@ function edUsuario(u){
           if(c1!==c2) return toast('Las dos claves no coinciden','warn');
           await fijarClave(ed,c1);
         }
-        ed.email=em; ed.rol=$('#r',m).value; ed.activo=$('#a',m).checked;
+        ed.email=em; ed.activo=$('#a',m).checked;
+        if(mando) ed.rol=$('#r',m).value;            // el rol solo lo mueve el proveedor
         put('usuarios',ed);
         const quiereNube = $('#nube',m) && $('#nube',m).checked && c1;
         closeModal(); render();
@@ -6985,6 +7029,13 @@ async function fbResetPass(email){
      body:JSON.stringify({requestType:'PASSWORD_RESET',email:email})});
 }
 function esSuper(){ return !!(S.perfil && S.perfil.rol==='superadmin'); }
+/* El personal lo da de alta el superadministrador (el proveedor del sistema).
+   El administrador del restaurante puede cambiarle el nombre o la clave a su
+   gente, activarla o desactivarla, pero no agregar personas nuevas ni cambiar
+   roles. En un equipo que trabaja sin nube no hay superadmin, así que allí el
+   administrador sí puede hacerlo. */
+function hayNube(){ return !!(S.cfg.fbOn && S.cfg.fbNegocio); }   /* conectado a un negocio concreto */
+function puedeCrearUsuarios(){ return esSuper() || !!(S.user && S.user._super) || !nubeDisponible(); }
 function negocioActual(){ return (S.perfil&&S.perfil.negocioId)||S.cfg.fbNegocio||''; }
 /* Le crea la cuenta en la nube a un mesero o cajero, para que pueda entrar
    desde CUALQUIER equipo sin que el administrador tenga que abrirlo primero. */
@@ -7108,7 +7159,7 @@ function viewSuper(vw){
           '<button class="btn ghost sm" data-ed="'+esc(n.id)+'">✎</button></div>'}
       ],S.negocios,{empty:'Todavía no has creado restaurantes. Empieza con "+ Restaurante".',icon:'🏢'})+'</div></div>'+
       '<div class="card"><div class="hd"><h3>Cuentas de acceso</h3>'+
-        '<span class="pill">tú creas al administrador; él crea a sus meseros y cajeros</span></div>'+
+        '<span class="pill">todas las cuentas se crean aquí: admin, cajeros y meseros</span></div>'+
         '<div class="bd p0">'+tbl([
         {t:'Correo',f:c=>'<b>'+esc(c.email)+'</b>'},
         {t:'Nombre',f:c=>esc(c.nombre||'—')},
@@ -7186,9 +7237,12 @@ function vigente(n){ const e=estadoNegocio(n); return e.k==='activo'||e.k==='por
 let LIC=null, _relojMem=0, _bloqueado=false;
 function leerLicencia(){
   if(LIC!==null) return LIC;
-  let o=null;
-  try{ o=JSON.parse(localStorage.getItem('pos_lic')||'null'); }catch(e){ o=null; }
-  if(!o && S.meta && S.meta.lic) o=S.meta.lic;
+  let o=null, hayLS=true;
+  try{ o=JSON.parse(localStorage.getItem('pos_lic')||'null'); }catch(e){ hayLS=false; }
+  /* Solo si el navegador bloqueó el almacenamiento se mira la copia en los
+     datos. Así el respaldo de otro equipo no activa este: la licencia se gana
+     conectándose, no copiando un archivo. */
+  if(!o && !hayLS && S.meta && S.meta.lic) o=S.meta.lic;
   LIC=o||false; return LIC;
 }
 function escribirLicencia(o){
@@ -7221,6 +7275,14 @@ function guardarLicencia(ficha,negocioId){
     activo:ficha.activo!==false, plan:ficha.plan||'',
     venceMs:venceMsDe(ficha.vence), revisadoMs:Date.now() });
   tocarReloj();
+}
+/* ¿este equipo ya se conectó alguna vez y verificó la licencia? */
+function nubeDisponible(){ return !!(S.cfg.fbOn && S.cfg.fbApiKey); }
+function equipoActivado(){
+  if(!nubeDisponible()) return true;            // instalación hecha aposta sin nube
+  if(S.cfg.prueba) return true;                 // modo prueba: ya venía de un equipo activado
+  const l=licenciaDeEsteEquipo();
+  return !!(l && l.revisadoMs);
 }
 function licenciaDeEsteEquipo(){
   const l=leerLicencia();
@@ -7330,14 +7392,17 @@ function edCuentaNube(c){
       '</select></div>'+
       '<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
         '<div class="f"><label>Nombre</label><input id="n" value="'+esc(ed.nombre||'')+'" placeholder="Ana Pérez"></div>'+
-        '<div class="f"><label>Rol</label><select id="r"><option value="admin"'+(ed.rol==='admin'?' selected':'')+
-          '>Administrador del restaurante</option></select></div></div>'+
+        '<div class="f"><label>Rol</label><select id="r">'+
+          [['admin','Administrador del restaurante'],['cajero','Cajero'],['mesero','Mesero']].map(r=>
+            '<option value="'+r[0]+'"'+(ed.rol===r[0]?' selected':'')+'>'+r[1]+'</option>').join('')+
+          '</select></div></div>'+
       '<div class="f" style="margin-bottom:10px"><label>Correo</label>'+
         '<input id="e" type="email" value="'+esc(ed.email||'')+'" '+(nuevo?'':'disabled')+'></div>'+
       (nuevo? '<div class="f"><label>Contraseña inicial (mínimo 6)</label><input id="p" value="'+
                 Math.random().toString(36).slice(2,10)+'"></div>'+
               '<div class="hintx" style="margin-top:8px">Se crea la cuenta en Firebase y queda habilitada solo para ese '+
-              'restaurante. Entrégale estos datos al administrador; él creará después a sus meseros y cajeros con PIN.</div>'
+              'restaurante. Entrégale el correo y la clave a la persona: entra con eso desde cualquier equipo, con el rol '+
+              'que le pusiste. El administrador del restaurante NO puede crear cuentas: todas salen de aquí.</div>'
             : '<label class="row tiny" style="gap:7px"><input type="checkbox" id="a" '+(ed.activo!==false?'checked':'')+
               '> Cuenta activa</label>'+
               '<div class="hintx" style="margin-top:8px">Al desactivarla, ese correo deja de poder leer o escribir datos.</div>'),
@@ -7361,12 +7426,14 @@ function edCuentaNube(c){
               {id:cta.uid,uid:cta.uid,email:email,nombre:nombre||email,rol:rol,negocioId:neg,activo:true});
             closeModal();
             modal({title:'Cuenta creada',size:'slim',
-              body:'<p>Entrégale estos datos al administrador de <b>'+esc((S.negocios.find(x=>x.id===neg)||{}).nombre||neg)+'</b>:</p>'+
+              body:'<p>Entrégale estos datos a <b>'+esc(nombre||email)+'</b> ('+esc(rol)+') de <b>'+
+                  esc((S.negocios.find(x=>x.id===neg)||{}).nombre||neg)+'</b>:</p>'+
                 '<div class="card" style="background:var(--panel2)"><div class="bd">'+
                 '<div class="tline"><span>Correo</span><span class="v">'+esc(email)+'</span></div>'+
                 '<div class="tline"><span>Contraseña</span><span class="v">'+esc(pass)+'</span></div></div></div>'+
-                '<p class="hintx" style="margin-bottom:0">Al entrar por primera vez, la app le descargará el restaurante '+
-                'y podrá crear sus meseros y cajeros en Ajustes ▸ Usuarios.</p>'});
+                '<p class="hintx" style="margin-bottom:0">Entra con eso desde cualquier equipo y la app le descarga el '+
+                'restaurante sola. Las cuentas nuevas se crean siempre desde aquí: el administrador del restaurante '+
+                'no puede agregar personal.</p>'});
             render();
           } else {
             await fbSet('usuariosNube/'+(ed.uid||ed.id),
@@ -7549,7 +7616,13 @@ function cargarDatos(d,opts){
   delete nuevo.prueba;                      // la marca de prueba nunca viaja en un archivo
   (opts.conservar||[]).forEach(k=>{ nuevo[k]=cfgViejo[k]; });
   S.cfg=nuevo; S.cfg.id='cfg'; idbPut('config',S.cfg); applyCfg();
-  S.meta=d.meta||{id:'meta',cons:{}}; saveMeta();
+  const licPropia=(S.meta&&S.meta.lic)||null, relojPropio=(S.meta&&S.meta.reloj)||0;
+  S.meta=d.meta||{id:'meta',cons:{}};
+  /* la licencia y el reloj son del EQUIPO: no se importan de un archivo */
+  delete S.meta.lic; delete S.meta.reloj;
+  if(licPropia) S.meta.lic=licPropia;
+  if(relojPropio) S.meta.reloj=Math.max(relojPropio, Date.now());
+  saveMeta();
   COLL.forEach(k=>{
     (S[k]||[]).forEach(o=>idbDel(k,o.id));           // fuera lo que había
     S[k]=(d[k]||[]).slice();
@@ -7797,15 +7870,19 @@ function paintLogin(){
   pintarPrueba();
   $('#lgname').textContent=(S.cfg.prueba?'🧪 ':'')+(S.cfg.nombre||'POS Restaurante');
   const vacio = !S.usuarios.length && !leerSesionFB();
+  const sinActivar = !equipoActivado();
   $('#lgsub').textContent = S.cfg.prueba
     ? 'MODO PRUEBA · entra con los usuarios de este respaldo'
+    : (sinActivar ? 'Equipo sin activar · la primera vez necesita internet'
     : (vacio ? 'Entra con la cuenta que te entregaron'
-             : 'Entra con tu correo y tu clave');
+             : 'Entra con tu correo y tu clave'));
   $('#lg_help').classList.toggle('hide',false);
   $('#lg_help').textContent = hayLegado()? 'Recuperar el acceso de este equipo' : '¿Quieres tu acceso?';
   lgError('');
   if(hayLegado()) lgError('Este equipo tiene usuarios de la versión anterior, que entraban con PIN. '+
     'Toca "¿No puedes entrar?" para ponerles correo y clave.');
+  else if(sinActivar) lgError('Este equipo todavía no se ha conectado nunca. La primera vez necesita internet '+
+    'para entrar a la cuenta y verificar la licencia; de ahí en adelante ya trabaja sin línea.');
   if(location.protocol==='file:' && S.cfg.fbOn)
     lgError('Estás abriendo el archivo directamente. Algunos navegadores bloquean Firebase así: usa "Revisar conexión" para comprobarlo.');
 }
@@ -7818,10 +7895,18 @@ async function ingresar(){
   const terminar=()=>{ b.disabled=false; b.textContent='Entrar'; };
   try{
     const local=usuarioPorCorreo(em);
+    const activado=equipoActivado();
 
-    /* la cuenta del restaurante entra al instante y sirve sin internet;
+    if(!activado){
+      /* Equipo nuevo: no hay atajo local. Tiene que entrar a la cuenta y
+         verificar la licencia antes de poder trabajar. */
+      if(!navigator.onLine){ lgSacudir();
+        return lgError('La primera vez este equipo necesita internet para entrar a la cuenta y '+
+          'verificar la licencia. Conéctelo y vuelva a intentar; después ya trabaja sin línea.'), terminar(); }
+    }
+    /* Ya activado: la cuenta local entra al instante y sirve sin internet;
        la nube se revisa detrás, sin hacer esperar a nadie */
-    if(local && await claveOk(local,pw)){
+    else if(local && await claveOk(local,pw)){
       login(local); terminar();
       if(S.cfg.fbOn && navigator.onLine) verificarEnSegundoPlano();
       return;
@@ -7837,6 +7922,10 @@ async function ingresar(){
         try{ ficha=await fbGet('negocios/'+pf.negocioId); }catch(e){}
         S.suscripcion=ficha||null;
         if(ficha) guardarLicencia(ficha,pf.negocioId);
+        else if(!equipoActivado()){ fbSalir();
+          lgError('Entré a su cuenta pero no pude leer la licencia del restaurante. '+
+            'Revise la conexión e intente de nuevo; este equipo todavía no queda activado.');
+          return terminar(); }
         if(ficha && !vigente(ficha)){ paintLogin(); mBloqueo(ficha); return terminar(); }
         const cambio = pf.negocioId && S.cfg.fbNegocio!==pf.negocioId;
         if(cambio || !S.meta.pull || !Object.keys(S.meta.pull).length) await entrarANegocio(pf.negocioId,null);
@@ -7857,15 +7946,19 @@ async function ingresar(){
         if(m==='SIN_PERFIL'){ fbSalir(); lgError('Esta cuenta no tiene restaurante asignado. Pídeselo al superadministrador.'); return terminar(); }
         if(m==='CUENTA_INACTIVA'){ fbSalir(); lgError('Esta cuenta está desactivada.'); return terminar(); }
         fbSalir();
-        /* sin internet o credencial de nube equivocada: intenta la cuenta local */
-        if(local && await claveOk(local,pw)){ login(local); terminar(); return; }
+        /* sin internet o credencial equivocada: solo un equipo ya activado
+           puede caer en la cuenta local */
+        if(activado && local && await claveOk(local,pw)){ login(local); terminar(); return; }
         if(/EMAIL_NOT_FOUND|INVALID_PASSWORD|INVALID_LOGIN/.test(m)){ lgSacudir(); lgError('Correo o clave incorrectos'); return terminar(); }
         lgError(fbErr(e)); return terminar();
       }
     }
     /* equipo sin nube: solo cuentas locales */
-    if(local && await claveOk(local,pw)){ login(local); terminar(); return; }
-    lgSacudir(); lgError(S.usuarios.length? 'Correo o clave incorrectos' : 'Este equipo todavía no está configurado');
+    if(activado && local && await claveOk(local,pw)){ login(local); terminar(); return; }
+    lgSacudir();
+    lgError(!activado
+      ? 'Este equipo todavía no está activado. Entre con el correo y la clave que le entregaron, con internet.'
+      : (S.usuarios.length? 'Correo o clave incorrectos' : 'Este equipo todavía no está configurado'));
   }catch(e){ lgError(fbErr(e)); }
   terminar();
 }
@@ -7916,18 +8009,31 @@ function loginSuper(){
 
 /* ---------------- primer arranque de un equipo en blanco -------------- */
 function primerArranque(){
-  modal({title:'Configurar este equipo', size:'wide', focus:false,
-    body:'<p class="hintx" style="margin-top:0">Elige cómo va a trabajar este equipo. Puedes cambiarlo después en Ajustes.</p>'+
-      '<div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
+  /* Con la nube configurada no hay camino local: el equipo se activa
+     entrando a la cuenta, y solo después trabaja sin internet. */
+  const soloNube=nubeDisponible();
+  modal({title:'Activar este equipo', size:'wide', focus:false,
+    body:(soloNube
+      ? '<p class="hintx" style="margin-top:0">Este equipo todavía no ha entrado a ninguna cuenta. '+
+        'La primera vez necesita internet.</p>'+
+        '<div class="card" style="border-color:var(--brand);margin-bottom:14px"><div class="bd">'+
+          '<div style="font-size:26px">☁️</div><b>Entrar con la cuenta del restaurante</b>'+
+          '<p class="hintx" style="margin:6px 0 0">Escriba arriba el correo y la clave que le entregaron. '+
+          'El programa descarga el restaurante y verifica la licencia. '+
+          '<b>De ahí en adelante funciona sin internet</b> hasta la fecha de vencimiento.</p>'+
+          '<div class="tiny muted" style="margin-top:8px">¿No tiene cuenta todavía? Pídasela al proveedor del sistema.</div>'+
+        '</div></div>'
+      : '<p class="hintx" style="margin-top:0">Este equipo está configurado para trabajar sin nube. '+
+        'Cree aquí el restaurante.</p>')+
+      '<div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px'+(soloNube?';display:none':'')+'">'+
       '<button class="card" id="pa_nube" style="text-align:left;padding:0;border-color:var(--brand)"><div class="bd">'+
         '<div style="font-size:26px">☁️</div><b>Conectar a un restaurante</b>'+
         '<p class="hintx" style="margin:6px 0 0">Ya existe el negocio en Firebase. Entra con el correo y la clave que te '+
         'dieron y este equipo descarga todo solo.</p></div></button>'+
       '<button class="card" id="pa_local" style="text-align:left;padding:0"><div class="bd">'+
         '<div style="font-size:26px">🏪</div><b>Crear un restaurante aquí</b>'+
-        '<p class="hintx" style="margin:6px 0 0">Arranca en blanco en este equipo, sin nube. Después puedes conectarlo y '+
-        'subir todo lo que lleves.</p></div></button></div>'+
-      '<div id="pa_form" class="hide">'+
+        '<p class="hintx" style="margin:6px 0 0">Arranca en blanco en este equipo, sin nube.</p></div></button></div>'+
+      '<div id="pa_form" class="'+(soloNube?'hide':'')+'">'+
         '<div class="f" style="margin-bottom:10px"><label>Nombre del restaurante</label>'+
           '<input id="pa_nom" placeholder="Parche Burguer Express"></div>'+
         '<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
@@ -7940,13 +8046,16 @@ function primerArranque(){
           ' Cargar un catálogo de ejemplo para practicar (lo puedes borrar después)</label>'+
         '<button class="btn pri lg blk" id="pa_ok" style="margin-top:14px">Crear restaurante</button>'+
       '</div>',
-    footer:null});
-  $('#pa_nube').onclick=()=>{ closeModal(); $('#lg_mail').focus();
+    footer:soloNube? '<button class="btn" id="pa_diag">🔌 Revisar la conexión</button>'+
+      '<div class="spacer"></div><button class="btn pri" data-x>Entendido</button>' : null});
+  if($('#pa_diag')) $('#pa_diag').onclick=()=>{ closeModal(); diagnosticoNube(); };
+  if(soloNube){ setTimeout(()=>{ if($('#lg_mail')) $('#lg_mail').focus(); },60); }
+  if($('#pa_nube')) $('#pa_nube').onclick=()=>{ closeModal(); $('#lg_mail').focus();
     toast('Escribe arriba el correo y la clave de tu cuenta','ok',4000); };
-  $('#pa_local').onclick=()=>{ $('#pa_form').classList.remove('hide');
+  if($('#pa_local')) $('#pa_local').onclick=()=>{ $('#pa_form').classList.remove('hide');
     $('#pa_nube').style.borderColor='var(--line)'; $('#pa_local').style.borderColor='var(--brand)';
     setTimeout(()=>$('#pa_nom').focus(),40); };
-  $('#pa_ok').onclick=async()=>{
+  if($('#pa_ok')) $('#pa_ok').onclick=async()=>{
     const nom=$('#pa_nom').value.trim(), per=$('#pa_per').value.trim(),
           em=norm($('#pa_mail').value), c1=$('#pa_c1').value, c2=$('#pa_c2').value;
     if(!nom) return toast('Escribe el nombre del restaurante','warn');
@@ -8041,7 +8150,23 @@ function corregirRol(u){
   }
   return u;
 }
+function mActivar(){
+  modal({title:'Falta activar este equipo', size:'slim', focus:false, footer:null,
+    body:'<div style="text-align:center;padding:6px 0 4px"><div style="font-size:42px">🌐</div>'+
+      '<h3 style="margin:10px 0 6px">La primera vez hay que conectarse</h3>'+
+      '<p class="hintx" style="margin:0 0 14px">Este equipo todavía no ha entrado a la cuenta del restaurante, '+
+      'así que no puede trabajar. Conéctelo a internet y entre con el correo y la clave que le entregaron: '+
+      'el programa baja la información y verifica la licencia.<br><br>'+
+      '<b>Después de eso sí funciona sin internet</b>, todos los días, hasta la fecha de vencimiento.</p></div>'+
+      '<button class="btn blk" id="ac_diag">🔌 Revisar la conexión</button>'+
+      '<button class="btn pri blk" id="ac_ok" style="margin-top:8px">Entendido</button>'});
+  $('#ac_ok').onclick=()=>{ closeModal(); paintLogin(); if($('#lg_mail')) $('#lg_mail').focus(); };
+  if($('#ac_diag')) $('#ac_diag').onclick=()=>{ closeModal(); diagnosticoNube(); };
+}
 function login(u){
+  /* Sin activar no se trabaja: ni con usuarios locales, ni con un respaldo
+     copiado, ni recuperando el acceso de una versión vieja. */
+  if(!equipoActivado() && !(u&&u._super)){ S.user=null; mActivar(); return; }
   u=corregirRol(u);
   S.user=u;
   try{ localStorage.setItem('pos_user',u.id); }catch(e){}
