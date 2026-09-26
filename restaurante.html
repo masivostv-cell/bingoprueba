@@ -564,7 +564,7 @@ const DEFCFG={ id:'cfg', nombre:'Mi Restaurante', nit:'', direccion:'', telefono
   ticketAncho:80, ticketPie:'¡Gracias por su visita!', tema:'light',
   /* impresión */
   impComanda:true, impTicket:true, ordenImp:'comanda', pausaImp:1800,
-  estacion:false, estacionAuto:true, estacionSonido:true,
+  estacion:false, estacionAuto:true, estacionSonido:true, respaldoCierre:true,
   comandaAncho:80, comandaPrecios:false, modoImp:'silencioso', letra:1.15,
   impresoraComanda:'', impresoraTicket:'', waSoporte:'573204491926',
   /* nube */
@@ -693,7 +693,7 @@ function fsDoc(fields){ const o={}; Object.keys(fields||{}).forEach(k=>{ o[k]=fs
 
 /* la configuración del dispositivo nunca viaja a la nube */
 const CFG_LOCAL=['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho','prueba',
-  'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp'];
+  'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp','respaldoCierre'];
 function cfgParaNube(){ const o={}; Object.keys(S.cfg).forEach(k=>{ if(CFG_LOCAL.indexOf(k)<0) o[k]=S.cfg[k]; }); o.id='cfg'; return o; }
 
 /* ------------------------- cola de envío (outbox) ------------------- */
@@ -1461,7 +1461,23 @@ function detalleTurno(t){
     bancos[m.cuentaId]=bancos[m.cuentaId]||{nombre:nameOf('cuentas',m.cuentaId),ing:0,egr:0};
     if(m.tipo==='ingreso') bancos[m.cuentaId].ing+=m.monto; else bancos[m.cuentaId].egr+=m.monto;
   });
-  return {vs,porMedio,ventaEfe,otrosIng,salidas,esperado,
+  /* TODO el movimiento del turno, cuenta por cuenta: cuánto entró, cuánto
+     salió y con cuánto quedó cada caja y cada banco */
+  const cuentas={};
+  const meter=id=>{ if(cuentas[id]) return cuentas[id];
+    const c=byId('cuentas',id)||{};
+    return cuentas[id]={id:id, nombre:c.nombre||nameOf('cuentas',id)||'—', tipo:c.tipo||'',
+      ventas:0, otrosIng:0, egresos:0, n:0, saldo:saldoCuenta(id),
+      esLaDelTurno: id===t.cuentaId}; };
+  movs.forEach(m=>{ const a=meter(m.cuentaId); a.n++;
+    if(m.tipo==='ingreso'){ if(m.refTipo==='venta') a.ventas+=m.monto; else a.otrosIng+=m.monto; }
+    else a.egresos+=m.monto; });
+  if(t.cuentaId) meter(t.cuentaId);
+  const porCuenta=Object.values(cuentas).map(a=>Object.assign(a,{
+    neto: round(a.ventas+a.otrosIng-a.egresos,2),
+    base: a.esLaDelTurno? (Number(t.base)||0):0
+  })).sort((a,b)=> (a.tipo===b.tipo? 0 : a.tipo==='caja'? -1:1) || b.neto-a.neto);
+  return {vs,porMedio,ventaEfe,otrosIng,salidas,esperado,porCuenta,
     bancos:Object.values(bancos), totalVentas:sum(vs,v=>v.total||0)};
 }
 function cajasDisponibles(){ return S.cuentas.filter(c=>c.activo!==false && c.tipo==='caja'); }
@@ -4862,7 +4878,19 @@ function verTurno(t){
       '<div class="tline b"><span>Total vendido</span><span class="v">'+money(D.totalVentas)+'</span></div>'+
       '<div class="tline"><span>Facturas</span><span class="v">'+(D.vs||[]).length+'</span></div>'+
       (t.nota? '<div class="hintx" style="margin-top:10px">Obs: '+esc(t.nota)+'</div>':'')+
-      '</div></div></div>',
+      '</div></div></div>'+
+      (()=>{ const pc=(D.porCuenta||[]).filter(a=>a.n>0||a.esLaDelTurno);
+        if(!pc.length) return '';
+        return '<div class="card" style="margin-top:12px"><div class="hd"><h3>Movimiento por caja y cuenta</h3></div>'+
+          '<div class="bd p0">'+tbl([
+            {t:'Cuenta',f:a=>(a.tipo==='caja'?'💵 ':'🏦 ')+'<b>'+esc(a.nombre)+'</b>'},
+            {t:'Abrió con',num:1,f:a=>a.base? money(a.base):'<span class="muted">—</span>'},
+            {t:'Ventas',num:1,f:a=>a.ventas? money(a.ventas):'<span class="muted">—</span>'},
+            {t:'Otras entradas',num:1,f:a=>a.otrosIng? money(a.otrosIng):'<span class="muted">—</span>'},
+            {t:'Salidas',num:1,f:a=>a.egresos? '<span style="color:var(--bad)">−'+money(a.egresos)+'</span>':'<span class="muted">—</span>'},
+            {t:'Movió',num:1,f:a=>'<b>'+money(a.neto)+'</b>'},
+            {t:'Queda',num:1,f:a=>'<b class="mono">'+money(saldoCuenta(a.id))+'</b>'}
+          ],pc,{empty:'—'})+'</div></div>'; })()+'',
     footer:'<button class="btn" data-x>Cerrar</button>'+
       '<button class="btn" id="wt">📋 WhatsApp</button>'+
       '<button class="btn pri" id="rt">🖨️ Reimprimir cierre</button>',
@@ -4949,6 +4977,8 @@ function mCerrarCaja(){
           '<input id="c" type="number" step="any" style="font-size:22px;font-weight:700;padding:12px" value="'+esperado+'"></div>'+
         '<div class="tline big" id="dif" style="margin:10px 0"><span>Diferencia</span><span class="v">'+money(0)+'</span></div>'+
         '<div class="f"><label>Observaciones</label><textarea id="n" rows="2" placeholder="Si hay diferencia, explica por qué"></textarea></div>'+
+        '<label class="row tiny" style="gap:7px;margin-top:8px"><input type="checkbox" id="rsp" '+
+          (S.cfg.respaldoCierre!==false?'checked':'')+'> 💾 Descargar copia de seguridad al cerrar</label>'+
       '</div>'+
       '<div>'+
         '<div class="card" style="margin-bottom:12px"><div class="hd"><h3>Contar billetes</h3>'+
@@ -4991,6 +5021,8 @@ function mCerrarCaja(){
       $('#wac',m).onclick=()=>copiarTexto(textoCierre(t,D,toN($('#c',m).value)),
         'Cierre copiado · pégalo en el grupo de WhatsApp');
       $('#ok',m).onclick=()=>{
+        if($('#rsp',m)){ const q=$('#rsp',m).checked;
+          if(q!==(S.cfg.respaldoCierre!==false)){ S.cfg.respaldoCierre=q; saveCfg(); } }
         t.contado=toN($('#c',m).value); t.esperado=esperado; t.diferencia=round(t.contado-esperado,2);
         /* la plata contada manda: la diferencia queda registrada para que el
            recorrido de la caja siga igual a lo que hay en el cajón.
@@ -5002,9 +5034,12 @@ function mCerrarCaja(){
         t.cierre=now(); t.estado='cerrado'; t.nota=$('#n',m).value;
         t.ventas=D.totalVentas; t.ventaEfectivo=D.ventaEfe; t.salidas=D.salidas;
         t.otrosMedios=D.porMedio; t.bancos=D.bancos; t.saldoCierre=t.contado;
+        t.porCuenta=D.porCuenta;
         put('turnos',t); S.turno=null; closeModal(); render();
         if(S.cfg.impTicket!==false) imprimirCierre(t,D,t.contado);
         toast('Turno cerrado · diferencia '+money(t.diferencia), Math.abs(t.diferencia)<1?'ok':'warn');
+        if(S.cfg.respaldoCierre!==false && respaldoDelCierre(t))
+          setTimeout(()=>toast('💾 Copia de seguridad descargada','ok',4000),900);
         setTimeout(()=>mandarCierreWA(t,D,t.contado),700);
       };
     }});
@@ -5016,11 +5051,28 @@ function datosCierre(t){
     if(t.salidas!=null) D.salidas=t.salidas;
     if(t.otrosMedios) D.porMedio=t.otrosMedios;
     if(t.bancos) D.bancos=t.bancos;
+    if(t.porCuenta) D.porCuenta=t.porCuenta;
     if(t.ventas!=null) D.totalVentas=t.ventas;
     if(t.esperado!=null) D.esperado=t.esperado;
   }
   return D;
 }
+/* Copia de seguridad automática al cerrar la caja: queda en Descargas con
+   la fecha, para tener siempre la información guardada por fuera. */
+function respaldoDelCierre(t){
+  try{
+    const cfg=Object.assign({},S.cfg); delete cfg.prueba;
+    const d={version:1, fecha:now(), motivo:'cierre de caja',
+      turnoId:t? t.id:'', cierre:t? t.cierre:'', cfg:cfg, meta:S.meta};
+    COLL.forEach(k=>d[k]=S[k]);
+    const dia=(t&&t.cierre? dISO(t.cierre):todayISO());
+    const hora=new Date().toISOString().slice(11,16).replace(':','');
+    const nom=normTxt(S.cfg.nombre||'pos').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+    download('respaldo_'+(nom||'pos')+'_'+dia+'_'+hora+'.json',JSON.stringify(d),'application/json');
+    return true;
+  }catch(e){ console.warn('respaldo',e); return false; }
+}
+
 /* Todo lo del día en un texto listo para pegar en el grupo de WhatsApp:
    un resumen, no venta por venta. Qué se vendió, cuánta plata, por dónde
    entró, qué salió y con cuánto quedó cada caja. */
@@ -5098,11 +5150,25 @@ function textoCierre(t,D,contado){
   if(!gastos.length) x+='(ninguno)\n';
   else porGasto.forEach(g=>{ x+='• '+g.n+': '+money(g.v)+'\n'; });
 
-  if(D.bancos && D.bancos.length){ x+='\n*MOVIMIENTO EN BANCOS*\n';
-    D.bancos.forEach(bk=>{ x+='• '+bk.nombre+': '+money(bk.ing-bk.egr)+'\n'; }); }
+  const pc=(D.porCuenta||[]).filter(a=>a.n>0 || a.esLaDelTurno);
+  if(pc.length){
+    x+='\n*MOVIMIENTO POR CAJA / CUENTA*\n';
+    pc.forEach(a=>{
+      x+=(a.tipo==='caja'?'💵 ':'🏦 ')+'*'+a.nombre+'*\n';
+      if(a.base) x+='   Abrió con: '+money(a.base)+'\n';
+      if(a.ventas) x+='   Ventas: '+money(a.ventas)+'\n';
+      if(a.otrosIng) x+='   Otras entradas: '+money(a.otrosIng)+'\n';
+      if(a.egresos) x+='   Salidas: -'+money(a.egresos)+'\n';
+      x+='   Movió: '+money(a.neto)+'  ·  Queda: '+money(saldoCuenta(a.id))+'\n';
+    });
+  }
 
-  x+='\n*CON CUÁNTO QUEDÓ CADA CUENTA*\n';
-  cta.forEach(c=>{ x+=(c.tipo==='caja'?'💵 ':'🏦 ')+c.nombre+': '+money(saldoCuenta(c.id))+'\n'; });
+  const otrasCtas=cta.filter(c=>!pc.some(a=>a.id===c.id));
+  if(otrasCtas.length){
+    x+='\n*OTRAS CUENTAS (sin movimiento hoy)*\n';
+    otrasCtas.forEach(c=>{ x+=(c.tipo==='caja'?'💵 ':'🏦 ')+c.nombre+': '+money(saldoCuenta(c.id))+'\n'; });
+  }
+  x+='\n*TOTAL EN CAJAS Y BANCOS: '+money(round(sum(cta,c=>saldoCuenta(c.id)),2))+'*\n';
 
   const cxcSaldo=round(sum(cxc(),d=>saldoDoc(d)||saldoVenta(d)||0),2);
   if(cxcSaldo>0.5) x+='\n*Por cobrar (cartera): '+money(cxcSaldo)+'*\n';
@@ -5167,7 +5233,19 @@ function imprimirCierre(t,D,contado,copia){
     {k:'DIFERENCIA', v:money(dif), big:true},
     'NO SE CUENTA'
   ].concat(MEDIOS.filter(x=>x.k!=='efectivo').map(md=>[md.n, money((D.porMedio||{})[md.k]||0)]))
-   .concat((D.bancos&&D.bancos.length? [{hr:1}].concat(D.bancos.map(bk=>[bk.nombre, money(bk.ing-bk.egr)])) : []))
+   .concat((()=>{ const pc=(D.porCuenta||[]).filter(a=>a.n>0||a.esLaDelTurno);
+     if(!pc.length) return [];
+     let l=['POR CAJA / CUENTA'];
+     pc.forEach(a=>{
+       l.push({k:String(a.nombre).toUpperCase(), v:(a.tipo==='caja'?'CAJA':'BANCO'), b:true});
+       if(a.base) l.push(['  Abrio con', money(a.base)]);
+       if(a.ventas) l.push(['  Ventas', money(a.ventas)]);
+       if(a.otrosIng) l.push(['  Otras entradas', money(a.otrosIng)]);
+       if(a.egresos) l.push(['  Salidas', '-'+money(a.egresos)]);
+       l.push({k:'  Movio', v:money(a.neto), b:true});
+       l.push(['  Queda', money(saldoCuenta(a.id))]);
+     });
+     return l; })())
    .concat([
     'VENTAS',
     ['Facturas', (D.vs||[]).length],
@@ -7446,12 +7524,38 @@ function pesoTexto(n){
   if(!n) return '0 KB';
   return n>=1048576? (n/1048576).toFixed(1)+' MB' : Math.round(n/1024)+' KB';
 }
+/* Vaciar IndexedDB de verdad: primero se limpia almacén por almacén (eso
+   funciona aunque la página tenga la base abierta) y después se cierra la
+   conexión y se borra la base. Sin esto, deleteDatabase se queda BLOQUEADO
+   y el espacio nunca se libera. */
+function vaciarBaseLocal(){
+  return new Promise(res=>{
+    const rematar=()=>{
+      try{ if(_db){ _db.close(); _db=null; } }catch(e){}
+      try{ _ls.clear(); }catch(e){}
+      let listo=false; const fin=()=>{ if(!listo){ listo=true; res(true); } };
+      try{ const rq=indexedDB.deleteDatabase(DBNAME);
+        rq.onsuccess=fin; rq.onerror=fin; rq.onblocked=fin;
+      }catch(e){ fin(); }
+      setTimeout(fin,2000);
+    };
+    try{
+      if(!_db) return rematar();
+      const names=Array.from(_db.objectStoreNames);
+      if(!names.length) return rematar();
+      const tx=_db.transaction(names,'readwrite');
+      names.forEach(n=>{ try{ tx.objectStore(n).clear(); }catch(e){} });
+      tx.oncomplete=rematar; tx.onerror=rematar; tx.onabort=rematar;
+      setTimeout(rematar,2500);
+    }catch(e){ rematar(); }
+  });
+}
 /* borra los datos de este equipo pero conserva la conexión a la nube */
 function limpiarEquipo(recargar){
   const guardar={};
   ['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho',
    'terminal','estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket',
-   'modoImp','comandaAncho','letra','nombre','simbolo','decimales'].forEach(k=>{
+   'modoImp','comandaAncho','letra','nombre','simbolo','decimales','respaldoCierre'].forEach(k=>{
      if(S.cfg[k]!==undefined) guardar[k]=S.cfg[k]; });
   const sesion=(()=>{ try{ return localStorage.getItem('pos_fb'); }catch(e){ return null; } })();
   const perfil=(()=>{ try{ return localStorage.getItem('pos_perfil'); }catch(e){ return null; } })();
@@ -7459,8 +7563,38 @@ function limpiarEquipo(recargar){
   try{ localStorage.setItem('pos_limpieza',JSON.stringify(guardar)); }catch(e){}
   if(sesion) try{ localStorage.setItem('pos_fb',sesion); }catch(e){}
   if(perfil) try{ localStorage.setItem('pos_perfil',perfil); }catch(e){}
-  try{ indexedDB.deleteDatabase(DBNAME); }catch(e){}
-  if(recargar!==false) setTimeout(()=>location.reload(),500);
+  /* las fotos guardadas como URL temporal también ocupan */
+  try{ _imgUrl.forEach(u=>{ try{URL.revokeObjectURL(u);}catch(e){} }); _imgUrl.clear(); }catch(e){}
+  _wq=new Map();
+  return vaciarBaseLocal().then(()=>{
+    if(recargar!==false) setTimeout(()=>location.reload(),350);
+    return true;
+  });
+}
+/* cuánto pesa cada cosa, para saber qué está llenando el equipo */
+function pesoPorTabla(){
+  const l=COLL.map(k=>{ let b=0;
+    try{ b=JSON.stringify(S[k]||[]).length; }catch(e){ b=0; }
+    return {tabla:k, n:(S[k]||[]).length, bytes:b}; });
+  l.push({tabla:'cola de envío', n:S.outbox.length, bytes:(()=>{try{return JSON.stringify(S.outbox).length;}catch(e){return 0;}})()});
+  return l.sort((a,b)=>b.bytes-a.bytes);
+}
+/* saca del equipo los movimientos viejos; en la nube siguen intactos */
+function archivarViejos(meses){
+  const corte=dateAdd(todayISO(), -Math.max(1,meses||3)*30);
+  const tablas=['ventas','compras','abonos','movimientos','movinv','comandas','turnos'];
+  let n=0;
+  tablas.forEach(k=>{
+    (S[k]||[]).slice().forEach(o=>{
+      const f=dISO(o.fecha||o.apertura||o.cierre||'');
+      if(!f || f>=corte) return;
+      if(k==='turnos' && o.estado==='abierto') return;
+      if(k==='comandas' && o.estado==='abierta') return;
+      idbDel(k,o.id); S[k]=S[k].filter(x=>x.id!==o.id); n++;
+    });
+  });
+  flushIDB();
+  return {n:n, corte:corte};
 }
 async function mSinEspacio(){
   const e=await espacioUsado();
@@ -7471,9 +7605,19 @@ async function mSinEspacio(){
       '<div class="tiny" style="margin-top:5px">Su información <b>no se pierde</b>: está en la nube. '+
       'Lo que hay que hacer es vaciar lo guardado en este computador y volverlo a bajar limpio.</div>'+
       '</div></div>'+
+      '<div class="hintx" style="margin-top:9px"><b>Ojo:</b> esto no tiene nada que ver con el plan de '+
+      'Firebase. Es el espacio que Chrome le da a la página en <b>este computador</b>; ampliar la cuota en '+
+      'Firebase no lo cambia.</div>'+
       (e? '<div class="tline" style="margin-top:11px"><span>Espacio usado</span><span class="v">'+
           pesoTexto(e.usado)+(e.tope? ' de '+pesoTexto(e.tope)+' ('+e.pct+'%)':'')+'</span></div>':'')+
       '<div class="tline"><span>Cambios sin subir</span><span class="v">'+pend+'</span></div>'+
+      '<div class="card" style="background:var(--panel2);margin-top:11px"><div class="bd p0">'+
+        '<div class="tblwrap" style="max-height:190px">'+tbl([
+          {t:'Qué',f:r=>esc(r.tabla)},
+          {t:'Registros',num:1,f:r=>num(r.n,0)},
+          {t:'Peso',num:1,f:r=>pesoTexto(r.bytes)}
+        ],pesoPorTabla().filter(r=>r.bytes>400).slice(0,8),{empty:'—'})+'</div>'+
+      '</div></div>'+
       (pend? '<div class="card" style="background:var(--bad-soft);margin-top:10px"><div class="bd">'+
         '<b>Ojo: hay '+pend+' cambio(s) que todavía no han subido</b>'+
         '<div class="tiny" style="margin-top:4px">Primero súbalos o descargue el respaldo; si limpia ahora, '+
@@ -7483,6 +7627,7 @@ async function mSinEspacio(){
     footer:'<button class="btn" data-x>Ahora no</button>'+
       '<button class="btn" id="q_resp">⬇️ Respaldo</button>'+
       (pend? '<button class="btn" id="q_sub">⬆️ Subir pendientes</button>':'')+
+      '<button class="btn" id="q_arch">📦 Archivar lo viejo</button>'+
       '<button class="btn danger" id="q_lim">🧹 Limpiar este equipo</button>',
     onOpen:m=>{
       $('#q_resp',m).onclick=()=>{ const cfg=Object.assign({},S.cfg); delete cfg.prueba;
@@ -7491,6 +7636,15 @@ async function mSinEspacio(){
         toast('Respaldo descargado','ok'); };
       if($('#q_sub',m)) $('#q_sub',m).onclick=async()=>{ await flushOutbox(true);
         toast(S.outbox.length? 'Todavía quedan '+S.outbox.length:'Listo, todo subido', S.outbox.length?'warn':'ok'); };
+      $('#q_arch',m).onclick=()=>{ closeModal();
+        confirmar('¿Sacar de este equipo las ventas, compras y movimientos de hace más de 3 meses? '+
+          'En la nube quedan intactos; aquí solo se libera espacio.',()=>{
+          const r=archivarViejos(3);
+          espacioUsado().then(()=>{});
+          toast(r.n? 'Listo: saqué '+num(r.n,0)+' registros anteriores al '+fdate(r.corte)
+                   : 'No hay nada de hace más de 3 meses','ok',6000);
+          render();
+        },true); };
       $('#q_lim',m).onclick=()=>{ closeModal();
         confirmar('¿Vaciar la información guardada en ESTE equipo? La nube no se toca y al volver a entrar '+
           'se descarga todo otra vez.',()=>{ toast('Limpiando…','ok'); limpiarEquipo(true); },true); };
@@ -7500,8 +7654,7 @@ async function mSinEspacio(){
 function borrarTodoLocal(){
   ['pos_user','pos_fb','pos_perfil'].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
   try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf('pos_')===0) localStorage.removeItem(k); }); }catch(e){}
-  try{ indexedDB.deleteDatabase(DBNAME); }catch(e){}
-  setTimeout(()=>location.reload(),400);
+  vaciarBaseLocal().then(()=>setTimeout(()=>location.reload(),350));
 }
 function lgError(msg){ const e=$('#lg_err'); if(!e) return; e.textContent=msg||''; e.classList.toggle('hide',!msg); }
 function lgSacudir(){ const bx=$('#login .box'); if(bx){ bx.classList.add('shake'); setTimeout(()=>bx.classList.remove('shake'),320); } }
