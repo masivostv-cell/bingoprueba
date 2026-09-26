@@ -436,8 +436,16 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const round=(n,d)=>{const f=Math.pow(10,d||0);return Math.round((Number(n)||0)*f+Number.EPSILON)/f;};
 const sum=(a,f)=>a.reduce((t,x)=>t+(f?f(x):x),0);
-const todayISO=()=> new Date().toISOString().slice(0,10);
-const dISO=d=> new Date(d).toISOString().slice(0,10);
+/* El día es el día del reloj del local, no el de Greenwich.
+   Antes una venta de las 8 de la noche en Colombia (UTC-5) quedaba contada
+   en el día siguiente, así que al buscar "hoy" salían las ventas de anoche. */
+const dISO=d=>{ const x=(d instanceof Date)? d : new Date(d);
+  if(isNaN(x.getTime())) return '';
+  return new Date(x.getTime()-x.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+const todayISO=()=> dISO(new Date());
+const horaISO=d=>{ const x=(d instanceof Date)? d : new Date(d||Date.now());
+  return isNaN(x.getTime())? '' :
+    new Date(x.getTime()-x.getTimezoneOffset()*60000).toISOString().slice(11,16); };
 function dateAdd(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return dISO(d);}
 function fdate(v,withTime){ if(!v) return '—'; const d=new Date(v);
   const s=d.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
@@ -4628,13 +4636,14 @@ function viewCaja(vw){
         (t.cuentaId? '<span class="pill">💵 '+esc(nameOf('cuentas',t.cuentaId))+'</span>':'')+
         '<span class="pill">'+esc(nameOf('usuarios',t.usuarioId))+'</span>'+
         '<div class="spacer"></div>'+
+        '<button class="btn sm" id="rrel" title="Ventas de este turno para WhatsApp">📋 Relación del turno</button>'+
         '<button class="btn sm" id="rmov">+ Entrada/salida</button>'+
         '<button class="btn danger sm" id="rcerrar">Cerrar caja</button></div><div class="bd">'+
         '<div class="kpis">'+
           kpi('Abrió con',money(t.base),'saldo del cierre anterior','')+
           kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas','brand')+
           kpi('Efectivo que debe haber',money(D.esperado),'esto es lo único que se cuenta','ok')+
-          kpi('Movido hoy',money(D.ventaEfe+D.otrosIng-D.salidas),'entradas menos salidas','')+
+          kpi('Movido en el turno',money(D.ventaEfe+D.otrosIng-D.salidas),'entradas menos salidas','')+
         '</div></div></div>';
     } else {
       h+='<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><div class="bd" style="text-align:center;padding:26px">'+
@@ -4666,6 +4675,7 @@ function viewCaja(vw){
     if($('#rabrir')) $('#rabrir').onclick=mAbrirCaja;
     if($('#rcerrar')) $('#rcerrar').onclick=mCerrarCaja;
     if($('#rmov')) $('#rmov').onclick=mMovimiento;
+    if($('#rrel')) $('#rrel').onclick=()=>mandarCierreWA(t,null,0);
     $$('[data-ct]',$('#view')).forEach(b=>b.onclick=()=>{ _cajaTab=b.dataset.ct; pinta(); });
   }
 
@@ -5018,7 +5028,7 @@ function mCerrarCaja(){
       $('#usar',m).onclick=()=>{ $('#c',m).value=recontar(); upd(); };
       $('#impc',m).onclick=()=>imprimirCierre(t,D,toN($('#c',m).value));
       /* copia sin cerrar el arqueo: la vista completa sale al confirmar */
-      $('#wac',m).onclick=()=>copiarTexto(textoCierre(t,D,toN($('#c',m).value)),
+      $('#wac',m).onclick=()=>copiarTexto(textoCierre(t,D,toN($('#c',m).value),true),
         'Cierre copiado · pégalo en el grupo de WhatsApp');
       $('#ok',m).onclick=()=>{
         if($('#rsp',m)){ const q=$('#rsp',m).checked;
@@ -5066,7 +5076,7 @@ function respaldoDelCierre(t){
       turnoId:t? t.id:'', cierre:t? t.cierre:'', cfg:cfg, meta:S.meta};
     COLL.forEach(k=>d[k]=S[k]);
     const dia=(t&&t.cierre? dISO(t.cierre):todayISO());
-    const hora=new Date().toISOString().slice(11,16).replace(':','');
+    const hora=horaISO(new Date()).replace(':','');
     const nom=normTxt(S.cfg.nombre||'pos').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
     download('respaldo_'+(nom||'pos')+'_'+dia+'_'+hora+'.json',JSON.stringify(d),'application/json');
     return true;
@@ -5076,10 +5086,12 @@ function respaldoDelCierre(t){
 /* Todo lo del día en un texto listo para pegar en el grupo de WhatsApp:
    un resumen, no venta por venta. Qué se vendió, cuánta plata, por dónde
    entró, qué salió y con cuánto quedó cada caja. */
-function textoCierre(t,D,contado){
+function textoCierre(t,D,contado,comoCierre){
   if(!t) return '';
   D=D||datosCierre(t);
+  const enCurso = !comoCierre && t.estado!=='cerrado';
   contado = contado!=null? contado : (t.contado||0);
+  const hayArqueo = !enCurso || contado>0;
   const dif=round((Number(contado)||0)-D.esperado,2);
   const vs=(D.vs||[]).filter(v=>v.estado!=='anulada');
   const ini=t.apertura, fin=t.cierre||now();
@@ -5113,12 +5125,14 @@ function textoCierre(t,D,contado){
 
   const medios=D.porMedio||{};
   let x='*'+String(S.cfg.nombre||'POS').toUpperCase()+'*\n';
-  x+='*CIERRE DE CAJA*\n';
-  x+=fdate(ini,true)+'  →  '+fdate(fin,true)+'\n';
+  x+= enCurso? '*RELACIÓN DEL TURNO (caja abierta)*\n' : '*CIERRE DE CAJA*\n';
+  x+='Abrió: '+fdate(ini,true)+'\n';
+  x+=(enCurso? 'Corte: ':'Cerró: ')+fdate(fin,true)+'\n';
   x+='Cajero: '+nameOf('usuarios',t.usuarioId)+'\n';
   if(t.cuentaId) x+='Caja: '+nameOf('cuentas',t.cuentaId)+'\n';
+  x+='_Es todo lo de ESTE turno, así pase de la medianoche._\n';
 
-  x+='\n*VENTAS DEL DÍA: '+money(D.totalVentas)+'*\n';
+  x+='\n*VENTAS DEL TURNO: '+money(D.totalVentas)+'*\n';
   x+=L('Facturas',vs.length);
   x+=L('Unidades vendidas',num(uds,0));
   x+=L('Ticket promedio',money(vs.length? D.totalVentas/vs.length:0));
@@ -5137,9 +5151,11 @@ function textoCierre(t,D,contado){
   x+=L('Ventas en efectivo',money(D.ventaEfe));
   if(D.otrosIng) x+=L('Otras entradas',money(D.otrosIng));
   if(D.salidas) x+=L('Salidas de caja','-'+money(D.salidas));
-  x+='*Debía haber: '+money(D.esperado)+'*\n';
-  x+='*Contado: '+money(contado)+'*\n';
-  x+='*'+(Math.abs(dif)<1? 'Cuadró ✅' : (dif>0? 'Sobrante: '+money(dif) : 'Faltante: '+money(Math.abs(dif))))+'*\n';
+  x+='*'+(enCurso?'Debe haber ahora: ':'Debía haber: ')+money(D.esperado)+'*\n';
+  if(hayArqueo){
+    x+='*Contado: '+money(contado)+'*\n';
+    x+='*'+(Math.abs(dif)<1? 'Cuadró ✅' : (dif>0? 'Sobrante: '+money(dif) : 'Faltante: '+money(Math.abs(dif))))+'*\n';
+  }
   if(t.nota) x+='Obs: '+t.nota+'\n';
 
   if(otras.length){ x+='\n*OTROS INGRESOS*\n';
@@ -5209,7 +5225,7 @@ async function copiarTexto(t,aviso){
 }
 function mandarCierreWA(t,D,contado){
   const txt=textoCierre(t,D,contado);
-  modal({title:'Cierre para el grupo',size:'wide',
+  modal({title:(t&&t.estado!=='cerrado')? 'Relación del turno para el grupo':'Cierre para el grupo',size:'wide',
     body:'<div class="hintx" style="margin-bottom:8px">Así queda el mensaje. Cópielo y péguelo en WhatsApp.</div>'+
       '<textarea id="wa_t" rows="20" style="font-family:ui-monospace,monospace;font-size:11.5px;white-space:pre">'+
       esc(txt)+'</textarea>',
