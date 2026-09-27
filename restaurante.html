@@ -719,6 +719,57 @@ function cfgParaNube(){ const o={}; Object.keys(S.cfg).forEach(k=>{ if(CFG_LOCAL
 
 /* ------------------------- cola de envío (outbox) ------------------- */
 let syncing=false, syncErr=0, lastSync=null, lastPull=null, pulling=false;
+
+/* ---------------- cuánto le cuesta a Firebase -----------------------
+   Firestore cobra por documento leído, y una consulta que no devuelve nada
+   también cuenta como una lectura. Aquí se lleva la cuenta del día para
+   poder verla en Ajustes ▸ Nube. */
+function contarLectura(n){
+  const hoy=todayISO();
+  const c=(S.meta&&S.meta.lect)||{};
+  if(c.dia!==hoy){ c.dia=hoy; c.n=0; c.esc=0; }
+  c.n=(c.n||0)+(Number(n)||0);
+  if(S.meta){ S.meta.lect=c; _guardarLectPronto(); }
+}
+function contarEscritura(n){
+  const hoy=todayISO();
+  const c=(S.meta&&S.meta.lect)||{};
+  if(c.dia!==hoy){ c.dia=hoy; c.n=0; c.esc=0; }
+  c.esc=(c.esc||0)+(Number(n)||0);
+  if(S.meta){ S.meta.lect=c; _guardarLectPronto(); }
+}
+let _lectT=null;
+function _guardarLectPronto(){ if(_lectT) return; _lectT=setTimeout(()=>{_lectT=null; saveMeta();},4000); }
+function lecturasHoy(){ const c=(S.meta&&S.meta.lect)||{}; return c.dia===todayISO()? (c.n||0):0; }
+function escriturasHoy(){ const c=(S.meta&&S.meta.lect)||{}; return c.dia===todayISO()? (c.esc||0):0; }
+
+/* ---------------- el pulso del negocio -------------------------------
+   Un solo documento diminuto guarda, por colección, la fecha del último
+   cambio. Las terminales leen ESO (1 lectura) y solo bajan las colecciones
+   que de verdad cambiaron. Antes se preguntaba por las 19 colecciones cada
+   12 segundos: unas 68.000 lecturas al día por equipo. */
+let _quietos=0, _pullT=null;
+function rutaPulso(){ return 'negocios/'+(S.cfg.fbNegocio||'principal')+'/sync/pulso'; }
+function pulsoVisto(){ S.meta.pulso=S.meta.pulso||{}; return S.meta.pulso; }
+function anotarPulso(mapa){
+  const v=pulsoVisto();
+  Object.keys(mapa||{}).forEach(k=>{ v[k]=String(mapa[k]||''); });
+  saveMeta();
+}
+/* negocio que venía de la versión anterior: se le deja el pulso para que de
+   aquí en adelante todas las terminales lean barato */
+async function dejarPulsoInicial(){
+  try{
+    const campos={id:'pulso', por:S.cfg.terminal||'', upd:now()}, m={};
+    Object.keys(S.meta.pull||{}).forEach(c=>{ const v=String(S.meta.pull[c]||'');
+      if(v){ campos['c_'+c]=v; m[c]=v; } });
+    const hdr=await fbAuthHdr();
+    await fbJson(fbUrl(':commit'),{method:'POST',headers:hdr,body:JSON.stringify({writes:[
+      {update:{name:fbDocRoot()+'/sync/pulso', fields:fsFields(campos)},
+       updateMask:{fieldPaths:Object.keys(campos)}}]})});
+    contarEscritura(1); anotarPulso(m);
+  }catch(e){ /* si no se pudo, el próximo intento lo vuelve a poner */ }
+}
 function enqueue(entidad,op,payload){
   if(S.cfg.prueba) return;                      // en modo prueba NADA sale del equipo
   if(!S.cfg.fbOn) return;                       // en modo local la cola no crece
@@ -726,6 +777,7 @@ function enqueue(entidad,op,payload){
   const item={id:uid('q'),ts:now(),entidad:entidad,op:op,payload:payload,intentos:0,error:''};
   S.outbox.push(item); idbPut('outbox',item);
   paintSync();
+  _quietos=0;                                   // hay movimiento: vuelve el ritmo normal
   if(S.cfg.autoSync) scheduleSync();
 }
 let _st=null;
@@ -752,16 +804,29 @@ async function flushOutbox(manual){
         : Object.assign({},o.payload,{upd:o.payload.upd||o.ts});
       return {update:{name:fbDocRoot()+'/'+o.entidad+'/'+o.payload.id, fields:fsFields(datos)}};
     });
+    /* el pulso: por colección, la fecha del último cambio de este lote */
+    const tope={};
+    Array.from(porDoc.values()).forEach(o=>{
+      const u=String(o.op==='delete'? o.ts : (o.payload.upd||o.ts));
+      if(!tope[o.entidad] || u>tope[o.entidad]) tope[o.entidad]=u;
+    });
+    const campos={id:'pulso', por:S.cfg.terminal||'', upd:now()};
+    Object.keys(tope).forEach(k=>{ campos['c_'+k]=tope[k]; });
+    writes.push({update:{name:fbDocRoot()+'/sync/pulso', fields:fsFields(campos)},
+                 updateMask:{fieldPaths:Object.keys(campos)}});
     for(let i=0;i<writes.length;i+=400){
       await fbJson(fbUrl(':commit'),{method:'POST',headers:hdr,
         body:JSON.stringify({writes:writes.slice(i,i+400)})});
     }
+    contarEscritura(writes.length);
+    /* lo que acabo de escribir yo no me lo tengo que volver a bajar */
+    anotarPulso(tope);
     const ids=new Set(lote.map(b=>b.id));
     S.outbox=S.outbox.filter(o=>!ids.has(o.id));
     lote.forEach(b=>idbDel('outbox',b.id));
     syncErr=0; lastSync=now();
     syncing=false; paintSync();
-    if(manual) toast('Enviado a Firebase ('+writes.length+' documentos)','ok');
+    if(manual) toast('Enviado a Firebase ('+(writes.length-1)+' documentos)','ok');
     if(S.outbox.length) scheduleSync(400);
   }catch(e){
     syncErr++; lote.forEach(b=>{b.intentos++;b.error=fbErr(e);idbPut('outbox',b);});
@@ -800,7 +865,29 @@ async function pullCloud(manual){
   try{
     const hdr=await fbAuthHdr();
     S.meta.pull=S.meta.pull||{};
-    for(const coll of COLL.concat(['config'])){
+
+    /* 1 sola lectura: ¿cambió algo y en qué colecciones? */
+    let listas=COLL.concat(['config']), pulso=null, sinPulso=false;
+    try{ pulso=await fbGet(rutaPulso()); }
+    catch(e){ pulling=false; paintSync(); if(manual) toast(fbErr(e),'bad',4200); return 0; }
+    if(pulso && !pulso.id) pulso=null;            // documento raro: se trata como si no hubiera
+    if(pulso){
+      const visto=pulsoVisto();
+      listas=listas.filter(c=>{
+        const r=String(pulso['c_'+c]||'');
+        if(!r) return false;                       // esa colección nunca se ha escrito
+        return r!==String(visto[c]||'');           // distinto (no "mayor"): aguanta relojes desfasados
+      });
+      if(!listas.length){
+        S.turno=turnoAbierto(); lastPull=now(); syncErr=0;
+        pulling=false; paintSync();
+        if(esEstacion() && S.user) setTimeout(revisarCocina,300);
+        else if(manual) toast('Todo al día','ok');
+        return 0;
+      }
+    } else sinPulso=true;                          // negocio viejo: se barre y se deja el pulso
+
+    for(const coll of listas){
       let cursor=S.meta.pull[coll]||'';
       for(let pag=0; pag<25; pag++){
         const q={structuredQuery:{ from:[{collectionId:coll}],
@@ -809,6 +896,7 @@ async function pullCloud(manual){
         const res=await fbJson(fbUrl('/negocios/'+(S.cfg.fbNegocio||'principal')+':runQuery'),
           {method:'POST',headers:hdr,body:JSON.stringify(q)});
         const docs=(res||[]).filter(r=>r&&r.document);
+        contarLectura(Math.max(1,docs.length));
         docs.forEach(r=>{ const o=fsDoc(r.document.fields);
           if(aplicarRemoto(coll,o)) cambios++;
           if(String(o.upd||'')>cursor) cursor=o.upd; });
@@ -816,6 +904,9 @@ async function pullCloud(manual){
       }
       S.meta.pull[coll]=cursor;
     }
+    /* queda anotado lo que traía el pulso que acabo de leer */
+    if(pulso){ const m={}; listas.forEach(c=>{ m[c]=String(pulso['c_'+c]||''); }); anotarPulso(m); }
+    else if(sinPulso) dejarPulsoInicial();
     saveMeta(); lastPull=now(); syncErr=0;
     S.turno=turnoAbierto();
     pulling=false; paintSync();
@@ -848,6 +939,7 @@ async function mPrimerEnlace(){
     for(const coll of ['productos','ventas','usuarios']){
       const res=await fbJson(fbUrl('/negocios/'+(S.cfg.fbNegocio||'principal')+':runQuery'),
         {method:'POST',headers:hdr,body:JSON.stringify({structuredQuery:{from:[{collectionId:coll}],limit:1}})});
+      contarLectura(1);
       if((res||[]).some(r=>r&&r.document)){ hayNube=true; break; }
     }
   }catch(e){ toast(fbErr(e),'bad',4500); return; }
@@ -900,8 +992,26 @@ function paintSync(){
 }
 window.addEventListener('online',()=>{ if(S.cfg.autoSync){ scheduleSync(300); pullCloud(); } });
 setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && !S.cfg.prueba && S.outbox.length) flushOutbox(); }, 15000);
-setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && !S.cfg.prueba && !document.hidden) pullCloud(); },
-            Math.max(5,Number(DEFCFG.pullSeg)||12)*1000);
+/* Ritmo de consulta. Cada vuelta cuesta 1 lectura (el pulso). Si no ha
+   pasado nada en un buen rato y este equipo no es la estación de cocina,
+   pregunta más despacio; apenas hay movimiento vuelve al ritmo normal. */
+function pullSegActual(){
+  const base=Math.max(5,Number(S.cfg.pullSeg)||12);
+  if(esEstacion()) return base;                       // la cocina no se puede dormir
+  if(_quietos>=20) return Math.min(60, base*4);
+  return base;
+}
+function programarPull(){
+  clearTimeout(_pullT);
+  _pullT=setTimeout(async()=>{
+    if(S.cfg.autoSync && S.cfg.fbOn && !S.cfg.prueba && !document.hidden){
+      try{ const n=await pullCloud(); if(n) _quietos=0; else _quietos++; }catch(e){ _quietos++; }
+    }
+    programarPull();
+  }, pullSegActual()*1000);
+}
+programarPull();
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ _quietos=0; programarPull(); } });
 
 /* ==================== ESTACIÓN DE COCINA =============================
    Los meseros toman el pedido en el teléfono, pero la impresora está en el
@@ -6693,6 +6803,21 @@ function viewAjustes(vw){
             'para que los consecutivos no se repitan: esta numera <b>V-'+esc(c.terminal||'A')+'-00001</b>.</div>'+
         '</div></div>'+
 
+        '<div class="card"><div class="hd"><h3>Consumo de Firebase</h3>'+
+          '<span class="pill '+(lecturasHoy()>40000?'bad':lecturasHoy()>20000?'warn':'ok')+'">'+
+            num(lecturasHoy(),0)+' lecturas hoy</span></div><div class="bd">'+
+          '<div class="tline"><span>Lecturas de este equipo hoy</span><span class="v mono">'+num(lecturasHoy(),0)+'</span></div>'+
+          '<div class="tline"><span>Escrituras de este equipo hoy</span><span class="v mono">'+num(escriturasHoy(),0)+'</span></div>'+
+          '<div class="tline"><span>Pregunta cada</span><span class="v">'+pullSegActual()+' s'+
+            (pullSegActual()>(Number(c.pullSeg)||12)? ' · en reposo':'')+'</span></div>'+
+          '<div class="tline"><span>Costo de cada vuelta</span><span class="v">1 lectura</span></div>'+
+          '<div class="hintx" style="margin-top:8px">El equipo lee un solo documento diminuto (el <i>pulso</i>) para '+
+          'saber si algo cambió. Solo cuando cambió baja las colecciones afectadas. Si nadie toca nada durante un '+
+          'rato, empieza a preguntar cada '+Math.min(60,(Number(c.pullSeg)||12)*4)+' s; en la estación de cocina no '+
+          'se duerme nunca, para que las comandas salgan de una. El plan gratuito de Firebase da 50.000 lecturas '+
+          'y 20.000 escrituras al día entre todos los equipos.</div>'+
+        '</div></div>'+
+
         '<div class="card"><div class="hd"><h3>Cola de envío</h3>'+
           '<span class="pill '+(pend?'warn':'ok')+'">'+pend+' pendientes</span></div><div class="bd">'+
           '<p class="hintx">La app guarda primero en el dispositivo (memoria + IndexedDB) y responde al instante. '+
@@ -7010,6 +7135,7 @@ async function diagnosticoNube(){
 async function fbGet(ruta){
   const hdr=await fbAuthHdr();
   const r=await fetch(fbUrl('/'+ruta),{headers:hdr});
+  contarLectura(1);
   if(r.status===404) return null;
   let j={}; try{ j=await r.json(); }catch(e){}
   if(!r.ok) throw new Error((j.error&&(j.error.message||j.error.status))||('HTTP '+r.status));
@@ -7017,6 +7143,7 @@ async function fbGet(ruta){
 }
 async function fbSet(ruta,obj){
   const hdr=await fbAuthHdr();
+  contarEscritura(1);
   await fbJson(fbUrl(':commit'),{method:'POST',headers:hdr,body:JSON.stringify({writes:[{update:{
     name:'projects/'+S.cfg.fbProjectId+'/databases/(default)/documents/'+ruta,
     fields:fsFields(Object.assign({},obj,{upd:now()}))}}]})});
@@ -7026,7 +7153,9 @@ async function fbLista(coleccion,limite){
   const hdr=await fbAuthHdr();
   const res=await fbJson(fbUrl(':runQuery'),{method:'POST',headers:hdr,
     body:JSON.stringify({structuredQuery:{from:[{collectionId:coleccion}],limit:limite||300}})});
-  return (res||[]).filter(r=>r&&r.document).map(r=>fsDoc(r.document.fields));
+  const d=(res||[]).filter(r=>r&&r.document);
+  contarLectura(Math.max(1,d.length));
+  return d.map(r=>fsDoc(r.document.fields));
 }
 async function fbCrearCuenta(email,pass){            // no toca la sesión actual
   const j=await fbJson('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+
