@@ -1478,6 +1478,24 @@ function movTes(cuentaId,tipo,monto,concepto,categoria,refTipo,refId,ter){
   if(cajaCerrada(cuentaId)){ m.fueraTurno=1; m.soporte=_soporteCaja||''; }
   put('movimientos',m); return m;
 }
+/* Cuánto había en la cuenta ANTES de que empezara ese día: sirve para mostrar
+   con qué se abrió el período. */
+function saldoCuentaAntesDe(id,ts){
+  const c=byId('cuentas',id); if(!c) return 0;
+  let s=Number(c.saldoInicial)||0;
+  S.movimientos.forEach(m=>{ if(m.cuentaId!==id) return;
+    if(ts && String(m.fecha)>=String(ts)) return;
+    s += m.tipo==='ingreso'? m.monto : -m.monto; });
+  return round(s,2);
+}
+function saldoCuentaAntesDelDia(id,dia){
+  const c=byId('cuentas',id); if(!c) return 0;
+  let s=Number(c.saldoInicial)||0;
+  S.movimientos.forEach(m=>{ if(m.cuentaId!==id) return;
+    if(!dia || dISO(m.fecha)>=dia) return;
+    s += m.tipo==='ingreso'? m.monto : -m.monto; });
+  return round(s,2);
+}
 function saldoCuenta(id){
   const c=byId('cuentas',id); if(!c) return 0;
   let s=Number(c.saldoInicial)||0;
@@ -4778,7 +4796,7 @@ function viewCaja(vw){
         '<div class="kpis">'+
           kpi('Abrió con',money(t.base),'saldo del cierre anterior','')+
           kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas'+
-            (round(sum(D.vs,v=>fiadoDe(v)),2)>0.5? ' · '+money(round(sum(D.vs,v=>fiadoDe(v)),2))+' fiados':''),'brand')+
+            (round(sum(D.vs,v=>fiadoDe(v)),2)>0.5? ' · '+money(round(sum(D.vs,v=>fiadoDe(v)),2))+' a crédito':''),'brand')+
           kpi('Efectivo que debe haber',money(D.esperado),'esto es lo único que se cuenta','ok')+
           kpi('Movido en el turno',money(D.ventaEfe+D.otrosIng-D.salidas),'entradas menos salidas','')+
         '</div></div></div>';
@@ -5279,9 +5297,9 @@ function textoCierre(t,D,contado,comoCierre){
 
   x+='\n*CÓMO PAGARON*\n';
   MEDIOS.forEach(md=>{ const v=medios[md.k]||0; if(!v) return;
-    x+=L(md.k==='credito'? '🧾 Fiado (NO entró plata)' : md.e+' '+md.n, money(v)); });
+    x+=L(md.k==='credito'? '🧾 Crédito (no entró plata)' : md.e+' '+md.n, money(v)); });
   x+='*PLATA QUE SÍ ENTRÓ: '+money(recaudado)+'*\n';
-  if(fiado>0.5) x+='_Quedaron '+money(fiado)+' fiados: eso no está en la caja, está en cartera._\n';
+  if(fiado>0.5) x+='_Quedaron '+money(fiado)+' a crédito: esa plata no está en la caja, está en cartera._\n';
 
   if(porCat.length){ x+='\n*POR CATEGORÍA*\n';
     porCat.forEach(c=>{ x+='• '+c.n+': '+money(c.v)+'\n'; }); }
@@ -5309,34 +5327,16 @@ function textoCierre(t,D,contado,comoCierre){
   if(!gastos.length) x+='(ninguno)\n';
   else porGasto.forEach(g=>{ x+='• '+g.n+': '+money(g.v)+'\n'; });
 
-  const pc=(D.porCuenta||[]).filter(a=>a.n>0 || a.esLaDelTurno);
-  if(pc.length){
-    x+='\n*MOVIMIENTO POR CAJA / CUENTA*\n';
-    pc.forEach(a=>{
-      x+=(a.tipo==='caja'?'💵 ':'🏦 ')+'*'+a.nombre+'*\n';
-      if(a.base) x+='   Abrió con: '+money(a.base)+'\n';
-      if(a.ventas) x+='   Ventas: '+money(a.ventas)+'\n';
-      if(a.otrosIng) x+='   Otras entradas: '+money(a.otrosIng)+'\n';
-      if(a.egresos) x+='   Salidas: -'+money(a.egresos)+'\n';
-      x+='   Movió: '+money(a.neto)+'  ·  Queda: '+money(saldoCuenta(a.id))+'\n';
-    });
-  }
-
-  const otrasCtas=cta.filter(c=>!pc.some(a=>a.id===c.id));
-  if(otrasCtas.length){
-    x+='\n*OTRAS CUENTAS (sin movimiento hoy)*\n';
-    otrasCtas.forEach(c=>{ x+=(c.tipo==='caja'?'💵 ':'🏦 ')+c.nombre+': '+money(saldoCuenta(c.id))+'\n'; });
-  }
-  const cjsC=cta.filter(c=>c.tipo==='caja'), bnsC=cta.filter(c=>c.tipo!=='caja');
-  const tCjaC=round(sum(cjsC,c=>saldoCuenta(c.id)),2), tBcoC=round(sum(bnsC,c=>saldoCuenta(c.id)),2);
-  x+='\n*CUÁNTO DEBE HABER AHORA*\n';
-  x+='💵 *EN EFECTIVO (cajas): '+money(tCjaC)+'*\n';
-  if(cjsC.length) cjsC.forEach(c=>{ x+='   • '+c.nombre+': '+money(saldoCuenta(c.id))+'\n'; });
-  else x+='   (sin cajas registradas)\n';
-  x+='🏦 *EN BANCOS / DIGITAL: '+money(tBcoC)+'*\n';
-  if(bnsC.length) bnsC.forEach(c=>{ x+='   • '+c.nombre+': '+money(saldoCuenta(c.id))+'\n'; });
-  else x+='   (sin cuentas de banco)\n';
-  x+='*TOTAL EN CAJAS Y BANCOS: '+money(round(tCjaC+tBcoC,2))+'*\n';
+  /* el recorrido del dinero del turno, cuenta por cuenta */
+  const dineroT=cta.map(c=>{
+    const a=(D.porCuenta||[]).find(y=>y.id===c.id)||{};
+    const ent=round((Number(a.ventas)||0)+(Number(a.otrosIng)||0),2);
+    const sal=round(Number(a.egresos)||0,2);
+    const antes = c.id===t.cuentaId ? round(Number(t.base)||0,2) : saldoCuentaAntesDe(c.id,ini);
+    return {id:c.id, nombre:c.nombre, tipo:c.tipo, antes:antes, ent:ent, sal:sal,
+      fin:round(antes+ent-sal,2), ahora:saldoCuenta(c.id)};
+  });
+  x+=bloqueDinero(dineroT, true, 'EL DINERO DEL TURNO, PASO A PASO', 'este turno');
 
   const cxcSaldo=round(sum(cxc(),saldoDoc),2);
   if(cxcSaldo>0.5) x+='\n*Por cobrar (cartera): '+money(cxcSaldo)+'*\n';
@@ -5402,7 +5402,7 @@ function imprimirCierre(t,D,contado,copia){
     {k:'DIFERENCIA', v:money(dif), big:true},
     'NO SE CUENTA'
   ].concat(MEDIOS.filter(x=>x.k!=='efectivo').map(md=>
-      [md.k==='credito'? 'Fiado (no entro)' : md.n, money((D.porMedio||{})[md.k]||0)]))
+      [md.k==='credito'? 'Credito (no entro)' : md.n, money((D.porMedio||{})[md.k]||0)]))
    .concat((()=>{ const pc=(D.porCuenta||[]).filter(a=>a.n>0||a.esLaDelTurno);
      if(!pc.length) return [];
      let l=['POR CAJA / CUENTA'];
@@ -5420,7 +5420,7 @@ function imprimirCierre(t,D,contado,copia){
     'VENTAS',
     ['Facturas', (D.vs||[]).length],
     {k:'TOTAL VENDIDO', v:money(D.totalVentas), b:true},
-    fiadoT>0.5? ['Menos fiado', '-'+money(fiadoT)] : null,
+    fiadoT>0.5? ['Menos credito', '-'+money(fiadoT)] : null,
     fiadoT>0.5? {k:'PLATA QUE ENTRO', v:money(round(D.totalVentas-fiadoT,2)), b:true} : null,
     t.nota? {texto:'Obs: '+t.nota} : null,
     {firma:'Firma del cajero'},
@@ -5829,7 +5829,16 @@ function resumenVentas(d1,d2){
   vs.forEach(v=>{ const k=nameOf('usuarios',v.usuarioId);
     porUsuario[k]=porUsuario[k]||{nombre:k,n:0,valor:0}; porUsuario[k].n++; porUsuario[k].valor+=v.total; });
   const fiado=round(sum(vs,v=>fiadoDe(v)),2);
-  return {d1,d2,vs,anul,ms,medios,total,costo, fiado, recaudado:round(total-fiado,2),
+  /* el recorrido del dinero: con cuánto se abrió, qué entró, qué salió y qué quedó */
+  const dinero=S.cuentas.filter(c=>c.activo!==false).map(c=>{
+    const mm=ms.filter(m=>m.cuentaId===c.id);
+    const ent=round(sum(mm.filter(m=>m.tipo==='ingreso'),m=>m.monto),2);
+    const sal=round(sum(mm.filter(m=>m.tipo==='egreso'),m=>m.monto),2);
+    const antes=saldoCuentaAntesDelDia(c.id,d1);
+    return {id:c.id, nombre:c.nombre, tipo:c.tipo, antes:antes, ent:ent, sal:sal,
+      fin:round(antes+ent-sal,2), ahora:saldoCuenta(c.id)};
+  });
+  return {d1,d2,vs,anul,ms,medios,total,costo, fiado, recaudado:round(total-fiado,2), dinero,
     utilidad:round(total-sum(vs,v=>v.propina||0)-sum(vs,v=>v.impuesto||0)-costo,2),
     descuentos:sum(vs,v=>v.descuento||0), propinas:sum(vs,v=>v.propina||0), impuestos:sum(vs,v=>v.impuesto||0),
     ing,egr,saldo:round(ing-egr,2), cajaIng,cajaEgr, cajaNeto:round(cajaIng-cajaEgr,2),
@@ -5909,6 +5918,31 @@ function imprimirResumen(d1,d2,detallado){
   abrirImpresion(h,'resumen',S.cfg.impresoraTicket);   // prioridad: no espera la cola de tickets
 }
 
+/* El recorrido del dinero, separado en efectivo y bancos:
+   con cuánto se abrió, cuánto entró, cuánto salió y cuánto queda. */
+function bloqueDinero(dinero,alDia,titulo,ambito){
+  const G=(t,e,titulo)=>{
+    const l=(dinero||[]).filter(c=> t==='caja'? c.tipo==='caja' : c.tipo!=='caja');
+    const S0=k=>round(sum(l,c=>c[k]),2);
+    let x=e+' *'+titulo+'*\n';
+    if(!l.length) return x+'   (no hay cuentas de este tipo)\n';
+    x+='   Había al empezar: '+money(S0('antes'))+'\n';
+    x+='   + Entró: '+money(S0('ent'))+'\n';
+    x+='   − Salió: '+money(S0('sal'))+'\n';
+    x+='   = *'+(alDia?'QUEDA AHORA':'QUEDÓ AL CERRAR')+': '+money(S0('fin'))+'*\n';
+    l.forEach(c=>{ x+='      • '+c.nombre+': '+money(c.fin)+'\n'; });
+    return x;
+  };
+  const tot=round(sum(dinero||[],c=>c.fin),2);
+  let x='\n*'+(titulo||'EL DINERO, PASO A PASO')+'*\n';
+  x+=G('caja','💵','EFECTIVO (cajas)');
+  x+=G('banco','🏦','BANCOS / DIGITAL');
+  x+='*TOTAL EN CAJAS Y BANCOS: '+money(tot)+'*\n';
+  const dif=(dinero||[]).some(c=>Math.abs(c.fin-c.ahora)>0.5);
+  if(dif) x+='_En este momento las cuentas suman '+money(round(sum(dinero,c=>c.ahora),2))+
+    ': hay movimientos por fuera de '+(ambito||'este período')+'._\n';
+  return x;
+}
 function textoResumen(d1,d2){
   const r=resumenVentas(d1,d2);
   const mismoDia=d1===d2;
@@ -5922,27 +5956,12 @@ function textoResumen(d1,d2){
   if(r.medios.efectivo) t+=li('💵 Efectivo',money(r.medios.efectivo))+'\n';
   if(r.medios.tarjeta) t+=li('💳 Tarjeta',money(r.medios.tarjeta))+'\n';
   if(r.medios.transferencia) t+=li('📲 Transferencia',money(r.medios.transferencia))+'\n';
-  if(r.medios.credito) t+=li('🧾 Fiado (NO entró plata)',money(r.medios.credito))+'\n';
+  if(r.medios.credito) t+=li('🧾 Crédito (no entró plata)',money(r.medios.credito))+'\n';
   t+='*PLATA QUE SÍ ENTRÓ: '+money(r.recaudado)+'*\n';
-  if(r.fiado>0.5) t+='_Quedaron '+money(r.fiado)+' fiados: eso no está en caja, está en cartera._\n';
+  if(r.fiado>0.5) t+='_Quedaron '+money(r.fiado)+' a crédito: esa plata no está en caja, está en cartera._\n';
   if(r.descuentos) t+=li('Descuentos','-'+money(r.descuentos))+'\n';
   if(r.propinas) t+=li('Propinas',money(r.propinas))+'\n';
-  const cjs=(r.cuentas||[]).filter(c=>c.tipo==='caja');
-  const bns=(r.cuentas||[]).filter(c=>c.tipo!=='caja');
-  const tCaja=round(sum(cjs,c=>c.saldo),2), tBanco=round(sum(bns,c=>c.saldo),2);
-  t+='\n*CUÁNTO DEBE HABER AHORA*\n';
-  t+='💵 *EN EFECTIVO (cajas): '+money(tCaja)+'*\n';
-  if(cjs.length) cjs.forEach(c=>{ t+='   • '+c.nombre+': '+money(c.saldo)+'\n'; });
-  else t+='   (sin cajas registradas)\n';
-  t+='🏦 *EN BANCOS / DIGITAL: '+money(tBanco)+'*\n';
-  if(bns.length) bns.forEach(c=>{ t+='   • '+c.nombre+': '+money(c.saldo)+'\n'; });
-  else t+='   (sin cuentas de banco)\n';
-  t+='*TOTAL EN CAJAS Y BANCOS: '+money(round(tCaja+tBanco,2))+'*\n';
-  t+='\n*Movimiento del período*\n';
-  t+=li('Entró',money(r.ing))+'\n';
-  t+=li('Salió','-'+money(r.egr))+'\n';
-  t+=li('Neto',money(r.saldo))+'\n';
-  t+=li('Solo efectivo (entró − salió)',money(r.cajaNeto))+'\n';
+  t+=bloqueDinero(r.dinero, d2===todayISO());
   if(r.totalGastos){
     const gc={}; r.gastos.forEach(m=>{ const k=m.categoria||'otros'; gc[k]=(gc[k]||0)+m.monto; });
     t+='\n*GASTOS: '+money(r.totalGastos)+'*\n';
