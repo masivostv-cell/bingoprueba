@@ -3209,7 +3209,8 @@ async function qzImprimir(html,impresora,tipo){
   try{
     await qzConectar();
     const nombre=impresora||null;
-    const cfg=nombre? qz.configs.create(nombre) : qz.configs.create(await qz.printers.getDefault());
+    const opc= html.indexOf('size:letter')>-1? {size:{width:8.5,height:11},units:'in',margins:0.4} : undefined;
+    const cfg=qz.configs.create(nombre||await qz.printers.getDefault(), opc);
     await qz.print(cfg,[{type:'html',format:'plain',data:html}]);
   }catch(e){ toast('QZ Tray ('+tipo+'): '+(e.message||e),'bad',6000); }
 }
@@ -3298,9 +3299,24 @@ async function qzListarImpresoras(){
   return S.impresoras;
 }
 
+/* ---------------- tamaño de papel: 58 mm, 80 mm o carta ---------------- */
+function papel(valor){
+  if(valor==='carta') return {carta:true, w:196};          // carta: 215.9 mm − márgenes de 10 mm
+  return {carta:false, w:Number(valor)===58? 58 : 80};
+}
+function paginaCSS(P,margen){
+  return P.carta? '@page{size:letter;margin:10mm}'
+                : '@page{size:'+P.w+'mm auto;margin:'+margen+'mm}';
+}
+function opcionesPapel(actual){
+  return [['58','58 mm'],['80','80 mm'],['carta','Carta']].map(o=>
+    '<option value="'+o[0]+'"'+(String(actual||80)===o[0]?' selected':'')+'>'+o[1]+'</option>').join('');
+}
+function leerPapel(v){ return v==='carta'? 'carta' : (Number(v)||80); }
+
 /* ------------------------- comanda de cocina ------------------------ */
 function comandaHTML(v,copia){
-  const c=S.cfg, w=Number(c.comandaAncho)||80;
+  const c=S.cfg, P=papel(c.comandaAncho), w=P.w;
   const mesa=v.mesaId? byId('mesas',v.mesaId):null;
   const destino = mesa? (esDomicilio(mesa)? ('🛵 DOMICILIO · '+String(mesa.nombre).toUpperCase())
                                            : ('MESA '+String(mesa.nombre).toUpperCase()))
@@ -3315,7 +3331,7 @@ function comandaHTML(v,copia){
   const uds=(v.items||[]).reduce((t,i)=>t+i.cant,0);
   const soloBaja=!filas && !cambios && !!bajas;
   return '<html><head><meta charset="utf-8"><style>'+
-    '@page{size:'+w+'mm auto;margin:3mm}'+
+    paginaCSS(P,3)+
     'body{font:'+px(14)+'/1.3 Arial,Helvetica,sans-serif;color:#000;margin:0;width:'+(w-5)+'mm;font-weight:bold}'+
     'h1{font-size:'+px(23)+';margin:0;text-align:center;letter-spacing:1px}'+
     '.cab{text-align:center;font-size:'+px(12.5)+';margin:3px 0;font-weight:normal}'+
@@ -3399,7 +3415,7 @@ function escalaLetra(){ const k=Number(S.cfg.letra); return (k>=0.8&&k<=1.8)? k 
 function px(base){ return round(base*escalaLetra(),1)+'px'; }
 
 function ticketHTML(v){
-  const c=S.cfg, w=Number(c.ticketAncho)||80, ang=(w-6);
+  const c=S.cfg, P=papel(c.ticketAncho), w=P.w, ang=(w-6);
   const cli=v.clienteId? byId('clientes',v.clienteId):null;
   const mesa=v.mesaId? byId('mesas',v.mesaId):null;
   const rows=(v.items||[]).map(i=>'<tr><td class="q">'+esc(i.cant)+'</td><td>'+esc(i.nombre)+
@@ -3411,7 +3427,7 @@ function ticketHTML(v){
     (vuelto>0.5? '<div class="l"><span>Recibido</span><span>'+money(recib)+'</span></div>'+
                  '<div class="l b"><span>CAMBIO</span><span>'+money(vuelto)+'</span></div>':'');
   return '<html><head><meta charset="utf-8"><style>'+
-   '@page{size:'+w+'mm auto;margin:2.5mm}'+
+   paginaCSS(P,2.5)+
    '*{-webkit-print-color-adjust:exact}'+
    'body{font:'+px(12.5)+'/1.42 Arial,Helvetica,sans-serif;color:#000;margin:0;width:'+ang+'mm;font-weight:500}'+
    'h1{font-size:'+px(19)+';margin:0 0 2px;text-align:center;font-weight:bold;line-height:1.15}'+
@@ -5682,7 +5698,7 @@ function mImportar(){
    ==================================================================== */
 function docTicket(titulo, bloques, opts){
   opts=opts||{};
-  const c=S.cfg, w=Number(c.ticketAncho)||80;
+  const c=S.cfg, P=papel(c.ticketAncho), w=P.w;
   const cuerpo=bloques.map(b=>{
     if(b===null||b===undefined) return '';
     if(typeof b==='string') return '<h2>'+esc(b)+'</h2>';
@@ -5694,7 +5710,7 @@ function docTicket(titulo, bloques, opts){
            '<span>'+(b[1]!==undefined?b[1]:b.v)+'</span></div>';
   }).join('');
   return '<html><head><meta charset="utf-8"><style>'+
-    '@page{size:'+w+'mm auto;margin:2.5mm}'+
+    paginaCSS(P,2.5)+
     'body{font:'+px(12)+'/1.42 Arial,Helvetica,sans-serif;color:#000;margin:0;width:'+(w-6)+'mm;font-weight:500}'+
     'h1{font-size:'+px(17)+';margin:0;text-align:center;font-weight:bold}'+
     'h2{font-size:'+px(12.5)+';margin:9px 0 3px;border-bottom:1.5px solid #000;font-weight:bold}'+
@@ -5848,11 +5864,11 @@ function resumenVentas(d1,d2){
 }
 
 function imprimirResumen(d1,d2,detallado){
-  const r=resumenVentas(d1,d2), c=S.cfg, w=Number(c.ticketAncho)||80;
+  const r=resumenVentas(d1,d2), c=S.cfg, P=papel(c.ticketAncho), w=P.w;
   const L=(a,b,neg)=>'<div class="l'+(neg?' neg':'')+'"><span>'+esc(a)+'</span><span>'+b+'</span></div>';
   const mismoDia = d1===d2;
   let h='<html><head><meta charset="utf-8"><style>'+
-    '@page{size:'+w+'mm auto;margin:3mm}'+
+    paginaCSS(P,3)+
     'body{font:'+px(12)+'/1.42 Arial,Helvetica,sans-serif;color:#000;margin:0;width:'+(w-6)+'mm;font-weight:500}'+
     'h1{font-size:'+px(18)+';margin:0;text-align:center;font-weight:bold}'+
     'h2{font-size:'+px(13)+';margin:10px 0 3px;border-bottom:1.5px solid #000;font-weight:bold}'+
@@ -6610,10 +6626,10 @@ function viewAjustes(vw){
           '</div>'+
           '<div style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px">'+
           '<div class="grid" style="grid-template-columns:1fr 1fr">'+
-            '<div class="f"><label>Ancho del ticket</label><select id="g_ticketAncho">'+
-              [58,80].map(w=>'<option value="'+w+'"'+(Number(c.ticketAncho)===w?' selected':'')+'>'+w+' mm</option>').join('')+'</select></div>'+
-            '<div class="f"><label>Ancho de la comanda</label><select id="g_comandaAncho">'+
-              [58,80].map(w=>'<option value="'+w+'"'+(Number(c.comandaAncho)===w?' selected':'')+'>'+w+' mm</option>').join('')+'</select></div></div>'+
+            '<div class="f"><label>Papel del ticket</label><select id="g_ticketAncho">'+
+              opcionesPapel(c.ticketAncho)+'</select></div>'+
+            '<div class="f"><label>Papel de la comanda</label><select id="g_comandaAncho">'+
+              opcionesPapel(c.comandaAncho)+'</select></div></div>'+
           '<label class="row tiny" style="gap:7px;margin:10px 0"><input type="checkbox" id="g_comandaPrecios" '+
             (c.comandaPrecios?'checked':'')+'> Mostrar precios en la comanda de cocina</label>'+
           '<div class="f"><label>Mensaje al pie del ticket</label><input id="g_ticketPie" value="'+esc(c.ticketPie||'')+'"></div>'+
@@ -6736,13 +6752,13 @@ function viewAjustes(vw){
         c.waSoporte=($('#g_waSoporte').value||'').replace(/\D/g,'')||'573204491926';
         c.modoImp=$('#g_modoImp').value; c.ordenImp=$('#g_ordenImp').value;
         c.pausaImp=Math.max(600,toN($('#g_pausaImp').value)||1800);
-        c.comandaAncho=Number($('#g_comandaAncho').value);
+        c.comandaAncho=leerPapel($('#g_comandaAncho').value);
         c.letra=Number($('#g_letra').value)||1.15;
         c.impComanda=$('#g_impComanda').checked; c.impTicket=$('#g_impTicket').checked;
         c.comandaPrecios=$('#g_comandaPrecios').checked;
         c.decimales=Number($('#g_decimales').value);
         c.impuesto=toN($('#g_impuesto').value); c.propina=toN($('#g_propina').value);
-        c.ticketAncho=Number($('#g_ticketAncho').value);
+        c.ticketAncho=leerPapel($('#g_ticketAncho').value);
         c.impIncluido=$('#g_impIncluido').checked; c.propinaAuto=$('#g_propinaAuto').checked;
         saveCfg(); render(); toast('Configuración guardada','ok');
       };
