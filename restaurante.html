@@ -1622,9 +1622,14 @@ function detalleTurno(t){
     return c && c.tipo==='caja' && (!t.cuentaId || m.cuentaId===t.cuentaId); };
   const cm=movs.filter(enCaja);
   const ventaEfe=sum(cm.filter(m=>m.tipo==='ingreso' && m.refTipo==='venta'),m=>m.monto);
-  const otrosIng=sum(cm.filter(m=>m.tipo==='ingreso' && m.refTipo!=='venta'),m=>m.monto);
-  const salidas =sum(cm.filter(m=>m.tipo==='egreso'),m=>m.monto);
-  const esperado=round((Number(t.base)||0)+ventaEfe+otrosIng-salidas,2);
+  /* un traslado no es entrada ni salida del negocio: la plata solo cambia de
+     cuenta. Se muestra aparte, pero sí cuenta para lo que debe haber en caja */
+  const esTras=m=>m.categoria==='traslado';
+  const otrosIng=sum(cm.filter(m=>m.tipo==='ingreso' && m.refTipo!=='venta' && !esTras(m)),m=>m.monto);
+  const salidas =sum(cm.filter(m=>m.tipo==='egreso' && !esTras(m)),m=>m.monto);
+  const trasIn  =sum(cm.filter(m=>m.tipo==='ingreso' && esTras(m)),m=>m.monto);
+  const trasOut =sum(cm.filter(m=>m.tipo==='egreso' && esTras(m)),m=>m.monto);
+  const esperado=round((Number(t.base)||0)+ventaEfe+otrosIng+trasIn-salidas-trasOut,2);
   const bancos={};
   movs.filter(m=>{const c=byId('cuentas',m.cuentaId);return c&&c.tipo!=='caja';}).forEach(m=>{
     bancos[m.cuentaId]=bancos[m.cuentaId]||{nombre:nameOf('cuentas',m.cuentaId),ing:0,egr:0};
@@ -1636,17 +1641,18 @@ function detalleTurno(t){
   const meter=id=>{ if(cuentas[id]) return cuentas[id];
     const c=byId('cuentas',id)||{};
     return cuentas[id]={id:id, nombre:c.nombre||nameOf('cuentas',id)||'—', tipo:c.tipo||'',
-      ventas:0, otrosIng:0, egresos:0, n:0, saldo:saldoCuenta(id),
+      ventas:0, otrosIng:0, egresos:0, trasIn:0, trasOut:0, n:0, saldo:saldoCuenta(id),
       esLaDelTurno: id===t.cuentaId}; };
   movs.forEach(m=>{ const a=meter(m.cuentaId); a.n++;
-    if(m.tipo==='ingreso'){ if(m.refTipo==='venta') a.ventas+=m.monto; else a.otrosIng+=m.monto; }
+    if(m.categoria==='traslado'){ if(m.tipo==='ingreso') a.trasIn+=m.monto; else a.trasOut+=m.monto; }
+    else if(m.tipo==='ingreso'){ if(m.refTipo==='venta') a.ventas+=m.monto; else a.otrosIng+=m.monto; }
     else a.egresos+=m.monto; });
   if(t.cuentaId) meter(t.cuentaId);
   const porCuenta=Object.values(cuentas).map(a=>Object.assign(a,{
-    neto: round(a.ventas+a.otrosIng-a.egresos,2),
+    neto: round(a.ventas+a.otrosIng+a.trasIn-a.egresos-a.trasOut,2),
     base: a.esLaDelTurno? (Number(t.base)||0):0
   })).sort((a,b)=> (a.tipo===b.tipo? 0 : a.tipo==='caja'? -1:1) || b.neto-a.neto);
-  return {vs,porMedio,ventaEfe,otrosIng,salidas,esperado,porCuenta,
+  return {vs,porMedio,ventaEfe,otrosIng,salidas,trasIn,trasOut,esperado,porCuenta,
     bancos:Object.values(bancos), totalVentas:sum(vs,v=>v.total||0)};
 }
 function cajasDisponibles(){ return S.cuentas.filter(c=>c.activo!==false && c.tipo==='caja'); }
@@ -4912,8 +4918,9 @@ function viewCaja(vw){
   function pintaResumen(){
     const cajas=cts.filter(c=>c.tipo==='caja'), bancos=cts.filter(c=>c.tipo!=='caja');
     const hoy=todayISO(), mh=S.movimientos.filter(m=>dISO(m.fecha)===hoy);
-    const ing=sum(mh.filter(m=>m.tipo==='ingreso'),m=>m.monto);
-    const egr=sum(mh.filter(m=>m.tipo==='egreso'),m=>m.monto);
+    const ing=sum(mh.filter(m=>m.tipo==='ingreso' && m.categoria!=='traslado'),m=>m.monto);
+    const egr=sum(mh.filter(m=>m.tipo==='egreso' && m.categoria!=='traslado'),m=>m.monto);
+    const tras=sum(mh.filter(m=>m.tipo==='egreso' && m.categoria==='traslado'),m=>m.monto);
     let h='';
     if(t){
       const D=detalleTurno(t);
@@ -4930,7 +4937,8 @@ function viewCaja(vw){
           kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas'+
             (round(sum(D.vs,v=>fiadoDe(v)),2)>0.5? ' · '+money(round(sum(D.vs,v=>fiadoDe(v)),2))+' a crédito':''),'brand')+
           kpi('Efectivo que debe haber',money(D.esperado),'esto es lo único que se cuenta','ok')+
-          kpi('Movido en el turno',money(D.ventaEfe+D.otrosIng-D.salidas),'entradas menos salidas','')+
+          kpi('Movido en el turno',money(D.ventaEfe+D.otrosIng-D.salidas),
+            'entradas menos salidas'+((D.trasIn||D.trasOut)? ' · traslados '+money(round((D.trasIn||0)-(D.trasOut||0),2)):''),'')+
         '</div></div></div>';
     } else {
       h+='<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><div class="bd" style="text-align:center;padding:26px">'+
@@ -4943,7 +4951,7 @@ function viewCaja(vw){
         kpi('Efectivo en cajas',money(sum(cajas,c=>saldoCuenta(c.id))),cajas.length+' caja(s)','ok')+
         kpi('En bancos y otros',money(sum(bancos,c=>saldoCuenta(c.id))),bancos.length+' cuenta(s)','brand')+
         kpi('Entradas de hoy',money(ing),'','ok')+
-        kpi('Salidas de hoy',money(egr),'','bad')+
+        kpi('Salidas de hoy',money(egr),tras? 'sin contar '+money(tras)+' en traslados':'','bad')+
       '</div>';
     h+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(235px,1fr))">'+
       cts.map(c=>{
@@ -5072,9 +5080,9 @@ function viewCaja(vw){
             (m.soporte? ' · '+esc(m.soporte):'')+'</div>':'')+
           '<div class="tiny muted">'+esc(m.categoria||'otros')+'</div></td>'+
         '<td>'+esc(nombreTercero(m)||'—')+'</td>'+
-        '<td><span class="pill">'+esc(origenMov(m))+'</span></td>'+
-        '<td class="num">'+(m.tipo==='ingreso'? '<b style="color:var(--ok)">'+money(m.monto)+'</b>':'<span class="muted">—</span>')+'</td>'+
-        '<td class="num">'+(m.tipo==='egreso'? '<b style="color:var(--bad)">'+money(m.monto)+'</b>':'<span class="muted">—</span>')+'</td>'+
+        '<td><span class="pill'+(m.categoria==='traslado'?' info':'')+'">'+(m.categoria==='traslado'?'⇄ ':'')+esc(origenMov(m))+'</span></td>'+
+        '<td class="num">'+(m.tipo==='ingreso'? '<b style="color:var('+(m.categoria==='traslado'?'--info':'--ok')+')">'+money(m.monto)+'</b>':'<span class="muted">—</span>')+'</td>'+
+        '<td class="num">'+(m.tipo==='egreso'? '<b style="color:var('+(m.categoria==='traslado'?'--info':'--bad')+')">'+money(m.monto)+'</b>':'<span class="muted">—</span>')+'</td>'+
         '<td class="num sal">'+money(f.saldo)+'</td>'+
         '<td><div class="row" style="gap:3px">'+
           '<button class="btn ghost sm" data-rm="'+m.id+'" title="Reimprimir comprobante">🖨️</button>'+
@@ -5162,6 +5170,8 @@ function verTurno(t){
       '<div class="tline"><span>Ventas en efectivo</span><span class="v">'+money(D.ventaEfe)+'</span></div>'+
       (D.otrosIng? '<div class="tline"><span>Otras entradas</span><span class="v">'+money(D.otrosIng)+'</span></div>':'')+
       (D.salidas? '<div class="tline"><span>Salidas</span><span class="v">−'+money(D.salidas)+'</span></div>':'')+
+      (D.trasIn? '<div class="tline"><span>Traslados recibidos</span><span class="v">'+money(D.trasIn)+'</span></div>':'')+
+      (D.trasOut? '<div class="tline"><span>Trasladado a otras cuentas</span><span class="v">−'+money(D.trasOut)+'</span></div>':'')+
       '<div class="tline big"><span>Esperado</span><span class="v">'+money(D.esperado)+'</span></div>'+
       (t.estado==='cerrado'? '<div class="tline big"><span>Contado</span><span class="v">'+money(t.contado)+'</span></div>'+
         '<div class="tline big" style="color:'+(Math.abs(t.diferencia||0)<1?'var(--ok)':'var(--bad)')+'">'+
@@ -5185,6 +5195,8 @@ function verTurno(t){
             {t:'Ventas',num:1,f:a=>a.ventas? money(a.ventas):'<span class="muted">—</span>'},
             {t:'Otras entradas',num:1,f:a=>a.otrosIng? money(a.otrosIng):'<span class="muted">—</span>'},
             {t:'Salidas',num:1,f:a=>a.egresos? '<span style="color:var(--bad)">−'+money(a.egresos)+'</span>':'<span class="muted">—</span>'},
+            {t:'Traslados',num:1,f:a=>{ const n=round((a.trasIn||0)-(a.trasOut||0),2);
+              return (a.trasIn||a.trasOut)? '⇄ '+(n>0?'+':n<0?'−':'')+money(Math.abs(n)) : '<span class="muted">—</span>'; }},
             {t:'Movió',num:1,f:a=>'<b>'+money(a.neto)+'</b>'},
             {t:'Queda',num:1,f:a=>'<b class="mono">'+money(saldoCuenta(a.id))+'</b>'}
           ],pc,{empty:'—'})+'</div></div>'; })()+'',
@@ -5268,6 +5280,8 @@ function mCerrarCaja(){
         '<div class="tline"><span>Ventas en efectivo</span><span class="v">'+money(D.ventaEfe)+'</span></div>'+
         (D.otrosIng? '<div class="tline"><span>Otras entradas</span><span class="v">'+money(D.otrosIng)+'</span></div>':'')+
         (D.salidas? '<div class="tline" style="color:var(--bad)"><span>Salidas de caja</span><span class="v">−'+money(D.salidas)+'</span></div>':'')+
+        (D.trasIn? '<div class="tline"><span>Traslados recibidos</span><span class="v">'+money(D.trasIn)+'</span></div>':'')+
+        (D.trasOut? '<div class="tline"><span>Trasladado a otras cuentas</span><span class="v">−'+money(D.trasOut)+'</span></div>':'')+
         '<div class="tline big"><span>Debe haber en caja</span><span class="v">'+money(esperado)+'</span></div>'+
         '</div></div>'+
         '<div class="f"><label>Efectivo contado</label>'+
@@ -5330,6 +5344,7 @@ function mCerrarCaja(){
             (t.diferencia>0?'Sobrante':'Faltante')+' en el cierre de caja','ajuste de caja','cierre',t.id);
         t.cierre=now(); t.estado='cerrado'; t.nota=$('#n',m).value;
         t.ventas=D.totalVentas; t.ventaEfectivo=D.ventaEfe; t.salidas=D.salidas;
+        t.trasIn=D.trasIn; t.trasOut=D.trasOut;
         t.otrosMedios=D.porMedio; t.bancos=D.bancos; t.saldoCierre=t.contado;
         t.porCuenta=D.porCuenta;
         put('turnos',t); S.turno=null; closeModal(); render();
@@ -5346,6 +5361,8 @@ function datosCierre(t){
   if(t.estado==='cerrado'){            // un turno cerrado imprime lo que quedó firmado ese día
     if(t.ventaEfectivo!=null) D.ventaEfe=t.ventaEfectivo;
     if(t.salidas!=null) D.salidas=t.salidas;
+    if(t.trasOut!=null){ D.trasOut=t.trasOut; D.trasIn=t.trasIn||0; }
+    else if(t.salidas!=null){ D.trasOut=0; }   // cierres viejos: el traslado ya iba dentro de salidas
     if(t.otrosMedios) D.porMedio=t.otrosMedios;
     if(t.bancos) D.bancos=t.bancos;
     if(t.porCuenta) D.porCuenta=t.porCuenta;
@@ -5444,6 +5461,8 @@ function textoCierre(t,D,contado,comoCierre){
   x+=L('Ventas en efectivo',money(D.ventaEfe));
   if(D.otrosIng) x+=L('Otras entradas',money(D.otrosIng));
   if(D.salidas) x+=L('Salidas de caja','-'+money(D.salidas));
+  if(D.trasIn) x+=L('Traslados recibidos',money(D.trasIn));
+  if(D.trasOut) x+=L('Trasladado a otras cuentas','-'+money(D.trasOut));
   x+='*'+(enCurso?'Debe haber ahora: ':'Debía haber: ')+money(D.esperado)+'*\n';
   if(hayArqueo){
     x+='*Contado: '+money(contado)+'*\n';
@@ -5462,8 +5481,8 @@ function textoCierre(t,D,contado,comoCierre){
   /* el recorrido del dinero del turno, cuenta por cuenta */
   const dineroT=cta.map(c=>{
     const a=(D.porCuenta||[]).find(y=>y.id===c.id)||{};
-    const ent=round((Number(a.ventas)||0)+(Number(a.otrosIng)||0),2);
-    const sal=round(Number(a.egresos)||0,2);
+    const ent=round((Number(a.ventas)||0)+(Number(a.otrosIng)||0)+(Number(a.trasIn)||0),2);
+    const sal=round((Number(a.egresos)||0)+(Number(a.trasOut)||0),2);
     const antes = c.id===t.cuentaId ? round(Number(t.base)||0,2) : saldoCuentaAntesDe(c.id,ini);
     return {id:c.id, nombre:c.nombre, tipo:c.tipo, antes:antes, ent:ent, sal:sal,
       fin:round(antes+ent-sal,2), ahora:saldoCuenta(c.id)};
@@ -5529,6 +5548,8 @@ function imprimirCierre(t,D,contado,copia){
     ['Ventas en efectivo', money(D.ventaEfe)],
     D.otrosIng? ['Otras entradas', money(D.otrosIng)] : null,
     D.salidas? ['Salidas', '-'+money(D.salidas)] : null,
+    D.trasIn? ['Traslados recibidos', money(D.trasIn)] : null,
+    D.trasOut? ['Trasladado a otra cuenta', '-'+money(D.trasOut)] : null,
     {k:'ESPERADO', v:money(D.esperado), big:true},
     {k:'CONTADO', v:money(contado), big:true},
     {k:'DIFERENCIA', v:money(dif), big:true},
@@ -5544,6 +5565,8 @@ function imprimirCierre(t,D,contado,copia){
        if(a.ventas) l.push(['  Ventas', money(a.ventas)]);
        if(a.otrosIng) l.push(['  Otras entradas', money(a.otrosIng)]);
        if(a.egresos) l.push(['  Salidas', '-'+money(a.egresos)]);
+       if(a.trasIn) l.push(['  Traslados recibidos', money(a.trasIn)]);
+       if(a.trasOut) l.push(['  Trasladado', '-'+money(a.trasOut)]);
        l.push({k:'  Movio', v:money(a.neto), b:true});
        l.push(['  Queda', money(saldoCuenta(a.id))]);
      });
