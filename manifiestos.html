@@ -1229,6 +1229,10 @@ let ubaPorRuta = null;        // mapa ruta -> U.B.A. (se arma una sola vez)
 let manifiestosElegidos = {}; // número de manifiesto -> marcado con la casilla
 let resultadosBusqueda = [];
 let historialDatos = [];
+// << v7 >> Rango de fechas que realmente se trajo del servidor. Sirve para
+// saber si un filtro nuevo se puede resolver en memoria o hay que consultar.
+let historialRango = null;          // { inicio:"yyyy-mm-dd" | "", fin:"yyyy-mm-dd" | "" }
+let historialCargando = false;
 let historialVisible = [];
 let clienteObservacionActual = "";
 let clienteEditando = null;   // cliente que se está editando (null = nuevo)
@@ -2806,7 +2810,7 @@ function procesarCola(forzar){
       enviandoCola = false;
 
       // Lo que cambió en el servidor deja de estar al día en pantalla.
-      if(item.tipo === "manifiesto") historialDatos = [];
+      if(item.tipo === "manifiesto"){ historialDatos = []; historialRango = null; }
       if(item.tipo === "cliente")    colaTocoClientes = true;
 
       persistirCola();
@@ -3025,60 +3029,174 @@ function guardar(){
 
 // GET al Apps Script con diagnóstico claro: distingue entre "sin red",
 // "despliegue no público" (Google devuelve HTML de login) y "error del script".
-function pedir(url){
+// << v6 >> Google Apps Script a veces responde 404/500/429 o una página de
+// "no se pudo abrir el archivo" de forma pasajera (sobre todo con muchas
+// consultas seguidas o respuestas grandes). Las consultas GET son seguras de
+// repetir, así que se reintentan solas antes de mostrar el error.
+const PEDIR_REINTENTOS  = 4;       // intentos totales
+const PEDIR_TIMEOUT_MS  = 60000;   // 60 s por intento
+const PEDIR_TRANSITORIOS = [404, 408, 425, 429, 500, 502, 503, 504];
 
-  // << v5 >> Toda consulta va firmada con el token de la sesión.
-  const separador = url.indexOf("?") === -1 ? "?" : "&";
-  const completa  = url + separador + "token=" + encodeURIComponent(sesion.token || "");
+function esperar(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-  return fetch(completa, { method:"GET", redirect:"follow" })
+function errorReintentable(mensaje){
+  const e = new Error(mensaje);
+  e.reintentable = true;
+  return e;
+}
+
+function pedirUnaVez(completa){
+  const ctrl  = (typeof AbortController !== "undefined") ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), PEDIR_TIMEOUT_MS) : null;
+
+  return fetch(completa, {
+      method:"GET", redirect:"follow", cache:"no-store",
+      signal: ctrl ? ctrl.signal : undefined
+    })
+    .catch(err => {
+      // Fallo de red o se agotó el tiempo: vale la pena reintentar.
+      if(err && err.name === "AbortError"){
+        throw errorReintentable("El servidor tardó demasiado en responder");
+      }
+      throw errorReintentable((err && err.message) || "Fallo de red");
+    })
     .then(async r => {
       const texto = await r.text();
-      if(!r.ok){
-        throw new Error("HTTP " + r.status + " " + r.statusText);
-      }
-      let datos;
 
+      if(!r.ok){
+        const msg = "HTTP " + r.status + " " + (r.statusText || "");
+        if(PEDIR_TRANSITORIOS.indexOf(r.status) !== -1) throw errorReintentable(msg.trim());
+        throw new Error(msg.trim());
+      }
+
+      let datos;
       try{
         datos = JSON.parse(texto);
       }catch(e){
         if(/<html|<!doctype/i.test(texto)){
-          throw new Error(
+          // Suele ser la página temporal de error de Google: se reintenta.
+          throw errorReintentable(
             "El servidor devolvió una página web en lugar de datos. " +
-            "Revisa que el despliegue del Apps Script esté publicado con acceso " +
+            "Si persiste, revisa que el despliegue del Apps Script esté publicado con acceso " +
             "\"Cualquier usuario\" y que la URL /exec sea la última versión."
           );
         }
         throw new Error("Respuesta no válida del servidor: " + texto.slice(0, 150));
       }
 
-      // << v5 >> El token ya no sirve: se pide entrar otra vez.
+      // << v5 >> El token ya no sirve: se pide entrar otra vez (no se reintenta).
       if(datos && datos.sesion){
         avisarSesionVencida();
         throw new Error(datos.mensaje || "La sesión venció");
       }
 
       return datos;
+    })
+    .finally(() => { if(timer) clearTimeout(timer); });
+}
+
+// GET al Apps Script con diagnóstico claro y reintentos automáticos.
+function pedir(url){
+
+  // << v5 >> Toda consulta va firmada con el token de la sesión.
+  const separador = url.indexOf("?") === -1 ? "?" : "&";
+  const base = url + separador + "token=" + encodeURIComponent(sesion.token || "");
+
+  const intentar = (n) => {
+    // Parámetro anti-caché para que ningún proxy devuelva una respuesta vieja.
+    const completa = base + "&_t=" + Date.now() + "_" + n;
+    return pedirUnaVez(completa).catch(err => {
+      if(err && err.reintentable && n < PEDIR_REINTENTOS){
+        const pausa = 1000 * Math.pow(2, n - 1) + Math.floor(Math.random() * 500); // 1s, 2s, 4s...
+        console.warn("Consulta falló (intento " + n + "/" + PEDIR_REINTENTOS + "): " +
+                     err.message + ". Reintentando en " + pausa + " ms");
+        return esperar(pausa).then(() => intentar(n + 1));
+      }
+      throw err;
     });
+  };
+
+  return intentar(1);
+}
+
+// << v7 >> Fechas en hora local (toISOString usa UTC y en Colombia
+// correría el día después de las 7 p. m.).
+function fechaLocalISO(d){
+  return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" +
+         ("0" + d.getDate()).slice(-2);
+}
+
+function rangoMesActual(){
+  const hoy = new Date();
+  return {
+    inicio: fechaLocalISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1)),
+    fin:    fechaLocalISO(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0))
+  };
+}
+
+function fechaCorta(iso){
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? m[3] + "/" + m[2] + "/" + m[1] : "";
+}
+
+// Si las casillas de fecha están vacías se llenan con el mes en curso: así
+// la consulta normal trae solo el mes y no todo el historial.
+function asegurarFechasHistorial(){
+  if(!$("histInicio").value && !$("histFin").value){
+    const r = rangoMesActual();
+    $("histInicio").value = r.inicio;
+    $("histFin").value    = r.fin;
+  }
+}
+
+// ¿Lo que ya está en memoria cubre las fechas pedidas?
+function rangoCubierto(inicio, fin){
+  if(!historialRango) return false;
+  const cubreInicio = !historialRango.inicio || (inicio && inicio >= historialRango.inicio);
+  const cubreFin    = !historialRango.fin    || (fin    && fin    <= historialRango.fin);
+  return cubreInicio && cubreFin;
 }
 
 function cargarHistorial(){
+  if(historialCargando) return;
+
+  asegurarFechasHistorial();
+  const inicio = $("histInicio").value;
+  const fin    = $("histFin").value;
+
+  if(inicio && fin && inicio > fin){
+    mensaje("estadoHistorial", "La fecha inicial es posterior a la final.", true);
+    return;
+  }
+
   const cuerpo = $("tablaHistorial");
   cuerpo.innerHTML = '<tr><td colspan="20">Cargando...</td></tr>';
   ocupado("btnHistorial","Consultando...");
   mensaje("estadoHistorial","");
+  historialCargando = true;
 
-  pedir(API + "?accion=excesos&inicio=&fin=&kilos=0")
+  pedir(API + "?accion=excesos&kilos=0" +
+        "&inicio=" + encodeURIComponent(inicio) +
+        "&fin="    + encodeURIComponent(fin))
     .then(data => {
       if(data && data.estado === "error"){
         throw new Error(data.mensaje || "El script reportó un error");
       }
       historialDatos = Array.isArray(data) ? data : (data && (data.datos || data.filas)) || [];
+      historialRango = { inicio: inicio, fin: fin };
+      historialCargando = false;
       ocupado("btnHistorial", null);
+
+      const desde = inicio ? fechaCorta(inicio) : "el inicio";
+      const hasta = fin    ? fechaCorta(fin)    : "hoy";
+      mensaje("estadoHistorial",
+        "Consultado del " + desde + " al " + hasta + ". Cambie las fechas para ver otro periodo.");
+
       filtrarHistorial();
     })
     .catch(error => {
       console.error("Historial:", error);
+      historialCargando = false;
       ocupado("btnHistorial", null);
       cuerpo.innerHTML = '<tr><td colspan="20">Error cargando información</td></tr>';
       mensaje("estadoHistorial",
@@ -3089,6 +3207,12 @@ function cargarHistorial(){
 function filtrarHistorial(){
   const inicio = $("histInicio").value;
   const fin    = $("histFin").value;
+
+  // << v7 >> Fechas fuera de lo que se trajo: hay que pedirlas al servidor.
+  if(!historialCargando && !rangoCubierto(inicio, fin)){
+    cargarHistorial();
+    return;
+  }
   const kilos  = Number($("histKilos").value) || 0;
   const movil  = $("histMovil").value;
   const soloExcedidos = $("histSoloExcedidos").checked;
@@ -3156,16 +3280,17 @@ function filtrarHistorial(){
 }
 
 function limpiarFiltroHistorial(){
-  $("histInicio").value = "";
-  $("histFin").value = "";
+  // << v7 >> "Sin filtros" es el mes en curso, no todo el historial.
+  const mes = rangoMesActual();
+  $("histInicio").value = mes.inicio;
+  $("histFin").value    = mes.fin;
   $("histKilos").value = "0";
   $("histMovil").value = "";
   $("histBuscar").value = "";
   Object.keys(DEF_FILTROS).forEach(id => {
     if(DEF_FILTROS[id].zona === "historial") filtros[id] = { texto:"", valores:null };
   });
-  mostrarHistorial(historialDatos);
-  pintarEstadoFiltros();
+  filtrarHistorial();   // usa lo que hay en memoria o consulta el mes si hace falta
 }
 
 function fechaValida(valor){
