@@ -55,6 +55,16 @@ input[type=checkbox]{width:auto}
 .nav a.on{background:var(--brand);color:#fff;font-weight:600}
 .nav a .ic{width:18px;text-align:center;font-size:15px}
 .nav a .badge{margin-left:auto;background:rgba(255,255,255,.14);border-radius:20px;font-size:10.5px;padding:1px 7px;font-weight:700}
+/* entregas pendientes: el botón parpadea hasta que se registren */
+@keyframes navblink{0%,100%{background:transparent}50%{background:rgba(229,72,77,.38)}}
+@keyframes badgeblink{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+.nav a.blink:not(.on){animation:navblink 1.1s ease-in-out infinite}
+.nav a.blink .badge{background:#e5484d;color:#fff;animation:badgeblink 1.1s ease-in-out infinite}
+.entcard{border-width:2px}
+.entcard .tmin{font-size:26px;font-weight:800;line-height:1}
+.entcard.t-ok{border-color:var(--ok)} .entcard.t-ok .tmin{color:var(--ok)}
+.entcard.t-warn{border-color:var(--warn)} .entcard.t-warn .tmin{color:var(--warn)}
+.entcard.t-bad{border-color:var(--bad)} .entcard.t-bad .tmin{color:var(--bad)}
 .nav a.on .badge{background:rgba(0,0,0,.22)}
 #sbfoot{border-top:1px solid rgba(255,255,255,.07);padding:10px}
 .userchip{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:9px;width:100%;text-align:left}
@@ -1080,7 +1090,7 @@ function revisarCocina(){
   if(n){
     campanaCocina();
     toast('🖨️ '+n+' pedido(s) nuevo(s) · '+uds+' unidad(es) enviados a la impresora','ok',5000);
-    if(S.view==='cocina'||S.view==='mesas') render(); else { buildNav(); }
+    if(S.view==='cocina'||S.view==='mesas'||S.view==='entregas') render(); else { buildNav(); }
   }
   pintarEstacion();
   return n;
@@ -1730,8 +1740,8 @@ function movsFueraDeTurno(cuentaId){
 
 /* ---- permisos ---- */
 const PERMS={ admin:'*',
-  cajero:['pos','mesas','cocina','ventas','compras','cartera','tesoreria','turnos','caja','clientes','inventario','reportes'],
-  mesero:['pos','mesas'] };
+  cajero:['pos','mesas','cocina','entregas','ventas','compras','cartera','tesoreria','turnos','caja','clientes','inventario','reportes'],
+  mesero:['pos','mesas','entregas'] };
 function can(v){
   if(v==='super') return !!(S.user && S.user._super && esSuper());
   const r=S.user?S.user.rol:'mesero'; const p=PERMS[r]||[]; return p==='*'||p.indexOf(v)>=0;
@@ -1815,6 +1825,7 @@ const VIEWS=[
   {k:'pos',    n:'Punto de venta', i:'🧾'},
   {k:'mesas',  n:'Mesas',          i:'🍽️'},
   {k:'cocina', n:'Cocina',         i:'👨‍🍳'},
+  {k:'entregas', n:'Entregas',     i:'🛵'},
   {k:'ventas', n:'Ventas',         i:'📈'},
   {g:'Compras e inventario'},
   {k:'compras',    n:'Compras',     i:'📦'},
@@ -1833,7 +1844,7 @@ const VIEWS=[
   {k:'super', n:'Restaurantes', i:'🏢'}
 ];
 const TITLES={pos:'Punto de venta',mesas:'Mesas y comandas',ventas:'Ventas',compras:'Compras',
-  inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',cocina:'Cocina · pedidos que llegan',
+  inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',cocina:'Cocina · pedidos que llegan',entregas:'Entregas · tiempo de los pedidos',
   caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes',ajustes:'Ajustes'};
 
 function buildNav(){
@@ -1841,13 +1852,18 @@ function buildNav(){
   VIEWS.forEach(v=>{
     if(v.g){ if(v.req && !can(v.req)) return; h+='<div class="sec">'+esc(v.g)+'</div>'; return; }
     if(!can(v.k)) return;
+    if(v.k==='entregas' && !entregasActivas() && !entregasPendientes().length) return;
     let badge='';
     if(v.k==='mesas'){ const c=S.comandas.filter(x=>x.estado==='abierta').length; if(c) badge='<span class="badge">'+c+'</span>'; }
     if(v.k==='cocina'){ const c=comandasPendientes().length; if(c) badge='<span class="badge">'+c+'</span>'; }
+    let extra='';
+    if(v.k==='entregas'){ const c=entregasPendientes().length; _entN=c;
+      if(c){ badge='<span class="badge">'+c+'</span>'; extra=' blink'; } }
     if(v.k==='cartera'){ const c=cxc().length; if(c) badge='<span class="badge">'+c+'</span>'; }
     if(v.k==='inventario'){ const c=S.ingredientes.filter(g=>g.activo&&(Number(g.stock)||0)<=(Number(g.stockMin)||0)).length;
       if(c) badge='<span class="badge">'+c+'</span>'; }
-    h+='<a href="#" data-nav="'+v.k+'" class="'+(S.view===v.k?'on':'')+'" title="'+esc(v.n)+'">'+
+    h+='<a href="#" data-nav="'+v.k+'" class="'+(S.view===v.k?'on':'')+extra+'" title="'+esc(v.n)+
+       (extra? ' · '+badge.replace(/<[^>]+>/g,'')+' pendiente(s)':'')+'">'+
        '<span class="ic">'+v.i+'</span><span class="tx">'+esc(v.n)+'</span>'+badge+'</a>';
   });
   n.innerHTML=h;
@@ -1867,7 +1883,7 @@ function render(){
     $('#topact').innerHTML='<span class="pill '+es.pill+'" title="Suscripción">⏳ '+esc(es.t)+'</span>';
   buildNav(); paintSync(); pintarPrueba(); pintarEstacion();
   const fn=({pos:viewPOS,mesas:viewMesas,ventas:viewVentas,compras:viewCompras,inventario:viewInventario,
-    productos:viewProductos,cartera:viewCartera,tesoreria:viewTesoreria,turnos:viewCaja,caja:viewCaja,cocina:viewCocina,
+    productos:viewProductos,cartera:viewCartera,tesoreria:viewTesoreria,turnos:viewCaja,caja:viewCaja,cocina:viewCocina,entregas:viewEntregas,
     clientes:viewClientes,reportes:viewReportes,ajustes:viewAjustes,super:viewSuper,
     contabilidad:viewContabilidad})[S.view];
   vw.scrollTop=0;
@@ -2616,6 +2632,9 @@ function persistComanda(force){
     bajas:(c.bajas||[]).slice(), cocinaMs:c.cocinaMs||null, tipo:c.tipo||'mesa',
     descuento:c.descuento, propinaPct:c.propinaPct, nota:c.nota, estado:'abierta',
     meseroId:S.user?S.user.id:'', apertura:(c.comandaId&&byId('comandas',c.comandaId)||{}).apertura||now() };
+  const prev=c.comandaId? byId('comandas',c.comandaId) : null;
+  if(prev) ['entregaMs','entregaPor','entregaUsuario','entregaOmitida','entregaNota','impresoMs']
+    .forEach(k=>{ if(prev[k]!==undefined && cm[k]===undefined) cm[k]=prev[k]; });
   c.comandaId=cm.id; put('comandas',cm);
 }
 function mNota(itId){
@@ -2884,6 +2903,7 @@ function registrarVenta(o){
     nota:c.nota||'' };
   if(original){ firmar(v); v.creadoPor=original.usuarioId; v.usuarioId=original.usuarioId;
     v.turnoId=original.turnoId||v.turnoId; }
+  datosEntregaVenta(v,c,original);
   put('ventas',v);
   (v.pagos||[]).forEach(p=> movTes(p.cuentaId||cuentaDeMedio(p.medio),'ingreso',p.monto,'Venta '+v.no,'venta','venta',v.id,
     terceroDe('cliente',v.clienteId)));
@@ -3100,6 +3120,212 @@ const anularCompra=borrarCompra;
    La pantalla del PC que tiene la impresora: ve llegar los pedidos de los
    teléfonos y los saca solo. También sirve de tablero para la cocina.
    ==================================================================== */
+/* =============================== ENTREGAS ===============================
+   Cuánto se demora un pedido desde que se toma hasta que le llega al cliente.
+   Los domicilios siempre se siguen; mostrador y mesas solo si se activa.
+   El reloj arranca al abrir la comanda y para cuando se registra la entrega.
+   ======================================================================= */
+let _entN=0;
+function metaEntrega(){ return Math.max(5,Number(S.cfg.entregaMeta)||40); }
+function mesaDeComanda(cm){ return cm && cm.mesaId? byId('mesas',cm.mesaId) : null; }
+function comandaEsDom(cm){ return esDomicilio(mesaDeComanda(cm)) || (cm&&cm.tipo==='domicilio'); }
+function seSigue(esDom){ return esDom? S.cfg.entregasDom!==false : S.cfg.entregasTodos===true; }
+function entregasActivas(){ return S.cfg.entregasDom!==false || S.cfg.entregasTodos===true; }
+function minEntre(a,b){ return Math.max(0,Math.round((new Date(b).getTime()-new Date(a).getTime())/60000)); }
+function claseTiempo(min){ const m=metaEntrega(); return min<=m*0.75?'t-ok':(min<=m?'t-warn':'t-bad'); }
+function resumenItems(items){ const l=(items||[]).filter(i=>i.cant>0);
+  return l.slice(0,3).map(i=>num(i.cant,0)+'× '+i.nombre).join(', ')+(l.length>3?' y '+(l.length-3)+' más':''); }
+function fmtMin(m){ if(m==null) return '—'; m=Math.round(m); return m<60? m+' min' : Math.floor(m/60)+' h '+(m%60)+' min'; }
+
+/* la venta se lleva el reloj de la comanda (o lo arranca si se vendió directo) */
+function datosEntregaVenta(v,c,original){
+  if(original && original.pedidoMs){
+    ['seguirEntrega','esDom','pedidoMs','entregaMs','entregaPor','entregaUsuario','entregaOmitida','entregaNota',
+     'destNombre','destTel'].forEach(k=>{ if(original[k]!==undefined) v[k]=original[k]; });
+    return;
+  }
+  const mesa=c.mesaId? byId('mesas',c.mesaId) : null;
+  const cm=c.comandaId? byId('comandas',c.comandaId) : null;
+  const esDom=esDomicilio(mesa) || c.tipo==='domicilio';
+  if(esDom && mesa){ v.destNombre=mesa.nombre; v.destTel=mesa.telefono||''; }
+  if(!seSigue(esDom)) return;
+  v.seguirEntrega=true; v.esDom=esDom;
+  v.pedidoMs=(cm&&cm.apertura) || (mesa&&mesa.creado) || v.fecha;
+  if(cm) ['entregaMs','entregaPor','entregaUsuario','entregaOmitida','entregaNota']
+    .forEach(k=>{ if(cm[k]!==undefined) v[k]=cm[k]; });
+}
+/* pedidos por entregar: comandas abiertas y ventas que todavía no llegan al cliente */
+function entregasPendientes(){
+  const out=[];
+  S.comandas.forEach(cm=>{
+    if(cm.estado!=='abierta' || cm.entregaMs) return;
+    if(!sum(cm.items||[],i=>i.cant)) return;
+    const esDom=comandaEsDom(cm); if(!seSigue(esDom)) return;
+    const m=mesaDeComanda(cm);
+    out.push({k:'comandas', obj:cm, esDom:esDom, desde:cm.apertura,
+      nombre: m? (esDom? m.nombre : 'Mesa '+m.nombre) : 'Mostrador', tel:m&&m.telefono||'',
+      items:cm.items, total:round(sum(cm.items||[],i=>i.precio*i.cant)-(cm.descuento||0),2), cobrado:false});
+  });
+  S.ventas.forEach(v=>{
+    if(!v.seguirEntrega || v.entregaMs || v.estado==='anulada') return;
+    out.push({k:'ventas', obj:v, esDom:!!v.esDom, desde:v.pedidoMs||v.fecha,
+      nombre: v.esDom? (v.destNombre||'Domicilio') : (v.mesaId? 'Mesa '+nameOf('mesas',v.mesaId) : 'Mostrador'),
+      tel:v.destTel||'', items:v.items, total:v.total, cobrado:true, no:v.no});
+  });
+  return out.sort((a,b)=>String(a.desde).localeCompare(String(b.desde)));
+}
+/* todos los pedidos que ya tienen hora de entrega, en un rango de fechas */
+function entregasHechas(d1,d2){
+  const out=[];
+  S.ventas.forEach(v=>{
+    if(!v.pedidoMs || !v.entregaMs || v.entregaOmitida || v.estado==='anulada') return;
+    const d=dISO(v.entregaMs); if(d<d1 || d>d2) return;
+    out.push({esDom:!!v.esDom, desde:v.pedidoMs, hasta:v.entregaMs, min:minEntre(v.pedidoMs,v.entregaMs),
+      nombre: v.esDom? (v.destNombre||'Domicilio') : (v.mesaId? 'Mesa '+nameOf('mesas',v.mesaId):'Mostrador'),
+      no:v.no, por:quienEntrego(v), total:v.total});
+  });
+  S.comandas.forEach(cm=>{          // entregadas pero todavía sin cobrar
+    if(cm.estado!=='abierta' || !cm.entregaMs || cm.entregaOmitida) return;
+    const d=dISO(cm.entregaMs); if(d<d1 || d>d2) return;
+    const esDom=comandaEsDom(cm), m=mesaDeComanda(cm);
+    out.push({esDom:esDom, desde:cm.apertura, hasta:cm.entregaMs, min:minEntre(cm.apertura,cm.entregaMs),
+      nombre: m? (esDom? m.nombre : 'Mesa '+m.nombre) : 'Mostrador', no:'sin cobrar',
+      por:quienEntrego(cm),
+      total:round(sum(cm.items||[],i=>i.precio*i.cant),2)});
+  });
+  return out.sort((a,b)=>String(b.hasta).localeCompare(String(a.hasta)));
+}
+function quienEntrego(x){
+  if(x.entregaPor) return x.entregaPor;
+  const n=x.entregaUsuario? nameOf('usuarios',x.entregaUsuario) : '';
+  return n && n!=='—'? n : '';
+}
+function statsEntregas(l){
+  if(!l.length) return {n:0,prom:null,max:null,aTiempo:0,pct:0};
+  const meta=metaEntrega(), mins=l.map(x=>x.min);
+  const at=mins.filter(m=>m<=meta).length;
+  return {n:l.length, prom:sum(mins,m=>m)/l.length, max:Math.max.apply(null,mins), aTiempo:at,
+    pct:Math.round(at/l.length*100)};
+}
+function registrarEntrega(e,o){
+  o=o||{};
+  const x=e.obj;
+  x.entregaMs=o.hora||now();
+  x.entregaUsuario=S.user?S.user.id:'';
+  if(o.por) x.entregaPor=o.por;
+  if(o.nota) x.entregaNota=o.nota;
+  if(o.omitir) x.entregaOmitida=true;
+  put(e.k,x);
+  if(o.por){ S.cfg.domiciliarios=[...new Set([o.por].concat(S.cfg.domiciliarios||[]))].slice(0,15); saveCfg(); }
+}
+function mEntrega(e){
+  const hh=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  const ini=new Date(e.desde), ahora=new Date();
+  const doms=[...new Set((S.cfg.domiciliarios||[]).concat(S.usuarios.filter(u=>u.activo!==false).map(u=>u.nombre)))];
+  modal({title:'Entrega · '+e.nombre, size:'slim',
+    body:'<div class="card" style="background:var(--panel2);margin-bottom:12px"><div class="bd">'+
+        '<div class="tline"><span>Se pidió</span><span class="v">'+ftime(e.desde)+'</span></div>'+
+        '<div class="tline"><span>Pedido</span><span class="v" style="text-align:right">'+esc(resumenItems(e.items))+'</span></div>'+
+        '<div class="tline b"><span>Lleva</span><span class="v" id="ldur">'+fmtMin(minEntre(e.desde,ahora))+'</span></div></div></div>'+
+      '<div class="grid" style="grid-template-columns:1fr 1fr">'+
+        '<div class="f"><label>Hora en que se entregó</label><input id="eh" type="time" value="'+hh(ahora)+'"></div>'+
+        '<div class="f"><label>'+(e.esDom?'Domiciliario':'Quién entregó')+'</label>'+
+          '<input id="ep" list="eplist" placeholder="Opcional" value="'+esc((S.cfg.domiciliarios||[])[0]||'')+'">'+
+          '<datalist id="eplist">'+doms.map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist></div></div>'+
+      '<div class="f" style="margin-top:10px"><label>Nota</label><input id="en" placeholder="Opcional: dirección equivocada, cliente no estaba…"></div>',
+    footer:'<button class="btn ghost" id="eom" title="Se quita de la lista y no cuenta en los promedios">No contar este</button>'+
+      '<div class="spacer"></div><button class="btn" data-x>Cancelar</button><button class="btn ok" id="eok">✅ Registrar entrega</button>',
+    onOpen:m=>{
+      const calc=()=>{ const v=$('#eh',m).value; if(!v) return null;
+        const d=new Date(); const p=v.split(':'); d.setHours(Number(p[0]),Number(p[1]),0,0);
+        if(d<ini) d.setDate(d.getDate()+1);            // pasó la medianoche
+        if(d-ini>36*3600000) d.setDate(d.getDate()-1);
+        return d; };
+      $('#eh',m).oninput=()=>{ const d=calc(); if(d) $('#ldur',m).textContent=fmtMin(minEntre(e.desde,d)); };
+      $('#eok',m).onclick=()=>{ const d=calc(); if(!d) return toast('Pon la hora de entrega','warn');
+        if(d.getTime()>Date.now()+60000) return toast('La hora de entrega no puede ser en el futuro','warn');
+        registrarEntrega(e,{hora:d.toISOString(), por:$('#ep',m).value.trim(), nota:$('#en',m).value.trim()});
+        closeModal(); render(); toast('Entregado · '+fmtMin(minEntre(e.desde,d)),'ok'); };
+      $('#eom',m).onclick=()=>{ registrarEntrega(e,{omitir:true, nota:$('#en',m).value.trim()});
+        closeModal(); render(); toast('Quitado de la lista','ok'); };
+    }});
+}
+function viewEntregas(vw){
+  const pend=entregasPendientes(), hoy=todayISO();
+  const hechas=entregasHechas(hoy,hoy);
+  const stD=statsEntregas(hechas.filter(x=>x.esDom)), stO=statsEntregas(hechas.filter(x=>!x.esDom));
+  const meta=metaEntrega();
+  const masViejo=pend.length? agoMin(pend[0].desde) : 0;
+  sub(pend.length? pend.length+' pedido(s) por entregar' : 'Todo entregado');
+  if(!entregasActivas() && !pend.length){
+    vw.innerHTML='<div class="card"><div class="bd" style="text-align:center;padding:30px">'+
+      '<div style="font-size:38px">🛵</div><h3 style="margin:8px 0">El seguimiento de entregas está apagado</h3>'+
+      '<p class="muted" style="margin:0">'+(can('ajustes')? 'Actívalo en Ajustes ▸ General ▸ Seguimiento de entregas.'
+        : 'Lo activa el administrador en Ajustes.')+'</p></div></div>';
+    return;
+  }
+  topact('<button class="btn sm" id="e_ref">↻ Actualizar</button>');
+  vw.innerHTML=
+    '<div class="kpis" style="margin-bottom:14px">'+
+      kpi('Por entregar',pend.length, pend.length? 'el más viejo lleva '+fmtMin(masViejo):'ninguno pendiente', pend.length?'bad':'ok')+
+      kpi('Promedio domicilios hoy',fmtMin(stD.prom), stD.n? stD.n+' entregado(s) · meta '+meta+' min':'sin entregas todavía',
+        stD.prom==null?'':(stD.prom<=meta?'ok':'bad'))+
+      kpi('A tiempo hoy',stD.n? stD.pct+'%':'—', stD.n? stD.aTiempo+' de '+stD.n+' en '+meta+' min o menos':'', stD.n?(stD.pct>=80?'ok':'warn'):'')+
+      (S.cfg.entregasTodos? kpi('Promedio mesa/mostrador',fmtMin(stO.prom),stO.n? stO.n+' entregado(s)':'',''):
+        kpi('Más demorado hoy',fmtMin(stD.max),'','') )+
+    '</div>'+
+    '<div class="card" style="margin-bottom:14px"><div class="hd"><h3>🛵 Pendientes por entregar</h3>'+
+      (pend.length? '<span class="pill bad">'+pend.length+'</span>':'<span class="pill ok">ninguno</span>')+
+      '<div class="spacer"></div><span class="tiny muted">🟢 a tiempo · 🟡 cerca de la meta · 🔴 pasó de '+meta+' min</span></div><div class="bd">'+
+      (pend.length? '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(270px,1fr))">'+
+        pend.map((e,i)=>{ const mn=agoMin(e.desde);
+          return '<div class="card entcard '+claseTiempo(mn)+'" data-ent="'+i+'"><div class="bd">'+
+            '<div class="row" style="align-items:flex-start;gap:10px">'+
+              '<div style="flex:1;min-width:0"><b style="font-size:15px">'+(e.esDom?'🛵 ':'🍽️ ')+esc(e.nombre)+'</b>'+
+                (e.tel? '<div class="tiny muted">📞 '+esc(e.tel)+'</div>':'')+
+                '<div class="tiny muted">pidió '+ftime(e.desde)+(e.no?' · '+esc(e.no):'')+'</div></div>'+
+              '<div style="text-align:right"><div class="tmin" data-desde="'+esc(e.desde)+'">'+mn+'</div><div class="tiny muted">min</div></div></div>'+
+            '<div class="tiny" style="margin-top:8px">'+esc(resumenItems(e.items))+'</div>'+
+            '<div class="row tiny" style="margin-top:6px;justify-content:space-between"><b>'+money(e.total)+'</b>'+
+              (e.cobrado? '<span class="pill ok">cobrado</span>':'<span class="pill warn">sin cobrar</span>')+'</div>'+
+            '<div class="row" style="gap:6px;margin-top:10px">'+
+              '<button class="btn ok sm" style="flex:1" data-ya="'+i+'">✅ Entregado ahora</button>'+
+              '<button class="btn sm" data-mas="'+i+'" title="Otra hora, domiciliario o nota">⋯</button></div>'+
+          '</div></div>'; }).join('')+'</div>'
+      : '<div class="empty"><span class="ico">✅</span>No hay pedidos esperando entrega</div>')+
+    '</div></div>'+
+    '<div class="card"><div class="hd"><h3>Entregados hoy</h3><span class="pill">'+hechas.length+'</span></div><div class="bd p0">'+
+      tbl([
+        {t:'Destino',f:x=>(x.esDom?'🛵 ':'🍽️ ')+'<b>'+esc(x.nombre)+'</b>'},
+        {t:'Venta',f:x=>esc(x.no||'—')},
+        {t:'Pidió',f:x=>ftime(x.desde)},
+        {t:'Entregó',f:x=>ftime(x.hasta)},
+        {t:'Tiempo',num:1,f:x=>'<span class="pill '+({'t-ok':'ok','t-warn':'warn','t-bad':'bad'})[claseTiempo(x.min)]+'">'+fmtMin(x.min)+'</span>'},
+        {t:'Quién',f:x=>esc(x.por||'—')},
+        {t:'Valor',num:1,f:x=>money(x.total)}
+      ],hechas,{empty:'Todavía no hay entregas hoy',icon:'🛵'})+'</div></div>'+
+    '<div class="tiny muted" style="margin-top:12px">Meta de entrega: '+meta+' min · '+
+      [S.cfg.entregasDom!==false?'domicilios':'', S.cfg.entregasTodos?'mesa y mostrador':''].filter(Boolean).join(' y ')+
+      (can('ajustes')? ' · <a href="#" id="e_cfg">cambiar en Ajustes</a>':' · lo configura el administrador')+'</div>';
+  $('#e_ref').onclick=async()=>{ if(S.cfg.fbOn) await pullCloud(true); render(); };
+  $$('[data-ya]',vw).forEach(b=>b.onclick=()=>{ const e=pend[Number(b.dataset.ya)];
+    registrarEntrega(e,{}); render(); toast('Entregado · '+fmtMin(agoMin(e.desde)),'ok'); });
+  $$('[data-mas]',vw).forEach(b=>b.onclick=()=>mEntrega(pend[Number(b.dataset.mas)]));
+  if($('#e_cfg')) $('#e_cfg').onclick=ev=>{ ev.preventDefault(); _ajTab='gen'; go('ajustes');
+    setTimeout(()=>{ const c=$('#g_entcard'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); },80); };
+}
+/* reloj: actualiza los minutos en pantalla y el contador del menú */
+setInterval(()=>{
+  if(!S.user) return;
+  try{
+    const n=entregasPendientes().length;
+    if(n!==_entN) buildNav();
+    if(S.view==='entregas') $$('[data-desde]').forEach(el=>{ const mn=agoMin(el.dataset.desde);
+      el.textContent=mn; const c=el.closest('.entcard');
+      if(c){ c.classList.remove('t-ok','t-warn','t-bad'); c.classList.add(claseTiempo(mn)); } });
+  }catch(e){}
+}, 20000);
+
 function viewCocina(vw){
   const pend=comandasPendientes();
   const abiertas=S.comandas.filter(c=>c.estado==='abierta')
@@ -6703,6 +6929,18 @@ function viewReportes(vw){
       .forEach(m=>{cons[m.ingredienteId]=(cons[m.ingredienteId]||0)+
         (m.costoTotal!=null? Math.abs(m.costoTotal) : Math.abs(m.cantidad)*(m.costoUnit||0));});
     const consArr=Object.keys(cons).map(k=>({n:nameOf('ingredientes',k),v:cons[k]})).sort((a,b)=>b.v-a.v).slice(0,10);
+    /* tiempos de entrega */
+    const ent=entregasHechas(d1,d2), entD=ent.filter(x=>x.esDom), stD=statsEntregas(entD), stO=statsEntregas(ent.filter(x=>!x.esDom));
+    const meta=metaEntrega();
+    const porDia={}; entD.forEach(x=>{ const d=dISO(x.hasta); (porDia[d]=porDia[d]||[]).push(x.min); });
+    const diaArr=Object.keys(porDia).sort().map(k=>({n:k.slice(5),v:Math.round(sum(porDia[k],m=>m)/porDia[k].length),
+      c:(sum(porDia[k],m=>m)/porDia[k].length)<=meta?'var(--ok)':'var(--bad)'}));
+    const porHora={}; entD.forEach(x=>{ const h=aFecha(x.desde).getHours(); (porHora[h]=porHora[h]||[]).push(x.min); });
+    const horaArr=Object.keys(porHora).sort((a,b)=>a-b).map(h=>({n:String(h).padStart(2,'0')+':00',
+      v:Math.round(sum(porHora[h],m=>m)/porHora[h].length)}));
+    const porDom={}; entD.forEach(x=>{ if(!x.por) return; (porDom[x.por]=porDom[x.por]||[]).push(x.min); });
+    const domArr=Object.keys(porDom).map(k=>({n:k+' ('+porDom[k].length+')',v:Math.round(sum(porDom[k],m=>m)/porDom[k].length)}))
+      .sort((a,b)=>a.v-b.v);
 
     $('#rbody').innerHTML=
       '<div class="kpis" style="margin-bottom:14px">'+
@@ -6712,6 +6950,8 @@ function viewReportes(vw){
         kpi('Compras',money(sum(cs,c=>c.total)),cs.length+' facturas','bad')+
         kpi('Propinas',money(prop),'','')+
         kpi('Ticket promedio',money(vs.length?tot/vs.length:0),'','')+
+        kpi('Tiempo prom. domicilio',fmtMin(stD.prom),stD.n? stD.n+' entregas · '+stD.pct+'% a tiempo':'sin entregas registradas',
+          stD.prom==null?'':(stD.prom<=meta?'ok':'bad'))+
       '</div>'+
       '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">'+
         '<div class="card"><div class="hd"><h3>Ventas por día</h3></div><div class="bd">'+
@@ -6725,6 +6965,22 @@ function viewReportes(vw){
           (hArr.length?bars(hArr):'<div class="empty">Sin datos</div>')+'</div></div>'+
         (verCostos()? '<div class="card"><div class="hd"><h3>Consumo de ingredientes (costo)</h3></div><div class="bd">'+
           (consArr.length?bars(consArr):'<div class="empty">Sin datos</div>')+'</div></div>':'')+
+        '<div class="card"><div class="hd"><h3>🛵 Tiempo de entrega de domicilios</h3>'+
+          '<div class="spacer"></div><span class="tiny muted">meta '+meta+' min</span></div><div class="bd">'+
+          (stD.n? '<div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;text-align:center">'+
+              '<div><div class="tiny muted">Promedio</div><b style="font-size:18px">'+fmtMin(stD.prom)+'</b></div>'+
+              '<div><div class="tiny muted">A tiempo</div><b style="font-size:18px;color:var('+(stD.pct>=80?'--ok':'--warn')+')">'+stD.pct+'%</b></div>'+
+              '<div><div class="tiny muted">Más lento</div><b style="font-size:18px">'+fmtMin(stD.max)+'</b></div>'+
+              '<div><div class="tiny muted">Entregas</div><b style="font-size:18px">'+stD.n+'</b></div></div>'+
+            '<div class="tiny muted" style="margin-bottom:6px">Promedio por día (minutos)</div>'+
+            bars(diaArr,v=>fmtMin(v))+
+            (horaArr.length>1? '<div class="tiny muted" style="margin:12px 0 6px">Según la hora en que se pidió</div>'+bars(horaArr,v=>fmtMin(v)):'')+
+            (domArr.length? '<div class="tiny muted" style="margin:12px 0 6px">Por domiciliario</div>'+bars(domArr,v=>fmtMin(v)):'')+
+            (stO.n? '<div class="tline" style="margin-top:12px"><span>Mesa y mostrador · promedio</span><span class="v">'+
+              fmtMin(stO.prom)+' ('+stO.n+')</span></div>':'')
+          : '<div class="empty"><span class="ico">🛵</span>Aún no hay entregas registradas en estas fechas.<br>'+
+            '<span class="tiny">Regístralas en el módulo Entregas.</span></div>')+
+        '</div></div>'+
         '<div class="card"><div class="hd"><h3>Productos más vendidos</h3></div><div class="bd p0">'+tbl([
           {t:'Producto',f:p=>'<b>'+esc(p.n)+'</b>'},
           {t:'Cant.',num:1,f:p=>num(p.q,0)},
@@ -6799,6 +7055,17 @@ function viewAjustes(vw){
           'carrito, ni en el cobro, ni en el ticket.</div>'+
           '<label class="row tiny" style="gap:7px"><input type="checkbox" id="g_propinaAuto" '+(c.propinaAuto?'checked':'')+
             '> Sugerir propina automáticamente en cada venta</label>'+
+        '</div></div>'+
+        '<div class="card" id="g_entcard"><div class="hd"><h3>🛵 Seguimiento de entregas</h3></div><div class="bd">'+
+          '<label class="row tiny" style="gap:8px;margin-bottom:9px"><input type="checkbox" id="g_entDom"'+
+            (c.entregasDom!==false?' checked':'')+'> <span><b>Seguir domicilios</b><br><span class="muted">'+
+            'Cada domicilio queda pendiente hasta que se registre la entrega al cliente.</span></span></label>'+
+          '<label class="row tiny" style="gap:8px;margin-bottom:12px"><input type="checkbox" id="g_entTodos"'+
+            (c.entregasTodos?' checked':'')+'> <span><b>Seguir mesas y mostrador</b><br><span class="muted">'+
+            'Mide cuánto se demora en servirse cada pedido.</span></span></label>'+
+          '<div class="f"><label>Meta de entrega (minutos)</label><input id="g_entMeta" type="number" min="5" value="'+metaEntrega()+'" style="max-width:130px"></div>'+
+          '<div class="hintx" style="margin-top:8px">El tiempo va desde que se abre la comanda hasta que se registra la entrega. '+
+          'Solo el administrador puede cambiar esto; el cajero y los meseros solo registran las entregas.</div>'+
         '</div></div>'+
         '<div class="card"><div class="hd"><h3>Impresión</h3>'+
           '<div class="spacer"></div><button class="btn sm" id="g_prueba">Probar</button></div><div class="bd">'+
@@ -6991,6 +7258,8 @@ function viewAjustes(vw){
         c.impuesto=toN($('#g_impuesto').value); c.propina=toN($('#g_propina').value);
         c.ticketAncho=leerPapel($('#g_ticketAncho').value);
         c.impIncluido=$('#g_impIncluido').checked; c.propinaAuto=$('#g_propinaAuto').checked;
+        c.entregasDom=$('#g_entDom').checked; c.entregasTodos=$('#g_entTodos').checked;
+        c.entregaMeta=Math.max(5,toN($('#g_entMeta').value)||40);
         saveCfg(); render(); toast('Configuración guardada','ok');
       };
     }
