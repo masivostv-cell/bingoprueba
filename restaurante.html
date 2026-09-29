@@ -151,6 +151,19 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 #poscats{display:flex;gap:7px;padding:12px 14px;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--panel);flex:0 0 auto}
 #poscats button{padding:7px 14px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap}
 #poscats button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.invcats{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;margin-bottom:2px}
+.invcats button{padding:7px 13px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap}
+.invcats button .n{opacity:.65;font-weight:500;margin-left:4px}
+.invcats button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.invgrp{margin-bottom:14px}
+.invgrp>.hd{cursor:pointer;user-select:none}
+.invgrp.cerrado .bd{display:none}
+.invgrp .flecha{transition:transform .15s;display:inline-block}
+.invgrp.cerrado .flecha{transform:rotate(-90deg)}
+.invgrp .tbl{table-layout:fixed;width:100%;min-width:760px}
+.invgrp .tbl th:first-child{width:24%}
+.invgrp .tbl th:last-child{width:52px}
+.invgrp .tbl td:first-child{overflow:hidden;text-overflow:ellipsis}
 #possearch{padding:10px 14px 0;flex:0 0 auto}
 #posgrid{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 14px;display:grid;gap:11px;
   grid-template-columns:repeat(auto-fill,minmax(132px,1fr));align-content:start}
@@ -3873,6 +3886,25 @@ function edProducto(p){
 }
 
 /* ============================ INVENTARIO ============================== */
+/* Categoría de un ingrediente: la que se le asignó a mano o, si no tiene,
+   la de los productos que lo usan en su receta (si todos son de la misma) */
+function catDeIng(g){
+  if(g.categoriaId && byId('categorias',g.categoriaId)) return {id:g.categoriaId, auto:false};
+  const cs=[...new Set(S.productos.filter(p=>(p.receta||[]).some(r=>r.ingredienteId===g.id))
+    .map(p=>p.categoriaId).filter(Boolean))];
+  if(cs.length===1 && byId('categorias',cs[0])) return {id:cs[0], auto:true};
+  return {id:cs.length>1? '_varias':'_sin', auto:true};
+}
+function gruposInventario(lista){
+  const cats=S.categorias.slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
+  const G={};
+  lista.forEach(g=>{ const k=catDeIng(g).id; (G[k]=G[k]||[]).push(g); });
+  const out=cats.filter(c=>G[c.id]).map(c=>({id:c.id, nombre:c.nombre, emoji:c.emoji||'🏷️', items:G[c.id]}));
+  if(G._varias) out.push({id:'_varias', nombre:'Varias categorías', emoji:'🔀', items:G._varias});
+  if(G._sin) out.push({id:'_sin', nombre:'Sin categoría', emoji:'📦', items:G._sin});
+  return out;
+}
+let _invCat='all', _invCerrados={};
 function viewInventario(vw){
   let tab='stock', q='';
   topact('<button class="btn sm" id="aj">⚖️ Ajuste</button><button class="btn pri sm" id="add">+ Ingrediente</button>');
@@ -3915,32 +3947,54 @@ function viewInventario(vw){
       return;
     }
     const todos=S.ingredientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
-    const gs=filtra(todos,q,[x=>x.nombre,x=>x.unidad||'']);
-    const bajo=todos.filter(g=>g.activo&&(Number(g.stock)||0)<=(Number(g.stockMin)||0));
-    const valor=valorInvTotal();
-    $('#ibody').innerHTML=
-      '<div class="kpis" style="margin-bottom:14px">'+
-        kpi('Ingredientes',gs.length,'','')+
-        kpi('Valor del inventario',money(valor),'al costo promedio','brand')+
-        kpi('Bajo mínimo',bajo.length,bajo.length?'requieren compra':'todo en orden',bajo.length?'bad':'ok')+
-      '</div>'+
-      barraBusca('Buscar ingrediente…',q)+
-      '<div class="card"><div class="bd p0">'+tbl([
+    const grTodos=gruposInventario(todos);
+    if(_invCat!=='all' && !grTodos.some(x=>x.id===_invCat)) _invCat='all';
+    const enCat=_invCat==='all'? todos : (grTodos.find(x=>x.id===_invCat)||{items:[]}).items;
+    const gs=filtra(enCat,q,[x=>x.nombre,x=>x.unidad||'',x=>{ const c=byId('categorias',catDeIng(x).id); return c?c.nombre:''; }]);
+    const esBajo=g=>g.activo!==false&&(Number(g.stock)||0)<=(Number(g.stockMin)||0);
+    const bajo=enCat.filter(esBajo);
+    const valor=_invCat==='all'? valorInvTotal() : round(sum(enCat,g=>valorInv(g.id)),2);
+    const cols=[
         {t:'Ingrediente',f:g=>'<b>'+esc(g.nombre)+'</b>'},
         {t:'Unidad',f:g=>esc(g.unidad)},
-        {t:'Stock',num:1,f:g=>{const b=(Number(g.stock)||0)<=(Number(g.stockMin)||0);
-          return '<b style="color:'+(b?'var(--bad)':'inherit')+'">'+num(g.stock,2)+'</b>';}},
+        {t:'Stock',num:1,f:g=>'<b style="color:'+(esBajo(g)?'var(--bad)':'inherit')+'">'+num(g.stock,2)+'</b>'},
         {t:'Mínimo',num:1,f:g=>num(g.stockMin,2)},
         {t:'Costo promedio',num:1,f:g=>money(costoProm(g.id)||g.costo)},
         {t:'Capas',num:1,f:g=>capasDe(g.id).length},
         {t:'Valor',num:1,f:g=>money(valorInv(g.id))},
         {t:'Usado en',num:1,f:g=>S.productos.filter(p=>(p.receta||[]).some(r=>r.ingredienteId===g.id)).length},
-        {t:'',f:g=>'<button class="btn ghost sm" data-e="'+g.id+'">✎</button>'}
-      ],gs,{empty:q?'Nada coincide con «'+esc(q)+'»':'Sin ingredientes',icon:'🥫'})+'</div></div>';
+        {t:'',f:g=>'<button class="btn ghost sm" data-e="'+g.id+'">✎</button>'}];
+    const grupos=gruposInventario(gs);
+    const chips='<div class="invcats">'+
+      '<button data-ic="all" class="'+(_invCat==='all'?'on':'')+'">Todas<span class="n">'+todos.length+'</span></button>'+
+      grTodos.map(x=>'<button data-ic="'+x.id+'" class="'+(_invCat===x.id?'on':'')+'">'+x.emoji+' '+esc(x.nombre)+
+        '<span class="n">'+x.items.length+'</span>'+(x.items.some(esBajo)?' <span style="color:var(--bad)">●</span>':'')+'</button>').join('')+
+      '</div>';
+    const cuerpo = !gs.length
+      ? '<div class="card"><div class="bd p0">'+tbl(cols,[],{empty:q?'Nada coincide con «'+esc(q)+'»':'Sin ingredientes',icon:'🥫'})+'</div></div>'
+      : grupos.map(x=>{
+          const nb=x.items.filter(esBajo).length, cerrado=_invCerrados[x.id] && !q;
+          return '<div class="card invgrp'+(cerrado?' cerrado':'')+'" data-grp="'+x.id+'"><div class="hd">'+
+            '<h3><span class="flecha">▾</span> '+x.emoji+' '+esc(x.nombre)+'</h3>'+
+            '<span class="pill">'+x.items.length+' ítem'+(x.items.length===1?'':'s')+'</span>'+
+            (nb? '<span class="pill bad">'+nb+' bajo mínimo</span>':'')+
+            '<div class="spacer"></div><b class="mono">'+money(round(sum(x.items,g=>valorInv(g.id)),2))+'</b></div>'+
+            '<div class="bd p0">'+tbl(cols,x.items)+'</div></div>';
+        }).join('');
+    $('#ibody').innerHTML=
+      '<div class="kpis" style="margin-bottom:14px">'+
+        kpi(_invCat==='all'?'Ingredientes':'En esta categoría',gs.length,'','')+
+        kpi('Valor del inventario',money(valor),'al costo promedio','brand')+
+        kpi('Bajo mínimo',bajo.length,bajo.length?'requieren compra':'todo en orden',bajo.length?'bad':'ok')+
+      '</div>'+
+      chips+barraBusca('Buscar ingrediente…',q)+cuerpo;
     const el=$('#bq'); if(el){ $('#bqn').textContent=q? gs.length+' de '+todos.length : todos.length+' ingredientes';
       el.oninput=debounce(()=>{ q=el.value; const pos=el.selectionStart; paint();
         const n2=$('#bq'); n2.focus(); n2.setSelectionRange(pos,pos); },160); }
     $$('[data-e]',$('#view')).forEach(b=>b.onclick=()=>edIngrediente(byId('ingredientes',b.dataset.e)));
+    $$('[data-ic]',$('#view')).forEach(b=>b.onclick=()=>{ _invCat=b.dataset.ic; paint(); });
+    $$('.invgrp>.hd',$('#view')).forEach(h=>h.onclick=()=>{ const c=h.parentNode, id=c.dataset.grp;
+      _invCerrados[id]=!_invCerrados[id]; c.classList.toggle('cerrado',_invCerrados[id]); });
   }
   paint();
 }
@@ -3952,6 +4006,8 @@ function edIngrediente(g){
       '<div class="f"><label>Unidad</label><input id="u" value="'+esc(ed.unidad)+'" placeholder="g, ml, und"></div>'+
       '<div class="f"><label>Costo unitario'+(g?' (promedio)':'')+'</label><input id="c" type="number" step="any" value="'+(ed.costo||0)+'" '+(g?'disabled title="Lo calcula el promedio de lo que hay en bodega"':'')+'></div>'+
       '<div class="f"><label>Stock mínimo</label><input id="sm" type="number" step="any" value="'+(ed.stockMin||0)+'"></div></div>'+
+      '<div class="f" style="margin-top:10px"><label>Categoría</label><div id="icat"></div>'+
+        '<div class="tiny muted" style="margin-top:4px">Si la dejas en automática, toma la categoría de los productos que lo usan.</div></div>'+
       (g?'<div class="hintx" style="margin-top:10px">Stock actual: <b>'+num(ed.stock,3)+' '+esc(ed.unidad)+
         '</b> en '+capasDe(ed.id).length+' capa(s), valuado en <b>'+money(valorInv(ed.id))+
         '</b>. Cámbialo con una compra o un ajuste.</div>':
@@ -3959,7 +4015,11 @@ function edIngrediente(g){
     footer:(g&&puedeBorrar()?'<button class="btn danger" id="del">Eliminar</button>':'')+
       '<div class="spacer"></div><button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
     onOpen:m=>{
+      const cbCat=combo($('#icat',m),{lista:S.categorias.filter(x=>x.activo!==false), valor:ed.categoriaId||'',
+        vacio:'— automática (según las recetas) —', placeholder:'Buscar categoría…',
+        etiqueta:x=>(x.emoji?x.emoji+' ':'')+x.nombre, crear:CREAR_CATEGORIA});
       $('#ok',m).onclick=()=>{ ed.nombre=$('#n',m).value.trim(); if(!ed.nombre) return toast('Nombre requerido','warn');
+        ed.categoriaId=cbCat.valor()||'';
         ed.unidad=$('#u',m).value.trim()||'und';
         if(!$('#c',m).disabled) ed.costo=toN($('#c',m).value);
         ed.stockMin=toN($('#sm',m).value);
