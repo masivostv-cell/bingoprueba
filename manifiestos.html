@@ -117,6 +117,12 @@ input[type="date"]{width:170px;}
 
 .estado{color:var(--verde-oscuro);font-size:14px;margin:8px 0;}
 .estado.error{color:var(--rojo-logo);}
+/* << v8 >> aviso de actualización del historial guardado en el equipo */
+.sync-historial{display:inline-block;font-size:13px;margin:8px 0 0;padding:6px 12px;border-radius:8px;
+  background:#eef6f5;color:var(--verde-oscuro);}
+.sync-historial:empty{display:none;}
+.sync-historial.trabajando{background:#fff7e0;color:#8a5a00;}
+.sync-historial.alerta{background:#fdecec;color:var(--rojo-logo);}
 
 /* ---------- Autocompletar ---------- */
 .buscador{position:relative;max-width:500px;}
@@ -849,7 +855,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         </select>
         <br>
         <input id="histBuscar" placeholder="Buscar cliente, manifiesto, ruta..."
-               autocomplete="off" oninput="filtrarHistorial()">
+               autocomplete="off" oninput="buscarHistorialConPausa()">
         <label class="opcion-ruta">
           <input type="checkbox" id="histPorRuta" checked onchange="filtrarHistorial()">
           Incluir las demás sedes de la misma ruta
@@ -862,6 +868,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         <br>
         <button type="button" id="btnHistorial" class="btn-pro btn-consultar" onclick="cargarHistorial()">📋 Consultar manifiestos</button>
         <button type="button" class="btn-pro btn-guardar" onclick="filtrarHistorial()">🔎 Filtrar</button>
+        <button type="button" class="btn-pro btn-neutro"  onclick="recargarHistorialCompleto()" title="Vuelve a descargar todo el historial (use si se editaron filas viejas en la hoja)">♻️ Recargar todo</button>
         <button type="button" class="btn-pro btn-neutro"  onclick="limpiarFiltroHistorial()">↩️ Quitar filtros</button>
         <button type="button" class="btn-pro btn-neutro"  onclick="exportarExcel()">📥 Exportar Excel</button>
         <button type="button" class="btn-pro btn-guardar" onclick="certificarDesdeHistorial()">🧾 Certificar estos manifiestos</button>
@@ -872,6 +879,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
                   onclick="limpiarFiltrosDeZona('historial')">✕</button>
         </span>
 
+        <p id="syncHistorial" class="sync-historial"></p>
         <p id="estadoHistorial" class="estado"></p>
 
         <div class="tabla-scroll">
@@ -1210,7 +1218,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbzyOxQ-PXUAY8CtXYgsrJVpGoJqrD3yGFol8AiafPBqbjcy0RnTuxRtB-s1AmbSYzs_/exec";
+const API = "https://script.google.com/macros/s/AKfycbwMvFkL6QzCm6hqPdcmJvrgLYZf5qSDLXQ63meuItyanjRWNyvUg1wBPdKoxSwfXd_a/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -1231,8 +1239,11 @@ let resultadosBusqueda = [];
 let historialDatos = [];
 // << v7 >> Rango de fechas que realmente se trajo del servidor. Sirve para
 // saber si un filtro nuevo se puede resolver en memoria o hay que consultar.
-let historialRango = null;          // { inicio:"yyyy-mm-dd" | "", fin:"yyyy-mm-dd" | "" }
-let historialCargando = false;
+// << v8 >> El historial se guarda en el equipo (IndexedDB) y solo se piden
+// al servidor las filas nuevas.
+let historialCache = null;          // lo guardado en el equipo
+let historialSincronizando = false;
+let historialUltimaSync = 0;        // ms; evita consultar a cada clic
 let historialVisible = [];
 let clienteObservacionActual = "";
 let clienteEditando = null;   // cliente que se está editando (null = nuevo)
@@ -1399,9 +1410,7 @@ function entrar(){
   ocupado("btnEntrar", "Entrando...");
   mensaje("estadoAcceso", "");
 
-  fetch(API, { method:"POST",
-               body: JSON.stringify({ accion:"login", usuario:usuario, clave:clave }) })
-    .then(r => r.json())
+  postLogin({ accion:"login", usuario:usuario, clave:clave })
     .then(resp => {
       if(!resp || resp.estado === "error"){
         throw new Error((resp && resp.mensaje) || "No se pudo entrar");
@@ -1418,8 +1427,52 @@ function entrar(){
     })
     .catch(error => {
       ocupado("btnEntrar", null);
-      mensaje("estadoAcceso", (error && error.message) || String(error), true);
+      let texto = (error && error.message) || String(error);
+      if(error && error.html){
+        texto = "Google no respondió bien (devolvió una página web en vez de datos). " +
+                "Espere un minuto y vuelva a intentar. Si sigue igual, abra en el navegador " +
+                "la dirección del Apps Script que termina en /exec: debe decir " +
+                "\"API de manifiestos activa\" y la versión. Si muestra un error, el " +
+                "problema está en el despliegue del script.";
+      }else if(error instanceof TypeError){
+        texto = navigator.onLine
+          ? "Google no respondió después de 6 intentos. Suele ser un fallo temporal de " +
+            "Google: espere un minuto y vuelva a intentar. Si pasa siempre, pruebe en una " +
+            "ventana de incógnito (puede ser una extensión del navegador bloqueando la conexión)."
+          : "No hay conexión a internet en este equipo.";
+      }
+      mensaje("estadoAcceso", texto, true);
     });
+}
+
+// << v8 >> El inicio de sesión a veces recibe la página de error temporal de
+// Google en vez del JSON ("Unexpected token '<'"). Entrar no modifica nada,
+// así que se puede reintentar sin riesgo.
+function postLogin(cuerpo){
+  const intentar = n =>
+    fetch(API, { method:"POST", body:JSON.stringify(cuerpo), cache:"no-store" })
+      .then(async r => {
+        const texto = await r.text();
+        try{
+          return JSON.parse(texto);
+        }catch(e){
+          const err = new Error("Respuesta no válida del servidor: " + texto.slice(0, 120));
+          err.html = /<html|<!doctype/i.test(texto);
+          err.reintentable = true;
+          throw err;
+        }
+      })
+      .catch(err => {
+        // Google falla a ratos con un 404 que el navegador ve como "sin
+        // conexión" (su página de error no trae permiso CORS). Se insiste
+        // hasta 6 veces, esperando cada vez un poco más (~25 s en total).
+        if(n < 6 && (err.reintentable || err instanceof TypeError)){
+          mensaje("estadoAcceso", "Google no respondió, reintentando (" + (n + 1) + "/6)...");
+          return esperar(1000 * n + Math.floor(Math.random() * 500)).then(() => intentar(n + 1));
+        }
+        throw err;
+      });
+  return intentar(1);
 }
 
 function salir(){
@@ -1464,6 +1517,11 @@ function arrancarApp(){
   cargarReserva();
   pintarEstadoNumero();
   asegurarReserva().then(() => ponerNumeroSugerido(false));
+
+  // << v8 >> Apenas entra administración, el historial se pone al día en
+  // segundo plano. Se espera un momento para no competir con clientes y
+  // móviles, que se necesitan primero.
+  if(esAdmin()) setTimeout(() => sincronizarHistorial(), 2500);
 }
 
 
@@ -1952,8 +2010,8 @@ function mostrar(id){
     cargarClientesTabla();
     actualizarEstadoClientes();
   }
-  if(id === "historial" && historialDatos.length === 0){
-    cargarHistorial();
+  if(id === "historial"){
+    entrarHistorial();   // << v8 >> muestra lo guardado y actualiza solo
   }
   if(id === "certificados"){
     describirTipoCert();
@@ -2810,7 +2868,7 @@ function procesarCola(forzar){
       enviandoCola = false;
 
       // Lo que cambió en el servidor deja de estar al día en pantalla.
-      if(item.tipo === "manifiesto"){ historialDatos = []; historialRango = null; }
+      if(item.tipo === "manifiesto"){ historialUltimaSync = 0; }   // << v8 >> la próxima vez trae lo nuevo
       if(item.tipo === "cliente")    colaTocoClientes = true;
 
       persistirCola();
@@ -3149,70 +3207,242 @@ function asegurarFechasHistorial(){
   }
 }
 
-// ¿Lo que ya está en memoria cubre las fechas pedidas?
-function rangoCubierto(inicio, fin){
-  if(!historialRango) return false;
-  const cubreInicio = !historialRango.inicio || (inicio && inicio >= historialRango.inicio);
-  const cubreFin    = !historialRango.fin    || (fin    && fin    <= historialRango.fin);
-  return cubreInicio && cubreFin;
+/* ---------------- << v8 >> historial guardado en el equipo ----------------
+
+   La primera vez se descarga todo el historial POR PARTES (bloques de 2.000
+   filas, para que Google no se ahogue) y se guarda en IndexedDB. De ahí en
+   adelante solo se piden las filas nuevas de la hoja DATOS, a partir de la
+   última que ya se tiene. Si alguien borró o insertó filas en la hoja, el
+   servidor lo detecta (la fila de control ya no coincide) y se recarga todo.
+   Cada 7 días se hace una recarga completa por si se editaron filas viejas. */
+
+const HIST_BLOQUE = 4000;
+const HIST_COMPLETO_CADA_DIAS = 7;
+const IDB_NOMBRE  = "manifiestosApp";
+const IDB_ALMACEN = "cache";
+const CLAVE_HIST  = "historial_v1";
+
+let idbConexion = null;
+
+function idbAbrir(){
+  if(idbConexion) return Promise.resolve(idbConexion);
+  return new Promise((ok, falla) => {
+    if(!window.indexedDB) return falla(new Error("Este navegador no permite guardar datos"));
+    const r = indexedDB.open(IDB_NOMBRE, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(IDB_ALMACEN);
+    r.onsuccess = () => { idbConexion = r.result; ok(idbConexion); };
+    r.onerror   = () => falla(r.error);
+  });
 }
 
-function cargarHistorial(){
-  if(historialCargando) return;
+function idbLeer(clave){
+  return idbAbrir().then(db => new Promise((ok, falla) => {
+    const q = db.transaction(IDB_ALMACEN, "readonly").objectStore(IDB_ALMACEN).get(clave);
+    q.onsuccess = () => ok(q.result || null);
+    q.onerror   = () => falla(q.error);
+  })).catch(e => { console.warn("No se pudo leer el historial guardado:", e); return null; });
+}
 
+function idbGuardar(clave, valor){
+  return idbAbrir().then(db => new Promise((ok, falla) => {
+    const tx = db.transaction(IDB_ALMACEN, "readwrite");
+    tx.objectStore(IDB_ALMACEN).put(valor, clave);
+    tx.oncomplete = () => ok(true);
+    tx.onerror    = () => falla(tx.error);
+  })).catch(e => { console.warn("No se pudo guardar el historial:", e); return false; });
+}
+
+function cacheVacia(){
+  return { api:API, filas:[], siguiente:2, control:"", actualizado:0, completo:0 };
+}
+
+function abrirHistorialGuardado(){
+  if(historialCache) return Promise.resolve(historialCache);
+  return idbLeer(CLAVE_HIST).then(c => {
+    // Si cambió la URL del script, lo guardado es de otro archivo: no sirve.
+    historialCache = (c && c.api === API && Array.isArray(c.filas)) ? c : cacheVacia();
+    return historialCache;
+  });
+}
+
+function ordenarHistorial(lista){
+  return lista.slice().sort((a, b) =>
+    a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : (Number(b.fila) || 0) - (Number(a.fila) || 0));
+}
+
+function avisoSync(texto, tipo){
+  const p = $("syncHistorial");
+  if(!p) return;
+  p.textContent = texto || "";
+  p.className = "sync-historial" + (tipo ? " " + tipo : "");
+}
+
+function fechaHoraCorta(ms){
+  const d = new Date(ms);
+  return fechaCorta(fechaLocalISO(d)) + " " +
+         d.toLocaleTimeString("es-CO", { hour:"numeric", minute:"2-digit" });
+}
+
+function numeroBonito(n){ return (Number(n) || 0).toLocaleString("es-CO"); }
+
+// Al abrir la sección: lo guardado aparece de inmediato y, si hace más de
+// 30 s que no se revisa, se buscan las filas nuevas.
+function entrarHistorial(){
   asegurarFechasHistorial();
-  const inicio = $("histInicio").value;
-  const fin    = $("histFin").value;
-
-  if(inicio && fin && inicio > fin){
-    mensaje("estadoHistorial", "La fecha inicial es posterior a la final.", true);
-    return;
-  }
-
-  const cuerpo = $("tablaHistorial");
-  cuerpo.innerHTML = '<tr><td colspan="20">Cargando...</td></tr>';
-  ocupado("btnHistorial","Consultando...");
-  mensaje("estadoHistorial","");
-  historialCargando = true;
-
-  pedir(API + "?accion=excesos&kilos=0" +
-        "&inicio=" + encodeURIComponent(inicio) +
-        "&fin="    + encodeURIComponent(fin))
-    .then(data => {
-      if(data && data.estado === "error"){
-        throw new Error(data.mensaje || "El script reportó un error");
-      }
-      historialDatos = Array.isArray(data) ? data : (data && (data.datos || data.filas)) || [];
-      historialRango = { inicio: inicio, fin: fin };
-      historialCargando = false;
-      ocupado("btnHistorial", null);
-
-      const desde = inicio ? fechaCorta(inicio) : "el inicio";
-      const hasta = fin    ? fechaCorta(fin)    : "hoy";
-      mensaje("estadoHistorial",
-        "Consultado del " + desde + " al " + hasta + ". Cambie las fechas para ver otro periodo.");
-
+  abrirHistorialGuardado().then(cache => {
+    if(!historialDatos.length && cache.filas.length){
+      historialDatos = ordenarHistorial(cache.filas);
       filtrarHistorial();
-    })
-    .catch(error => {
-      console.error("Historial:", error);
-      historialCargando = false;
+    }
+    if(!cache.filas.length && !historialSincronizando){
+      $("tablaHistorial").innerHTML = '<tr><td colspan="20">Descargando el historial por primera vez...</td></tr>';
+    }
+    if(Date.now() - historialUltimaSync > 30000) sincronizarHistorial();
+  });
+}
+
+// Botón "Consultar manifiestos": trae lo nuevo.
+function cargarHistorial(){
+  asegurarFechasHistorial();
+  sincronizarHistorial();
+}
+
+function recargarHistorialCompleto(){
+  if(!confirm("Se va a descargar de nuevo todo el historial. Úselo si se corrigieron " +
+              "filas viejas directamente en la hoja. ¿Continuar?")) return;
+  sincronizarHistorial({ completo:true });
+}
+
+function sincronizarHistorial(opciones){
+  opciones = opciones || {};
+  if(!esAdmin() || historialSincronizando) return Promise.resolve();
+
+  historialSincronizando = true;
+  ocupado("btnHistorial", "Actualizando...");
+
+  return abrirHistorialGuardado().then(cache => {
+
+    if(!historialDatos.length && cache.filas.length){
+      historialDatos = ordenarHistorial(cache.filas);
+      filtrarHistorial();
+    }
+
+    const vencida = !cache.completo ||
+                    Date.now() - cache.completo > HIST_COMPLETO_CADA_DIAS * 864e5;
+    let recargaTotal = !!opciones.completo || vencida;
+
+    let base    = recargaTotal ? [] : cache.filas.slice();
+    let desde   = recargaTotal ? 2  : (cache.siguiente || 2);
+    let control = recargaTotal ? "" : (cache.control || "");
+    let nuevos  = 0;
+
+    // Si ya hay algo guardado y se está recargando todo, la tabla sigue
+    // mostrando lo guardado hasta que termine: no se vacía a medio camino.
+    const hayCopia = cache.filas.length > 0;
+
+    avisoSync(hayCopia ? "🔄 Actualizando historial... revisando qué falta."
+                       : "🔄 Descargando el historial por primera vez...", "trabajando");
+
+    const paso = () => pedir(API + "?accion=manifiestos&desdeFila=" + desde +
+                             "&limite=" + HIST_BLOQUE +
+                             (desde > 2 ? "&control=" + encodeURIComponent(control) : ""))
+      .then(data => {
+        if(data && data.estado === "error"){
+          throw new Error(data.mensaje || "El script reportó un error");
+        }
+
+        // Apps Script sin la carga por partes: devuelve la lista completa.
+        if(Array.isArray(data)) return { antiguo:true, filas:data };
+
+        if(!data || !Array.isArray(data.filas)){
+          throw new Error("Respuesta inesperada del servidor");
+        }
+
+        if(data.reinicio){          // la hoja cambió por dentro: se empieza de cero
+          base = []; nuevos = 0; recargaTotal = true;
+        }
+
+        base    = base.concat(data.filas);
+        nuevos += data.filas.length;
+        desde   = data.siguiente;
+        control = String(data.control || "");
+
+        const progresivo = !recargaTotal || !hayCopia;
+        const estado = {
+          api:API, filas:base, siguiente:desde, control:control,
+          actualizado: Date.now(),
+          completo: (recargaTotal && data.fin) ? Date.now() : (recargaTotal ? 0 : cache.completo)
+        };
+
+        if(progresivo || data.fin){
+          historialCache = estado;
+          idbGuardar(CLAVE_HIST, estado);
+          // Se redibuja al terminar, o en cada bloque solo si la tabla está
+          // vacía (primera descarga), para que se vea que avanza.
+          if(data.fin || (data.filas.length && !historialDatos.length)){
+            historialDatos = ordenarHistorial(base);
+            filtrarHistorial();
+          }
+        }
+
+        if(data.fin) return { nuevos:nuevos, total:base.length, recargaTotal:recargaTotal };
+
+        const hecha = Math.min(desde - 1, data.ultimaFila);
+        const pct = data.ultimaFila > 1 ? Math.round(100 * (hecha - 1) / (data.ultimaFila - 1)) : 100;
+        avisoSync("🔄 Actualizando historial... " + pct + "% (fila " + numeroBonito(hecha) +
+                  " de " + numeroBonito(data.ultimaFila) + ")", "trabajando");
+        return paso();
+      });
+
+    return paso().then(r => {
+      historialSincronizando = false;
+      historialUltimaSync = Date.now();
       ocupado("btnHistorial", null);
-      cuerpo.innerHTML = '<tr><td colspan="20">Error cargando información</td></tr>';
-      mensaje("estadoHistorial",
-        "No se pudo consultar el servidor: " + (error.message || error), true);
+
+      if(r.antiguo){
+        historialDatos = ordenarHistorial(r.filas);
+        filtrarHistorial();
+        avisoSync("⚠️ Consultado, pero NO se guardó en el equipo: el Apps Script todavía no " +
+                  "tiene la versión v10 (carga por partes).", "alerta");
+        return;
+      }
+
+      avisoSync("✅ Historial al día: " + numeroBonito(r.total) + " manifiestos guardados en este equipo" +
+                (r.recargaTotal ? " (recarga completa)" : r.nuevos ? ", " + r.nuevos + " nuevo(s)" : ", sin novedades") +
+                ". Revisado " + fechaHoraCorta(Date.now()) + ".", "ok");
     });
+
+  }).catch(error => {
+    historialSincronizando = false;
+    ocupado("btnHistorial", null);
+    console.error("Historial:", error);
+
+    const c = historialCache;
+    if(historialDatos.length){
+      avisoSync("⚠️ No se pudo actualizar (" + (error.message || error) + "). Se muestra la copia " +
+                "guardada" + (c && c.actualizado ? " del " + fechaHoraCorta(c.actualizado) : "") +
+                ". Pulse \"Consultar manifiestos\" para reintentar.", "alerta");
+    }else{
+      $("tablaHistorial").innerHTML = '<tr><td colspan="20">Error cargando información</td></tr>';
+      avisoSync("⚠️ No se pudo consultar el servidor: " + (error.message || error), "alerta");
+    }
+  });
+}
+
+const textoBusqueda = new WeakMap();   // << v9 >> manifiesto -> texto para buscar
+let temporizadorBusqueda = null;
+
+// << v9 >> Al escribir en el buscador se espera a que la persona haga una
+// pausa, en vez de filtrar miles de filas con cada letra.
+function buscarHistorialConPausa(){
+  clearTimeout(temporizadorBusqueda);
+  temporizadorBusqueda = setTimeout(filtrarHistorial, 250);
 }
 
 function filtrarHistorial(){
   const inicio = $("histInicio").value;
   const fin    = $("histFin").value;
 
-  // << v7 >> Fechas fuera de lo que se trajo: hay que pedirlas al servidor.
-  if(!historialCargando && !rangoCubierto(inicio, fin)){
-    cargarHistorial();
-    return;
-  }
   const kilos  = Number($("histKilos").value) || 0;
   const movil  = $("histMovil").value;
   const soloExcedidos = $("histSoloExcedidos").checked;
@@ -3247,9 +3477,14 @@ function filtrarHistorial(){
 
   const coincideTexto = x => {
     if(!palabras.length) return true;
-    const texto = normalizar([x.cliente, x.manifiesto, x.ruta, x.movil,
-                              x.fecha, x.observaciones,
-                              rutaDeManifiesto(x)].join(" "));
+    // << v9 >> Se calcula una vez por manifiesto y se reutiliza en cada tecla.
+    let texto = textoBusqueda.get(x);
+    if(texto === undefined){
+      texto = normalizar([x.cliente, x.manifiesto, x.ruta, x.movil,
+                          x.fecha, x.observaciones,
+                          rutaDeManifiesto(x)].join(" "));
+      textoBusqueda.set(x, texto);
+    }
     return palabras.every(p => texto.includes(p));
   };
 
@@ -3290,7 +3525,7 @@ function limpiarFiltroHistorial(){
   Object.keys(DEF_FILTROS).forEach(id => {
     if(DEF_FILTROS[id].zona === "historial") filtros[id] = { texto:"", valores:null };
   });
-  filtrarHistorial();   // usa lo que hay en memoria o consulta el mes si hace falta
+  filtrarHistorial();
 }
 
 function fechaValida(valor){
@@ -3332,17 +3567,14 @@ function manifiestosSeleccionados(){
   return historialVisible.filter(x => manifiestosElegidos[claveManifiesto(x)]);
 }
 
-function mostrarHistorial(datos){
-  historialVisible = datos || [];
-  const cuerpo = $("tablaHistorial");
-  let malas = 0;
+// << v9 >> Con miles de manifiestos, dibujar todas las filas de una vez
+// congela el navegador varios segundos. Se pintan por páginas: los totales,
+// el Excel y el certificado siguen usando TODAS las filas filtradas.
+const HIST_PAGINA = 300;
+let historialPintadas = 0;
 
-  if(historialVisible.length === 0){
-    cuerpo.innerHTML = '<tr><td colspan="20">Sin registros</td></tr>';
-  }else{
-    cuerpo.innerHTML = historialVisible.map((x, iFila) => {
+function filaHistorialHTML(x){
       const buena = fechaValida(x.fecha);
-      if(!buena) malas++;
       const clase = buena
         ? ' class="num"'
         : ' class="num fecha-mala" title="La celda Fecha de la hoja DATOS no es una fecha real. Corríjala para que entre en los filtros por fecha."';
@@ -3382,8 +3614,46 @@ function mostrarHistorial(datos){
                      onclick="verFirma(event, this.dataset.man)">✍ Ver</button>`
           : "—"}</td>
       </tr>`;
-    }).join("");
+}
+
+function pintarFilasHistorial(hasta){
+  const cuerpo = $("tablaHistorial");
+  const tope = Math.min(hasta, historialVisible.length);
+
+  const viejo = cuerpo.querySelector("tr.fila-mas");
+  if(viejo) viejo.remove();
+
+  if(tope > historialPintadas){
+    cuerpo.insertAdjacentHTML("beforeend",
+      historialVisible.slice(historialPintadas, tope).map(filaHistorialHTML).join(""));
+    historialPintadas = tope;
   }
+
+  const quedan = historialVisible.length - historialPintadas;
+  if(quedan > 0){
+    cuerpo.insertAdjacentHTML("beforeend",
+      '<tr class="fila-mas"><td colspan="20" style="text-align:center;padding:12px">' +
+      'Se muestran ' + numeroBonito(historialPintadas) + ' de ' + numeroBonito(historialVisible.length) + '. ' +
+      '<button type="button" class="btn-mini" onclick="pintarFilasHistorial(historialPintadas + HIST_PAGINA)">' +
+      'Mostrar ' + Math.min(HIST_PAGINA, quedan) + ' más</button> ' +
+      '<button type="button" class="btn-mini" onclick="pintarFilasHistorial(Infinity)">Mostrar todos</button>' +
+      '</td></tr>');
+  }
+}
+
+function mostrarHistorial(datos){
+  historialVisible = datos || [];
+  const cuerpo = $("tablaHistorial");
+  historialPintadas = 0;
+
+  if(historialVisible.length === 0){
+    cuerpo.innerHTML = '<tr><td colspan="20">Sin registros</td></tr>';
+  }else{
+    cuerpo.innerHTML = "";
+    pintarFilasHistorial(HIST_PAGINA);
+  }
+
+  const malas = historialVisible.reduce((n, x) => n + (fechaValida(x.fecha) ? 0 : 1), 0);
 
   $("histTodos").checked = false;
   actualizarResumenHistorial(malas);
