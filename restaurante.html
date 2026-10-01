@@ -163,6 +163,12 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 #poscats button.on{background:var(--brand);border-color:var(--brand);color:#fff}
 #mto::-webkit-outer-spin-button,#mto::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 #mto{-moz-appearance:textfield}
+#verdoc{position:fixed;inset:0;z-index:9999;background:rgba(10,12,18,.62);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 8px}
+#verdoc.on{display:flex}
+#verdoc .vd-caja{background:var(--panel);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden}
+#verdoc .vd-hd{display:flex;align-items:center;gap:9px;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+#verdoc .vd-papel{background:#e9ebef;padding:14px;overflow-x:auto;display:flex;justify-content:center}
+#verdoc iframe{border:0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);min-height:300px}
 .invcats{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;margin-bottom:2px}
 .invcats button{padding:7px 13px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap}
 .invcats button .n{opacity:.65;font-weight:500;margin-left:4px}
@@ -2499,7 +2505,7 @@ function paintCart(){
   if(pbn){ pbn.textContent=t.uds; pbt.textContent=money(t.total);
     $('#posbar').style.opacity = t.uds? '1':'.75'; }
   $('#cmesa').onclick=mDestino; $('#cclear').onclick=()=>{ if(!c.items.length) return;
-    confirmar('¿Vaciar el carrito?',()=>{ c.items=[]; paintCart(); persistComanda(); },true); };
+    confirmar('¿Vaciar el carrito? También se borra el nombre del cliente.',()=>{ vaciarCarrito(); },true); };
 
   /* nombre del cliente: sirve para llamarlo y sale en la comanda y la factura */
   let cn=$('#cnom');
@@ -2646,6 +2652,21 @@ function enviarACocina(){
 /* Guarda el pedido en la mesa y deja el carrito en cero, listo para el
    siguiente. El pedido no se pierde: queda abierto en la mesa hasta que
    se cobre. */
+/* Vaciar: quita productos y nombre. Si era un pedido guardado de mostrador o
+   un domicilio sin nada más, desaparece de Mesas para que no quede pendiente */
+function vaciarCarrito(){
+  const c=S.cart; if(!c) return;
+  (c.items||[]).forEach(i=>bajaComanda(i,i.env||0));
+  c.items=[]; c.nombrePedido='';
+  const mm=c.mesaId? byId('mesas',c.mesaId):null;
+  persistComanda();
+  if(mm && mm.temporal && byId('mesas',mm.id)) limpiarDomicilio(mm.id);
+  if(mm && mm.temporal){ S.cart=newCart(); }
+  else if(c.comandaId===null) c.nroTurno=0;
+  const i=$('#cnomi'); if(i) i.value='';
+  paintCart(); buildNav();
+  toast('Carrito vacío','ok',2000);
+}
 function guardarPedido(prefijo){
   const c=S.cart;
   if(!c) return;
@@ -3552,7 +3573,7 @@ function viewCocina(vw){
                : (cm.impresoMs? '<span class="pill ok">impresa</span>':'<span class="pill">sin pedir</span>'); }},
         {t:'',f:cm=>'<div class="row" style="gap:3px">'+
           '<button class="btn ghost sm" data-ab="'+cm.id+'" title="Abrir el pedido">👁️</button>'+
-          '<button class="btn ghost sm" data-re="'+cm.id+'" title="Reimprimir todo el pedido">🖨️</button></div>'}
+          '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button><button class="btn ghost sm" data-re="'+cm.id+'" title="Reimprimir todo el pedido">🖨️</button></div>'}
       ],abiertas,{empty:'No hay mesas abiertas',icon:'🍽️'})+
     '</div></div>';
 
@@ -3591,7 +3612,45 @@ function viewCocina(vw){
    El navegador por sí solo no puede elegir impresora; por eso hay tres
    modos, y el de dos impresoras usa QZ Tray.
    =================================================================== */
+/* ---------- 👁️ ver un documento en pantalla sin imprimirlo ----------
+   El botón 👁️ va justo antes del botón de imprimir: ejecuta lo mismo pero
+   en vez de mandarlo a la impresora lo muestra aquí. */
+let _soloVer=0, _soloVerT=null;
+function verSinImprimir(fn){
+  _soloVer=1; clearTimeout(_soloVerT); _soloVerT=setTimeout(()=>{ _soloVer=0; },2500);
+  const t0=window.toast;                 // sin avisos de "enviado a impresión"
+  window.toast=function(msg){ if(/impres|imprim|🖨/i.test(String(msg))) return; return t0.apply(this,arguments); };
+  try{ fn(); }catch(e){ _soloVer=0; t0('No se pudo mostrar: '+e.message,'bad'); }
+  finally{ setTimeout(()=>{ window.toast=t0; },400); }
+}
+function verDocumento(html,tipo,impresora){
+  let w=$('#verdoc');
+  if(!w){ w=document.createElement('div'); w.id='verdoc'; document.body.appendChild(w); }
+  const carta=String(html).indexOf('size:letter')>-1;
+  w.innerHTML='<div class="vd-caja" style="width:'+(carta?'min(860px,96vw)':'min(380px,96vw)')+'">'+
+    '<div class="vd-hd"><b>👁️ Vista previa</b><span class="tiny muted">no se imprimió nada</span><div class="spacer"></div>'+
+      '<button class="btn sm" id="vd_imp">🖨️ Imprimir</button><button class="btn ghost sm" id="vd_x">✕</button></div>'+
+    '<div class="vd-papel"><iframe id="vd_if" style="width:'+(carta?'816px':'100%')+'"></iframe></div></div>';
+  const ifr=$('#vd_if');
+  ifr.srcdoc=String(html).replace(/<script[\s\S]*?<\/script>/gi,'').replace(/window\.print\(\)/g,'');
+  ifr.onload=()=>{ try{ const d=ifr.contentDocument; ifr.style.height=Math.max(300,d.documentElement.scrollHeight+20)+'px'; }catch(e){} };
+  w.classList.add('on');
+  const cerrar=()=>{ w.classList.remove('on'); w.innerHTML=''; };
+  $('#vd_x').onclick=cerrar;
+  w.onclick=e=>{ if(e.target===w) cerrar(); };
+  $('#vd_imp').onclick=()=>{ cerrar(); encolarImp(html,tipo,impresora); };
+}
+document.addEventListener('keydown',e=>{ const w=$('#verdoc');
+  if(e.key==='Escape' && w && w.classList.contains('on')){ e.stopImmediatePropagation(); w.classList.remove('on'); w.innerHTML=''; } },true);
+document.addEventListener('click',e=>{
+  const b=e.target.closest && e.target.closest('[data-ver]'); if(!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const imp=b.nextElementSibling;
+  if(!imp || typeof imp.onclick!=='function') return toast('No hay nada que mostrar','warn');
+  verSinImprimir(()=>imp.onclick({target:imp,currentTarget:imp,preventDefault(){},stopPropagation(){}}));
+},true);
 function abrirImpresion(html,tipo,impresora){
+  if(_soloVer){ _soloVer=0; return verDocumento(html,tipo,impresora); }
   if(S.cfg.modoImp==='qz'){
     if(window.qz || _qzCarga) return qzImprimir(html,impresora,tipo);
     cargarQZ().then(ok=>{ if(ok) qzImprimir(html,impresora,tipo); });
@@ -3750,9 +3809,9 @@ function comandaHTML(v,copia){
     '.sec{font-size:'+px(14)+';font-weight:bold;margin:7px 0 2px;border-bottom:2px solid #000}'+
     '.baja{text-decoration:line-through}'+
     '.nomb{text-align:center;font-size:'+px(24)+';font-weight:bold;margin:4px 0;line-height:1.15}'+
-    '.turno{text-align:center;border:3px solid #000;border-radius:6px;margin:5px 0;padding:3px 0 5px}'+
-    '.turno small{display:block;font-size:'+px(12)+';letter-spacing:3px}'+
-    '.turno b{display:block;font-size:'+px(40)+';line-height:1;letter-spacing:2px}'+
+    '.turno{text-align:center;border:2px solid #000;border-radius:5px;margin:4px 0;padding:2px 0 4px}'+
+    '.turno small{display:block;font-size:'+px(10.5)+';letter-spacing:2px}'+
+    '.turno b{display:block;font-size:'+px(24)+';line-height:1.05;letter-spacing:1px}'+
     '</style></head><body>'+
     '<h1>'+(soloBaja?'ANULACIÓN':v.adicional?'AGREGADO':'COMANDA')+'</h1>'+
     (v.nroTurno? '<div class="turno"><small>TURNO</small><b>'+fmtTurno(v.nroTurno)+'</b></div>':'')+
@@ -3778,7 +3837,7 @@ function comandaHTML(v,copia){
 /* cola única: si entran varias ventas seguidas, los documentos salen
    uno detrás de otro y ninguno pisa al anterior */
 const _colaImp=[]; let _impOcupado=false;
-function encolarImp(html,tipo,impresora){ _colaImp.push({html:html,tipo:tipo,impresora:impresora}); bombearImp(); }
+function encolarImp(html,tipo,impresora){ if(_soloVer){ _soloVer=0; return verDocumento(html,tipo,impresora); } _colaImp.push({html:html,tipo:tipo,impresora:impresora}); bombearImp(); }
 function bombearImp(){
   if(_impOcupado || !_colaImp.length) return;
   _impOcupado=true;
@@ -3850,11 +3909,11 @@ function ticketHTML(v){
    '.tot{font-size:'+px(18)+';font-weight:bold;margin:3px 0}'+
    '.logo{display:block;margin:0 auto 5px;max-width:'+Math.min(ang,62)+'mm;max-height:30mm}'+
    '.pie{text-align:center;font-size:'+px(11)+';margin-top:4px}'+
-   '.turno{text-align:center;border:2.5px solid #000;border-radius:6px;margin:6px 0;padding:4px 0 6px}'+
-   '.turno small{display:block;font-size:'+px(11.5)+';letter-spacing:3px;font-weight:bold}'+
-   '.turno b{display:block;font-size:'+px(38)+';line-height:1;letter-spacing:2px}'+
+   '.turno{text-align:center;border:2px solid #000;border-radius:5px;margin:5px 0;padding:3px 0 4px}'+
+   '.turno small{display:block;font-size:'+px(10)+';letter-spacing:2px;font-weight:bold}'+
+   '.turno b{display:block;font-size:'+px(22)+';line-height:1.05;letter-spacing:1px}'+
    '.turno i{display:block;font-size:'+px(10)+';font-style:normal;margin-top:2px}'+
-   '.turno u{display:block;text-decoration:none;font-size:'+px(17)+';font-weight:bold;margin-top:3px}'+
+   '.turno u{display:block;text-decoration:none;font-size:'+px(15)+';font-weight:bold;margin-top:2px}'+
    '</style></head><body>'+
    (imgDe('logo')? '<img class="logo" src="'+imgDe('logo').datos+'">' : '')+
    '<h1>'+esc(c.nombre)+'</h1>'+
@@ -4041,8 +4100,8 @@ function viewVentas(vw){
           v.estado==='pendiente'?'<span class="pill warn">Pendiente</span>':'<span class="pill ok">Pagada</span>')+
           (v.ediciones?' <span class="pill" title="Editada '+v.ediciones+' vez(ces) por '+
             esc(nameOf('usuarios',v.editadoPor))+' el '+fdate(v.editadoEl,true)+'">✎'+v.ediciones+'</span>':'')},
-        {t:'',f:v=>'<div class="row" style="gap:3px"><button class="btn ghost sm" data-t="'+v.id+'" title="Ticket">🧾</button>'+
-          '<button class="btn ghost sm" data-rc="'+v.id+'" title="Reimprimir comanda">👨‍🍳</button>'+
+        {t:'',f:v=>'<div class="row" style="gap:3px"><button class="btn ghost sm" data-t="'+v.id+'" title="Ver el ticket">🧾</button>'+
+          '<button class="btn ghost sm" data-ver title="Ver la comanda sin imprimir">👁️</button><button class="btn ghost sm" data-rc="'+v.id+'" title="Reimprimir comanda">👨‍🍳</button>'+
           (v.estado!=='anulada'&&puedeEditar()?'<button class="btn ghost sm" data-ev="'+v.id+'" title="Editar">✎</button>':'')+
           (puedeBorrar()?'<button class="btn ghost sm" data-a="'+v.id+'" title="Borrar la venta">🗑️</button>':'')+'</div>'}
       ],vs,{empty: f.q? 'Nada coincide con «'+esc(f.q)+'»':'Sin ventas en el rango',icon:'📈'})+
@@ -4332,13 +4391,15 @@ function viewInventario(vw){
         {t:'Ingrediente',f:c=>'<b>'+esc(nameOf('ingredientes',c.ingredienteId))+'</b>'},
         {t:'Entró',f:c=>fdate(c.fecha,true)},
         {t:'Origen',f:c=>{ const cp=c.refTipo==='compra'? byId('compras',c.refId):null;
-          return cp? '<span class="pill info">'+esc(cp.no)+'</span>' : '<span class="pill">'+esc(c.refTipo||'inicial')+'</span>'; }},
+          return cp? '<span class="pill info">'+esc(cp.no)+'</span> <button class="btn ghost sm" data-vcp="'+cp.id+'" title="Ver la compra">👁️</button>'
+                   : '<span class="pill">'+esc(c.refTipo||'inicial')+'</span>'; }},
         {t:'Cantidad',num:1,f:c=>num(c.cantidad,3)},
         {t:'Restante',num:1,f:c=>{const r=Number(c.restante)||0;
           return r>0.000001? '<b>'+num(r,3)+'</b>' : '<span class="muted">agotada</span>';}},
         {t:'Costo unit.',num:1,f:c=>money(c.costoUnit)},
         {t:'Valor restante',num:1,f:c=>money((Number(c.restante)||0)*(Number(c.costoUnit)||0))}
       ],cs,{empty:'Sin capas todavía',icon:'🧱'})+'</div></div>';
+      $$('[data-vcp]',$('#ibody')).forEach(b=>b.onclick=()=>verSinImprimir(()=>comprobanteCompra(byId('compras',b.dataset.vcp),true)));
       return;
     }
     const todos=S.ingredientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
@@ -4499,7 +4560,7 @@ function viewCompras(vw){
           saldoCompra(c)>0.5?'<span class="pill warn">Pendiente</span>':'<span class="pill ok">Pagada</span>')+
           (c.ediciones?' <span class="pill" title="Editada '+c.ediciones+' vez(ces)">✎'+c.ediciones+'</span>':'')},
         {t:'',f:c=>'<div class="row" style="gap:3px"><button class="btn ghost sm" data-v="'+c.id+'" title="Ver">👁️</button>'+
-          '<button class="btn ghost sm" data-rp="'+c.id+'" title="Imprimir comprobante">🖨️</button>'+
+          '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-rp="'+c.id+'" title="Imprimir comprobante">🖨️</button>'+
         (puedeEditar()&&c.estado!=='anulada'?'<button class="btn ghost sm" data-ec2="'+c.id+'" title="Editar">✎</button>':'')+
         (puedeBorrar()? '<button class="btn ghost sm" data-bc="'+c.id+'" title="'+
           (compraConsumida(c)?'Ya se vendió parte: solo se puede corregir':'Borrar la compra')+'">'+
@@ -4675,7 +4736,7 @@ function verCompra(c){
         '</div></div>':'')+
       '',
     footer:(saldoCompra(c)>0.5?'<button class="btn ok" id="pg">💵 Registrar pago</button>':'')+
-      '<button class="btn" id="imp">🖨️ Comprobante</button>'+
+      '<button class="btn" data-ver title="Ver sin imprimir">👁️ Ver</button>'+'<button class="btn" id="imp">🖨️ Comprobante</button>'+
       (puedeEditar()&&c.estado!=='anulada'?'<button class="btn" id="edt">✎ Editar</button>'+
         '<button class="btn danger" id="anu">🗑️ Borrar</button>':'')+
       '<div class="spacer"></div><button class="btn" data-x>Cerrar</button>',
@@ -4733,7 +4794,7 @@ function viewCartera(vw){
         {t:'Monto',num:1,f:a=>'<b>'+money(a.monto)+'</b>'},
         {t:'Usuario',f:a=>esc(nameOf('usuarios',a.usuarioId))},
         {t:'',f:a=>'<div class="row" style="gap:3px">'+
-          '<button class="btn ghost sm" data-ra="'+a.id+'" title="Reimprimir recibo">🖨️</button>'+
+          '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-ra="'+a.id+'" title="Reimprimir recibo">🖨️</button>'+
           (puedeEditar()? '<button class="btn ghost sm" data-ab="'+a.id+'" title="Eliminar">🗑️</button>':'')+'</div>'}
       ],as,{empty: fa.q?'Nada coincide con «'+esc(fa.q)+'»':'Sin cobros ni pagos en el rango',icon:'💳'})+'</div></div>';
       $$('[data-ab]',$('#view')).forEach(b=>b.onclick=()=>borrarAbono(byId('abonos',b.dataset.ab)));
@@ -4794,7 +4855,7 @@ function viewCartera(vw){
         {t:'Abonado',num:1,f:d=>money(abonadoDe(d.id))},
         {t:'Saldo',num:1,f:d=>'<b>'+money(saldoF(d))+'</b>'},
         {t:'',f:d=>'<div class="row" style="gap:3px"><button class="btn ok sm" data-p="'+d.id+'">'+(esC?'Cobrar':'Pagar')+'</button>'+
-          (d.esOtro? '<button class="btn ghost sm" data-rd="'+d.id+'" title="Reimprimir">🖨️</button>':'')+'</div>'}
+          (d.esOtro? '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-rd="'+d.id+'" title="Reimprimir">🖨️</button>':'')+'</div>'}
       ],docs,{empty:esC?'No hay cuentas por cobrar':'No hay cuentas por pagar',icon:'✅'})+'</div></div>';
     $$('[data-p]',$('#view')).forEach(b=>b.onclick=()=>mAbono(esC?'cxc':'cxp', docCartera(b.dataset.p)));
     $$('[data-rd]',$('#view')).forEach(b=>b.onclick=()=>{ comprobanteOtro(byId('otrosdocs',b.dataset.rd),true);
@@ -5038,7 +5099,7 @@ function viewTesoreria(vw){
             {t:'Ingreso',num:1,f:m=>m.tipo==='ingreso'?'<b style="color:var(--ok)">'+money(m.monto)+'</b>':'<span class="muted">—</span>'},
             {t:'Egreso',num:1,f:m=>m.tipo==='egreso'?'<b style="color:var(--bad)">'+money(m.monto)+'</b>':'<span class="muted">—</span>'},
             {t:'',f:m=>'<div class="row" style="gap:3px">'+
-              '<button class="btn ghost sm" data-rm="'+m.id+'" title="Comprobante">🖨️</button>'+
+              '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-rm="'+m.id+'" title="Comprobante">🖨️</button>'+
               (puedeEditar()? '<button class="btn ghost sm" data-em="'+m.id+'">✎</button>':'')+'</div>'}
           ],S.movimientos.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,12),
             {empty:'Sin movimientos todavía',icon:'🏦'})+'</div></div>';
@@ -5094,7 +5155,7 @@ function viewTesoreria(vw){
         {t:'Egreso',num:1,f:m=>m.tipo==='egreso'?'<b style="color:var(--bad)">'+money(m.monto)+'</b>':'<span class="muted">—</span>'},
         {t:'Usuario',f:m=>esc(nameOf('usuarios',m.usuarioId))+(m.ediciones?' <span class="pill">✎</span>':'')},
         {t:'',f:m=>'<div class="row" style="gap:3px">'+
-          '<button class="btn ghost sm" data-rm="'+m.id+'" title="Imprimir comprobante">🖨️</button>'+
+          '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-rm="'+m.id+'" title="Imprimir comprobante">🖨️</button>'+
           (puedeEditar()? '<button class="btn ghost sm" data-em="'+m.id+'" title="'+
             (esMovManual(m)?'Editar':'Viene de otro documento')+'">✎</button>':'')+'</div>'}
       ],ms,{empty: f.q?'Nada coincide con «'+esc(f.q)+'»':'Sin movimientos en el rango',icon:'🏦'})+'</div></div>';
@@ -5521,7 +5582,7 @@ function viewCaja(vw){
           (t.nota? ' · '+esc(t.nota):'')+'</td>'+
           '<td class="num">—</td><td class="num">—</td>'+
           '<td class="num sal">'+money(f.saldo)+'</td>'+
-          '<td><button class="btn ghost sm" data-rc="'+t.id+'" title="Reimprimir el cierre">🖨️</button></td></tr>';
+          '<td style="white-space:nowrap"><button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button><button class="btn ghost sm" data-rc="'+t.id+'" title="Reimprimir el cierre">🖨️</button></td></tr>';
         return;
       }
       const m=f.m;
@@ -5537,7 +5598,7 @@ function viewCaja(vw){
         '<td class="num">'+(m.tipo==='egreso'? '<b style="color:var('+(m.categoria==='traslado'?'--info':'--bad')+')">'+money(m.monto)+'</b>':'<span class="muted">—</span>')+'</td>'+
         '<td class="num sal">'+money(f.saldo)+'</td>'+
         '<td><div class="row" style="gap:3px">'+
-          '<button class="btn ghost sm" data-rm="'+m.id+'" title="Reimprimir comprobante">🖨️</button>'+
+          '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-rm="'+m.id+'" title="Reimprimir comprobante">🖨️</button>'+
           (puedeEditar()? '<button class="btn ghost sm" data-em="'+m.id+'" title="Editar">✎</button>':'')+
         '</div></td></tr>';
     });
@@ -5591,7 +5652,7 @@ function viewCaja(vw){
         {t:'Contado',num:1,f:x=>x.estado==='abierto'?'—':money(x.contado)},
         {t:'Diferencia',num:1,f:x=>{ if(x.estado==='abierto') return '—';
           const d=x.diferencia||0; return '<b style="color:'+(Math.abs(d)<1?'var(--ok)':'var(--bad)')+'">'+money(d)+'</b>';}},
-        {t:'',f:x=>'<div class="row" style="gap:3px"><button class="btn ghost sm" data-rt="'+x.id+'" title="Reimprimir el cierre">🖨️</button>'+
+        {t:'',f:x=>'<div class="row" style="gap:3px"><button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button><button class="btn ghost sm" data-rt="'+x.id+'" title="Reimprimir el cierre">🖨️</button>'+
           '<button class="btn ghost sm" data-wt="'+x.id+'" title="Texto para WhatsApp">📋</button>'+
           '<button class="btn ghost sm" data-vt="'+x.id+'" title="Ver detalle">👁️</button></div>'}
       ],hist,{empty:'Todavía no se ha cerrado ninguna caja',icon:'🔒'})+'</div></div>';
@@ -5654,7 +5715,7 @@ function verTurno(t){
           ],pc,{empty:'—'})+'</div></div>'; })()+'',
     footer:'<button class="btn" data-x>Cerrar</button>'+
       '<button class="btn" id="wt">📋 WhatsApp</button>'+
-      '<button class="btn pri" id="rt">🖨️ Reimprimir cierre</button>',
+      '<button class="btn" data-ver title="Ver sin imprimir">👁️ Ver</button>'+'<button class="btn pri" id="rt">🖨️ Reimprimir cierre</button>',
     onOpen:m=>{ $('#rt',m).onclick=()=>{ imprimirCierre(t,D,t.contado,true); toast('Enviado a impresión','ok'); };
       $('#wt',m).onclick=()=>{ closeModal(); mandarCierreWA(t,D,t.contado); }; }});
 }
@@ -5765,7 +5826,7 @@ function mCerrarCaja(){
       '</div></div>',
     footer:'<button class="btn" data-x>Cancelar</button>'+
       '<button class="btn" id="wac">📋 WhatsApp</button>'+
-      '<button class="btn" id="impc">🖨️ Imprimir cierre</button>'+
+      '<button class="btn" data-ver title="Ver sin imprimir">👁️ Ver</button>'+'<button class="btn" id="impc">🖨️ Imprimir cierre</button>'+
       '<button class="btn danger" id="ok">Cerrar turno</button>',
     onOpen:m=>{
       const upd=()=>{ const d=round(toN($('#c',m).value)-esperado,2);
@@ -6634,8 +6695,8 @@ function mResumenVentas(d1,d2){
       '<div id="rvprev" class="card" style="background:var(--panel2)"><div class="bd"></div></div>',
     footer:'<button class="btn" data-x>Cerrar</button>'+
       '<button class="btn" id="rv_txt">📋 Copiar para WhatsApp</button>'+
-      '<button class="btn" id="rv_det">🖨️ Detallado</button>'+
-      '<button class="btn pri" id="rv_imp">🖨️ Resumen</button>',
+      '<button class="btn" data-ver title="Ver sin imprimir">👁️ Detallado</button>'+'<button class="btn" id="rv_det">🖨️ Detallado</button>'+
+      '<button class="btn" data-ver title="Ver sin imprimir">👁️ Resumen</button>'+'<button class="btn pri" id="rv_imp">🖨️ Resumen</button>',
     onOpen:m=>{
       const prev=()=>{
         const a=$('#rv1',m).value, b=$('#rv2',m).value, r=resumenVentas(a,b);
@@ -6779,7 +6840,7 @@ function viewContabilidad(vw){
     '<div class="spacer"></div>'+
     '<div class="f"><label>&nbsp;</label><div class="row">'+
       '<button class="btn sm" id="k_csv">⬇️ CSV</button>'+
-      '<button class="btn pri sm" id="k_imp">🖨️ Informe</button></div></div>'+
+      '<button class="btn sm" data-ver title="Ver sin imprimir">👁️ Ver</button>'+'<button class="btn pri sm" id="k_imp">🖨️ Informe</button></div></div>'+
     '</div></div></div>';
   const set=(a,b)=>{ d1=a; d2=b; $('#k1').value=a; $('#k2').value=b; paint(); };
   $('#k1').onchange=e=>{d1=e.target.value;paint();};
