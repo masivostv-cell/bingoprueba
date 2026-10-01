@@ -1052,8 +1052,10 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ _quieto
    nada; solo deja el pedido marcado como pendiente para la cocina.
    ==================================================================== */
 function esEstacion(){ return !!S.cfg.estacion; }
+/* Solo cuenta lo que alguien MANDÓ a cocina (botón Cocina). Un pedido que se
+   está tomando o que solo se guardó no se imprime hasta que lo envíen. */
 function comandasPendientes(){
-  return S.comandas.filter(cm=>cm.estado==='abierta' && pendientesComanda(cm).uds>0)
+  return S.comandas.filter(cm=>cm.estado==='abierta' && cm.cocinaMs && pendientesComanda(cm).uds>0)
     .sort((a,b)=>String(a.cocinaMs||a.apertura||'').localeCompare(String(b.cocinaMs||b.apertura||'')));
 }
 function unidadesPendientes(){ return sum(comandasPendientes(),cm=>pendientesComanda(cm).uds); }
@@ -1064,7 +1066,7 @@ function docComanda(cm,d){
   return comandaHTML({no:(soloBaja?'ANULA · ':d.yaEnviado?'AGREGADO · ':'PEDIDO · ')+dest,
     fecha:now(), tipo:cm.tipo||(mesa?'mesa':'mostrador'), mesaId:cm.mesaId||'',
     usuarioId:cm.meseroId||'', items:d.nuevos, cambios:d.cambios, bajas:d.bajas,
-    adicional:d.yaEnviado, nota:cm.nota, nroTurno:cm.nroTurno||0});
+    adicional:d.yaEnviado, nota:cm.nota, nroTurno:cm.nroTurno||0, nombrePedido:nombreDePedido(cm)});
 }
 /* imprime lo que falta de esa comanda y lo deja marcado para que nadie lo repita */
 function imprimirPendiente(cm){
@@ -1080,7 +1082,7 @@ function imprimirPendiente(cm){
   if(S.cart && S.cart.comandaId===cm.id){       // el carrito abierto se entera
     S.cart.items.forEach(i=>{ const o=(cm.items||[]).find(x=>x.id===i.id);
       if(o){ i.env=o.env; i.envNota=o.envNota; } });
-    S.cart.bajas=[]; if(S.view==='pos') paintCart();
+    S.cart.bajas=[]; S.cart.cocinaMs=null; if(S.view==='pos') paintCart();
   }
   return true;
 }
@@ -2485,7 +2487,7 @@ function paintCart(){
   const c=S.cart, t=cartTot(c);
   const mesa=c.mesaId? byId('mesas',c.mesaId):null;
   hd.innerHTML=(c.editandoId? '':'')+'<div style="flex:1;min-width:0">'+
-      '<div class="b" style="font-size:14px">'+(mesa? (esDomicilio(mesa)? '🛵 '+esc(mesa.nombre) : '🍽️ Mesa '+esc(mesa.nombre))
+      '<div class="b" style="font-size:14px">'+(mesa? esc(etiquetaDestino(mesa))
         : c.tipo==='domicilio'?'🛵 Domicilio':'🧾 Mostrador')+
         (turnoDeCarrito(c)? ' <span class="pill brand">Turno '+fmtTurno(turnoDeCarrito(c))+'</span>':'')+'</div>'+
       '<div class="tiny muted">'+t.uds+' unidades · '+c.items.length+' líneas</div></div>'+
@@ -2499,6 +2501,20 @@ function paintCart(){
   $('#cmesa').onclick=mDestino; $('#cclear').onclick=()=>{ if(!c.items.length) return;
     confirmar('¿Vaciar el carrito?',()=>{ c.items=[]; paintCart(); persistComanda(); },true); };
 
+  /* nombre del cliente: sirve para llamarlo y sale en la comanda y la factura */
+  let cn=$('#cnom');
+  if(!cn){ cn=document.createElement('div'); cn.id='cnom';
+    cn.style.cssText='padding:8px 12px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center';
+    cn.innerHTML='<span style="font-size:17px">👤</span><input id="cnomi" autocomplete="off" '+
+      'placeholder="Nombre del cliente (para llamarlo)" style="flex:1;font-size:15px;font-weight:650;padding:8px 10px">';
+    hd.after(cn);
+    $('#cnomi').oninput=e=>{ S.cart.nombrePedido=e.target.value.trimStart(); };
+    $('#cnomi').onchange=e=>{ const v=e.target.value.trim(); S.cart.nombrePedido=v;
+      const mm=S.cart.mesaId? byId('mesas',S.cart.mesaId):null;
+      if(mm && mm.temporal && v){ mm.nombre=v; put('mesas',mm); }
+      persistComanda(); paintCart(); };
+  }
+  if(document.activeElement!==$('#cnomi')) $('#cnomi').value=c.nombrePedido||(mesa&&mesa.temporal? mesa.nombre:'');
   const viejo=$('#cedav'); if(viejo) viejo.remove();
   if(c.editandoId){
     const av=document.createElement('div');
@@ -2540,15 +2556,18 @@ function paintCart(){
     '<div class="row wrap" style="margin-top:11px;gap:7px">'+
       '<button class="btn sm" id="cdesc" style="flex:1 1 76px">% Desc.</button>'+
       '<button class="btn sm" id="cprop" style="flex:1 1 76px">💰 Propina</button>'+
-      (S.cart.mesaId?'<button class="btn sm" id="csave" style="flex:1 1 76px">💾 Guardar</button>':'')+
+
       (S.cart.items.length? (()=>{ const d=pendientesComanda(c);
         const falta=d.nuevos.length+d.cambios.length+d.bajas.length;
         return '<button class="btn sm'+(falta?'':' ghost')+'" id="ccom" style="flex:1 1 76px" title="'+
           (falta? 'Mandar a cocina solo lo que falta':'La cocina ya tiene todo')+'">👨‍🍳 Cocina'+
           (d.yaEnviado? (falta? ' <b>+'+d.uds+'</b>':' ✓'):'')+'</button>'; })():'')+
     '</div>'+
-    '<button class="btn pri lg blk" id="ccobrar" style="margin-top:9px"'+(t.total<=0?' disabled':'')+'>'+
-      (c.editandoId?'Guardar corrección · ':'Cobrar · ')+money(t.total)+'</button>';
+    '<div class="row" style="margin-top:9px;gap:8px">'+
+      (c.editandoId? '' : '<button class="btn lg" id="csave" style="flex:1 1 0;font-weight:750;border:2px solid var(--brand);color:var(--brand)"'+
+        (c.items.length?'':' disabled')+' title="Guardar sin cobrar">💾 Guardar</button>')+
+      '<button class="btn pri lg" id="ccobrar" style="flex:2 1 0"'+(t.total<=0?' disabled':'')+'>'+
+        (c.editandoId?'Guardar corrección · ':'Cobrar · ')+money(t.total)+'</button></div>';
   $('#cdesc').onclick=mDescuento; $('#cprop').onclick=mPropina;
   if($('#csave')) $('#csave').onclick=()=>guardarPedido();
   if($('#ccom')) $('#ccom').onclick=enviarACocina;
@@ -2616,7 +2635,8 @@ function enviarACocina(){
   const soloBaja=!d.nuevos.length && !d.cambios.length && d.bajas.length;
   encolarImp(comandaHTML({no:(soloBaja?'ANULA · ':d.yaEnviado?'AGREGADO · ':'PEDIDO · ')+dest, fecha:now(),
     tipo:c.tipo, mesaId:c.mesaId||'', usuarioId:S.user?S.user.id:'',
-    items:d.nuevos, cambios:d.cambios, bajas:d.bajas, adicional:d.yaEnviado, nota:c.nota}),
+    items:d.nuevos, cambios:d.cambios, bajas:d.bajas, adicional:d.yaEnviado, nota:c.nota,
+    nroTurno:turnoDeCarrito(c), nombrePedido:nombreDePedido(c)}),
     'comanda',S.cfg.impresoraComanda);
   marcarEnviado(c);
   if(c.mesaId) guardarPedido(d.yaEnviado? 'Agregado a cocina · guardado en ' : 'Pedido a cocina y guardado en ');
@@ -2628,24 +2648,42 @@ function enviarACocina(){
    se cobre. */
 function guardarPedido(prefijo){
   const c=S.cart;
-  if(!c || !c.mesaId) return;
+  if(!c) return;
   if(!c.items.length) return toast('El pedido está vacío','warn');
+  if(!c.mesaId){                         // mostrador: se guarda a nombre del cliente
+    const crear=n=>{ const ml=nuevoLlevar(n); c.mesaId=ml.id; c.tipo='mostrador'; c.nombrePedido=n; guardarPedido(prefijo); };
+    if(c.nombrePedido) return crear(c.nombrePedido);
+    modal({title:'Guardar pedido de mostrador', size:'slim',
+      body:'<div class="f"><label>¿A nombre de quién?</label>'+
+        '<input id="gnom" autocomplete="off" placeholder="Ej: Juan" style="font-size:20px;font-weight:700;padding:11px"></div>'+
+        '<div class="hintx" style="margin-top:9px">Queda en <b>Mesas ▸ Mostrador</b> hasta que pague. '+
+        'Lo abres desde ahí y lo cobras.</div>',
+      footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="gok">💾 Guardar</button>',
+      onOpen:m=>{ const i=$('#gnom',m); setTimeout(()=>i.focus(),50);
+        const ok=()=>{ const n=i.value.trim(); if(!n) return toast('Escribe el nombre del cliente','warn'); closeModal(); crear(n); };
+        $('#gok',m).onclick=ok; i.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } }; }});
+    return;
+  }
   persistComanda(true);
-  const mesa=nameOf('mesas',c.mesaId);
+  const mm=byId('mesas',c.mesaId);
+  const mesa=esLlevar(mm)? 'Mostrador · '+mm.nombre : (mm&&!mm.temporal&&c.nombrePedido? mm.nombre+' · '+c.nombrePedido : nameOf('mesas',c.mesaId));
+  const nt=turnoDeCarrito(c);
   const uds=sum(c.items,i=>i.cant), val=cartTot().total;
   S.cart=newCart();                    // carrito en cero para la siguiente venta
   abrirCarrito(false);
   go('mesas');
-  toast((prefijo||'Pedido guardado en ')+mesa+' · '+num(uds,0)+' und · '+money(val)+
-        ' — carrito listo para el siguiente','ok',4200);
+  toast((prefijo||'Pedido guardado en ')+mesa+(nt?' · Turno '+fmtTurno(nt):'')+' · '+num(uds,0)+' und · '+money(val)+
+        ' — carrito listo para el siguiente','ok',4500);
 }
 
 /* --- comandas (cuentas abiertas por mesa) --- */
 function persistComanda(force){
   const c=S.cart; if(!c || !c.mesaId) return;
-  if(!c.items.length && c.comandaId){ remove('comandas',c.comandaId); c.comandaId=null; return; }
+  if(!c.items.length && c.comandaId){ remove('comandas',c.comandaId); c.comandaId=null;
+    const ml=byId('mesas',c.mesaId); if(esLlevar(ml)){ remove('mesas',ml.id); c.mesaId=null; }
+    return; }
   if(!c.items.length) return;
-  const cm={ id:c.comandaId||uid('cm'), mesaId:c.mesaId,
+  const cm={ id:c.comandaId||uid('cm'), mesaId:c.mesaId, nombrePedido:c.nombrePedido||'',
     items:c.items.map(i=>Object.assign({},i)), clienteId:c.clienteId,
     bajas:(c.bajas||[]).slice(), cocinaMs:c.cocinaMs||null, tipo:c.tipo||'mesa',
     descuento:c.descuento, propinaPct:c.propinaPct, nota:c.nota, estado:'abierta',
@@ -2694,6 +2732,29 @@ function esDomicilio(m){ return !!(m && (m.domicilio || m.zona===ZONA_DOM)); }
 /* Un domicilio se comporta como una mesa temporal: lleva el nombre de la
    persona, se ve en Mesas mientras cocina lo prepara y desaparece solo
    cuando se le cobra al domiciliario. */
+/* Pedido de mostrador guardado sin cobrar: también es una "mesa" temporal
+   con el nombre del cliente; queda en Mesas ▸ Mostrador hasta que pague */
+const ZONA_LLEVAR='Mostrador · por cobrar';
+function esLlevar(m){ return !!(m && (m.llevar || m.zona===ZONA_LLEVAR)); }
+function nuevoLlevar(nombre){
+  const m={id:uid('ml'), nombre:String(nombre||'').trim()||'Cliente', zona:ZONA_LLEVAR, capacidad:1, activo:true,
+    llevar:true, temporal:true, creado:now()};
+  put('mesas',m); return m;
+}
+/* nombre con el que se llama al cliente */
+function nombreDePedido(x){
+  if(!x) return '';
+  if(x.nombrePedido) return x.nombrePedido;
+  const m=x.mesaId? byId('mesas',x.mesaId):null;
+  if(m && m.temporal) return m.nombre;
+  return x.destNombre||'';
+}
+function etiquetaDestino(m){
+  if(!m) return '🧾 Mostrador';
+  if(esDomicilio(m)) return '🛵 '+m.nombre;
+  if(esLlevar(m)) return '🧾 Mostrador';
+  return '🍽️ Mesa '+m.nombre;
+}
 function nuevoDomicilio(nombre,telefono){
   const n=String(nombre||'').trim() || 'Domicilio';
   const m={id:uid('dm'), nombre:n, zona:ZONA_DOM, capacidad:1, activo:true,
@@ -2707,9 +2768,11 @@ function limpiarDomicilio(mesaId){
   remove('mesas',mesaId);
 }
 function mDestino(){
-  const libres=S.mesas.filter(m=>m.activo && !esDomicilio(m));
+  const libres=S.mesas.filter(m=>m.activo && !esDomicilio(m) && !esLlevar(m));
   const doms=S.mesas.filter(m=>m.activo && esDomicilio(m));
-  const actual=S.cart.mesaId? byId('mesas',S.cart.mesaId):null;
+  const actual0=S.cart.mesaId? byId('mesas',S.cart.mesaId):null;
+  const llevarAct=esLlevar(actual0)? actual0 : null;
+  const actual=llevarAct? null : actual0;
   const esDom=esDomicilio(actual) || (!actual && S.cart.tipo==='domicilio');
   modal({title:'Destino del pedido',
     body:'<div class="row wrap" style="margin-bottom:14px">'+
@@ -2720,7 +2783,7 @@ function mDestino(){
       '<div id="zdom" class="hide" style="margin-bottom:12px">'+
         '<div class="f"><label>¿A nombre de quién va el domicilio?</label>'+
           '<input id="dnom" placeholder="Ej: Señora Marta · Torre 3 apto 402" autocomplete="off" '+
-          'value="'+esc(esDom&&actual? actual.nombre:'')+'"></div>'+
+          'value="'+esc(esDom&&actual? actual.nombre:(S.cart.nombrePedido||''))+'"></div>'+
         '<div class="f" style="margin-top:9px"><label>Teléfono o dirección (opcional)</label>'+
           '<input id="dtel" placeholder="Para que cocina y el domiciliario lo ubiquen" autocomplete="off" '+
           'value="'+esc(esDom&&actual? (actual.telefono||''):'')+'"></div>'+
@@ -2755,6 +2818,10 @@ function mDestino(){
           if(!mesa) return toast('Escoge la mesa','warn');
           S.cart.mesaId=mesa; S.cart.tipo='mesa';
         } else if(k==='domicilio'){
+          if(llevarAct && !(cbD&&cbD.valor())){ llevarAct.llevar=false; llevarAct.domicilio=true; llevarAct.zona=ZONA_DOM;
+            llevarAct.nombre=$('#dnom',m).value.trim()||llevarAct.nombre; llevarAct.telefono=$('#dtel',m).value.trim();
+            put('mesas',llevarAct); S.cart.mesaId=llevarAct.id; S.cart.tipo='domicilio';
+            S.cart.clienteId=cbC.valor(); closeModal(); paintCart(); persistComanda(); buildNav(); return; }
           const ya=cbD? cbD.valor():'';
           if(ya){ S.cart.mesaId=ya; S.cart.tipo='domicilio'; }
           else{
@@ -2769,6 +2836,7 @@ function mDestino(){
             S.cart.tipo='domicilio';
           }
         } else { S.cart.mesaId=null; S.cart.tipo='mostrador'; }
+        if(k==='mostrador' && llevarAct){ S.cart.mesaId=llevarAct.id; }     // sigue guardado a su nombre
         if(antes && antes!==S.cart.mesaId) limpiarDomicilio(antes);
         S.cart.clienteId=cbC.valor(); closeModal(); paintCart(); persistComanda(); buildNav();
       };
@@ -2972,6 +3040,7 @@ function registrarVenta(o){
   if(original){ firmar(v); v.creadoPor=original.usuarioId; v.usuarioId=original.usuarioId;
     v.turnoId=original.turnoId||v.turnoId; }
   datosEntregaVenta(v,c,original);
+  v.nombrePedido = (original&&original.nombrePedido) || nombreDePedido(c) || '';
   { const cmT=c.comandaId? byId('comandas',c.comandaId):null;
     if(original && original.nroTurno){ v.nroTurno=original.nroTurno; v.turnoPedidoId=original.turnoPedidoId||''; }
     else if(cmT && cmT.nroTurno){ v.nroTurno=cmT.nroTurno; v.turnoPedidoId=cmT.turnoPedidoId||''; }
@@ -3237,13 +3306,15 @@ function entregasPendientes(){
     const esDom=comandaEsDom(cm); if(!seSigue(esDom)) return;
     const m=mesaDeComanda(cm);
     out.push({k:'comandas', obj:cm, esDom:esDom, desde:cm.apertura,
-      nombre: m? (esDom? m.nombre : 'Mesa '+m.nombre) : 'Mostrador', tel:m&&m.telefono||'',
+      nombre: m? (esDom? m.nombre : esLlevar(m)? 'Mostrador · '+m.nombre : 'Mesa '+m.nombre+(cm.nombrePedido?' · '+cm.nombrePedido:'')) : 'Mostrador',
+      tel:m&&m.telefono||'',
       items:cm.items, total:round(sum(cm.items||[],i=>i.precio*i.cant)-(cm.descuento||0),2), cobrado:false, turno:cm.nroTurno||0});
   });
   S.ventas.forEach(v=>{
     if(!v.seguirEntrega || v.entregaMs || v.estado==='anulada') return;
     out.push({k:'ventas', obj:v, esDom:!!v.esDom, desde:v.pedidoMs||v.fecha,
-      nombre: v.esDom? (v.destNombre||'Domicilio') : (v.mesaId? 'Mesa '+nameOf('mesas',v.mesaId) : 'Mostrador'),
+      nombre: v.esDom? (v.destNombre||'Domicilio') : (v.nombrePedido? (v.tipo==='mesa'?'Mesa · ':'Mostrador · ')+v.nombrePedido
+        : v.mesaId? 'Mesa '+nameOf('mesas',v.mesaId) : 'Mostrador'),
       tel:v.destTel||'', items:v.items, total:v.total, cobrado:true, no:v.no, turno:v.nroTurno||0});
   });
   return out.sort((a,b)=>String(a.desde).localeCompare(String(b.desde)));
@@ -3409,7 +3480,8 @@ function viewCocina(vw){
   topact('<button class="btn sm" id="k_ref">↻ Revisar ahora</button>'+
     (pend.length? '<button class="btn pri sm" id="k_todo">🖨️ Imprimir los '+pend.length+'</button>':''));
   const destino=cm=>{ const m=cm.mesaId? byId('mesas',cm.mesaId):null;
-    return m? (esDomicilio(m)? '🛵 '+m.nombre : '🍽️ Mesa '+m.nombre) : '🧾 Mostrador'; };
+    const nm=nombreDePedido(cm);
+    return m? (esDomicilio(m)? '🛵 '+m.nombre : esLlevar(m)? '🧾 '+m.nombre : '🍽️ Mesa '+m.nombre+(nm?' · '+nm:'')) : '🧾 Mostrador'+(nm?' · '+nm:''); };
 
   vw.innerHTML=
     '<div class="card" style="margin-bottom:14px;border-color:'+(esEstacion()?'var(--ok)':'var(--warn)')+'"><div class="bd">'+
@@ -3646,6 +3718,7 @@ function comandaHTML(v,copia){
   const c=S.cfg, P=papel(c.comandaAncho), w=P.w;
   const mesa=v.mesaId? byId('mesas',v.mesaId):null;
   const destino = mesa? (esDomicilio(mesa)? ('🛵 DOMICILIO · '+String(mesa.nombre).toUpperCase())
+                       : esLlevar(mesa)? 'MOSTRADOR'
                                            : ('MESA '+String(mesa.nombre).toUpperCase()))
                  : v.tipo==='domicilio'? '🛵 DOMICILIO'+(v.destNombre? ' · '+String(v.destNombre).toUpperCase():'') : 'PARA LLEVAR';
   const linea=(i,cls)=>'<tr><td class="q">'+esc(i.cant)+'</td><td class="n'+(cls?' '+cls:'')+'">'+
@@ -3676,6 +3749,7 @@ function comandaHTML(v,copia){
       'padding:4px 0;margin:5px 0;letter-spacing:1px}'+
     '.sec{font-size:'+px(14)+';font-weight:bold;margin:7px 0 2px;border-bottom:2px solid #000}'+
     '.baja{text-decoration:line-through}'+
+    '.nomb{text-align:center;font-size:'+px(24)+';font-weight:bold;margin:4px 0;line-height:1.15}'+
     '.turno{text-align:center;border:3px solid #000;border-radius:6px;margin:5px 0;padding:3px 0 5px}'+
     '.turno small{display:block;font-size:'+px(12)+';letter-spacing:3px}'+
     '.turno b{display:block;font-size:'+px(40)+';line-height:1;letter-spacing:2px}'+
@@ -3684,6 +3758,8 @@ function comandaHTML(v,copia){
     (v.nroTurno? '<div class="turno"><small>TURNO</small><b>'+fmtTurno(v.nroTurno)+'</b></div>':'')+
     '<div class="cab">'+esc(v.no)+' · '+ftime(v.fecha)+'</div>'+
     '<div class="dest">'+esc(destino)+'</div>'+
+    (()=>{ const nm=nombreDePedido(v); return nm && !String(destino).toUpperCase().includes(String(nm).toUpperCase())
+        ? '<div class="nomb">'+esc(String(nm).toUpperCase())+'</div>' : ''; })()+
     (v.adicional&&!soloBaja? '<div class="agr">SOLO ESTO ES NUEVO</div>':'')+
     '<div class="cab">Atiende: '+esc(nameOf('usuarios',v.usuarioId))+'</div><hr>'+
     (filas? '<table>'+filas+'</table>':'')+
@@ -3778,15 +3854,18 @@ function ticketHTML(v){
    '.turno small{display:block;font-size:'+px(11.5)+';letter-spacing:3px;font-weight:bold}'+
    '.turno b{display:block;font-size:'+px(38)+';line-height:1;letter-spacing:2px}'+
    '.turno i{display:block;font-size:'+px(10)+';font-style:normal;margin-top:2px}'+
+   '.turno u{display:block;text-decoration:none;font-size:'+px(17)+';font-weight:bold;margin-top:3px}'+
    '</style></head><body>'+
    (imgDe('logo')? '<img class="logo" src="'+imgDe('logo').datos+'">' : '')+
    '<h1>'+esc(c.nombre)+'</h1>'+
    '<div class="cab">'+(c.nit?'NIT '+esc(c.nit)+'<br>':'')+(c.direccion?esc(c.direccion)+'<br>':'')+
      (c.telefono?'Tel. '+esc(c.telefono):'')+'</div><hr>'+
    (v.nroTurno? '<div class="turno"><small>SU TURNO</small><b>'+fmtTurno(v.nroTurno)+'</b>'+
+     (nombreDePedido(v)? '<u>'+esc(nombreDePedido(v))+'</u>':'')+
      '<i>Esté atento, lo llamamos por este número</i></div>':'')+
    '<div class="l b"><span>'+esc(v.no)+'</span><span>'+fdate(v.fecha,true)+'</span></div>'+
-   '<div class="l"><span>'+(mesa? (esDomicilio(mesa)? 'Domicilio · '+esc(mesa.nombre) : 'Mesa '+esc(mesa.nombre))
+   (!v.nroTurno && nombreDePedido(v)? '<div class="c b" style="font-size:'+px(16)+';margin:3px 0">'+esc(nombreDePedido(v))+'</div>':'')+
+   '<div class="l"><span>'+(mesa? (esDomicilio(mesa)? 'Domicilio · '+esc(mesa.nombre) : esLlevar(mesa)? 'Mostrador' : 'Mesa '+esc(mesa.nombre))
      : v.tipo==='domicilio'? 'Domicilio'+(v.destNombre? ' · '+esc(v.destNombre):'') : 'Mostrador')+'</span>'+
      '<span>'+esc(nameOf('usuarios',v.usuarioId))+'</span></div>'+
    (cli?'<div>Cliente: '+esc(cli.nombre)+'</div>':'')+'<hr>'+
@@ -3819,18 +3898,21 @@ function viewMesas(vw){
   topact('<button class="btn pri sm" id="nd">🛵 Domicilio</button><button class="btn sm" id="nm">+ Mesa</button>');
   const zonas={};
   S.mesas.filter(m=>m.activo).forEach(m=>{ (zonas[m.zona||'General']=zonas[m.zona||'General']||[]).push(m); });
-  const orden=Object.keys(zonas).sort((a,b)=> a===ZONA_DOM? -1 : b===ZONA_DOM? 1 : a.localeCompare(b));
+  const peso=z=> z===ZONA_DOM?0 : z===ZONA_LLEVAR?1 : 2;
+  const orden=Object.keys(zonas).sort((a,b)=> peso(a)-peso(b) || a.localeCompare(b));
   let h='';
   orden.forEach(z=>{
-    const dom = z===ZONA_DOM;
-    h+='<div class="card" style="margin-bottom:14px'+(dom?';border-color:var(--info)':'')+'">'+
-       '<div class="hd"><h3>'+(dom?'🛵 ':'')+esc(z)+'</h3>'+
-       '<span class="pill">'+zonas[z].length+(dom?' en camino':' mesas')+'</span></div><div class="bd"><div class="mesas">';
+    const dom = z===ZONA_DOM, lle = z===ZONA_LLEVAR;
+    h+='<div class="card" style="margin-bottom:14px'+(dom?';border-color:var(--info)':lle?';border-color:var(--warn)':'')+'">'+
+       '<div class="hd"><h3>'+(dom?'🛵 ':lle?'🧾 ':'')+esc(z)+'</h3>'+
+       '<span class="pill">'+zonas[z].length+(dom?' en camino':lle?' por cobrar':' mesas')+'</span></div><div class="bd"><div class="mesas">';
     zonas[z].forEach(m=>{
       const cm=abiertas.find(c=>c.mesaId===m.id);
       const tot=cm? round(sum(cm.items,i=>i.precio*i.cant)-(cm.descuento||0),2):0;
       h+='<button class="mesa '+(cm?'ocupada':'libre')+'" data-m="'+m.id+'">'+
-         '<div class="n">'+(dom?'🛵 ':'')+esc(m.nombre)+'</div>'+
+         '<div class="n">'+(dom?'🛵 ':lle?'🧾 ':'')+esc(m.nombre)+
+           (cm&&cm.nroTurno? ' <span class="tiny" style="opacity:.75">#'+fmtTurno(cm.nroTurno)+'</span>':'')+'</div>'+
+         (cm&&cm.nombrePedido&&!m.temporal? '<div class="z b">👤 '+esc(cm.nombrePedido)+'</div>':'')+
          '<div class="z">'+(cm? (cm.items.length+' items · '+agoMin(cm.apertura)+' min')
                               : (dom? esc(m.telefono||'sin pedido') : m.capacidad+' puestos'))+'</div>'+
          '<div class="t">'+(cm? money(tot):(dom?'—':'Libre'))+'</div></button>';
@@ -3863,7 +3945,8 @@ function mNuevoDomicilio(){
 function abrirMesa(mesaId){
   const cm=S.comandas.find(c=>c.estado==='abierta'&&c.mesaId===mesaId);
   const mm=byId('mesas',mesaId);
-  S.cart=newCart({mesaId:mesaId,tipo: esDomicilio(mm)?'domicilio':'mesa'});
+  S.cart=newCart({mesaId:mesaId,tipo: esDomicilio(mm)?'domicilio':esLlevar(mm)?'mostrador':'mesa'});
+  S.cart.nombrePedido=(cm&&cm.nombrePedido) || (mm&&mm.temporal? mm.nombre:'');
   if(cm){ S.cart.comandaId=cm.id;
     S.cart.items=(cm.items||[]).map(i=>Object.assign({},i));   // copia: no tocar la comanda guardada
     S.cart.bajas=(cm.bajas||[]).slice();
