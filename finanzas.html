@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15302A">
+<title>Super Gastos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#EDF1EE; --surface:#FFFFFF; --surface2:#E2E9E5; --ink:#15302A; --muted:#5E716B; --line:#D2DBD6;
+  --in:#1B8455; --in-soft:#DDF1E6; --out:#B8432C; --out-soft:#F7E3DD; --tr:#3A62A7; --tr-soft:#E1E9F6;
+  --brand:#15302A; --brand-ink:#F2F6F3; --gold:#C98F10;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1916; --surface:#162521; --surface2:#1E312C; --ink:#E5EDE9; --muted:#91A69F; --line:#2A3F39;
+    --in:#4DC48B; --in-soft:#163829; --out:#EF7C63; --out-soft:#3C221C; --tr:#86A8E8; --tr-soft:#1B2A44;
+    --brand:#DDE9E3; --brand-ink:#0E1916; --gold:#E7B84A;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Sora",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3{margin:0;line-height:1.2}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* Auth */
+#auth{min-height:100vh;display:grid;place-items:center;padding:24px}
+.auth-box{width:100%;max-width:380px}
+.logo{font-weight:700;font-size:34px;letter-spacing:-.03em;line-height:1}
+.logo span{display:block;font-size:15px;font-weight:400;letter-spacing:0;color:var(--muted);margin-top:8px}
+.auth-box form{margin-top:28px;display:grid;gap:12px}
+.aviso{background:var(--out-soft);border-radius:12px;padding:12px 14px;font-size:13px;margin-top:20px}
+.linkbtn{background:none;border:0;color:var(--ink);text-decoration:underline;cursor:pointer;padding:4px 0;font-size:14px}
+.err{color:var(--out);font-size:13px;min-height:1em}
+
+/* Campos */
+label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
+input,select{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;color:var(--ink)}
+input:focus,select:focus{border-color:var(--ink);outline:none}
+.btn{border:0;border-radius:10px;padding:12px 16px;font-weight:600;cursor:pointer;background:var(--surface2);color:var(--ink)}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.danger{background:var(--out-soft);color:var(--out)}
+.btn.sm{padding:8px 12px;font-size:13px}
+.btn:disabled{opacity:.5}
+
+/* Layout app */
+.wrap{max-width:620px;margin:0 auto;padding:0 16px 120px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 0 8px}
+header.top .marca{font-weight:700;font-size:18px;letter-spacing:-.02em}
+header.top .quien{font-size:12px;color:var(--muted);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.local-flag{font-size:12px;background:var(--tr-soft);color:var(--tr);border-radius:8px;padding:6px 10px;margin:4px 0 8px}
+section{margin-top:22px}
+section > h2{font-size:15px;font-weight:600;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+
+/* Hero: saldo + tiras de cajas */
+.hero .etq{font-size:13px;color:var(--muted)}
+.hero .big{font-size:clamp(34px,10vw,48px);font-weight:700;letter-spacing:-.035em;margin-top:2px}
+.tira{display:flex;gap:10px;overflow-x:auto;padding:14px 2px 6px;margin:0 -16px;padding-left:16px;padding-right:16px;scroll-snap-type:x mandatory}
+.tira::-webkit-scrollbar{display:none}
+.ticket{flex:0 0 auto;min-width:150px;scroll-snap-align:start;background:var(--surface);border-radius:14px;padding:12px 14px 12px 16px;position:relative;cursor:pointer;border:0;text-align:left}
+.ticket::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:0 4px 4px 0;background:var(--gold)}
+.ticket.banco::before{background:var(--tr)}
+.ticket.otro::before{background:var(--muted)}
+.ticket .t-tipo{font-size:11px;color:var(--muted)}
+.ticket .t-nom{font-weight:600;font-size:14px;margin-top:1px}
+.ticket .t-sal{font-weight:600;font-size:16px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.ticket .t-sal.neg{color:var(--out)}
+.ticket.nueva{display:grid;place-items:center;color:var(--muted);border:1.5px dashed var(--line);background:transparent;min-width:110px}
+.ticket.nueva::before{display:none}
+
+/* Resumen del mes */
+.resumen{background:var(--surface);border-radius:14px;padding:4px 16px}
+.resumen .fila{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)}
+.resumen .fila:last-child{border-bottom:0;font-weight:600}
+.pos{color:var(--in)} .neg{color:var(--out)}
+
+/* Movimientos */
+.lista{background:var(--surface);border-radius:14px;overflow:hidden}
+.mov{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left}
+.mov:last-child{border-bottom:0}
+.mov .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto;font-weight:700;font-size:16px}
+.mov.ingreso .ico{background:var(--in-soft);color:var(--in)}
+.mov.egreso .ico{background:var(--out-soft);color:var(--out)}
+.mov.transferencia .ico{background:var(--tr-soft);color:var(--tr)}
+.mov .txt{flex:1;min-width:0}
+.mov .l1{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mov .l2{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mov .monto{font-weight:600;font-size:14px;white-space:nowrap}
+.mov.ingreso .monto{color:var(--in)} .mov.egreso .monto{color:var(--out)} .mov.transferencia .monto{color:var(--tr)}
+.dia{font-size:12px;color:var(--muted);padding:14px 2px 6px;text-transform:capitalize}
+.vacio{background:var(--surface);border-radius:14px;padding:22px 18px;text-align:center;color:var(--muted)}
+.vacio .btn{margin-top:12px}
+
+.filtros{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.filtros .full{grid-column:1/-1}
+.filtros input,.filtros select{padding:9px 10px;font-size:14px}
+.totales{display:flex;gap:8px;margin-top:10px}
+.totales div{flex:1;background:var(--surface);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--muted)}
+.totales b{display:block;font-size:15px;color:var(--ink);font-weight:600}
+
+/* Segmentado */
+.seg{display:flex;background:var(--surface2);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:9px;cursor:pointer;font-weight:500;font-size:14px;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.seg button.on[data-t="ingreso"]{color:var(--in)} .seg button.on[data-t="egreso"]{color:var(--out)} .seg button.on[data-t="transferencia"]{color:var(--tr)}
+
+/* Reportes */
+.panel{background:var(--surface);border-radius:14px;padding:16px}
+.chartbox{position:relative;height:220px}
+.cat-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.cat-row:last-child{border-bottom:0}
+.cat-row .bar{grid-column:1/-1;height:6px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.cat-row .bar i{display:block;height:100%;border-radius:4px}
+.cat-row small{color:var(--muted)}
+.tabla-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:460px}
+th,td{padding:9px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:500}
+tfoot td{font-weight:600;border-bottom:0}
+
+/* Ajustes */
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .n{font-weight:500;font-size:14px}
+.item .s{font-size:12px;color:var(--muted)}
+.item .acc{display:flex;gap:6px}
+
+/* Nav inferior */
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
+nav.bottom .in{max-width:620px;margin:0 auto;display:flex}
+nav.bottom button{flex:1;background:none;border:0;padding:10px 4px 12px;font-size:12px;color:var(--muted);cursor:pointer;display:grid;justify-items:center;gap:3px}
+nav.bottom button svg{width:22px;height:22px}
+nav.bottom button.on{color:var(--ink);font-weight:600}
+.fab{position:fixed;right:max(16px,calc(50% - 294px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:18px;border:0;background:var(--brand);color:var(--brand-ink);font-size:30px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(21,48,42,.3);z-index:21}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,17,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));display:grid;gap:14px;animation:sube .22s ease-out}
+@media (min-width:640px){.modal-bg{align-items:center}.modal{border-radius:20px}}
+@keyframes sube{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.modal{animation:none}}
+.modal h2{font-size:18px;display:flex;justify-content:space-between;align-items:center}
+.modal .cerrar{background:none;border:0;font-size:24px;cursor:pointer;color:var(--muted);padding:0 4px}
+.monto-in{font-size:28px!important;font-weight:700;padding:12px!important;letter-spacing:-.02em}
+.preview{font-size:12px;color:var(--muted)}
+.fila2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acts{display:flex;gap:10px;justify-content:flex-end;margin-top:4px}
+.acts .btn.primary{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-height:132px;overflow-y:auto;padding:2px 0}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:13px;cursor:pointer;color:var(--ink)}
+.chip.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.chip.mas{border-style:dashed;border-color:var(--ink);font-weight:600}
+.chips .nada{font-size:12px;color:var(--muted);padding:6px 2px}
+
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--brand);color:var(--brand-ink);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:90vw}
+.cargando{padding:40px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ============ PANTALLA DE ACCESO ============ -->
+<div id="auth" class="hidden">
+  <div class="auth-box">
+    <div class="logo">Super Gastos<span>Tus ingresos, tus gastos y el saldo de cada caja.</span></div>
+    <form id="auth-form" autocomplete="on">
+      <label>Correo electrónico<input type="email" id="a-email" required autocomplete="email"></label>
+      <label>Contraseña<input type="password" id="a-pass" required minlength="6" autocomplete="current-password"></label>
+      <div class="err" id="a-err"></div>
+      <button class="btn primary" id="a-btn" type="submit">Entrar</button>
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <button type="button" class="linkbtn" id="a-toggle">Crear una cuenta nueva</button>
+        <button type="button" class="linkbtn" id="a-reset">Olvidé mi contraseña</button>
+      </div>
+    </form>
+    <div id="sin-config" class="aviso hidden">
+      Firebase todavía no está configurado. Pega tus credenciales en <b>firebaseConfig</b> dentro del archivo.
+      Mientras tanto puedes probar la app guardando los datos solo en este dispositivo.
+      <div><button class="btn sm" style="margin-top:10px" id="btn-local">Probar sin cuenta</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <div class="wrap">
+    <header class="top">
+      <div class="marca">Super Gastos</div>
+      <div class="quien" id="quien"></div>
+    </header>
+    <div id="local-flag" class="local-flag hidden">Modo de prueba: los datos se guardan solo en este dispositivo.</div>
+
+    <main>
+      <div id="view-inicio" class="view"></div>
+      <div id="view-movs" class="view hidden"></div>
+      <div id="view-reportes" class="view hidden"></div>
+      <div id="view-ajustes" class="view hidden"></div>
+    </main>
+  </div>
+
+  <button class="fab" id="fab" aria-label="Registrar movimiento">+</button>
+
+  <nav class="bottom">
+    <div class="in">
+      <button data-v="inicio" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</button>
+      <button data-v="movs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Movimientos</button>
+      <button data-v="reportes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Flujos</button>
+      <button data-v="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
+    </div>
+  </nav>
+</div>
+
+<div id="cargando" class="cargando">Cargando…</div>
+<div id="modal-root"></div>
+
+<script>
+/* =========================================================
+   1) PEGA AQUÍ LAS CREDENCIALES DE TU PROYECTO FIREBASE
+   (Consola Firebase > Configuración del proyecto > Tus apps > Web)
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDbrMyi5IPHdjE4CXQZveK6_jWm7k8vKbk",
+  authDomain: "finanzas-cd440.firebaseapp.com",
+  projectId: "finanzas-cd440",
+  storageBucket: "finanzas-cd440.firebasestorage.app",
+  messagingSenderId: "601894976880",
+  appId: "1:601894976880:web:fe654037549927f218a3b5"
+};
+
+/* Moneda y formato */
+const MONEDA = "COP";
+const LOCALE = "es-CO";
+
+/* Categorías que se crean automáticamente para cada usuario nuevo */
+const CATEGORIAS_INICIALES = {
+  egreso: ["Alimentación","Mercado","Transporte","Vivienda","Servicios públicos","Salud","Educación","Entretenimiento","Ropa","Deudas y créditos","Otros gastos"],
+  ingreso: ["Salario","Ventas","Honorarios","Préstamos recibidos","Otros ingresos"]
+};
+
+/* ========================================================= */
+const COLS = ["cajas","categorias","terceros","movimientos"];
+let S = {cajas:[],categorias:[],terceros:[],movimientos:[]};
+let backend = null, vista = "inicio", charts = {};
+const configurado = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("PEGA_AQUI");
+const hayFirebase = typeof firebase !== "undefined";
+
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = n => new Intl.NumberFormat(LOCALE,{style:"currency",currency:MONEDA,maximumFractionDigits:0}).format(n||0);
+const fmtNum = n => new Intl.NumberFormat(LOCALE,{maximumFractionDigits:2}).format(n||0);
+const parseMonto = s => { s = String(s||"").trim().replace(/[^\d,.-]/g,"").replace(/\./g,"").replace(",","."); const n = parseFloat(s); return isNaN(n)?0:Math.abs(n); };
+const pad = n => String(n).padStart(2,"0");
+const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const mesActual = () => hoy().slice(0,7);
+const sumaMes = (ym, k) => { let [y,m] = ym.split("-").map(Number); m += k; while(m>12){m-=12;y++} while(m<1){m+=12;y--} return `${y}-${pad(m)}`; };
+const nombreMes = ym => { const [y,m] = ym.split("-").map(Number); return new Date(y,m-1,1).toLocaleDateString(LOCALE,{month:"long",year:"numeric"}); };
+const mesCorto = ym => { const [y,m] = ym.split("-").map(Number); return new Date(y,m-1,1).toLocaleDateString(LOCALE,{month:"short"}); };
+const nombreDia = f => { const [y,m,d] = f.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString(LOCALE,{weekday:"long",day:"numeric",month:"long"}); };
+const byId = (c,id) => S[c].find(x => x.id === id);
+const nomCaja = id => byId("cajas",id)?.nombre || "Caja eliminada";
+const nomCat = id => byId("categorias",id)?.nombre || "Sin categoría";
+const suma = arr => arr.reduce((a,v) => a + (Number(v.monto)||0), 0);
+const ordenar = arr => [...arr].sort((a,b) => (b.fecha||"").localeCompare(a.fecha||"") || (b.creado||0)-(a.creado||0));
+const porNombre = (a,b) => (a.nombre||"").localeCompare(b.nombre||"", "es");
+const idLocal = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const PALETA = ["#B8432C","#C98F10","#1B8455","#3A62A7","#7A4DA8","#D0662A","#2E8C8C","#A33B6B","#5E716B","#8A9A2B","#4B7BD1","#9C6B3F"];
+const tipoCaja = t => t === "banco" ? "Banco" : t === "otro" ? "Otro" : "Efectivo";
+
+function toast(msg){ const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+
+function defaults(){
+  const out = [];
+  Object.entries(CATEGORIAS_INICIALES).forEach(([tipo,lista]) => lista.forEach(nombre => out.push({col:"categorias", data:{nombre, tipo}})));
+  return out;
+}
+
+/* ---------- saldos ---------- */
+function saldos(antesDe){ // antesDe: 'YYYY-MM-DD' exclusivo; null = todo
+  const m = {}; S.cajas.forEach(c => m[c.id] = Number(c.saldoInicial)||0);
+  S.movimientos.forEach(v => {
+    if (antesDe && v.fecha >= antesDe) return;
+    const a = Number(v.monto)||0;
+    if (v.tipo === "ingreso") m[v.cajaId] = (m[v.cajaId]||0) + a;
+    else if (v.tipo === "egreso") m[v.cajaId] = (m[v.cajaId]||0) - a;
+    else if (v.tipo === "transferencia"){ m[v.cajaId] = (m[v.cajaId]||0) - a; m[v.cajaDestinoId] = (m[v.cajaDestinoId]||0) + a; }
+  });
+  return m;
+}
+
+/* =========================================================
+   BACKENDS
+   ========================================================= */
+let auth = null, fdb = null;
+if (configurado && hayFirebase){
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  fdb = firebase.firestore();
+  fdb.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+}
+
+const FireBackend = {
+  unsubs: [], base: null,
+  async start(uid){
+    this.stop();
+    S = {cajas:[],categorias:[],terceros:[],movimientos:[]};
+    this.base = fdb.collection("usuarios").doc(uid);
+    try{
+      const u = await this.base.get();
+      if (!u.exists){
+        const b = fdb.batch();
+        b.set(this.base, {email: auth.currentUser.email, creado: Date.now()});
+        defaults().forEach(o => b.set(this.base.collection(o.col).doc(), o.data));
+        await b.commit();
+      }
+    }catch(e){ toast("No se pudo preparar tu cuenta: " + e.message); }
+    COLS.forEach(c => {
+      this.unsubs.push(this.base.collection(c).onSnapshot(
+        snap => { S[c] = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); },
+        err => toast("Error leyendo " + c + ": " + err.message)
+      ));
+    });
+  },
+  stop(){ this.unsubs.forEach(u => u()); this.unsubs = []; },
+  add(c,d){ return this.base.collection(c).add(d); },
+  upd(c,id,d){ return this.base.collection(c).doc(id).update(d); },
+  del(c,id){ return this.base.collection(c).doc(id).delete(); }
+};
+
+const LocalBackend = {
+  key: "supergastos_local",
+  start(){
+    let d = null;
+    try{ d = JSON.parse(localStorage.getItem(this.key)); }catch(e){}
+    if (!d || !d.cajas){ d = {cajas:[],categorias:[],terceros:[],movimientos:[]}; defaults().forEach(o => d[o.col].push({id:idLocal(), ...o.data})); }
+    S = d; this.save(); render();
+  },
+  save(){ try{ localStorage.setItem(this.key, JSON.stringify(S)); }catch(e){} },
+  stop(){},
+  async add(c,d){ const o = {id:idLocal(), ...d}; S[c].push(o); this.save(); render(); return {id:o.id}; },
+  async upd(c,id,d){ const o = byId(c,id); if(o) Object.assign(o,d); this.save(); render(); },
+  async del(c,id){ S[c] = S[c].filter(x => x.id !== id); this.save(); render(); }
+};
+
+/* =========================================================
+   ACCESO
+   ========================================================= */
+let modoRegistro = false;
+const MSG_AUTH = {
+  "auth/invalid-email":"El correo no es válido.",
+  "auth/user-not-found":"Correo o contraseña incorrectos.",
+  "auth/wrong-password":"Correo o contraseña incorrectos.",
+  "auth/invalid-credential":"Correo o contraseña incorrectos.",
+  "auth/invalid-login-credentials":"Correo o contraseña incorrectos.",
+  "auth/email-already-in-use":"Ya existe una cuenta con ese correo. Entra con tu contraseña.",
+  "auth/weak-password":"La contraseña debe tener al menos 6 caracteres.",
+  "auth/network-request-failed":"Sin conexión. Revisa tu internet e intenta de nuevo.",
+  "auth/too-many-requests":"Demasiados intentos. Espera unos minutos.",
+  "auth/operation-not-allowed":"Activa el acceso con correo y contraseña en Firebase > Authentication."
+};
+
+function mostrarAuth(){
+  $("#cargando").classList.add("hidden"); $("#app").classList.add("hidden"); $("#auth").classList.remove("hidden");
+  if (!configurado || !hayFirebase){ $("#sin-config").classList.remove("hidden"); $("#auth-form").classList.add("hidden"); }
+}
+function mostrarApp(etiqueta, local){
+  $("#cargando").classList.add("hidden"); $("#auth").classList.add("hidden"); $("#app").classList.remove("hidden");
+  $("#quien").textContent = etiqueta;
+  $("#local-flag").classList.toggle("hidden", !local);
+  irA("inicio");
+}
+
+$("#a-toggle").onclick = () => {
+  modoRegistro = !modoRegistro;
+  $("#a-btn").textContent = modoRegistro ? "Crear cuenta" : "Entrar";
+  $("#a-toggle").textContent = modoRegistro ? "Ya tengo cuenta" : "Crear una cuenta nueva";
+  $("#a-pass").autocomplete = modoRegistro ? "new-password" : "current-password";
+  $("#a-err").textContent = "";
+};
+$("#a-reset").onclick = async () => {
+  const email = $("#a-email").value.trim();
+  if (!email){ $("#a-err").textContent = "Escribe tu correo y vuelve a tocar “Olvidé mi contraseña”."; return; }
+  try{ await auth.sendPasswordResetEmail(email); $("#a-err").textContent = ""; toast("Te enviamos un correo para cambiar la contraseña."); }
+  catch(e){ $("#a-err").textContent = MSG_AUTH[e.code] || e.message; }
+};
+$("#auth-form").onsubmit = async ev => {
+  ev.preventDefault();
+  const email = $("#a-email").value.trim(), pass = $("#a-pass").value;
+  $("#a-btn").disabled = true; $("#a-err").textContent = "";
+  try{
+    if (modoRegistro) await auth.createUserWithEmailAndPassword(email, pass);
+    else await auth.signInWithEmailAndPassword(email, pass);
+  }catch(e){ $("#a-err").textContent = MSG_AUTH[e.code] || e.message; }
+  $("#a-btn").disabled = false;
+};
+$("#btn-local").onclick = () => { backend = LocalBackend; mostrarApp("Sin cuenta", true); LocalBackend.start(); };
+
+function cerrarSesion(){
+  if (backend === LocalBackend){ backend = null; mostrarAuth(); return; }
+  FireBackend.stop(); S = {cajas:[],categorias:[],terceros:[],movimientos:[]}; auth.signOut();
+}
+
+if (auth){
+  auth.onAuthStateChanged(user => {
+    if (user){ backend = FireBackend; mostrarApp(user.email, false); FireBackend.start(user.uid); }
+    else { backend = null; mostrarAuth(); }
+  });
+} else { mostrarAuth(); }
+
+/* =========================================================
+   NAVEGACIÓN Y RENDER
+   ========================================================= */
+document.querySelectorAll("nav.bottom button").forEach(b => b.onclick = () => irA(b.dataset.v));
+$("#fab").onclick = () => modalMov();
+
+function irA(v){
+  vista = v;
+  document.querySelectorAll("nav.bottom button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  document.querySelectorAll(".view").forEach(el => el.classList.add("hidden"));
+  $("#view-" + v).classList.remove("hidden");
+  window.scrollTo(0,0);
+  render();
+}
+function render(){
+  if (!backend) return;
+  if (vista === "inicio") renderInicio();
+  else if (vista === "movs") renderMovs();
+  else if (vista === "reportes") renderReportes();
+  else if (vista === "ajustes") renderAjustes();
+}
+
+function movRow(v){
+  const signo = v.tipo === "ingreso" ? "+" : v.tipo === "egreso" ? "−" : "⇄";
+  let l1, l2;
+  if (v.tipo === "transferencia"){ l1 = v.descripcion || "Transferencia"; l2 = `${nomCaja(v.cajaId)} a ${nomCaja(v.cajaDestinoId)}`; }
+  else { l1 = v.tercero || v.descripcion || nomCat(v.categoriaId); l2 = `${nomCat(v.categoriaId)}, ${nomCaja(v.cajaId)}`; }
+  return `<button class="mov ${v.tipo}" onclick="modalMov('${v.id}')">
+    <div class="ico">${signo}</div>
+    <div class="txt"><div class="l1">${esc(l1)}</div><div class="l2">${esc(l2)}</div></div>
+    <div class="monto num">${v.tipo==="egreso"?"−":v.tipo==="ingreso"?"+":""}${fmt(v.monto)}</div></button>`;
+}
+
+/* ---------- INICIO ---------- */
+function renderInicio(){
+  const sal = saldos();
+  const cajas = [...S.cajas].sort(porNombre);
+  const total = cajas.reduce((a,c) => a + (sal[c.id]||0), 0);
+  const mes = mesActual();
+  const mm = S.movimientos.filter(v => (v.fecha||"").startsWith(mes));
+  const ing = suma(mm.filter(v => v.tipo === "ingreso")), egr = suma(mm.filter(v => v.tipo === "egreso"));
+  const ult = ordenar(S.movimientos).slice(0,6);
+
+  const tickets = cajas.map(c => `<button class="ticket ${c.tipo||"caja"}" onclick="verCaja('${c.id}')">
+      <div class="t-tipo">${tipoCaja(c.tipo)}</div><div class="t-nom">${esc(c.nombre)}</div>
+      <div class="t-sal num ${(sal[c.id]||0)<0?"neg":""}">${fmt(sal[c.id])}</div></button>`).join("")
+    + `<button class="ticket nueva" onclick="modalCaja()">+ Nueva caja</button>`;
+
+  $("#view-inicio").innerHTML = `
+    <section class="hero" style="margin-top:8px">
+      <div class="etq">Saldo total en ${cajas.length} ${cajas.length===1?"caja":"cajas"}</div>
+      <div class="big num ${total<0?"neg":""}">${fmt(total)}</div>
+      <div class="tira">${tickets}</div>
+    </section>
+    ${cajas.length === 0 ? `<div class="vacio">Crea tus cajas y bancos (por ejemplo Caja Jorge o Banco Maffer) para empezar a registrar movimientos.<br><button class="btn primary" onclick="modalCaja()">Crear primera caja</button></div>` : ""}
+    <section>
+      <h2><span style="text-transform:capitalize">${nombreMes(mes)}</span></h2>
+      <div class="resumen">
+        <div class="fila"><span>Ingresos</span><span class="num pos">${fmt(ing)}</span></div>
+        <div class="fila"><span>Gastos</span><span class="num neg">${fmt(egr)}</span></div>
+        <div class="fila"><span>Diferencia</span><span class="num ${ing-egr<0?"neg":"pos"}">${fmt(ing-egr)}</span></div>
+      </div>
+    </section>
+    <section>
+      <h2>Últimos movimientos ${ult.length?`<button class="btn sm" onclick="irA('movs')">Ver todos</button>`:""}</h2>
+      ${ult.length ? `<div class="lista">${ult.map(movRow).join("")}</div>` : `<div class="vacio">Aún no hay movimientos. Toca + para registrar el primero.</div>`}
+    </section>`;
+}
+function verCaja(id){ F.caja = id; F.mes = ""; irA("movs"); }
+
+/* ---------- MOVIMIENTOS ---------- */
+const F = {mes: mesActual(), tipo:"", caja:"", cat:"", q:""};
+function filtrar(){
+  const q = F.q.toLowerCase();
+  return ordenar(S.movimientos.filter(v =>
+    (!F.mes || (v.fecha||"").startsWith(F.mes)) &&
+    (!F.tipo || v.tipo === F.tipo) &&
+    (!F.caja || v.cajaId === F.caja || v.cajaDestinoId === F.caja) &&
+    (!F.cat || v.categoriaId === F.cat) &&
+    (!q || [v.tercero, v.descripcion, nomCat(v.categoriaId), nomCaja(v.cajaId)].join(" ").toLowerCase().includes(q))
+  ));
+}
+function renderMovs(){
+  const cajas = [...S.cajas].sort(porNombre), cats = [...S.categorias].sort(porNombre);
+  $("#view-movs").innerHTML = `
+    <section style="margin-top:8px">
+      <div class="filtros">
+        <input type="month" value="${F.mes}" onchange="F.mes=this.value;renderListaMovs()" aria-label="Mes">
+        <button class="btn sm" onclick="F.mes='';renderMovs()">${F.mes?"Ver todos los meses":"Todos los meses"}</button>
+        <select onchange="F.tipo=this.value;renderListaMovs()" aria-label="Tipo">
+          <option value="">Todos los tipos</option><option value="ingreso">Ingresos</option><option value="egreso">Gastos</option><option value="transferencia">Transferencias</option>
+        </select>
+        <select onchange="F.caja=this.value;renderListaMovs()" aria-label="Caja">
+          <option value="">Todas las cajas</option>${cajas.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join("")}
+        </select>
+        <select class="full" onchange="F.cat=this.value;renderListaMovs()" aria-label="Categoría">
+          <option value="">Todas las categorías</option>${cats.map(c=>`<option value="${c.id}">${esc(c.nombre)} (${c.tipo==="ingreso"?"ingreso":"gasto"})</option>`).join("")}
+        </select>
+        <input class="full" type="search" placeholder="Buscar tercero o descripción" value="${esc(F.q)}" oninput="F.q=this.value;renderListaMovs()">
+      </div>
+      <div id="movs-lista"></div>
+    </section>`;
+  const sels = $("#view-movs").querySelectorAll("select");
+  sels[0].value = F.tipo; sels[1].value = F.caja; sels[2].value = F.cat;
+  renderListaMovs();
+}
+function renderListaMovs(){
+  const arr = filtrar();
+  const ing = suma(arr.filter(v=>v.tipo==="ingreso")), egr = suma(arr.filter(v=>v.tipo==="egreso"));
+  let html = `<div class="totales"><div>Ingresos<b class="num pos">${fmt(ing)}</b></div><div>Gastos<b class="num neg">${fmt(egr)}</b></div><div>Movimientos<b class="num">${arr.length}</b></div></div>`;
+  if (!arr.length) html += `<div class="vacio" style="margin-top:12px">No hay movimientos con estos filtros.</div>`;
+  else {
+    let dia = null, bloque = [];
+    const cerrar = () => { if (bloque.length) html += `<div class="dia">${nombreDia(dia)}</div><div class="lista">${bloque.join("")}</div>`; bloque = []; };
+    arr.forEach(v => { if (v.fecha !== dia){ cerrar(); dia = v.fecha; } bloque.push(movRow(v)); });
+    cerrar();
+  }
+  $("#movs-lista").innerHTML = html;
+}
+
+/* ---------- FLUJOS / REPORTES ---------- */
+const R = {mes: mesActual(), tipo: "egreso"};
+function colorVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function renderReportes(){
+  Object.values(charts).forEach(c => c.destroy()); charts = {};
+  const mv = S.movimientos.filter(v => (v.fecha||"").startsWith(R.mes) && v.tipo === R.tipo);
+  const total = suma(mv);
+  const grupos = {};
+  mv.forEach(v => { grupos[v.categoriaId] = (grupos[v.categoriaId]||0) + (Number(v.monto)||0); });
+  const filas = Object.entries(grupos).map(([id,m]) => ({id, nombre: nomCat(id), monto:m})).sort((a,b)=>b.monto-a.monto);
+  filas.forEach((f,i) => f.color = PALETA[i % PALETA.length]);
+
+  // Flujo por caja del mes
+  const ini = R.mes + "-01", fin = sumaMes(R.mes,1) + "-01";
+  const sIni = saldos(ini), sFin = saldos(fin);
+  const flujo = [...S.cajas].sort(porNombre).map(c => {
+    let ent = 0, sal = 0;
+    S.movimientos.forEach(v => {
+      if (!(v.fecha >= ini && v.fecha < fin)) return;
+      const a = Number(v.monto)||0;
+      if (v.tipo==="ingreso" && v.cajaId===c.id) ent += a;
+      if (v.tipo==="egreso" && v.cajaId===c.id) sal += a;
+      if (v.tipo==="transferencia"){ if (v.cajaDestinoId===c.id) ent += a; if (v.cajaId===c.id) sal += a; }
+    });
+    return {nombre:c.nombre, ini:sIni[c.id]||0, ent, sal, fin:sFin[c.id]||0};
+  });
+  const tot = flujo.reduce((a,f)=>({ini:a.ini+f.ini, ent:a.ent+f.ent, sal:a.sal+f.sal, fin:a.fin+f.fin}), {ini:0,ent:0,sal:0,fin:0});
+
+  $("#view-reportes").innerHTML = `
+    <section style="margin-top:8px">
+      <div class="fila2">
+        <input type="month" value="${R.mes}" onchange="if(this.value){R.mes=this.value;renderReportes()}" aria-label="Mes">
+        <button class="btn sm" onclick="exportarCSV()">Descargar Excel (CSV)</button>
+      </div>
+      <div class="seg" style="margin-top:10px">
+        <button data-t="egreso" class="${R.tipo==="egreso"?"on":""}" onclick="R.tipo='egreso';renderReportes()">Flujo de gastos</button>
+        <button data-t="ingreso" class="${R.tipo==="ingreso"?"on":""}" onclick="R.tipo='ingreso';renderReportes()">Flujo de ingresos</button>
+      </div>
+    </section>
+    <section>
+      <div class="panel">
+        <div class="muted" style="font-size:13px;text-transform:capitalize">${R.tipo==="egreso"?"Gastos":"Ingresos"} de ${nombreMes(R.mes)}</div>
+        <div class="num ${R.tipo==="egreso"?"neg":"pos"}" style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px">${fmt(total)}</div>
+        ${filas.length ? `<div class="chartbox"><canvas id="ch-dona"></canvas></div>
+          <div style="margin-top:12px">${filas.map(f=>`<div class="cat-row"><span>${esc(f.nombre)} <small>${total?Math.round(f.monto/total*100):0}%</small></span><span class="num">${fmt(f.monto)}</span><div class="bar"><i style="width:${total?f.monto/total*100:0}%;background:${f.color}"></i></div></div>`).join("")}</div>`
+        : `<div class="vacio" style="padding:14px 0">No hay ${R.tipo==="egreso"?"gastos":"ingresos"} registrados en este mes.</div>`}
+      </div>
+    </section>
+    <section>
+      <h2>Ingresos y gastos, últimos 6 meses</h2>
+      <div class="panel"><div class="chartbox"><canvas id="ch-barras"></canvas></div></div>
+    </section>
+    <section>
+      <h2>Flujo por caja en el mes</h2>
+      ${flujo.length ? `<div class="panel tabla-wrap"><table>
+        <thead><tr><th>Caja</th><th>Saldo inicial</th><th>Entradas</th><th>Salidas</th><th>Saldo final</th></tr></thead>
+        <tbody>${flujo.map(f=>`<tr><td>${esc(f.nombre)}</td><td class="num">${fmt(f.ini)}</td><td class="num pos">${fmt(f.ent)}</td><td class="num neg">${fmt(f.sal)}</td><td class="num">${fmt(f.fin)}</td></tr>`).join("")}</tbody>
+        <tfoot><tr><td>Total</td><td class="num">${fmt(tot.ini)}</td><td class="num">${fmt(tot.ent)}</td><td class="num">${fmt(tot.sal)}</td><td class="num">${fmt(tot.fin)}</td></tr></tfoot>
+      </table></div>` : `<div class="vacio">Crea una caja para ver su flujo.</div>`}
+    </section>`;
+
+  if (typeof Chart === "undefined") return;
+  const ink = colorVar("--ink"), muted = colorVar("--muted"), line = colorVar("--line");
+  Chart.defaults.font.family = '"Sora", system-ui, sans-serif';
+  Chart.defaults.color = muted;
+  if (filas.length){
+    charts.dona = new Chart($("#ch-dona"), {
+      type:"doughnut",
+      data:{labels:filas.map(f=>f.nombre), datasets:[{data:filas.map(f=>f.monto), backgroundColor:filas.map(f=>f.color), borderWidth:0}]},
+      options:{maintainAspectRatio:false, cutout:"62%", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.parsed)}`}}}}
+    });
+  }
+  const meses = [5,4,3,2,1,0].map(k => sumaMes(R.mes,-k));
+  const sIng = meses.map(m => suma(S.movimientos.filter(v=>v.tipo==="ingreso" && (v.fecha||"").startsWith(m))));
+  const sEgr = meses.map(m => suma(S.movimientos.filter(v=>v.tipo==="egreso" && (v.fecha||"").startsWith(m))));
+  charts.barras = new Chart($("#ch-barras"), {
+    type:"bar",
+    data:{labels:meses.map(mesCorto), datasets:[
+      {label:"Ingresos", data:sIng, backgroundColor:colorVar("--in"), borderRadius:5},
+      {label:"Gastos", data:sEgr, backgroundColor:colorVar("--out"), borderRadius:5}]},
+    options:{maintainAspectRatio:false,
+      scales:{x:{grid:{display:false}}, y:{grid:{color:line}, ticks:{callback:v=>new Intl.NumberFormat(LOCALE,{notation:"compact"}).format(v)}}},
+      plugins:{legend:{labels:{boxWidth:10,color:ink}}, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.parsed.y)}`}}}}
+  });
+}
+
+/* ---------- AJUSTES ---------- */
+function renderAjustes(){
+  const sal = saldos();
+  const cajas = [...S.cajas].sort(porNombre);
+  const catE = S.categorias.filter(c=>c.tipo!=="ingreso").sort(porNombre);
+  const catI = S.categorias.filter(c=>c.tipo==="ingreso").sort(porNombre);
+  const ters = [...S.terceros].sort(porNombre);
+  const lista = (arr, fn) => arr.length ? `<div class="lista">${arr.map(fn).join("")}</div>` : `<div class="vacio">Nada por aquí todavía.</div>`;
+
+  $("#view-ajustes").innerHTML = `
+    <section style="margin-top:8px">
+      <h2>Cajas y bancos <button class="btn sm" onclick="modalCaja()">Agregar</button></h2>
+      ${lista(cajas, c => `<div class="item"><div><div class="n">${esc(c.nombre)}</div><div class="s">${tipoCaja(c.tipo)}, saldo actual ${fmt(sal[c.id])}</div></div>
+        <div class="acc"><button class="btn sm" onclick="modalCaja('${c.id}')">Editar</button></div></div>`)}
+    </section>
+    <section>
+      <h2>Categorías de gasto <button class="btn sm" onclick="nuevaCategoria('egreso')">Agregar</button></h2>
+      ${lista(catE, c => itemCat(c))}
+    </section>
+    <section>
+      <h2>Categorías de ingreso <button class="btn sm" onclick="nuevaCategoria('ingreso')">Agregar</button></h2>
+      ${lista(catI, c => itemCat(c))}
+    </section>
+    <section>
+      <h2>Terceros <button class="btn sm" onclick="nuevoTercero()">Agregar</button></h2>
+      ${lista(ters, t => `<div class="item"><div><div class="n">${esc(t.nombre)}</div><div class="s">${S.movimientos.filter(v=>v.tercero===t.nombre).length} movimientos</div></div>
+        <div class="acc"><button class="btn sm" onclick="renombrarTercero('${t.id}')">Renombrar</button><button class="btn sm danger" onclick="borrarTercero('${t.id}')">Eliminar</button></div></div>`)}
+    </section>
+    <section>
+      <h2>Cuenta</h2>
+      <div class="lista">
+        <div class="item"><div><div class="n">${esc($("#quien").textContent)}</div><div class="s">${backend===LocalBackend?"Datos guardados solo en este dispositivo":"Tus datos son privados: nadie más los ve."}</div></div>
+        <div class="acc"><button class="btn sm" onclick="cerrarSesion()">${backend===LocalBackend?"Salir":"Cerrar sesión"}</button></div></div>
+        <div class="item"><div><div class="n">Exportar movimientos</div><div class="s">Archivo CSV que abre en Excel</div></div>
+        <div class="acc"><button class="btn sm" onclick="exportarCSV()">Descargar</button></div></div>
+      </div>
+    </section>`;
+}
+function itemCat(c){
+  const n = S.movimientos.filter(v=>v.categoriaId===c.id).length;
+  return `<div class="item"><div><div class="n">${esc(c.nombre)}</div><div class="s">${n} movimientos</div></div>
+    <div class="acc"><button class="btn sm" onclick="renombrarCategoria('${c.id}')">Renombrar</button><button class="btn sm danger" onclick="borrarCategoria('${c.id}')">Eliminar</button></div></div>`;
+}
+
+/* =========================================================
+   MODALES
+   ========================================================= */
+function abrirModal(html){
+  $("#modal-root").innerHTML = `<div class="modal-bg" onclick="if(event.target===this)cerrarModal()"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+  const f = $("#modal-root").querySelector("input:not([type=hidden]),select"); if (f && window.innerWidth > 640) f.focus();
+}
+function cerrarModal(){ $("#modal-root").innerHTML = ""; }
+document.addEventListener("keydown", e => { if (e.key === "Escape") cerrarModal(); });
+
+/* ---------- Movimiento ---------- */
+let M = null;
+function modalMov(id){
+  if (!S.cajas.length){ toast("Primero crea una caja o banco."); modalCaja(); return; }
+  const v = id ? byId("movimientos",id) : null;
+  M = v ? {...v} : {tipo:"egreso", fecha:hoy(), monto:"", cajaId:"", cajaDestinoId:"", categoriaId:"", tercero:"", descripcion:""};
+  const cajas = [...S.cajas].sort(porNombre);
+  const opCajas = cajas.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join("");
+  abrirModal(`
+    <h2>${v?"Editar movimiento":"Nuevo movimiento"}<button class="cerrar" onclick="cerrarModal()" aria-label="Cerrar">×</button></h2>
+    <div class="seg" id="m-seg">
+      <button data-t="egreso" onclick="setTipo('egreso')">Gasto</button>
+      <button data-t="ingreso" onclick="setTipo('ingreso')">Ingreso</button>
+      <button data-t="transferencia" onclick="setTipo('transferencia')">Transferencia</button>
+    </div>
+    <label>Valor<input id="m-monto" class="monto-in num" inputmode="decimal" placeholder="0" value="${v?fmtNum(v.monto):""}" oninput="$('#m-prev').textContent=parseMonto(this.value)?fmt(parseMonto(this.value)):''"><span class="preview num" id="m-prev">${v?fmt(v.monto):""}</span></label>
+    <div class="fila2">
+      <label>Fecha<input type="date" id="m-fecha" value="${M.fecha}"></label>
+      <label><span id="m-lcaja">Pagado desde</span><select id="m-caja"><option value="">Elige…</option>${opCajas}</select></label>
+    </div>
+    <label id="m-wdest">Hacia la caja<select id="m-dest"><option value="">Elige…</option>${opCajas}</select></label>
+    <div id="m-wcat" style="display:grid;gap:6px"><label for="m-cat-txt">Categoría</label>
+      <input id="m-cat-txt" placeholder="Escribe o elige una categoría" autocomplete="off" oninput="M.categoriaId=catExacta(this.value)?.id||'';pintarCats()">
+      <div class="chips" id="m-cats"></div></div>
+    <label id="m-wter">Tercero<input id="m-ter" list="dl-ter" placeholder="Quién te pagó o a quién le pagaste" value="${esc(M.tercero||"")}" autocomplete="off"></label>
+    <datalist id="dl-ter">${[...S.terceros].sort(porNombre).map(t=>`<option value="${esc(t.nombre)}">`).join("")}</datalist>
+    <label>Descripción<input id="m-desc" placeholder="Opcional" value="${esc(M.descripcion||"")}"></label>
+    <div class="acts">
+      ${v?`<button class="btn danger" onclick="borrarMov('${v.id}')">Eliminar</button>`:""}
+      <button class="btn primary" id="m-guardar" onclick="guardarMov('${v?v.id:""}')">Guardar</button>
+    </div>`);
+  $("#m-caja").value = M.cajaId || (cajas.length===1?cajas[0].id:"");
+  $("#m-dest").value = M.cajaDestinoId || "";
+  setTipo(M.tipo, true);
+}
+const tipoCat = () => M.tipo === "ingreso" ? "ingreso" : "egreso";
+const catsDelTipo = () => S.categorias.filter(c => (c.tipo==="ingreso"?"ingreso":"egreso") === tipoCat()).sort(porNombre);
+const normal = s => String(s||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const catExacta = txt => catsDelTipo().find(c => normal(c.nombre) === normal(txt));
+function llenarCats(){
+  const inp = $("#m-cat-txt"); if (!inp) return;
+  const c = catsDelTipo().find(c => c.id === M.categoriaId);
+  if (!c) M.categoriaId = "";
+  inp.value = c ? c.nombre : "";
+  pintarCats();
+}
+function pintarCats(){
+  const box = $("#m-cats"); if (!box) return;
+  const txt = $("#m-cat-txt").value.trim();
+  const q = normal(txt);
+  const lista = catsDelTipo().filter(c => !q || M.categoriaId === c.id || normal(c.nombre).includes(q));
+  let html = "";
+  if (txt && !catExacta(txt)) html += `<button type="button" class="chip mas" onclick="agregarCatEscrita()">+ Agregar “${esc(txt)}”</button>`;
+  html += lista.map(c => `<button type="button" class="chip ${c.id===M.categoriaId?"on":""}" onclick="elegirCat('${c.id}')">${esc(c.nombre)}</button>`).join("");
+  if (!html) html = `<span class="nada">Escribe el nombre de una categoría para crearla.</span>`;
+  box.innerHTML = html;
+}
+function elegirCat(id){ M.categoriaId = id; $("#m-cat-txt").value = nomCat(id); pintarCats(); }
+async function crearCatEscrita(){
+  const nombre = $("#m-cat-txt").value.trim().replace(/\s+/g," ");
+  if (!nombre) return "";
+  const ya = catExacta(nombre); if (ya) return ya.id;
+  const r = await backend.add("categorias", {nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1), tipo: tipoCat()});
+  return r.id;
+}
+async function agregarCatEscrita(){
+  try{
+    const id = await crearCatEscrita();
+    M.categoriaId = id;
+    const esperar = (n=0) => { if (byId("categorias", id) || n > 30){ llenarCats(); } else setTimeout(() => esperar(n+1), 100); };
+    esperar(); toast("Categoría agregada");
+  }catch(e){ toast("No se pudo crear la categoría: " + e.message); }
+}
+function setTipo(t, inicial){
+  if (!inicial && t !== M.tipo) M.categoriaId = "";
+  M.tipo = t;
+  document.querySelectorAll("#m-seg button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  const tr = t === "transferencia";
+  $("#m-wdest").classList.toggle("hidden", !tr);
+  $("#m-wcat").classList.toggle("hidden", tr);
+  $("#m-wter").classList.toggle("hidden", tr);
+  $("#m-lcaja").textContent = t === "ingreso" ? "Entró a" : t === "egreso" ? "Pagado desde" : "Desde la caja";
+  llenarCats();
+}
+async function guardarMov(id){
+  const d = {
+    tipo: M.tipo,
+    monto: parseMonto($("#m-monto").value),
+    fecha: $("#m-fecha").value,
+    cajaId: $("#m-caja").value,
+    cajaDestinoId: M.tipo==="transferencia" ? $("#m-dest").value : "",
+    categoriaId: M.tipo==="transferencia" ? "" : M.categoriaId,
+    tercero: M.tipo==="transferencia" ? "" : $("#m-ter").value.trim(),
+    descripcion: $("#m-desc").value.trim()
+  };
+  if (!d.monto) return toast("Escribe el valor.");
+  if (!d.fecha) return toast("Elige la fecha.");
+  if (!d.cajaId) return toast("Elige la caja.");
+  if (d.tipo==="transferencia" && (!d.cajaDestinoId || d.cajaDestinoId===d.cajaId)) return toast("Elige una caja de destino diferente.");
+  if (d.tipo!=="transferencia" && !d.categoriaId && !$("#m-cat-txt").value.trim()) return toast("Escribe o elige la categoría.");
+  $("#m-guardar").disabled = true;
+  try{
+    if (d.tipo!=="transferencia" && !d.categoriaId) d.categoriaId = await crearCatEscrita();
+    if (d.tercero && !S.terceros.some(t => t.nombre.toLowerCase() === d.tercero.toLowerCase())) await backend.add("terceros", {nombre:d.tercero});
+    else if (d.tercero){ d.tercero = S.terceros.find(t => t.nombre.toLowerCase() === d.tercero.toLowerCase()).nombre; }
+    if (id) await backend.upd("movimientos", id, d);
+    else await backend.add("movimientos", {...d, creado: Date.now()});
+    cerrarModal(); toast(id ? "Movimiento actualizado" : "Movimiento guardado");
+  }catch(e){ toast("No se pudo guardar: " + e.message); $("#m-guardar").disabled = false; }
+}
+async function borrarMov(id){
+  if (!confirm("¿Eliminar este movimiento?")) return;
+  try{ await backend.del("movimientos", id); cerrarModal(); toast("Movimiento eliminado"); }catch(e){ toast(e.message); }
+}
+
+/* ---------- Cajas ---------- */
+function modalCaja(id){
+  const c = id ? byId("cajas",id) : {nombre:"", tipo:"caja", saldoInicial:0};
+  abrirModal(`
+    <h2>${id?"Editar caja":"Nueva caja o banco"}<button class="cerrar" onclick="cerrarModal()" aria-label="Cerrar">×</button></h2>
+    <label>Nombre<input id="c-nombre" value="${esc(c.nombre)}" placeholder="Caja Jorge, Banco Maffer…"></label>
+    <label>Tipo<select id="c-tipo"><option value="caja">Efectivo</option><option value="banco">Banco</option><option value="otro">Otro (billetera digital, tarjeta)</option></select></label>
+    <label>Saldo inicial<input id="c-saldo" class="num" inputmode="decimal" placeholder="0" value="${c.saldoInicial?fmtNum(c.saldoInicial):""}"><span class="preview">El dinero que tenía esta caja antes de empezar a registrar.</span></label>
+    <div class="acts">
+      ${id?`<button class="btn danger" onclick="borrarCaja('${id}')">Eliminar</button>`:""}
+      <button class="btn primary" onclick="guardarCaja('${id||""}')">Guardar</button>
+    </div>`);
+  $("#c-tipo").value = c.tipo || "caja";
+}
+async function guardarCaja(id){
+  const d = {nombre: $("#c-nombre").value.trim(), tipo: $("#c-tipo").value, saldoInicial: parseMonto($("#c-saldo").value)};
+  if (!d.nombre) return toast("Escribe el nombre de la caja.");
+  if (S.cajas.some(c => c.id !== id && c.nombre.toLowerCase() === d.nombre.toLowerCase())) return toast("Ya tienes una caja con ese nombre.");
+  try{ if (id) await backend.upd("cajas", id, d); else await backend.add("cajas", d); cerrarModal(); toast(id?"Caja actualizada":"Caja creada"); }
+  catch(e){ toast("No se pudo guardar: " + e.message); }
+}
+async function borrarCaja(id){
+  const n = S.movimientos.filter(v => v.cajaId===id || v.cajaDestinoId===id).length;
+  if (n) return toast(`Esta caja tiene ${n} movimientos. Elimínalos o muévelos antes de borrarla.`);
+  if (!confirm("¿Eliminar esta caja?")) return;
+  await backend.del("cajas", id); cerrarModal(); toast("Caja eliminada");
+}
+
+/* ---------- Categorías ---------- */
+async function nuevaCategoria(tipo, desdeMov){
+  tipo = tipo === "ingreso" ? "ingreso" : "egreso";
+  const nombre = (prompt(`Nombre de la nueva categoría de ${tipo==="ingreso"?"ingreso":"gasto"}:`) || "").trim();
+  if (!nombre) return;
+  if (S.categorias.some(c => c.tipo===tipo && c.nombre.toLowerCase()===nombre.toLowerCase())) return toast("Esa categoría ya existe.");
+  const r = await backend.add("categorias", {nombre, tipo});
+  if (desdeMov && $("#m-cat-txt")){
+    M.categoriaId = r.id;
+    const esperar = () => { if (byId("categorias", r.id)){ llenarCats(); } else setTimeout(esperar, 150); };
+    esperar();
+  }
+  toast("Categoría creada");
+}
+async function renombrarCategoria(id){
+  const c = byId("categorias",id);
+  const nombre = (prompt("Nuevo nombre:", c.nombre) || "").trim();
+  if (nombre && nombre !== c.nombre){ await backend.upd("categorias", id, {nombre}); toast("Categoría renombrada"); }
+}
+async function borrarCategoria(id){
+  const n = S.movimientos.filter(v => v.categoriaId===id).length;
+  if (n) return toast(`Esta categoría tiene ${n} movimientos. Cámbialos de categoría antes de borrarla.`);
+  if (!confirm("¿Eliminar esta categoría?")) return;
+  await backend.del("categorias", id); toast("Categoría eliminada");
+}
+
+/* ---------- Terceros ---------- */
+async function nuevoTercero(){
+  const nombre = (prompt("Nombre del tercero (persona o empresa):") || "").trim();
+  if (!nombre) return;
+  if (S.terceros.some(t => t.nombre.toLowerCase()===nombre.toLowerCase())) return toast("Ese tercero ya existe.");
+  await backend.add("terceros", {nombre}); toast("Tercero agregado");
+}
+async function renombrarTercero(id){
+  const t = byId("terceros",id);
+  const nombre = (prompt("Nuevo nombre:", t.nombre) || "").trim();
+  if (!nombre || nombre === t.nombre) return;
+  const viejo = t.nombre;
+  await backend.upd("terceros", id, {nombre});
+  const afect = S.movimientos.filter(v => v.tercero === viejo);
+  for (const v of afect) await backend.upd("movimientos", v.id, {tercero:nombre});
+  toast(`Tercero renombrado en ${afect.length} movimientos`);
+}
+async function borrarTercero(id){
+  const t = byId("terceros",id);
+  const n = S.movimientos.filter(v => v.tercero===t.nombre).length;
+  if (!confirm(n ? `${t.nombre} aparece en ${n} movimientos. Los movimientos se conservan con el nombre. ¿Eliminar de la lista?` : `¿Eliminar a ${t.nombre}?`)) return;
+  await backend.del("terceros", id); toast("Tercero eliminado");
+}
+
+/* ---------- Exportar ---------- */
+function exportarCSV(){
+  const cab = ["Fecha","Tipo","Valor","Caja","Caja destino","Categoría","Tercero","Descripción"];
+  const q = s => `"${String(s??"").replace(/"/g,'""')}"`;
+  const filas = ordenar(S.movimientos).map(v => [v.fecha, v.tipo==="egreso"?"Gasto":v.tipo==="ingreso"?"Ingreso":"Transferencia", v.monto,
+    nomCaja(v.cajaId), v.cajaDestinoId?nomCaja(v.cajaDestinoId):"", v.categoriaId?nomCat(v.categoriaId):"", v.tercero, v.descripcion].map(q).join(";"));
+  const blob = new Blob(["\ufeff" + [cab.map(q).join(";"), ...filas].join("\r\n")], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `super-gastos-${hoy()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+</script>
+</body>
+</html>
