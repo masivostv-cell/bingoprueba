@@ -641,7 +641,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.01-2';
+const APP_VERSION='2026.10.01-4';
 const DEFCFG={ id:'cfg', nombre:'Mi Restaurante', nit:'', direccion:'', telefono:'',
   simbolo:'$', decimales:0, impuesto:0, impIncluido:true, propina:10, propinaAuto:false,
   ticketAncho:80, ticketPie:'¡Gracias por su visita!', tema:'light',
@@ -1085,7 +1085,7 @@ function esEstacion(){ return !!S.cfg.estacion; }
 /* Solo cuenta lo que alguien MANDÓ a cocina (botón Cocina). Un pedido que se
    está tomando o que solo se guardó no se imprime hasta que lo envíen. */
 function comandasPendientes(){
-  return S.comandas.filter(cm=>cm.estado==='abierta' && cm.cocinaMs && pendientesComanda(cm).uds>0)
+  return S.comandas.filter(cm=>(cm.estado==='abierta'||cm.estado==='anulada') && cm.cocinaMs && pendientesComanda(cm).uds>0)
     .sort((a,b)=>String(a.cocinaMs||a.apertura||'').localeCompare(String(b.cocinaMs||b.apertura||'')));
 }
 function unidadesPendientes(){ return sum(comandasPendientes(),cm=>pendientesComanda(cm).uds); }
@@ -2441,18 +2441,59 @@ function cartAdd(pid){
   paintCart(); persistComanda();
   if(esMovil() && navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
 }
+/* ============ CONTROL: lo que ya fue a cocina no se borra en silencio ============
+   Si se quita un producto que la cocina ya tiene, se pide el motivo, queda tachado
+   en el carrito con quién lo quitó, y se guarda con la venta para el informe.
+   Cajero y mesero no pueden vaciar un pedido que ya fue a cocina. */
+const MOTIVOS_ANULA=['El cliente cambió de opinión','Error al tomar el pedido','Se acabó el producto',
+  'El cliente se fue','Producto con problema / devuelto'];
+function pedirMotivo(titulo,detalle,cb){
+  const admin=puedeEditar();
+  modal({title:titulo, size:'slim',
+    body:'<div class="card" style="background:var(--bad-soft);border-color:var(--bad);margin-bottom:12px"><div class="bd" style="color:var(--bad);font-weight:650">'+
+        '🍳 '+detalle+'</div></div>'+
+      '<div class="f"><label>¿Por qué se quita?'+(admin?' (opcional para el administrador)':'')+'</label>'+
+        '<input id="mmot" autocomplete="off" placeholder="Escribe el motivo…" style="font-size:16px;padding:11px"></div>'+
+      '<div class="row wrap" style="gap:6px;margin-top:9px">'+MOTIVOS_ANULA.map(x=>
+        '<button class="btn sm" data-mo="'+esc(x)+'">'+esc(x)+'</button>').join('')+'</div>'+
+      '<div class="hintx" style="margin-top:10px">Queda registrado con tu nombre y la hora, y el producto se ve tachado en el pedido.</div>',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn danger" id="mok">Quitar</button>',
+    onOpen:m=>{ const i=$('#mmot',m); setTimeout(()=>i.focus(),50);
+      $$('[data-mo]',m).forEach(b=>b.onclick=()=>{ i.value=b.dataset.mo; i.focus(); });
+      const ok=()=>{ const v=i.value.trim();
+        if(!v && !admin){ i.focus(); return toast('Escribe el motivo para poder quitarlo','warn'); }
+        closeModal(); cb(v||'(sin motivo)'); };
+      $('#mok',m).onclick=ok; i.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } }; }});
+}
+function registrarAnulado(it,cant,motivo){
+  if(!cant || !S.cart) return;
+  S.cart.anulados=(S.cart.anulados||[]).concat([{id:uid('an'), productoId:it.productoId, nombre:it.nombre,
+    precio:Number(it.precio)||0, cant:cant, nota:it.nota||'', motivo:motivo||'',
+    usuarioId:S.user?S.user.id:'', usuarioNombre:S.user?S.user.nombre:'', fecha:now()}]);
+}
+function quitarEnviado(it,cut,aplicar){
+  pedirMotivo('Quitar producto que ya está en cocina',
+    esc(num(cut,0))+' × '+esc(it.nombre)+' ya se mandó a la cocina.',
+    motivo=>{ registrarAnulado(it,cut,motivo); bajaComanda(it,cut);
+      if(S.cart.bajas && S.cart.bajas.length) S.cart.bajas[S.cart.bajas.length-1].motivo=motivo;
+      aplicar(); paintCart(); persistComanda(); });
+}
 function cartQty(itId,d){
   const it=S.cart.items.find(i=>i.id===itId); if(!it) return;
-  if(d<0) bajaComanda(it, Math.min(-d, (it.env||0)-Math.max(0,it.cant+d)));
-  it.cant+=d;
-  if(it.cant<=0) S.cart.items=S.cart.items.filter(i=>i.id!==itId);
-  paintCart(); persistComanda();
+  const aplicar=()=>{ it.cant+=d; if(it.cant<=0) S.cart.items=S.cart.items.filter(i=>i.id!==itId); };
+  if(d<0){
+    const cut=Math.min(-d, (it.env||0)-Math.max(0,it.cant+d));
+    if(cut>0) return quitarEnviado(it,cut,aplicar);
+  }
+  aplicar(); paintCart(); persistComanda();
 }
 function cartDel(itId){
-  const it=S.cart.items.find(i=>i.id===itId);
-  if(it) bajaComanda(it,it.env||0);
-  S.cart.items=S.cart.items.filter(i=>i.id!==itId); paintCart(); persistComanda();
+  const it=S.cart.items.find(i=>i.id===itId); if(!it) return;
+  const aplicar=()=>{ S.cart.items=S.cart.items.filter(i=>i.id!==itId); };
+  if((it.env||0)>0) return quitarEnviado(it,it.env,aplicar);
+  aplicar(); paintCart(); persistComanda();
 }
+function hayEnCocina(c){ return (c||S.cart||{items:[]}).items.some(i=>(i.env||0)>0); }
 /* Si se quita algo que la cocina ya está preparando, queda anotado para
    avisarle en la próxima comanda. */
 function bajaComanda(it,cant){
@@ -2529,6 +2570,17 @@ function paintCart(){
   if(pbn){ pbn.textContent=t.uds; pbt.textContent=money(t.total);
     $('#posbar').style.opacity = t.uds? '1':'.75'; }
   $('#cmesa').onclick=mDestino; $('#cclear').onclick=()=>{ if(!c.items.length) return;
+    if(hayEnCocina(c)){
+      if(!puedeEditar()) return modal({title:'No se puede vaciar', size:'slim',
+        body:'<p style="margin:0 0 8px">Este pedido <b>ya se mandó a la cocina</b>, así que no se puede vaciar ni eliminar.</p>'+
+          '<p class="muted" style="margin:0">Si el cliente cambió algo, quita cada producto con el ✕ o el − y escribe el motivo. '+
+          'Si hay que cancelar todo el pedido, llama al administrador.</p>',
+        footer:'<button class="btn pri" data-x>Entendido</button>'});
+      const env=c.items.filter(i=>(i.env||0)>0);
+      return pedirMotivo('Vaciar pedido que ya está en cocina',
+        'Se van a anular '+env.reduce((t,i)=>t+i.env,0)+' producto(s) que la cocina ya tiene.',
+        motivo=>{ env.forEach(i=>registrarAnulado(i,i.env,motivo)); vaciarCarrito(true); });
+    }
     confirmar('¿Vaciar el carrito? También se borra el nombre del cliente.',()=>{ vaciarCarrito(); },true); };
 
   /* nombre del cliente: sirve para llamarlo y sale en la comanda y la factura */
@@ -2569,7 +2621,16 @@ function paintCart(){
       '<div class="qty"><button data-m>−</button><span>'+i.cant+'</span><button data-p>+</button></div>'+
       '<div style="text-align:right"><button class="btn ghost sm" data-n title="Nota">✎</button>'+
       '<button class="btn ghost sm" data-x>✕</button></div></div>';
-  }).join('') : '<div class="empty"><span class="ico">🛒</span>Toca un producto para agregarlo</div>';
+  }).join('') : ((c.anulados||[]).length? '' : '<div class="empty"><span class="ico">🛒</span>Toca un producto para agregarlo</div>');
+  if((c.anulados||[]).length){
+    it.innerHTML+='<div style="margin:8px 10px 4px;padding:8px 10px;border:1.5px dashed var(--bad);border-radius:10px;background:var(--bad-soft)">'+
+      '<div class="tiny b" style="color:var(--bad);margin-bottom:4px">🚫 Quitado después de ir a cocina</div>'+
+      c.anulados.map(a=>'<div style="padding:4px 0;border-top:1px solid rgba(0,0,0,.06)">'+
+        '<div class="row" style="justify-content:space-between"><s style="color:var(--bad);font-weight:650">'+num(a.cant,0)+' × '+esc(a.nombre)+'</s>'+
+          '<s class="tiny mono" style="color:var(--bad)">'+money(a.precio*a.cant)+'</s></div>'+
+        '<div class="tiny muted">'+esc(a.usuarioNombre||'—')+' · '+ftime(a.fecha)+' · <i>'+esc(a.motivo||'')+'</i></div></div>').join('')+
+    '</div>';
+  }
   $$('.citem',it).forEach(row=>{ const id=row.dataset.i;
     $('[data-m]',row).onclick=()=>cartQty(id,-1);
     $('[data-p]',row).onclick=()=>cartQty(id,1);
@@ -2656,7 +2717,7 @@ function enviarACocina(){
   if(!esEstacion() && S.cfg.fbOn){
     c.cocinaMs=Date.now();
     if(c.mesaId){ persistComanda(true);
-      guardarPedido('📨 Pedido enviado a cocina · guardado en '); }
+      guardarPedido('📨 Pedido enviado a cocina · guardado en ',true); }
     else { persistComanda(); paintCart();
       toast('📨 Pedido enviado a la cocina','ok',3500); }
     if(S.cfg.autoSync) scheduleSync(200);
@@ -2669,7 +2730,7 @@ function enviarACocina(){
     nroTurno:turnoDeCarrito(c), nombrePedido:nombreDePedido(c)}),
     'comanda',S.cfg.impresoraComanda);
   marcarEnviado(c);
-  if(c.mesaId) guardarPedido(d.yaEnviado? 'Agregado a cocina · guardado en ' : 'Pedido a cocina y guardado en ');
+  if(c.mesaId) guardarPedido(d.yaEnviado? 'Agregado a cocina · guardado en ' : 'Pedido a cocina y guardado en ',true);
   else { persistComanda(); paintCart(); toast('Comanda enviada a cocina','ok'); }
 }
 
@@ -2678,8 +2739,9 @@ function enviarACocina(){
    se cobre. */
 /* Vaciar: quita productos y nombre. Si era un pedido guardado de mostrador o
    un domicilio sin nada más, desaparece de Mesas para que no quede pendiente */
-function vaciarCarrito(){
+function vaciarCarrito(conMotivo){
   const c=S.cart; if(!c) return;
+  if(hayEnCocina(c) && !conMotivo && !puedeEditar()) return toast('Este pedido ya fue a cocina: no se puede vaciar','warn');
   (c.items||[]).forEach(i=>bajaComanda(i,i.env||0));
   c.items=[]; c.nombrePedido='';
   const mm=c.mesaId? byId('mesas',c.mesaId):null;
@@ -2691,12 +2753,12 @@ function vaciarCarrito(){
   paintCart(); buildNav();
   toast('Carrito vacío','ok',2000);
 }
-function guardarPedido(prefijo){
+function guardarPedido(prefijo,desdeCocina){
   const c=S.cart;
   if(!c) return;
   if(!c.items.length) return toast('El pedido está vacío','warn');
   if(!c.mesaId){                         // mostrador: se guarda a nombre del cliente
-    const crear=n=>{ const ml=nuevoLlevar(n); c.mesaId=ml.id; c.tipo='mostrador'; c.nombrePedido=n; guardarPedido(prefijo); };
+    const crear=n=>{ const ml=nuevoLlevar(n); c.mesaId=ml.id; c.tipo='mostrador'; c.nombrePedido=n; guardarPedido(prefijo,desdeCocina); };
     if(c.nombrePedido) return crear(c.nombrePedido);
     modal({title:'Guardar pedido de mostrador', size:'slim',
       body:'<div class="f"><label>¿A nombre de quién?</label>'+
@@ -2708,6 +2770,12 @@ function guardarPedido(prefijo){
         const ok=()=>{ const n=i.value.trim(); if(!n) return toast('Escribe el nombre del cliente','warn'); closeModal(); crear(n); };
         $('#gok',m).onclick=ok; i.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } }; }});
     return;
+  }
+  /* lo que la cocina todavía no tiene se manda solo al guardar, para que no
+     quede ningún producto sin imprimir (y esa misma función vuelve a guardar) */
+  if(!desdeCocina && S.cfg.impComanda!==false){
+    const d=pendientesComanda(c);
+    if(d.nuevos.length || d.cambios.length || d.bajas.length){ persistComanda(true); return enviarACocina(); }
   }
   persistComanda(true);
   const mm=byId('mesas',c.mesaId);
@@ -2724,13 +2792,32 @@ function guardarPedido(prefijo){
 /* --- comandas (cuentas abiertas por mesa) --- */
 function persistComanda(force){
   const c=S.cart; if(!c || !c.mesaId) return;
+  if(!c.items.length && c.comandaId && (c.anulados||[]).length){
+    const vieja=byId('comandas',c.comandaId);
+    if(vieja){ vieja.estado='anulada'; vieja.items=[]; vieja.anulados=(c.anulados||[]).slice();
+      vieja.bajas=(c.bajas||[]).slice(); vieja.cierre=now();
+      /* la cocina tiene que enterarse de que se canceló */
+      const pb=vieja.bajas.filter(x=>x.vaCocina!==false);
+      if(pb.length && S.cfg.impComanda!==false){
+        if(esEstacion() || !S.cfg.fbOn){
+          const ms=byId('mesas',c.mesaId);
+          encolarImp(comandaHTML({no:'ANULA · '+(ms? ms.nombre:'MOSTRADOR'), fecha:now(), tipo:c.tipo, mesaId:c.mesaId||'',
+            usuarioId:S.user?S.user.id:'', items:[], cambios:[], bajas:pb, adicional:true,
+            nroTurno:vieja.nroTurno||0, nombrePedido:nombreDePedido(vieja)}),'comanda',S.cfg.impresoraComanda);
+          vieja.bajas=[];
+        } else vieja.cocinaMs=Date.now();
+      }
+      put('comandas',vieja); }
+    c.comandaId=null; c.anulados=[];
+    const ml=byId('mesas',c.mesaId); if(esLlevar(ml)){ remove('mesas',ml.id); c.mesaId=null; }
+    return; }
   if(!c.items.length && c.comandaId){ remove('comandas',c.comandaId); c.comandaId=null;
     const ml=byId('mesas',c.mesaId); if(esLlevar(ml)){ remove('mesas',ml.id); c.mesaId=null; }
     return; }
   if(!c.items.length) return;
   const cm={ id:c.comandaId||uid('cm'), mesaId:c.mesaId, nombrePedido:c.nombrePedido||'',
     items:c.items.map(i=>Object.assign({},i)), clienteId:c.clienteId,
-    bajas:(c.bajas||[]).slice(), cocinaMs:c.cocinaMs||null, tipo:c.tipo||'mesa',
+    bajas:(c.bajas||[]).slice(), anulados:(c.anulados||[]).slice(), cocinaMs:c.cocinaMs||null, tipo:c.tipo||'mesa',
     descuento:c.descuento, propinaPct:c.propinaPct, nota:c.nota, estado:'abierta',
     meseroId:S.user?S.user.id:'', apertura:(c.comandaId&&byId('comandas',c.comandaId)||{}).apertura||now() };
   const prev=c.comandaId? byId('comandas',c.comandaId) : null;
@@ -3086,6 +3173,8 @@ function registrarVenta(o){
     v.turnoId=original.turnoId||v.turnoId; }
   datosEntregaVenta(v,c,original);
   v.nombrePedido = (original&&original.nombrePedido) || nombreDePedido(c) || '';
+  v.anulados = ((original&&original.anulados)||[]).concat((c.anulados||[]).filter(a=>
+    !((original&&original.anulados)||[]).some(b=>b.id===a.id)));
   { const cmT=c.comandaId? byId('comandas',c.comandaId):null;
     if(original && original.nroTurno){ v.nroTurno=original.nroTurno; v.turnoPedidoId=original.turnoPedidoId||''; }
     else if(cmT && cmT.nroTurno){ v.nroTurno=cmT.nroTurno; v.turnoPedidoId=cmT.turnoPedidoId||''; }
@@ -4034,6 +4123,7 @@ function abrirMesa(mesaId){
   if(cm){ S.cart.comandaId=cm.id;
     S.cart.items=(cm.items||[]).map(i=>Object.assign({},i));   // copia: no tocar la comanda guardada
     S.cart.bajas=(cm.bajas||[]).slice();
+    S.cart.anulados=(cm.anulados||[]).slice();
     S.cart.cocinaMs=cm.cocinaMs||null;
     S.cart.clienteId=cm.clienteId||'';
     S.cart.descuento=cm.descuento||0; S.cart.propinaPct=cm.propinaPct||0; S.cart.nota=cm.nota||''; }
@@ -7197,6 +7287,14 @@ function viewReportes(vw){
       .forEach(m=>{cons[m.ingredienteId]=(cons[m.ingredienteId]||0)+
         (m.costoTotal!=null? Math.abs(m.costoTotal) : Math.abs(m.cantidad)*(m.costoUnit||0));});
     const consArr=Object.keys(cons).map(k=>({n:nameOf('ingredientes',k),v:cons[k]})).sort((a,b)=>b.v-a.v).slice(0,10);
+    /* anulaciones de productos que ya habían ido a cocina */
+    const anu=[];
+    S.ventas.forEach(v=>(v.anulados||[]).forEach(a=>anu.push(Object.assign({ped:v.no+(v.nroTurno?' · T'+fmtTurno(v.nroTurno):'')},a))));
+    S.comandas.forEach(cm=>{ if(cm.estado==='cerrada') return;
+      (cm.anulados||[]).forEach(a=>anu.push(Object.assign({ped:(cm.estado==='anulada'?'pedido cancelado':'pedido abierto')+
+        (cm.nroTurno?' · T'+fmtTurno(cm.nroTurno):'')},a))); });
+    const anuR=anu.filter(a=>{ const d=dISO(a.fecha); return d>=d1 && d<=d2; }).sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+    const anuPorU={}; anuR.forEach(a=>{ const k=a.usuarioNombre||'—'; anuPorU[k]=(anuPorU[k]||0)+a.precio*a.cant; });
     /* tiempos de entrega */
     const ent=entregasHechas(d1,d2), entD=ent.filter(x=>x.esDom), stD=statsEntregas(entD), stO=statsEntregas(ent.filter(x=>!x.esDom));
     const meta=metaEntrega();
@@ -7248,6 +7346,19 @@ function viewReportes(vw){
               fmtMin(stO.prom)+' ('+stO.n+')</span></div>':'')
           : '<div class="empty"><span class="ico">🛵</span>Aún no hay entregas registradas en estas fechas.<br>'+
             '<span class="tiny">Regístralas en el módulo Entregas.</span></div>')+
+        '</div></div>'+
+        '<div class="card" style="grid-column:1/-1"><div class="hd"><h3>🚫 Quitados después de ir a cocina</h3>'+
+          (anuR.length? '<span class="pill bad">'+anuR.length+'</span><span class="pill">'+money(round(sum(anuR,a=>a.precio*a.cant),2))+'</span>':'')+
+          '</div><div class="bd'+(anuR.length?' p0':'')+'">'+
+          (anuR.length? tbl([
+              {t:'Fecha',f:a=>fdate(a.fecha,true)},
+              {t:'Quién',f:a=>'<b>'+esc(a.usuarioNombre||'—')+'</b>'},
+              {t:'Producto',f:a=>num(a.cant,0)+' × '+esc(a.nombre)},
+              {t:'Valor',num:1,f:a=>money(a.precio*a.cant)},
+              {t:'Motivo',f:a=>'<i>'+esc(a.motivo||'')+'</i>'},
+              {t:'Pedido',f:a=>esc(a.ped)}],anuR)+
+            '<div class="bd tiny muted">Por persona: '+Object.keys(anuPorU).map(k=>esc(k)+' '+money(round(anuPorU[k],2))).join(' · ')+'</div>'
+          : '<div class="empty"><span class="ico">✅</span>Nadie quitó productos que ya estaban en cocina en estas fechas</div>')+
         '</div></div>'+
         '<div class="card"><div class="hd"><h3>Productos más vendidos</h3></div><div class="bd p0">'+tbl([
           {t:'Producto',f:p=>'<b>'+esc(p.n)+'</b>'},
