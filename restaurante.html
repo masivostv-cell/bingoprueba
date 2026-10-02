@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>POS Restaurante</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%BD%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<title>Mr Cheff</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E %3Cdefs%3E %3ClinearGradient id='bg' x1='0' y1='0' x2='0' y2='1'%3E %3Cstop offset='0' stop-color='%23f26a3d'/%3E%3Cstop offset='1' stop-color='%23d4441f'/%3E %3C/linearGradient%3E %3C/defs%3E %3Crect width='512' height='512' rx='112' fill='url(%23bg)'/%3E %3Cg fill='%23fff'%3E %3Ccircle cx='176' cy='168' r='70'/%3E %3Ccircle cx='256' cy='128' r='84'/%3E %3Ccircle cx='336' cy='168' r='70'/%3E %3Crect x='150' y='160' width='212' height='96' rx='18'/%3E %3C/g%3E %3Crect x='150' y='232' width='212' height='40' rx='10' fill='%23f4f1ec'/%3E %3Cpath d='M196 200 v40 M256 186 v54 M316 200 v40' stroke='%23e8e2d8' stroke-width='10' stroke-linecap='round'/%3E %3Cellipse cx='256' cy='338' rx='96' ry='88' fill='%23ffd9b8'/%3E %3Ccircle cx='222' cy='322' r='11' fill='%232b1d16'/%3E %3Ccircle cx='290' cy='322' r='11' fill='%232b1d16'/%3E %3Ccircle cx='256' cy='350' r='13' fill='%23f2a983'/%3E %3Cpath d='M256 368 c-14 -16 -46 -18 -62 -4 c-12 10 -8 30 -26 32 c22 10 52 4 70 -10 c8 -6 14 -12 18 -18 c4 6 10 12 18 18 c18 14 48 20 70 10 c-18 -2 -14 -22 -26 -32 c-16 -14 -48 -12 -62 4 z' fill='%233a2418'/%3E %3Cpath d='M222 400 q34 22 68 0' stroke='%23c96f52' stroke-width='8' fill='none' stroke-linecap='round'/%3E %3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="application-name" content="Mr Cheff">
+<meta name="apple-mobile-web-app-title" content="Mr Cheff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#e2542c">
 <style>
 :root{
   --bg:#f2f4f7; --panel:#ffffff; --panel2:#f8fafc; --ink:#111827; --ink2:#374151;
@@ -283,6 +289,14 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
   background:var(--panel2);padding:3px;box-sizing:border-box}
 .brand .logoimg{width:32px;height:32px;border-radius:9px;object-fit:contain;flex:0 0 auto}
 #login .logoimg{width:60px;height:60px;border-radius:17px;object-fit:contain;margin:0 auto 14px;display:block}
+@keyframes apppop{from{opacity:0;transform:translateY(8px) scale(.9)}}
+#login .appicon{width:96px;height:96px;display:block;margin:0 auto 12px;border-radius:24px;box-shadow:0 12px 30px rgba(226,84,44,.35);animation:apppop .45s ease-out}
+#login .appname{font-size:28px;font-weight:850;letter-spacing:.3px;margin:0}
+#login .lgbiz{display:inline-flex;align-items:center;gap:7px;margin:8px auto 14px;padding:4px 12px;border-radius:20px;
+  background:rgba(255,255,255,.08);color:#fff;font-size:13px;font-weight:650}
+#login .lgbiz:empty{display:none}
+#login .lgbiz img{width:20px;height:20px;border-radius:6px;object-fit:contain}
+#login .pie{margin-top:18px;font-size:11px;color:var(--sb-ink);opacity:.7}
 .cbx{position:relative}
 .cbx-in{width:100%;padding-right:28px}
 .cbx-x{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;
@@ -424,8 +438,9 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 
 <div id="login">
   <div class="box">
-    <div class="logo">🍽️</div>
-    <h2 id="lgname">POS Restaurante</h2>
+    <img class="appicon" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E %3Cdefs%3E %3ClinearGradient id='bg' x1='0' y1='0' x2='0' y2='1'%3E %3Cstop offset='0' stop-color='%23f26a3d'/%3E%3Cstop offset='1' stop-color='%23d4441f'/%3E %3C/linearGradient%3E %3C/defs%3E %3Crect width='512' height='512' rx='112' fill='url(%23bg)'/%3E %3Cg fill='%23fff'%3E %3Ccircle cx='176' cy='168' r='70'/%3E %3Ccircle cx='256' cy='128' r='84'/%3E %3Ccircle cx='336' cy='168' r='70'/%3E %3Crect x='150' y='160' width='212' height='96' rx='18'/%3E %3C/g%3E %3Crect x='150' y='232' width='212' height='40' rx='10' fill='%23f4f1ec'/%3E %3Cpath d='M196 200 v40 M256 186 v54 M316 200 v40' stroke='%23e8e2d8' stroke-width='10' stroke-linecap='round'/%3E %3Cellipse cx='256' cy='338' rx='96' ry='88' fill='%23ffd9b8'/%3E %3Ccircle cx='222' cy='322' r='11' fill='%232b1d16'/%3E %3Ccircle cx='290' cy='322' r='11' fill='%232b1d16'/%3E %3Ccircle cx='256' cy='350' r='13' fill='%23f2a983'/%3E %3Cpath d='M256 368 c-14 -16 -46 -18 -62 -4 c-12 10 -8 30 -26 32 c22 10 52 4 70 -10 c8 -6 14 -12 18 -18 c4 6 10 12 18 18 c18 14 48 20 70 10 c-18 -2 -14 -22 -26 -32 c-16 -14 -48 -12 -62 4 z' fill='%233a2418'/%3E %3Cpath d='M222 400 q34 22 68 0' stroke='%23c96f52' stroke-width='8' fill='none' stroke-linecap='round'/%3E %3C/svg%3E" alt="Mr Cheff">
+    <h2 id="lgname" class="appname">Mr Cheff</h2>
+    <div id="lgbiz" class="lgbiz"></div>
     <p id="lgsub">Entra con tu correo y tu clave</p>
 
     <div id="loginform" style="text-align:left">
@@ -440,6 +455,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
         <button class="btn ghost sm" id="lg_diag" style="color:#8b94a5">Revisar conexión</button>
       </div>
     </div>
+    <div class="pie" id="lgpie">Mr Cheff · software para restaurantes</div>
   </div>
 </div>
 
@@ -641,7 +657,11 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.01-5';
+const APP_VERSION='2026.10.02-1';
+/* Marca del software (igual para todos los clientes). El logo de cada
+   restaurante sigue saliendo adentro: menú, tickets y facturas. */
+const APP_NOMBRE='Mr Cheff';
+const APP_ICONO="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E %3Cdefs%3E %3ClinearGradient id='bg' x1='0' y1='0' x2='0' y2='1'%3E %3Cstop offset='0' stop-color='%23f26a3d'/%3E%3Cstop offset='1' stop-color='%23d4441f'/%3E %3C/linearGradient%3E %3C/defs%3E %3Crect width='512' height='512' rx='112' fill='url(%23bg)'/%3E %3Cg fill='%23fff'%3E %3Ccircle cx='176' cy='168' r='70'/%3E %3Ccircle cx='256' cy='128' r='84'/%3E %3Ccircle cx='336' cy='168' r='70'/%3E %3Crect x='150' y='160' width='212' height='96' rx='18'/%3E %3C/g%3E %3Crect x='150' y='232' width='212' height='40' rx='10' fill='%23f4f1ec'/%3E %3Cpath d='M196 200 v40 M256 186 v54 M316 200 v40' stroke='%23e8e2d8' stroke-width='10' stroke-linecap='round'/%3E %3Cellipse cx='256' cy='338' rx='96' ry='88' fill='%23ffd9b8'/%3E %3Ccircle cx='222' cy='322' r='11' fill='%232b1d16'/%3E %3Ccircle cx='290' cy='322' r='11' fill='%232b1d16'/%3E %3Ccircle cx='256' cy='350' r='13' fill='%23f2a983'/%3E %3Cpath d='M256 368 c-14 -16 -46 -18 -62 -4 c-12 10 -8 30 -26 32 c22 10 52 4 70 -10 c8 -6 14 -12 18 -18 c4 6 10 12 18 18 c18 14 48 20 70 10 c-18 -2 -14 -22 -26 -32 c-16 -14 -48 -12 -62 4 z' fill='%233a2418'/%3E %3Cpath d='M222 400 q34 22 68 0' stroke='%23c96f52' stroke-width='8' fill='none' stroke-linecap='round'/%3E %3C/svg%3E";
 const DEFCFG={ id:'cfg', nombre:'Mi Restaurante', nit:'', direccion:'', telefono:'',
   simbolo:'$', decimales:0, impuesto:0, impIncluido:true, propina:10, propinaAuto:false,
   ticketAncho:80, ticketPie:'¡Gracias por su visita!', tema:'light',
@@ -3874,19 +3894,36 @@ function comandoKiosco(){
   const url=urlDeLaApp();
   return '"%CH%" --kiosk-printing --app="'+url+'" --user-data-dir="%LocalAppData%\\PosCaja"';
 }
+function psCodificado(txt){ let b=''; for(let i=0;i<txt.length;i++){ const c=txt.charCodeAt(i); b+=String.fromCharCode(c&255,c>>8); } return btoa(b); }
 function descargarAccesoDirecto(){
   if(location.protocol==='file:')
     return toast('Primero publica la app en una dirección web; desde un archivo local no sirve','warn',6000);
   const url=urlDeLaApp();
+  const ico=url.replace(/[^/]*$/,'')+'mrcheff.ico';
+  /* crea en el escritorio el acceso "Mr Cheff" con el icono del chef */
+  const ps=[
+    "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12",
+    "$d=Join-Path $env:LOCALAPPDATA 'MrCheff'; New-Item -ItemType Directory -Force -Path $d | Out-Null",
+    "$ico=Join-Path $d 'mrcheff.ico'",
+    "try{ Invoke-WebRequest -Uri '"+ico.replace(/'/g,"''")+"' -OutFile $ico -UseBasicParsing }catch{}",
+    "$lnk=Join-Path ([Environment]::GetFolderPath('Desktop')) 'Mr Cheff.lnk'",
+    "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($lnk)",
+    "$s.TargetPath=$env:CH",
+    "$s.Arguments='--kiosk-printing --app=\""+url.replace(/'/g,"''")+"\" --user-data-dir=\"'+$env:LOCALAPPDATA+'\\PosCaja\"'",
+    "if(Test-Path $ico){ $s.IconLocation=$ico }",
+    "$s.Description='Mr Cheff - punto de venta'",
+    "$s.Save()"].join('; ');
   const bat='@echo off\r\n'+
-    'rem Abre el POS en Chrome con impresion automatica (sin ventana de vista previa)\r\n'+
+    'rem Mr Cheff: crea el acceso directo con su icono y abre la caja con impresion automatica\r\n'+
     'setlocal\r\n'+
     'set "CH=%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"\r\n'+
     'if not exist "%CH%" set "CH=%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe"\r\n'+
     'if not exist "%CH%" set "CH=%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe"\r\n'+
     'if not exist "%CH%" (echo No se encontro Google Chrome en este equipo. & pause & exit /b)\r\n'+
+    'echo Instalando Mr Cheff en el escritorio...\r\n'+
+    'powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand '+psCodificado(ps)+'\r\n'+
     'start "" "%CH%" --kiosk-printing --app="'+url+'" --user-data-dir="%LocalAppData%\\PosCaja"\r\n';
-  download('POS - impresion automatica.bat', bat, 'application/octet-stream');
+  download('Instalar Mr Cheff.bat', bat, 'application/octet-stream');
 }
 function mImpresionAuto(){
   const url=urlDeLaApp();
@@ -7541,6 +7578,8 @@ function viewAjustes(vw){
             '> Sugerir propina automáticamente en cada venta</label>'+
         '</div></div>'+
         '<div class="card"><div class="hd"><h3>🔄 Versión del sistema</h3></div><div class="bd">'+
+          '<div class="row" style="gap:10px;margin-bottom:8px"><img src="'+APP_ICONO+'" style="width:38px;height:38px;border-radius:10px" alt="">'+
+            '<div><b>'+APP_NOMBRE+'</b><div class="tiny muted">software para restaurantes</div></div></div>'+
           '<div class="tline"><span>Versión de este equipo</span><span class="v mono">'+esc(APP_VERSION)+'</span></div>'+
           '<div class="tline"><span>Se abre desde</span><span class="v">'+(enLinea()? '🌐 '+esc(location.host) : '📁 archivo en el PC')+'</span></div>'+
           (enLinea()? '<div class="hintx" style="margin-top:6px">Se actualiza sola: al abrir, cada 10 minutos y al volver a la ventana.</div>'
@@ -9038,7 +9077,10 @@ function lgSacudir(){ const bx=$('#login .box'); if(bx){ bx.classList.add('shake
 
 function paintLogin(){
   pintarPrueba();
-  $('#lgname').textContent=(S.cfg.prueba?'🧪 ':'')+(S.cfg.nombre||'POS Restaurante');
+  $('#lgname').textContent=(S.cfg.prueba?'🧪 ':'')+APP_NOMBRE;
+  { const u=urlImg('logo'), nb=S.cfg.nombre&&S.cfg.nombre!=='Mi Restaurante'? S.cfg.nombre : '';
+    $('#lgbiz').innerHTML= nb? (u?'<img src="'+u+'" alt="">':'🍽️')+'<span>'+esc(nb)+'</span>' : ''; }
+  if($('#lgpie')) $('#lgpie').textContent=APP_NOMBRE+' · versión '+APP_VERSION;
   const vacio = !S.usuarios.length && !leerSesionFB();
   const sinActivar = !equipoActivado();
   $('#lgsub').textContent = S.cfg.prueba
@@ -9405,13 +9447,12 @@ function applyCfg(){
   document.documentElement.setAttribute('data-theme', S.cfg.tema==='dark'?'dark':'light');
   $('#btntheme').textContent = S.cfg.tema==='dark'?'☀️':'🌙';
   $('#bizname').textContent = S.cfg.nombre||'Mi Restaurante';
-  document.title = (S.cfg.nombre||'POS')+' · Punto de venta';
+  document.title = APP_NOMBRE+(S.cfg.nombre && S.cfg.nombre!=='Mi Restaurante'? ' · '+S.cfg.nombre : '');
   const u=urlImg('logo');
   const cont=$('.brand'), viejo=$('.brand .logo, .brand .logoimg');
   if(viejo){ const nuevo=u? '<img class="logoimg" src="'+u+'" alt="">' : '<div class="logo">🍽️</div>';
     viejo.outerHTML=nuevo; }
-  const lg=$('#login .logo, #login .logoimg');
-  if(lg) lg.outerHTML = u? '<img class="logoimg" src="'+u+'" alt="">' : '<div class="logo">🍽️</div>';
+  if($('#login') && !$('#login').classList.contains('hide')) try{ paintLogin(); }catch(e){}
 }
 
 /* ================================ BOOT ================================ */
