@@ -641,7 +641,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.01-4';
+const APP_VERSION='2026.10.01-5';
 const DEFCFG={ id:'cfg', nombre:'Mi Restaurante', nit:'', direccion:'', telefono:'',
   simbolo:'$', decimales:0, impuesto:0, impIncluido:true, propina:10, propinaAuto:false,
   ticketAncho:80, ticketPie:'¡Gracias por su visita!', tema:'light',
@@ -1644,8 +1644,90 @@ function coleccionDoc(d){ return d.esOtro? 'otrosdocs' : (d.proveedorId!==undefi
 function terceroDoc(d){
   if(!d) return '—';
   if(d.esOtro) return d.terceroNombre||'—';
-  if(d.proveedorId!==undefined) return nameOf('proveedores',d.proveedorId);
-  return d.clienteId? nameOf('clientes',d.clienteId):'—';
+  if(d.proveedorId!==undefined){ const p=byId('proveedores',d.proveedorId);
+    return p&&p.nombre? p.nombre : (d.proveedorNombre||pistaNombre(d)||'—'); }
+  const c=d.clienteId? byId('clientes',d.clienteId):null;
+  return c&&c.nombre? c.nombre : (d.clienteNombre||pistaNombre(d)||'—');
+}
+/* ---------- nombres de cartera a prueba de pérdidas ----------
+   Cada factura a crédito guarda una copia del nombre. Si la ficha del cliente
+   se pierde, el nombre se sigue viendo y se puede reconstruir. */
+function esProvDoc(d){ return d && d.proveedorId!==undefined; }
+function idTerceroDoc(d){ return esProvDoc(d)? d.proveedorId : d.clienteId; }
+function sinFicha(d){
+  if(!d || d.esOtro) return false;
+  const id=idTerceroDoc(d); if(!id) return true;
+  const o=byId(esProvDoc(d)?'proveedores':'clientes',id);
+  return !o || !o.nombre;
+}
+/* busca el nombre en cualquier rastro que haya quedado */
+function pistaNombre(d){
+  if(!d) return '';
+  const prov=esProvDoc(d), id=idTerceroDoc(d);
+  const propio=prov? d.proveedorNombre : (d.clienteNombre||d.nombrePedido||d.destNombre);
+  if(propio) return propio;
+  if(!id) return '';
+  const col=prov? S.compras : S.ventas, k=prov?'proveedorId':'clienteId', kn=prov?'proveedorNombre':'clienteNombre';
+  const otro=col.find(x=>x[k]===id && x[kn]); if(otro) return otro[kn];
+  const tid=(prov?'proveedor:':'cliente:')+id;
+  const mv=S.movimientos.find(m=>m.terceroId===tid && m.terceroNombre && m.terceroNombre!=='—');
+  if(mv) return mv.terceroNombre;
+  const od=S.otrosdocs.find(o=>o.terceroId===tid && o.terceroNombre); if(od) return od.terceroNombre;
+  if(!prov){ const vv=col.find(x=>x[k]===id && (x.nombrePedido||x.destNombre)); if(vv) return vv.nombrePedido||vv.destNombre; }
+  return '';
+}
+/* copia el nombre actual en las facturas pendientes que todavía no lo tienen */
+function respaldarNombresCartera(){
+  let n=0;
+  cxc().forEach(d=>{ if(d.esOtro||!d.clienteId) return; const c=byId('clientes',d.clienteId);
+    if(c&&c.nombre&&d.clienteNombre!==c.nombre){ d.clienteNombre=c.nombre; put('ventas',d); n++; } });
+  cxp().forEach(d=>{ if(d.esOtro||!d.proveedorId) return; const c=byId('proveedores',d.proveedorId);
+    if(c&&c.nombre&&d.proveedorNombre!==c.nombre){ d.proveedorNombre=c.nombre; put('compras',d); n++; } });
+  return n;
+}
+/* rehace las fichas que faltan con el MISMO id: así se arreglan todas sus facturas */
+function recuperarNombresCartera(){
+  const hechos={}, sinPista={};
+  cxc().concat(cxp()).filter(sinFicha).forEach(d=>{
+    const prov=esProvDoc(d), id=idTerceroDoc(d); if(!id) return;
+    const clave=(prov?'p:':'c:')+id; if(hechos[clave]) return;
+    const nom=pistaNombre(d);
+    if(!nom){ sinPista[clave]=1; return; }
+    const col=prov?'proveedores':'clientes';
+    const ex=byId(col,id);
+    put(col, Object.assign(ex||{id:id,activo:true,telefono:'',doc:''},{nombre:nom,activo:true}));
+    hechos[clave]=nom;
+  });
+  return {hechos:Object.keys(hechos).length, sinPista:Object.keys(sinPista).length};
+}
+function mPonerNombre(d){
+  const prov=esProvDoc(d), id=idTerceroDoc(d), col=prov?'proveedores':'clientes';
+  const mismos=(prov?cxp():cxc()).filter(x=>!x.esOtro && idTerceroDoc(x)===id);
+  modal({title:'Poner nombre · '+d.no, size:'slim',
+    body:'<div class="hintx" style="margin-bottom:10px">Esta factura perdió el nombre del '+(prov?'proveedor':'cliente')+'.'+
+        (mismos.length>1? ' El cambio arregla también las otras <b>'+(mismos.length-1)+'</b> factura(s) del mismo '+(prov?'proveedor':'cliente')+'.':'')+'</div>'+
+      '<div class="f"><label>Nombre</label><input id="pnom" autocomplete="off" value="'+esc(pistaNombre(d))+'" placeholder="¿Quién debe esta factura?" style="font-size:16px;padding:11px"></div>'+
+      '<div class="f" style="margin-top:10px"><label>…o es alguien que ya está creado</label><div id="pex"></div></div>',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="pok">Guardar nombre</button>',
+    onOpen:m=>{
+      const cb=combo($('#pex',m),{lista:S[col].filter(x=>x.nombre && x.id!==id), vacio:'— no, es nuevo —',
+        placeholder:'Buscar '+(prov?'proveedor':'cliente')+'…'});
+      setTimeout(()=>{ const i=$('#pnom',m); i.focus(); i.select(); },50);
+      $('#pok',m).onclick=()=>{
+        const otro=cb.valor(), nom=$('#pnom',m).value.trim();
+        if(otro){                       // pasar las facturas a una ficha que ya existe
+          mismos.forEach(x=>{ if(prov){ x.proveedorId=otro; x.proveedorNombre=nameOf(col,otro); put('compras',x); }
+            else { x.clienteId=otro; x.clienteNombre=nameOf(col,otro); put('ventas',x); } });
+          S.abonos.filter(a=>a.terceroId===id && mismos.some(x=>x.id===a.docId)).forEach(a=>{ a.terceroId=otro; put('abonos',a); });
+        } else {
+          if(!nom) return toast('Escribe el nombre','warn');
+          if(id){ const ex=byId(col,id); put(col,Object.assign(ex||{id:id,activo:true,telefono:'',doc:''},{nombre:nom,activo:true})); }
+          else { const nid=uid(prov?'pr':'cl'); put(col,{id:nid,nombre:nom,activo:true,telefono:'',doc:''});
+            if(prov){ d.proveedorId=nid; put('compras',d); } else { d.clienteId=nid; put('ventas',d); } }
+        }
+        respaldarNombresCartera(); closeModal(); render(); toast('Nombre guardado','ok');
+      };
+    }});
 }
 function otrosCartera(tipo){ return S.otrosdocs.filter(d=>d.tipo===tipo && d.estado!=='anulado' && saldoDoc(d)>0.5); }
 /* lo que quedó fiado en una venta: eso NO entró a la caja, se va a cartera */
@@ -3173,6 +3255,8 @@ function registrarVenta(o){
     v.turnoId=original.turnoId||v.turnoId; }
   datosEntregaVenta(v,c,original);
   v.nombrePedido = (original&&original.nombrePedido) || nombreDePedido(c) || '';
+  if(v.clienteId){ const cl=byId('clientes',v.clienteId); if(cl&&cl.nombre) v.clienteNombre=cl.nombre;
+    else if(original&&original.clienteNombre) v.clienteNombre=original.clienteNombre; }
   v.anulados = ((original&&original.anulados)||[]).concat((c.anulados||[]).filter(a=>
     !((original&&original.anulados)||[]).some(b=>b.id===a.id)));
   { const cmT=c.comandaId? byId('comandas',c.comandaId):null;
@@ -4823,6 +4907,7 @@ function edCompra(orig){
           estado: credito?'pendiente':'pagada',
           medioPago: credito?'':$('#fp',m).value, cuentaId: credito?'':$('#ct',m).value,
           usuarioId:S.user?S.user.id:''};
+        if(cp.proveedorId){ const pv=byId('proveedores',cp.proveedorId); if(pv&&pv.nombre) cp.proveedorNombre=pv.nombre; }
         put('compras',cp);
         items.forEach(i=> movInv(i.ingredienteId,'entrada',i.cantidad,i.costoUnit,'compra',cp.id,'Compra '+cp.no));
         if(!credito) movTes(cp.cuentaId,'egreso',cp.total,'Compra '+cp.no+' · '+nameOf('proveedores',cp.proveedorId),'compra','compra',cp.id,
@@ -4969,7 +5054,14 @@ function viewCartera(vw){
     const buckets=[[0,0,'Al día'],[1,30,'1-30 días'],[31,60,'31-60'],[61,9999,'+60']];
     const bs=buckets.map(b=>{ const l=docs.filter(d=>{const v=diasVencido(d);return b[0]===0? v===0 : (v>=b[0]&&v<=b[1]);});
       return {n:b[2],v:sum(l,saldoF),c:l.length}; });
-    $('#cbody').innerHTML= nota+
+    const huer=docs.filter(sinFicha);
+    const aviso= huer.length? '<div class="card" style="border-color:var(--warn);background:var(--warn-soft);margin-bottom:14px"><div class="bd">'+
+        '<div class="row wrap" style="gap:10px;align-items:center"><div style="flex:1;min-width:240px">'+
+          '<b style="color:var(--warn)">⚠️ '+huer.length+' factura(s) perdieron la ficha del '+(esC?'cliente':'proveedor')+'</b>'+
+          '<div class="tiny" style="margin-top:3px">Las deudas siguen completas; solo falta el nombre. Puedo buscarlo en los cobros, '+
+          'movimientos y otras facturas, o lo pones tú con ✏️.</div></div>'+
+          '<button class="btn pri" id="crec">🔎 Recuperar nombres</button></div></div></div>' : '';
+    $('#cbody').innerHTML= nota+aviso+
       '<div class="kpis" style="margin-bottom:14px">'+
         kpi(esC?'Total por cobrar':'Total por pagar',money(total),docs.length+' documentos',esC?'brand':'bad')+
         kpi('Vencido',money(sum(venc,saldoF)),venc.length+' documentos',venc.length?'bad':'ok')+
@@ -4979,7 +5071,11 @@ function viewCartera(vw){
         {t:'Documento',f:d=>'<b>'+esc(d.no)+'</b>'+(d.esOtro?' <span class="pill info">otro</span>':'')},
         {t:'Fecha',f:d=>fdate(d.fecha)},
         {t:esC?'Cliente / tercero':'Proveedor / tercero',
-          f:d=>'<b>'+esc(terceroDoc(d))+'</b>'+(d.esOtro? '<div class="tiny muted">'+esc(d.concepto||'')+'</div>':'')},
+          f:d=>{ const sf=sinFicha(d), nm=terceroDoc(d);
+            return '<b'+(sf&&nm==='—'?' style="color:var(--warn)"':'')+'>'+esc(sf&&nm==='—'?'Sin nombre':nm)+'</b>'+
+              (sf? ' <button class="btn ghost sm" data-pn="'+d.id+'" title="Poner o corregir el nombre">✏️</button>'+
+                (nm!=='—'? '<div class="tiny" style="color:var(--warn)">ficha perdida · nombre recuperado</div>':''):'')+
+              (d.esOtro? '<div class="tiny muted">'+esc(d.concepto||'')+'</div>':''); }},
         {t:'Vence',f:d=>{const v=diasVencido(d);
           return esc(d.vence||'—')+(v>0?' <span class="pill bad">'+v+'d</span>':'');}},
         {t:'Total',num:1,f:d=>money(d.total)},
@@ -4989,6 +5085,15 @@ function viewCartera(vw){
           (d.esOtro? '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-rd="'+d.id+'" title="Reimprimir">🖨️</button>':'')+'</div>'}
       ],docs,{empty:esC?'No hay cuentas por cobrar':'No hay cuentas por pagar',icon:'✅'})+'</div></div>';
     $$('[data-p]',$('#view')).forEach(b=>b.onclick=()=>mAbono(esC?'cxc':'cxp', docCartera(b.dataset.p)));
+    $$('[data-pn]',$('#view')).forEach(b=>b.onclick=()=>mPonerNombre(docCartera(b.dataset.pn)));
+    if($('#crec')) $('#crec').onclick=async()=>{
+      /* primero se baja todo de la nube: a veces la ficha existe allá y solo faltaba aquí */
+      if(S.cfg.fbOn){ toast('Revisando la nube…','ok',2000); try{ await pullCloud(true); }catch(e){} }
+      const antes=(esC?cxc():cxp()).filter(sinFicha).length;
+      if(!antes){ respaldarNombresCartera(); paint(); return toast('Listo: los nombres estaban en la nube y ya se ven','ok',5000); }
+      const r=recuperarNombresCartera(); respaldarNombresCartera(); paint();
+      toast(r.hechos? 'Recuperé '+r.hechos+' nombre(s)'+(r.sinPista? '. '+r.sinPista+' no tienen rastro: ponlos con ✏️':'')
+                    : 'No encontré rastro del nombre. Ponlo con ✏️ en cada factura', r.hechos?'ok':'warn', 6000); };
     $$('[data-rd]',$('#view')).forEach(b=>b.onclick=()=>{ comprobanteOtro(byId('otrosdocs',b.dataset.rd),true);
       toast('Enviado a impresión','ok'); });
   }
@@ -9406,6 +9511,7 @@ async function boot(){
   try{ if(sessionStorage.getItem('pos_upd')===APP_VERSION){ sessionStorage.removeItem('pos_upd');
     setTimeout(()=>toast('✅ Sistema actualizado a la versión '+APP_VERSION,'ok',5000),1500); } }catch(e){}
   setTimeout(()=>revisarActualizacion(false),4000);
+  setTimeout(()=>{ try{ if(S.user) respaldarNombresCartera(); }catch(e){} },9000);
 }
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
