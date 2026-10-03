@@ -657,7 +657,8 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.02-1';
+const APP_VERSION='2026.10.02-3';
+const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
 const APP_NOMBRE='Mr Cheff';
@@ -1445,15 +1446,23 @@ function movInv(ingredienteId,tipo,cantidad,costoUnit,refTipo,refId,nota){
     const cu=(costoUnit===null||costoUnit===undefined||costoUnit==='')? ultimoCosto(ingredienteId) : Number(costoUnit)||0;
     nuevaCapa(ingredienteId,c,cu,refTipo,refId,null);
     nivelarCosto(ingredienteId);             // lo que había + lo que entró = nuevo promedio
+    /* si el stock estaba en negativo (se vendió más de lo que había), esas
+       unidades ya salieron: se descuentan de lo que acaba de entrar para que
+       las capas (el valor) queden iguales al stock */
+    if(antes<-0.000001) consumirPeps(ingredienteId,Math.min(c,-antes),refTipo,refId);
     delta=c; costoMov=round(c*cu,2);
   } else if(tipo==='salida'){
     costoMov=consumirPeps(ingredienteId,c,refTipo,refId); delta=-c;
   } else {                                   // ajuste: c es el conteo real
     delta=round(c-antes,4);
-    if(delta>0){ const cu=costoProm(ingredienteId)||ultimoCosto(ingredienteId);
-      nuevaCapa(ingredienteId,delta,cu,refTipo,refId); nivelarCosto(ingredienteId);
-      costoMov=round(delta*cu,2); }
-    else if(delta<0){ costoMov=consumirPeps(ingredienteId,-delta,refTipo,refId); }
+    /* las capas se llevan a lo contado (nunca a negativo), sin importar
+       si antes estaban descuadradas con el stock */
+    const enCapas=round(sum(capasDe(ingredienteId),x=>Number(x.restante)||0),4);
+    const dq=round(Math.max(0,c)-enCapas,4);
+    const cu=costoProm(ingredienteId)||ultimoCosto(ingredienteId);
+    if(dq>0.000001){ nuevaCapa(ingredienteId,dq,cu,refTipo,refId); nivelarCosto(ingredienteId); }
+    else if(dq<-0.000001){ consumirPeps(ingredienteId,-dq,refTipo,refId); }
+    costoMov=round(Math.abs(delta)*cu,2);
   }
   g.stock=round(antes+delta,4);
   g.costo=round(costoProm(ingredienteId)||ultimoCosto(ingredienteId),4);
@@ -1501,6 +1510,8 @@ function reponerVenta(v){
     const fecha=new Date((prim? new Date(prim.fecha).getTime() : Date.now())-1000).toISOString();
     nuevaCapa(x.ingredienteId,x.cantidad,cu,'venta-anulada',v.id,fecha);
     nivelarCosto(x.ingredienteId);
+    { const antes=Number(g.stock)||0;            // si estaba en negativo, esa deuda se cubre primero
+      if(antes<-0.000001) consumirPeps(x.ingredienteId,Math.min(x.cantidad,-antes)); }
     g.stock=round((Number(g.stock)||0)+x.cantidad,4);
     g.costo=round(costoProm(x.ingredienteId)||ultimoCosto(x.ingredienteId),4);
     put('ingredientes',g);
@@ -3354,6 +3365,8 @@ function devolverConsumo(v,motivo){
     const fecha=new Date((prim? new Date(prim.fecha).getTime() : Date.now())-1000).toISOString();
     nuevaCapa(x.ingredienteId,x.cantidad,cu,motivo||'reverso',v.id,fecha);
     nivelarCosto(x.ingredienteId);
+    { const antes=Number(g.stock)||0;            // si estaba en negativo, esa deuda se cubre primero
+      if(antes<-0.000001) consumirPeps(x.ingredienteId,Math.min(x.cantidad,-antes)); }
     g.stock=round((Number(g.stock)||0)+x.cantidad,4);
     g.costo=round(costoProm(x.ingredienteId)||ultimoCosto(x.ingredienteId),4);
     put('ingredientes',g);
@@ -3369,16 +3382,20 @@ function deshacerVenta(v){
 function deshacerCompra(c){
   let parcial=false;
   S.capas.filter(x=>x.refTipo==='compra' && x.refId===c.id).forEach(cap=>{
-    const g=byId('ingredientes',cap.ingredienteId);
-    const quita=Math.max(0,Number(cap.restante)||0);
-    if(quita < (Number(cap.cantidad)||0)-0.000001) parcial=true;
-    /* el valor que se va es el que costó de verdad esa compra, no el
-       promedio; así el promedio de lo que queda vuelve a ser el correcto */
+    const gid=cap.ingredienteId, g=byId('ingredientes',gid);
+    /* Con costo promedio las unidades son iguales entre sí: deshacer la compra
+       saca TODA la cantidad comprada (no solo lo que quedaba en esa capa) y
+       TODO lo que costó. Así: compras = costo de lo vendido + inventario. */
+    const qc=round(Number(cap.cantidad)||0,4), resto=round(Math.max(0,Number(cap.restante)||0),4);
+    if(resto < qc-0.000001) parcial=true;
     const base=Number(cap.costoBase!=null? cap.costoBase : cap.costoUnit)||0;
+    const avg=costoProm(gid)||Number(cap.costoUnit)||0;
     remove('capas',cap.id);
-    if(g){ g.stock=round((Number(g.stock)||0)-quita,4); put('ingredientes',g); }
-    nivelarCosto(cap.ingredienteId, 0, round(quita*base - quita*(Number(cap.costoUnit)||0),4));
-    if(g){ g.costo=round(costoProm(g.id)||ultimoCosto(g.id),4); put('ingredientes',g); }
+    const extra=round(qc-resto,4);
+    if(extra>0.000001) consumirPeps(gid,extra);            // lo que ya se vendió sale de las otras capas
+    if(g){ g.stock=round((Number(g.stock)||0)-qc,4); }
+    nivelarCosto(gid, 0, round(qc*base - qc*avg,4));
+    if(g){ g.costo=round(costoProm(gid)||ultimoCosto(gid),4); put('ingredientes',g); }
   });
   borrarDerivados('',c.id);
   return parcial;
@@ -4144,6 +4161,7 @@ function ticketHTML(v){
    '.tot{font-size:'+px(18)+';font-weight:bold;margin:3px 0}'+
    '.logo{display:block;margin:0 auto 5px;max-width:'+Math.min(ang,62)+'mm;max-height:30mm}'+
    '.pie{text-align:center;font-size:'+px(11)+';margin-top:4px}'+
+   '.firma-sw{text-align:center;font-size:'+px(9.5)+';margin-top:7px;padding-top:5px;border-top:1px dotted #000;line-height:1.35}'+
    '.turno{text-align:center;border:2px solid #000;border-radius:5px;margin:5px 0;padding:3px 0 4px}'+
    '.turno small{display:block;font-size:'+px(10)+';letter-spacing:2px;font-weight:bold}'+
    '.turno b{display:block;font-size:'+px(22)+';line-height:1.05;letter-spacing:1px}'+
@@ -4171,6 +4189,7 @@ function ticketHTML(v){
    '<div class="l tot"><span>TOTAL</span><span>'+money(v.total)+'</span></div><hr>'+
    pagos+ (v.credito?'<div class="l b"><span>CREDITO</span><span>vence '+esc(v.vence)+'</span></div>':'')+
    '<hr><div class="pie b">'+esc(c.ticketPie||'')+'</div>'+
+   '<div class="firma-sw">Software elaborado por <b>'+APP_NOMBRE+'</b><br>'+APP_WEB+'</div>'+
    '</body></html>';
 }
 function imprimirTicket(v){ encolarImp(ticketHTML(v),'ticket',S.cfg.impresoraTicket); }
@@ -4604,11 +4623,12 @@ function gruposInventario(lista){
 let _invCat='all', _invCerrados={};
 function viewInventario(vw){
   let tab='stock', q='';
-  topact('<button class="btn sm" id="aj">⚖️ Ajuste</button><button class="btn pri sm" id="add">+ Ingrediente</button>');
+  topact('<button class="btn sm" id="audinv">🩺 Revisar</button><button class="btn sm" id="aj">⚖️ Ajuste</button><button class="btn pri sm" id="add">+ Ingrediente</button>');
   vw.innerHTML='<div id="itabs"></div><div id="ibody"></div>';
   $('#itabs').appendChild(tabsBar([['stock','Existencias'],['capas','Entradas'],['mov','Movimientos']],tab,t=>{tab=t;paint();}));
   $('#add').onclick=()=>edIngrediente(null);
-  $('#aj').onclick=mAjuste;
+  $('#aj').onclick=()=>mAjuste();
+  if($('#audinv')) $('#audinv').onclick=mAuditoriaInv;
   function paint(){
     $$('#itabs .tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
     if(tab==='mov'){
@@ -4727,8 +4747,104 @@ function edIngrediente(g){
         confirmar('¿Eliminar ingrediente?',()=>{remove('ingredientes',ed.id);render();},true); };
     }});
 }
-function mAjuste(){
-  const gs=S.ingredientes.filter(g=>g.activo);
+/* ===================== AUDITORÍA DE INVENTARIO =====================
+   Revisa que lo que se vende sí descuente, que las recetas estén completas y
+   que el stock, el valor (capas) y el historial de movimientos cuadren. */
+function auditarInventario(){
+  const ok=x=>Math.abs(x)<0.01;
+  const ings=S.ingredientes.map(g=>{
+    const stock=round(Number(g.stock)||0,3);
+    const capas=round(sum(capasDe(g.id),c=>Number(c.restante)||0),3);
+    const hist=round(sum(S.movinv.filter(m=>m.ingredienteId===g.id),m=>Number(m.cantidad)||0),3);
+    const tieneHist=S.movinv.some(m=>m.ingredienteId===g.id);
+    return {g:g, stock:stock, capas:capas, hist:hist,
+      descuadreValor: !ok(Math.max(0,stock)-capas),
+      descuadreHist: tieneHist && !ok(stock-hist),
+      negativo: stock<-0.0001,
+      usado: S.productos.some(p=>p.activo!==false && (p.receta||[]).some(r=>r.ingredienteId===g.id))};
+  });
+  const activos=S.productos.filter(p=>p.activo!==false);
+  const sinReceta=activos.filter(p=>!(p.receta||[]).some(r=>r.ingredienteId && Number(r.cantidad)>0));
+  const recetaRota=[];
+  activos.forEach(p=>(p.receta||[]).forEach(r=>{
+    const g=r.ingredienteId? byId('ingredientes',r.ingredienteId):null;
+    if(!r.ingredienteId) recetaRota.push({p:p, que:'una línea sin ingrediente elegido'});
+    else if(!g) recetaRota.push({p:p, que:'usa un ingrediente que ya no existe'});
+    else if(!(Number(r.cantidad)>0)) recetaRota.push({p:p, que:'«'+g.nombre+'» con cantidad 0'});
+    else if(g.activo===false) recetaRota.push({p:p, que:'«'+g.nombre+'» está inactivo (igual descuenta)'});
+  }));
+  /* ventas de los últimos 30 días que deberían haber descontado y no lo hicieron */
+  const desde=dateAdd(todayISO(),-30);
+  const ventasSin=S.ventas.filter(v=>v.estado!=='anulada' && dISO(v.fecha)>=desde && (v.items||[]).some(i=>{
+    const p=byId('productos',i.productoId); return p && (p.receta||[]).some(r=>r.ingredienteId&&Number(r.cantidad)>0);
+  }) && !(v.consumo||[]).length);
+  /* lo más vendido sin receta, para priorizar */
+  const vendidoSin={};
+  S.ventas.filter(v=>v.estado!=='anulada' && dISO(v.fecha)>=desde).forEach(v=>(v.items||[]).forEach(i=>{
+    if(sinReceta.some(p=>p.id===i.productoId)) vendidoSin[i.productoId]=(vendidoSin[i.productoId]||0)+(Number(i.cant)||0); }));
+  return {ings:ings, sinReceta:sinReceta, recetaRota:recetaRota, ventasSin:ventasSin, vendidoSin:vendidoSin,
+    malValor:ings.filter(x=>x.descuadreValor), malHist:ings.filter(x=>x.descuadreHist),
+    negativos:ings.filter(x=>x.negativo), sinUso:ings.filter(x=>!x.usado && x.g.activo!==false)};
+}
+/* deja las capas (el valor) iguales al stock, sin tocar el stock */
+function cuadrarValorConStock(gid){
+  const g=byId('ingredientes',gid); if(!g) return;
+  const objetivo=Math.max(0,round(Number(g.stock)||0,4));
+  const enCapas=round(sum(capasDe(gid),c=>Number(c.restante)||0),4);
+  const dq=round(objetivo-enCapas,4);
+  if(dq>0.000001){ nuevaCapa(gid,dq,costoProm(gid)||ultimoCosto(gid),'cuadre','',null); nivelarCosto(gid); }
+  else if(dq<-0.000001) consumirPeps(gid,-dq,'cuadre','');
+  g.costo=round(costoProm(gid)||ultimoCosto(gid),4); put('ingredientes',g);
+}
+function mAuditoriaInv(){
+  const A=auditarInventario(), admin=puedeEditar();
+  const sec=(ico,titulo,n,cuerpo,tono)=>'<div class="card" style="margin-bottom:12px'+(n?';border-color:var(--'+(tono||'warn')+')':'')+'">'+
+    '<div class="hd"><h3>'+ico+' '+titulo+'</h3>'+(n? '<span class="pill '+(tono||'warn')+'">'+n+'</span>':'<span class="pill ok">✓ bien</span>')+'</div>'+
+    (n? '<div class="bd">'+cuerpo+'</div>':'')+'</div>';
+  const li=a=>'<div style="padding:5px 0;border-bottom:1px solid var(--line)">'+a+'</div>';
+  const total=A.sinReceta.length+A.recetaRota.length+A.malValor.length+A.malHist.length+A.negativos.length+A.ventasSin.length;
+  modal({title:'🩺 Revisión del inventario', size:'wide',
+    body:'<div class="card" style="background:'+(total?'var(--warn-soft)':'var(--ok-soft)')+';margin-bottom:12px"><div class="bd"><b>'+
+        (total? 'Encontré '+total+' cosa(s) para revisar.' : '✅ Todo cuadra: lo que se vende descuenta y el inventario está consistente.')+'</b>'+
+        '<div class="tiny" style="margin-top:4px">'+S.ingredientes.length+' ingredientes · '+S.productos.filter(p=>p.activo!==false).length+
+        ' productos activos · '+S.movinv.length+' movimientos de inventario</div></div></div>'+
+      sec('🍽️','Productos que NO descuentan inventario (sin receta)',A.sinReceta.length,
+        '<div class="hintx" style="margin-bottom:6px">Al venderlos no baja nada del inventario. Si llevan ingredientes (o son de reventa como una gaseosa), '+
+        'ponles receta en Productos. Ordenados por lo que más se vendió en 30 días.</div>'+
+        A.sinReceta.slice().sort((a,b)=>(A.vendidoSin[b.id]||0)-(A.vendidoSin[a.id]||0)).map(p=>li('<b>'+esc(p.nombre)+'</b>'+
+          (A.vendidoSin[p.id]? ' <span class="tiny muted">· '+num(A.vendidoSin[p.id],0)+' vendidos en 30 días</span>':'')+
+          ' <button class="btn ghost sm" data-ep="'+p.id+'">✎ Ponerle receta</button>')).join(''),'bad')+
+      sec('🧩','Recetas incompletas',A.recetaRota.length,
+        A.recetaRota.map(x=>li('<b>'+esc(x.p.nombre)+'</b>: '+esc(x.que)+' <button class="btn ghost sm" data-ep="'+x.p.id+'">✎ Corregir</button>')).join(''),'bad')+
+      sec('🧾','Ventas recientes que no descontaron',A.ventasSin.length,
+        '<div class="hintx" style="margin-bottom:6px">Se vendieron antes de que el producto tuviera receta. Si quieres que descuenten, edítalas y vuelve a cobrarlas, o haz un ajuste.</div>'+
+        A.ventasSin.slice(0,30).map(v=>li(esc(v.no)+' · '+fdate(v.fecha,true)+' · '+money(v.total))).join(''))+
+      sec('📉','Ingredientes en negativo',A.negativos.length,
+        '<div class="hintx" style="margin-bottom:6px">Se vendió más de lo que había registrado. Casi siempre falta registrar una compra; si no, haz un conteo y ajústalo.</div>'+
+        A.negativos.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: '+num(x.stock,2)+' '+esc(x.g.unidad||'')+
+          ' <button class="btn ghost sm" data-aj="'+x.g.id+'">⚖️ Ajustar</button>')).join(''),'bad')+
+      sec('💰','El valor del inventario no cuadra con el stock',A.malValor.length,
+        '<div class="hintx" style="margin-bottom:6px">El stock dice una cantidad y el inventario valorizado otra (pasaba cuando se vendía en negativo y luego se compraba; ya está corregido). '+
+        'Cuadrarlo no cambia el stock, solo el valor.</div>'+
+        A.malValor.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: stock '+num(x.stock,2)+' · valorizado '+num(x.capas,2))).join('')+
+        (admin? '<button class="btn pri sm" id="au_cuadrar" style="margin-top:8px">Cuadrar el valor de todos</button>':''))+
+      sec('📜','Stock distinto al historial de movimientos',A.malHist.length,
+        '<div class="hintx" style="margin-bottom:6px">Sumando todas las entradas y salidas da otra cantidad. Puede ser de datos viejos (antes del historial) '+
+        'o de dos equipos vendiendo a la vez sin internet. Lo seguro es contar físicamente y ajustar.</div>'+
+        A.malHist.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: stock '+num(x.stock,2)+' · según historial '+num(x.hist,2)+
+          ' <button class="btn ghost sm" data-aj="'+x.g.id+'">⚖️ Ajustar</button>')).join(''),'info')+
+      (A.sinUso.length? '<div class="hintx">ℹ️ '+A.sinUso.length+' ingrediente(s) activos no están en ninguna receta: '+
+        A.sinUso.slice(0,12).map(x=>esc(x.g.nombre)).join(', ')+(A.sinUso.length>12?'…':'')+'.</div>':''),
+    footer:'<button class="btn" data-x>Cerrar</button>',
+    onOpen:m=>{
+      $$('[data-ep]',m).forEach(b=>b.onclick=()=>{ closeModal(); edProducto(byId('productos',b.dataset.ep)); });
+      $$('[data-aj]',m).forEach(b=>b.onclick=()=>{ closeModal(); mAjuste(b.dataset.aj); });
+      if($('#au_cuadrar',m)) $('#au_cuadrar',m).onclick=()=>{ A.malValor.forEach(x=>cuadrarValorConStock(x.g.id));
+        closeModal(); render(); toast('Valor del inventario cuadrado con el stock','ok'); setTimeout(mAuditoriaInv,300); };
+    }});
+}
+function mAjuste(gid){
+  const gs=S.ingredientes.filter(g=>g.activo!==false);
   if(!gs.length) return toast('No hay ingredientes','warn');
   modal({title:'Ajuste de inventario',
     body:'<div class="f" style="margin-bottom:10px"><label>Ingrediente</label><div id="g"></div></div>'+
@@ -4738,7 +4854,7 @@ function mAjuste(){
       '<div class="f" style="margin-top:10px"><label>Motivo</label><input id="mo" placeholder="Merma, conteo físico, daño…"></div>',
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Aplicar</button>',
     onOpen:m=>{
-      const cbG=combo($('#g',m),{lista:gs, valor:gs[0]?gs[0].id:'', placeholder:'Buscar ingrediente…',
+      const cbG=combo($('#g',m),{lista:gs, valor:(typeof gid==='string'&&gid)||(gs[0]?gs[0].id:''), placeholder:'Buscar ingrediente…',
         sub:x=>'stock '+num(x.stock,2)+' '+x.unidad, crear:CREAR_INGREDIENTE, onPick:()=>upd()});
       const upd=()=>{ const g=byId('ingredientes',cbG.valor());
         $('#ac',m).value=g? num(g.stock,3)+' '+g.unidad:''; $('#nv',m).value=g?g.stock:0; };
