@@ -657,7 +657,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.02-3';
+const APP_VERSION='2026.10.02-4';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -4623,12 +4623,15 @@ function gruposInventario(lista){
 let _invCat='all', _invCerrados={};
 function viewInventario(vw){
   let tab='stock', q='';
-  topact('<button class="btn sm" id="audinv">🩺 Revisar</button><button class="btn sm" id="aj">⚖️ Ajuste</button><button class="btn pri sm" id="add">+ Ingrediente</button>');
+  topact('<button class="btn sm" id="audinv">🩺 Revisar</button>'+(puedeEditar()?'<button class="btn sm" id="recalc">🔄 Recalcular</button>':'')+
+    '<button class="btn sm" id="aj" title="Si contaste físicamente un ingrediente, pon aquí cuánto hay de verdad">⚖️ Conteo físico</button>'+
+    '<button class="btn pri sm" id="add">+ Ingrediente</button>');
   vw.innerHTML='<div id="itabs"></div><div id="ibody"></div>';
   $('#itabs').appendChild(tabsBar([['stock','Existencias'],['capas','Entradas'],['mov','Movimientos']],tab,t=>{tab=t;paint();}));
   $('#add').onclick=()=>edIngrediente(null);
   $('#aj').onclick=()=>mAjuste();
   if($('#audinv')) $('#audinv').onclick=mAuditoriaInv;
+  if($('#recalc')) $('#recalc').onclick=hacerRecalculo;
   function paint(){
     $$('#itabs .tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
     if(tab==='mov'){
@@ -4755,8 +4758,7 @@ function auditarInventario(){
   const ings=S.ingredientes.map(g=>{
     const stock=round(Number(g.stock)||0,3);
     const capas=round(sum(capasDe(g.id),c=>Number(c.restante)||0),3);
-    const hist=round(sum(S.movinv.filter(m=>m.ingredienteId===g.id),m=>Number(m.cantidad)||0),3);
-    const tieneHist=S.movinv.some(m=>m.ingredienteId===g.id);
+    const H=historialIng(g.id), hist=round(H.hist,3), tieneHist=H.confiable;
     return {g:g, stock:stock, capas:capas, hist:hist,
       descuadreValor: !ok(Math.max(0,stock)-capas),
       descuadreHist: tieneHist && !ok(stock-hist),
@@ -4796,6 +4798,59 @@ function cuadrarValorConStock(gid){
   else if(dq<-0.000001) consumirPeps(gid,-dq,'cuadre','');
   g.costo=round(costoProm(gid)||ultimoCosto(gid),4); put('ingredientes',g);
 }
+/* Recalcular: pone cada ingrediente en lo real sin pedir conteos.
+   - Si el historial está completo (empieza con una entrada o un conteo), el stock
+     real es la suma de TODO lo que entró y salió: compras, ventas, ajustes.
+   - Nada puede quedar por debajo de 0.
+   - El valor del inventario queda cuadrado con el stock.
+   Cada cambio queda registrado como movimiento "Recalculado". */
+/* historial de un ingrediente: la suma de todo lo que entró y salió.
+   Sirve si arranca con una entrada o un conteo y no hay existencias de antes
+   de que existiera el historial (capa "inicial" sin movimiento). */
+function historialIng(gid){
+  const movs=S.movinv.filter(m=>m.ingredienteId===gid)
+    .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+  const inicialSinMov=S.capas.some(c=>c.ingredienteId===gid && c.refTipo==='inicial') &&
+    !movs.some(m=>m.refTipo==='inicial' || m.refTipo==='importacion');
+  return {movs:movs, hist:round(sum(movs,m=>Number(m.cantidad)||0),4),
+    confiable: movs.length>0 && movs[0].tipo!=='salida' && !inicialSinMov};
+}
+function recalcularInventario(){
+  const cambios=[];
+  S.ingredientes.forEach(g=>{
+    const H=historialIng(g.id), confiable=H.confiable, hist=H.hist;
+    const antes=round(Number(g.stock)||0,4);
+    let objetivo=confiable? hist : antes, porque=confiable? 'según compras, ventas y ajustes' : '';
+    if(objetivo<0){ objetivo=0; porque='estaba en negativo (falta registrar una compra)'; }
+    if(Math.abs(objetivo-antes)>0.0001){
+      const m=movInv(g.id,'ajuste',objetivo,null,'recalculo','','Recalculado: '+porque);
+      /* el movimiento registra lo que le faltaba al HISTORIAL para llegar a lo real,
+         así historial y stock quedan iguales de aquí en adelante */
+      if(m){ m.cantidad=round(objetivo-hist,4); m.stockAntes=antes; m.nota+=' (estaba en '+num(antes,2)+', quedó en '+num(objetivo,2)+')'; delete m.costoMov; put('movinv',m); }
+      cambios.push({g:g, antes:antes, ahora:objetivo, porque:porque});
+    } else {
+      const enCapas=round(sum(capasDe(g.id),c=>Number(c.restante)||0),4);
+      if(Math.abs(Math.max(0,antes)-enCapas)>0.0001){ cuadrarValorConStock(g.id);
+        cambios.push({g:g, antes:antes, ahora:antes, porque:'se cuadró el valor (el stock ya estaba bien)'}); }
+    }
+  });
+  return cambios;
+}
+function hacerRecalculo(){
+  if(!puedeEditar()) return pedirAlAdmin('recalcular el inventario');
+  confirmar('¿Recalcular el inventario? Cada ingrediente queda con lo que dicen todas las compras, ventas y ajustes registrados. '+
+    'Lo que esté en negativo queda en 0. Todo queda registrado.',()=>{
+    const ch=recalcularInventario(); render();
+    modal({title:'🔄 Inventario recalculado', size:'wide',
+      body: ch.length? '<div class="hintx" style="margin-bottom:10px">Cambié '+ch.length+' ingrediente(s). Los demás ya estaban bien.</div>'+
+          tbl([{t:'Ingrediente',f:x=>'<b>'+esc(x.g.nombre)+'</b>'},
+               {t:'Antes',num:1,f:x=>num(x.antes,2)+' '+esc(x.g.unidad||'')},
+               {t:'Ahora',num:1,f:x=>'<b>'+num(x.ahora,2)+' '+esc(x.g.unidad||'')+'</b>'},
+               {t:'Por qué',f:x=>'<span class="tiny">'+esc(x.porque)+'</span>'}],ch)
+        : '<div class="empty"><span class="ico">✅</span>Todo estaba bien: no hubo que cambiar nada.</div>',
+      footer:'<button class="btn pri" data-x>Listo</button>'});
+  },false);
+}
 function mAuditoriaInv(){
   const A=auditarInventario(), admin=puedeEditar();
   const sec=(ico,titulo,n,cuerpo,tono)=>'<div class="card" style="margin-bottom:12px'+(n?';border-color:var(--'+(tono||'warn')+')':'')+'">'+
@@ -4807,7 +4862,13 @@ function mAuditoriaInv(){
     body:'<div class="card" style="background:'+(total?'var(--warn-soft)':'var(--ok-soft)')+';margin-bottom:12px"><div class="bd"><b>'+
         (total? 'Encontré '+total+' cosa(s) para revisar.' : '✅ Todo cuadra: lo que se vende descuenta y el inventario está consistente.')+'</b>'+
         '<div class="tiny" style="margin-top:4px">'+S.ingredientes.length+' ingredientes · '+S.productos.filter(p=>p.activo!==false).length+
-        ' productos activos · '+S.movinv.length+' movimientos de inventario</div></div></div>'+
+        ' productos activos · '+S.movinv.length+' movimientos de inventario</div>'+
+        ((A.malValor.length||A.malHist.length||A.negativos.length)? (admin?
+          '<button class="btn pri lg blk" id="au_recalc" style="margin-top:12px">🔄 Recalcular inventario</button>'+
+          '<div class="tiny" style="margin-top:6px">Lo arregla solo: deja cada ingrediente con lo que dicen las compras, ventas y ajustes, '+
+          'lo negativo queda en 0 y el valor se cuadra. No tienes que contar nada.</div>'
+          : '<div class="tiny" style="margin-top:8px">Pídele al administrador que toque <b>Recalcular inventario</b>.</div>') : '')+
+        '</div></div>'+
       sec('🍽️','Productos que NO descuentan inventario (sin receta)',A.sinReceta.length,
         '<div class="hintx" style="margin-bottom:6px">Al venderlos no baja nada del inventario. Si llevan ingredientes (o son de reventa como una gaseosa), '+
         'ponles receta en Productos. Ordenados por lo que más se vendió en 30 días.</div>'+
@@ -4820,33 +4881,29 @@ function mAuditoriaInv(){
         '<div class="hintx" style="margin-bottom:6px">Se vendieron antes de que el producto tuviera receta. Si quieres que descuenten, edítalas y vuelve a cobrarlas, o haz un ajuste.</div>'+
         A.ventasSin.slice(0,30).map(v=>li(esc(v.no)+' · '+fdate(v.fecha,true)+' · '+money(v.total))).join(''))+
       sec('📉','Ingredientes en negativo',A.negativos.length,
-        '<div class="hintx" style="margin-bottom:6px">Se vendió más de lo que había registrado. Casi siempre falta registrar una compra; si no, haz un conteo y ajústalo.</div>'+
-        A.negativos.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: '+num(x.stock,2)+' '+esc(x.g.unidad||'')+
-          ' <button class="btn ghost sm" data-aj="'+x.g.id+'">⚖️ Ajustar</button>')).join(''),'bad')+
+        '<div class="hintx" style="margin-bottom:6px">Se vendió más de lo que había registrado. Casi siempre falta registrar una compra. Recalcular los deja en 0.</div>'+
+        A.negativos.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: '+num(x.stock,2)+' '+esc(x.g.unidad||''))).join(''),'bad')+
       sec('💰','El valor del inventario no cuadra con el stock',A.malValor.length,
         '<div class="hintx" style="margin-bottom:6px">El stock dice una cantidad y el inventario valorizado otra (pasaba cuando se vendía en negativo y luego se compraba; ya está corregido). '+
-        'Cuadrarlo no cambia el stock, solo el valor.</div>'+
-        A.malValor.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: stock '+num(x.stock,2)+' · valorizado '+num(x.capas,2))).join('')+
-        (admin? '<button class="btn pri sm" id="au_cuadrar" style="margin-top:8px">Cuadrar el valor de todos</button>':''))+
+        'Se arregla con Recalcular.</div>'+
+        A.malValor.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: stock '+num(x.stock,2)+' · valorizado '+num(x.capas,2))).join(''))+
       sec('📜','Stock distinto al historial de movimientos',A.malHist.length,
         '<div class="hintx" style="margin-bottom:6px">Sumando todas las entradas y salidas da otra cantidad. Puede ser de datos viejos (antes del historial) '+
-        'o de dos equipos vendiendo a la vez sin internet. Lo seguro es contar físicamente y ajustar.</div>'+
-        A.malHist.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: stock '+num(x.stock,2)+' · según historial '+num(x.hist,2)+
-          ' <button class="btn ghost sm" data-aj="'+x.g.id+'">⚖️ Ajustar</button>')).join(''),'info')+
+        'o de dos equipos vendiendo a la vez sin internet. Recalcular lo deja como dice el historial.</div>'+
+        A.malHist.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: stock '+num(x.stock,2)+' · según historial '+num(x.hist,2))).join(''),'info')+
       (A.sinUso.length? '<div class="hintx">ℹ️ '+A.sinUso.length+' ingrediente(s) activos no están en ninguna receta: '+
         A.sinUso.slice(0,12).map(x=>esc(x.g.nombre)).join(', ')+(A.sinUso.length>12?'…':'')+'.</div>':''),
     footer:'<button class="btn" data-x>Cerrar</button>',
     onOpen:m=>{
       $$('[data-ep]',m).forEach(b=>b.onclick=()=>{ closeModal(); edProducto(byId('productos',b.dataset.ep)); });
       $$('[data-aj]',m).forEach(b=>b.onclick=()=>{ closeModal(); mAjuste(b.dataset.aj); });
-      if($('#au_cuadrar',m)) $('#au_cuadrar',m).onclick=()=>{ A.malValor.forEach(x=>cuadrarValorConStock(x.g.id));
-        closeModal(); render(); toast('Valor del inventario cuadrado con el stock','ok'); setTimeout(mAuditoriaInv,300); };
+      if($('#au_recalc',m)) $('#au_recalc',m).onclick=()=>{ closeModal(); hacerRecalculo(); };
     }});
 }
 function mAjuste(gid){
   const gs=S.ingredientes.filter(g=>g.activo!==false);
   if(!gs.length) return toast('No hay ingredientes','warn');
-  modal({title:'Ajuste de inventario',
+  modal({title:'⚖️ Conteo físico',
     body:'<div class="f" style="margin-bottom:10px"><label>Ingrediente</label><div id="g"></div></div>'+
       '<div class="grid" style="grid-template-columns:1fr 1fr">'+
       '<div class="f"><label>Stock actual</label><input id="ac" disabled></div>'+
