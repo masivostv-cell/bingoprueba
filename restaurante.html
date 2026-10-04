@@ -476,6 +476,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
       <div style="min-width:0"><h1 id="ttl">Punto de venta</h1><div class="sub" id="tsub"></div></div>
       <div class="spacer"></div>
       <div id="topact" class="row"></div>
+      <button class="btn sm hide" id="btnrecalc" title="Revisa todo y arregla lo que haya quedado mal">🔄 Recalcular</button>
       <button id="estchip" class="estchip hide" title="Estación de impresión"></button>
       <button id="sync" title="Estado de sincronización"><span class="dot"></span><span id="synctx">Local</span></button>
       <button class="btn ghost sm" id="btntheme" title="Tema">🌙</button>
@@ -657,7 +658,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.02-4';
+const APP_VERSION='2026.10.02-5';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -2010,6 +2011,7 @@ const TITLES={pos:'Punto de venta',mesas:'Mesas y comandas',ventas:'Ventas',comp
   caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes',ajustes:'Ajustes'};
 
 function buildNav(){
+  { const b=$('#btnrecalc'); if(b) b.classList.toggle('hide', !(S.user && S.user.rol!=='mesero')); }
   const n=$('#nav'); let h='';
   VIEWS.forEach(v=>{
     if(v.g){ if(v.req && !can(v.req)) return; h+='<div class="sec">'+esc(v.g)+'</div>'; return; }
@@ -3426,9 +3428,26 @@ function cancelarEdicion(){
 }
 
 /* ------------------- eliminar un abono de cartera ------------------- */
+function borrarOtroDoc(d){
+  if(!puedeBorrar()) return pedirAlAdmin('borrar documentos');
+  confirmar('¿Borrar '+d.no+' ('+esc(d.terceroNombre||'')+') por '+money(d.total)+'? Se borran también sus abonos y los movimientos de caja que generó.',()=>{
+    S.abonos.filter(a=>a.docId===d.id).forEach(a=>{
+      const mv=a.movId? byId('movimientos',a.movId):null;
+      if(mv && mv.autoCartera){ mv.noAplicar=true; mv.aplicado=(mv.aplicado||[]).filter(x=>x.abonoId!==a.id);
+        mv.aplicadoMonto=round(sum(mv.aplicado,x=>x.monto),2); put('movimientos',mv); }
+      remove('abonos',a.id); });
+    S.movimientos.filter(m=>m.refId===d.id).forEach(m=>remove('movimientos',m.id));
+    remove('otrosdocs',d.id); render(); toast(d.no+' borrado','ok');
+  },true);
+}
 function borrarAbono(a){
   if(!puedeBorrar()) return pedirAlAdmin('eliminar abonos');
   confirmar('¿Eliminar este abono de '+money(a.monto)+'? El saldo del documento vuelve a subir.',()=>{
+    const mvA=a.movId? byId('movimientos',a.movId):null;
+    if(mvA && mvA.autoCartera){            // la plata sí entró: solo se suelta de la factura
+      mvA.noAplicar=true; mvA.aplicado=(mvA.aplicado||[]).filter(x=>x.abonoId!==a.id);
+      mvA.aplicadoMonto=round(sum(mvA.aplicado,x=>x.monto),2); put('movimientos',mvA);
+    } else
     S.movimientos.filter(m=>m.refId===a.docId && m.refTipo===a.tipo &&
       Math.abs(m.monto-a.monto)<0.01 && m.cuentaId===a.cuentaId).slice(0,1).forEach(m=>remove('movimientos',m.id));
     remove('abonos',a.id);
@@ -4815,6 +4834,112 @@ function historialIng(gid){
   return {movs:movs, hist:round(sum(movs,m=>Number(m.cantidad)||0),4),
     confiable: movs.length>0 && movs[0].tipo!=='salida' && !inicialSinMov};
 }
+/* ===================== RECALCULAR TODO =====================
+   Botón de arriba (cajero, administrador y superadmin). Revisa y arregla lo
+   que por cualquier motivo quedó mal: cartera, pedidos e inventario. */
+const REF_DOC=['venta','compra','cxc','cxp'];
+function arreglarCartera(){
+  const out=[];
+  /* 1) abonos de documentos que ya no existen: se van con su movimiento */
+  S.abonos.slice().forEach(a=>{
+    if(docCartera(a.docId)) return;
+    S.movimientos.filter(m=>m.refId===a.docId).forEach(m=>remove('movimientos',m.id));
+    remove('abonos',a.id);
+    out.push('Se quitó un abono de '+money(a.monto)+' de un documento que ya no existe');
+  });
+  /* 2) movimientos de caja de documentos borrados */
+  S.movimientos.slice().forEach(m=>{
+    if(REF_DOC.indexOf(m.refTipo)<0 || !m.refId || docCartera(m.refId)) return;
+    remove('movimientos',m.id);
+    out.push('Se quitó de '+nameOf('cuentas',m.cuentaId)+' el movimiento «'+(m.concepto||m.refTipo)+'» por '+money(m.monto)+
+      ' (su documento ya se había borrado)');
+  });
+  /* 3) pagos registrados en Tesorería a nombre de un cliente o proveedor que tiene
+        facturas pendientes, pero que no se aplicaron a ninguna: se aplican a las
+        más viejas para que dejen de salir en cartera */
+  S.movimientos.filter(m=>!m.refId && !m.noAplicar && m.categoria!=='traslado' && !esCategoriaCartera(m.categoria) &&
+      m.terceroId && ((m.tipo==='ingreso' && /^cliente:/.test(m.terceroId)) || (m.tipo==='egreso' && /^proveedor:/.test(m.terceroId))))
+    .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)))
+    .forEach(m=>{
+      let libre=round((Number(m.monto)||0)-(Number(m.aplicadoMonto)||0),2); if(libre<=0.5) return;
+      const esC=m.tipo==='ingreso', id=m.terceroId.split(':').slice(1).join(':');
+      const docs=(esC?cxc():cxp()).filter(d=> d.esOtro? d.terceroId===m.terceroId : (esC? d.clienteId===id : d.proveedorId===id))
+        .filter(d=>String(d.fecha).slice(0,10)<=String(m.fecha).slice(0,10))
+        .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+      docs.forEach(d=>{
+        if(libre<=0.5) return;
+        const va=round(Math.min(libre,saldoDoc(d)),2); if(va<=0.5) return;
+        const a={id:uid('ab'),fecha:m.fecha,tipo:esC?'cxc':'cxp',docId:d.id,
+          terceroId:d.esOtro?'':(esC?d.clienteId:d.proveedorId), terceroNombre:d.esOtro?(d.terceroNombre||''):'',
+          monto:va, medio:(byId('cuentas',m.cuentaId)||{}).medio||'efectivo', cuentaId:m.cuentaId,
+          nota:'Aplicado al recalcular: pago registrado en Tesorería', movId:m.id, usuarioId:m.usuarioId||'', turnoId:m.turnoId||''};
+        put('abonos',a);
+        m.autoCartera=true; m.aplicado=(m.aplicado||[]).concat([{docId:d.id,abonoId:a.id,monto:va}]);
+        m.aplicadoMonto=round((Number(m.aplicadoMonto)||0)+va,2);
+        libre=round(libre-va,2);
+        out.push('El pago de '+money(va)+' del '+fdate(m.fecha)+' ('+terceroDoc(d)+') se aplicó a '+d.no);
+      });
+      if(m.autoCartera) put('movimientos',m);
+    });
+  /* 4) estado de cada documento según su saldo real */
+  S.ventas.concat(S.compras).forEach(d=>{
+    if(!d.credito || d.estado==='anulada') return;
+    const st= saldoDoc(d)<=0.5? 'pagada':'pendiente';
+    if(d.estado!==st){ d.estado=st; put(coleccionDoc(d),d); out.push(d.no+' quedó como '+st); }
+  });
+  S.otrosdocs.forEach(d=>{
+    if(d.estado==='anulado') return;
+    const st= saldoDoc(d)<=0.5? 'pagado':'pendiente';
+    if(d.estado!==st){ d.estado=st; put('otrosdocs',d); out.push(d.no+' quedó como '+st); }
+  });
+  /* 5) nombres */
+  const r=recuperarNombresCartera(); if(r.hechos) out.push('Se recuperaron '+r.hechos+' nombre(s) de clientes o proveedores');
+  respaldarNombresCartera();
+  return out;
+}
+function arreglarPedidos(){
+  const out=[];
+  S.comandas.slice().forEach(cm=>{
+    if(cm.estado!=='abierta') return;
+    if(cm.ventaId && byId('ventas',cm.ventaId)){ cm.estado='cerrada'; put('comandas',cm);
+      out.push('Pedido ya cobrado ('+nameOf('mesas',cm.mesaId)+') se cerró'); return; }
+    if(!(cm.items||[]).some(i=>Number(i.cant)>0) && !(cm.anulados||[]).length){ remove('comandas',cm.id);
+      out.push('Se quitó un pedido vacío ('+nameOf('mesas',cm.mesaId)+')'); }
+  });
+  const hace12=Date.now()-12*3600000;
+  S.mesas.slice().forEach(m=>{
+    if(!m.temporal) return;
+    const abierta=S.comandas.some(c=>c.estado==='abierta' && c.mesaId===m.id);
+    if(!abierta && (!m.creado || new Date(m.creado).getTime()<hace12)){
+      remove('mesas',m.id); out.push('Se quitó '+(esDomicilio(m)?'el domicilio':'el pedido')+' «'+m.nombre+'» que había quedado vacío');
+    }
+  });
+  return out;
+}
+async function recalcularTodo(){
+  if(!S.user || S.user.rol==='mesero') return toast('Solo caja o administrador','warn');
+  const b=$('#btnrecalc'); if(b){ b.disabled=true; b.textContent='⏳ Recalculando…'; }
+  try{
+    if(S.cfg.fbOn){ try{ await pullCloud(true); }catch(e){} }     // primero lo último de la nube
+    const res=[
+      {t:'💳 Cartera', l:arreglarCartera()},
+      {t:'🍽️ Pedidos y mesas', l:arreglarPedidos()},
+      {t:'📦 Inventario', l:recalcularInventario().map(x=>x.g.nombre+': '+num(x.antes,2)+' → '+num(x.ahora,2)+' '+(x.g.unidad||'')+' · '+x.porque)}
+    ];
+    try{ scheduleSync(300); }catch(e){}
+    render();
+    const n=sum(res,r=>r.l.length);
+    modal({title:'🔄 Recalcular', size:'wide',
+      body:'<div class="card" style="background:'+(n?'var(--info-soft)':'var(--ok-soft)')+';margin-bottom:12px"><div class="bd"><b>'+
+          (n? 'Listo: arreglé '+n+' cosa(s).' : '✅ Revisé todo y estaba bien. No hubo que cambiar nada.')+'</b></div></div>'+
+        res.map(r=>'<div class="card" style="margin-bottom:10px"><div class="hd"><h3>'+r.t+'</h3>'+
+          (r.l.length? '<span class="pill info">'+r.l.length+'</span>':'<span class="pill ok">✓ bien</span>')+'</div>'+
+          (r.l.length? '<div class="bd">'+r.l.slice(0,60).map(x=>'<div style="padding:5px 0;border-bottom:1px solid var(--line);font-size:13px">'+esc(x)+'</div>').join('')+
+            (r.l.length>60?'<div class="tiny muted">…y '+(r.l.length-60)+' más</div>':'')+'</div>':'')+'</div>').join(''),
+      footer:'<button class="btn pri" data-x>Listo</button>'});
+  } catch(e){ toast('No se pudo terminar de recalcular: '+e.message,'bad',6000); }
+  finally{ if(b){ b.disabled=false; b.textContent='🔄 Recalcular'; } }
+}
 function recalcularInventario(){
   const cambios=[];
   S.ingredientes.forEach(g=>{
@@ -5292,10 +5417,12 @@ function viewCartera(vw){
         {t:'Abonado',num:1,f:d=>money(abonadoDe(d.id))},
         {t:'Saldo',num:1,f:d=>'<b>'+money(saldoF(d))+'</b>'},
         {t:'',f:d=>'<div class="row" style="gap:3px"><button class="btn ok sm" data-p="'+d.id+'">'+(esC?'Cobrar':'Pagar')+'</button>'+
-          (d.esOtro? '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-rd="'+d.id+'" title="Reimprimir">🖨️</button>':'')+'</div>'}
+          (d.esOtro? '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button>'+'<button class="btn ghost sm" data-rd="'+d.id+'" title="Reimprimir">🖨️</button>'+
+            (puedeBorrar()? '<button class="btn ghost sm" data-bo="'+d.id+'" title="Borrar este documento">🗑️</button>':''):'')+'</div>'}
       ],docs,{empty:esC?'No hay cuentas por cobrar':'No hay cuentas por pagar',icon:'✅'})+'</div></div>';
     $$('[data-p]',$('#view')).forEach(b=>b.onclick=()=>mAbono(esC?'cxc':'cxp', docCartera(b.dataset.p)));
     $$('[data-pn]',$('#view')).forEach(b=>b.onclick=()=>mPonerNombre(docCartera(b.dataset.pn)));
+    $$('[data-bo]',$('#view')).forEach(b=>b.onclick=()=>borrarOtroDoc(byId('otrosdocs',b.dataset.bo)));
     if($('#crec')) $('#crec').onclick=async()=>{
       /* primero se baja todo de la nube: a veces la ficha existe allá y solo faltaba aquí */
       if(S.cfg.fbOn){ toast('Revisando la nube…','ok',2000); try{ await pullCloud(true); }catch(e){} }
@@ -9614,6 +9741,7 @@ $('#btnuser').onclick=()=>{
 };
 $('#sync').onclick=()=>{ if(can('ajustes')){ _ajTab='sync'; S.view='ajustes'; render(); }
   else toast(S.outbox.length? S.outbox.length+' cambios en cola':(S.cfg.fbOn?'Todo sincronizado':'Modo local')); };
+$('#btnrecalc').onclick=()=>recalcularTodo();
 $('#btntheme').onclick=()=>{ S.cfg.tema = S.cfg.tema==='dark'?'light':'dark'; saveCfg(); };
 
 function applyCfg(){
