@@ -658,7 +658,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.02-5';
+const APP_VERSION='2026.10.02-6';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -3469,7 +3469,7 @@ function edMovimiento(m){
         '<option value="'+x+'"'+(m.tipo===x?' selected':'')+'>'+x+'</option>').join('')+'</select></div>'+
       '<div class="f"><label>Monto</label><input id="mt" type="number" step="any" value="'+m.monto+'"></div></div>'+
       '<div class="f" style="margin-bottom:10px"><label>Cuenta</label><select id="c1">'+
-        selOpts(S.cuentas.filter(c=>c.activo),m.cuentaId,c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
+        selOpts(S.cuentas.filter(c=>c.activo!==false),m.cuentaId,c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
       '<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
       '<div class="f"><label>Categoría</label><div id="cat"></div></div>'+
       '<div class="f"><label>Concepto</label><input id="co" value="'+esc(m.concepto||'')+'"></div></div>'+
@@ -5562,7 +5562,7 @@ function mAbono(tipo,doc){
       '<div class="f"><label>Medio</label><select id="me">'+MEDIOS.filter(m=>m.k!=='credito').map(m=>
         '<option value="'+m.k+'">'+m.e+' '+m.n+'</option>').join('')+'</select></div></div>'+
       '<div class="f" style="margin-top:10px"><label>Cuenta de tesorería</label><select id="ct">'+
-        selOpts(S.cuentas.filter(c=>c.activo),cuentaDeMedio('efectivo'),c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
+        selOpts(S.cuentas.filter(c=>c.activo!==false),cuentaDeMedio('efectivo'),c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
       '<div class="f" style="margin-top:10px"><label>Nota</label><input id="nt" placeholder="Opcional"></div>',
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn ok" id="ok">Registrar</button>',
     onOpen:m=>{
@@ -5594,11 +5594,12 @@ function mAbono(tipo,doc){
 function viewTesoreria(vw){
   let tab='resumen';
   let f={desde:todayISO().slice(0,8)+'01',hasta:todayISO(),q:'',tipo:'',cuenta:'',categoria:'',tercero:''};
-  topact('<button class="btn sm" id="nc">+ Cuenta</button><button class="btn pri sm" id="nm">+ Movimiento</button>');
+  topact('<button class="btn sm" id="ncs">🏦 Cajas y bancos</button><button class="btn sm" id="nc">+ Caja o banco</button><button class="btn pri sm" id="nm">+ Movimiento</button>');
   vw.innerHTML='<div id="ttabs"></div><div id="tbody"></div>';
   $('#ttabs').appendChild(tabsBar([['resumen','Cuentas'],['ing','Ingresos'],['egr','Egresos'],['todo','Todos los movimientos']],
     tab,t=>{ tab=t; f.tipo = t==='ing'?'ingreso' : t==='egr'?'egreso' : ''; paint(); }));
   $('#nc').onclick=()=>edCuenta(null);
+  $('#ncs').onclick=mCuentas;
   $('#nm').onclick=mMovimiento;
 
   function datos(){
@@ -5630,7 +5631,7 @@ function viewTesoreria(vw){
     Object.values(agr).sort((a,b)=>(b.ing+b.egr)-(a.ing+a.egr)).forEach(t=>
       porT.push([t.nombre,t.tipo||'',t.n,t.ing,t.egr,round(t.ing-t.egr,2)]));
     const cta=[['Cuenta','Tipo','Saldo inicial','Ingresos','Egresos','Saldo actual'].map(x=>({v:x,b:1}))];
-    S.cuentas.filter(c=>c.activo).forEach(c=>{
+    S.cuentas.filter(c=>c.activo!==false).forEach(c=>{
       const mm=ms.filter(m=>m.cuentaId===c.id);
       cta.push([c.nombre,c.tipo,c.saldoInicial||0,
         sum(mm.filter(m=>m.tipo==='ingreso'),m=>m.monto),
@@ -5643,7 +5644,7 @@ function viewTesoreria(vw){
   function paint(){
     $$('#ttabs .tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
     if(tab==='resumen'){
-      const cts=S.cuentas.filter(c=>c.activo);
+      const cts=S.cuentas.filter(c=>c.activo!==false);
       const hoy=todayISO(), mh=S.movimientos.filter(m=>dISO(m.fecha)===hoy);
       const ing=sum(mh.filter(m=>m.tipo==='ingreso'),m=>m.monto);
       const egr=sum(mh.filter(m=>m.tipo==='egreso'),m=>m.monto);
@@ -5661,6 +5662,8 @@ function viewTesoreria(vw){
             '<button class="btn ghost sm" data-e="'+c.id+'">✎</button></div>'+
             '<div style="font-size:21px;font-weight:750;margin-top:8px" class="mono">'+money(saldoCuenta(c.id))+'</div>'+
           '</div></div>').join('')+'</div>'+
+        (S.cuentas.some(c=>c.activo===false)? '<div class="tiny muted" style="margin-top:8px">'+S.cuentas.filter(c=>c.activo===false).length+
+          ' cuenta(s) deshabilitada(s) · <a href="#" id="verdes">ver y administrar</a></div>':'')+
         '<div class="card" style="margin-top:14px"><div class="hd"><h3>Últimos movimientos</h3>'+
           '<div class="spacer"></div><button class="btn sm" id="vertodos">Ver todos</button></div><div class="bd p0">'+
           tbl([
@@ -5678,6 +5681,7 @@ function viewTesoreria(vw){
             {empty:'Sin movimientos todavía',icon:'🏦'})+'</div></div>';
       $$('[data-e]',$('#view')).forEach(b=>b.onclick=()=>edCuenta(byId('cuentas',b.dataset.e)));
       $$('[data-em]',$('#view')).forEach(b=>b.onclick=()=>edMovimiento(byId('movimientos',b.dataset.em)));
+      if($('#verdes')) $('#verdes').onclick=e=>{ e.preventDefault(); mCuentas(); };
       $$('[data-rm]',$('#view')).forEach(b=>b.onclick=()=>{ comprobanteMov(byId('movimientos',b.dataset.rm),true);
         toast('Comprobante enviado a impresión','ok'); });
       $('#vertodos').onclick=()=>{ tab='todo'; f.tipo=''; paint(); };
@@ -5750,7 +5754,82 @@ function viewTesoreria(vw){
   }
   paint();
 }
-function edCuenta(c){
+/* ======================= CAJAS Y BANCOS =======================
+   Crear, editar, deshabilitar, volver a habilitar y eliminar (solo si nunca
+   se usó). Una cuenta con movimientos no se borra: se deshabilita y deja de
+   salir para cobrar y pagar, pero su historia queda intacta. */
+function usoCuenta(id){
+  const n={mov:S.movimientos.filter(m=>m.cuentaId===id).length,
+    turnos:S.turnos.filter(t=>t.cuentaId===id).length,
+    abonos:S.abonos.filter(a=>a.cuentaId===id).length,
+    ventas:S.ventas.filter(v=>(v.pagos||[]).some(p=>p.cuentaId===id)).length,
+    compras:S.compras.filter(c=>c.cuentaId===id).length,
+    otros:S.otrosdocs.filter(d=>d.cuentaId===id).length};
+  n.total=n.mov+n.turnos+n.abonos+n.ventas+n.compras+n.otros;
+  return n;
+}
+function porQueNoDeshabilitar(c){
+  const sal=saldoCuenta(c.id);
+  if(Math.abs(sal)>0.5) return 'Tiene '+money(sal)+'. Pasa esa plata a otra cuenta con un traslado (Tesorería ▸ + Movimiento ▸ Traslado) y después la deshabilitas.';
+  const t=S.turnos.find(x=>x.estado==='abierto' && x.cuentaId===c.id);
+  if(t) return 'Tiene una caja abierta. Ciérrala primero.';
+  if(c.tipo==='caja' && S.cuentas.filter(x=>x.activo!==false && x.tipo==='caja' && x.id!==c.id).length===0)
+    return 'Es la única caja activa. Debe quedar al menos una caja para cobrar en efectivo.';
+  return '';
+}
+function cambiarEstadoCuenta(c,activa){
+  if(!puedeEditar()){ pedirAlAdmin('habilitar o deshabilitar cajas'); return false; }
+  if(!activa){ const pq=porQueNoDeshabilitar(c); if(pq){ modal({title:'No se puede deshabilitar '+c.nombre,size:'slim',
+    body:'<p style="margin:0">'+esc(pq)+'</p>',footer:'<button class="btn pri" data-x>Entendido</button>'}); return false; } }
+  c.activo=!!activa; put('cuentas',c);
+  toast(c.nombre+(activa?' habilitada':' deshabilitada: ya no sale para cobrar ni pagar'),'ok',4000);
+  return true;
+}
+function eliminarCuenta(c){
+  if(!puedeEditar()) return pedirAlAdmin('eliminar cajas');
+  const u=usoCuenta(c.id);
+  if(u.total){
+    return modal({title:'No se puede eliminar '+c.nombre,size:'slim',
+      body:'<p style="margin:0 0 8px">Ya tiene historia: '+[u.mov&&u.mov+' movimientos',u.turnos&&u.turnos+' cierres de caja',
+          u.ventas&&u.ventas+' ventas',u.compras&&u.compras+' compras',u.abonos&&u.abonos+' abonos'].filter(Boolean).join(', ')+'.</p>'+
+        '<p class="muted" style="margin:0">Borrarla dañaría esos registros. Lo correcto es <b>deshabilitarla</b>: deja de salir para cobrar y pagar, y la puedes volver a habilitar cuando quieras.</p>',
+      footer:'<button class="btn" data-x>Cancelar</button>'+(c.activo!==false?'<button class="btn danger" id="dsh">🚫 Deshabilitar</button>':''),
+      onOpen:m=>{ if($('#dsh',m)) $('#dsh',m).onclick=()=>{ closeModal(); if(cambiarEstadoCuenta(c,false)) mCuentas(); }; }});
+  }
+  confirmar('¿Eliminar '+c.nombre+'? Nunca se usó, así que no afecta nada.',()=>{ remove('cuentas',c.id); toast(c.nombre+' eliminada','ok'); mCuentas(); },true);
+}
+function mCuentas(){
+  const admin=puedeEditar();
+  const fila=c=>{ const u=usoCuenta(c.id), act=c.activo!==false;
+    return '<div class="row" style="gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center;'+(act?'':'opacity:.6')+'">'+
+      '<span style="font-size:22px">'+(c.tipo==='caja'?'💵':'🏦')+'</span>'+
+      '<div style="flex:1;min-width:0"><b>'+esc(c.nombre)+'</b> '+(act?'<span class="pill ok">activa</span>':'<span class="pill">deshabilitada</span>')+
+        '<div class="tiny muted">'+(c.tipo==='caja'?'Caja (efectivo)':'Banco / datáfono')+' · '+esc((MEDIOS.find(x=>x.k===c.medio)||{}).n||c.medio||'')+
+        ' · '+(u.total? u.total+' registros':'sin usar')+'</div></div>'+
+      '<b class="mono" style="min-width:100px;text-align:right">'+money(saldoCuenta(c.id))+'</b>'+
+      '<div class="row" style="gap:4px">'+
+        '<button class="btn ghost sm" data-ce="'+c.id+'" title="Editar">✎</button>'+
+        (admin? (act? '<button class="btn ghost sm" data-cd="'+c.id+'" title="Deshabilitar">🚫</button>'
+                     : '<button class="btn ghost sm" data-ch="'+c.id+'" title="Habilitar">✅</button>')+
+          '<button class="btn ghost sm" data-cx="'+c.id+'" title="Eliminar">🗑️</button>' : '')+
+      '</div></div>'; };
+  const act=S.cuentas.filter(c=>c.activo!==false), ina=S.cuentas.filter(c=>c.activo===false);
+  modal({title:'🏦 Cajas y bancos', size:'wide',
+    body:'<div class="hintx" style="margin-bottom:10px">Crea las cajas y cuentas que necesites. Las que no uses, <b>deshabilítalas</b>: '+
+        'dejan de salir para cobrar y pagar, pero su historia queda. Solo se pueden <b>eliminar</b> las que nunca se usaron.</div>'+
+      act.map(fila).join('')+
+      (ina.length? '<div class="tiny b muted" style="margin:14px 0 2px">DESHABILITADAS</div>'+ina.map(fila).join('') : ''),
+    footer:'<button class="btn" data-x>Cerrar</button><button class="btn pri" id="cnew">+ Nueva caja o banco</button>',
+    onOpen:m=>{
+      $('#cnew',m).onclick=()=>{ closeModal(); edCuenta(null,mCuentas); };
+      $$('[data-ce]',m).forEach(b=>b.onclick=()=>{ closeModal(); edCuenta(byId('cuentas',b.dataset.ce),mCuentas); });
+      $$('[data-cd]',m).forEach(b=>b.onclick=()=>{ const c=byId('cuentas',b.dataset.cd); closeModal();
+        if(cambiarEstadoCuenta(c,false)){ render(); mCuentas(); } });
+      $$('[data-ch]',m).forEach(b=>b.onclick=()=>{ cambiarEstadoCuenta(byId('cuentas',b.dataset.ch),true); closeModal(); render(); mCuentas(); });
+      $$('[data-cx]',m).forEach(b=>b.onclick=()=>{ const c=byId('cuentas',b.dataset.cx); closeModal(); eliminarCuenta(c); });
+    }});
+}
+function edCuenta(c,despues){
   const ed=c||{id:uid('ct'),nombre:'',tipo:'banco',medio:'transferencia',saldoInicial:0,activo:true};
   modal({title:c?'Editar cuenta':'Nueva caja o banco',size:'slim',
     body:'<div class="f" style="margin-bottom:10px"><label>Nombre</label><input id="n" value="'+esc(ed.nombre)+'"></div>'+
@@ -5761,15 +5840,18 @@ function edCuenta(c){
         '<option value="'+x.k+'"'+(ed.medio===x.k?' selected':'')+'>'+x.n+'</option>').join('')+'</select></div></div>'+
       '<div class="f" style="margin-top:10px"><label>Saldo inicial</label><input id="s" type="number" step="any" value="'+(ed.saldoInicial||0)+'"></div>'+
       (c? '<label class="row tiny" style="margin-top:10px;gap:7px"><input type="checkbox" id="a" '+
-          (ed.activo!==false?'checked':'')+'> Activa (si la apagas deja de aparecer al cobrar)</label>':'')+
+          (ed.activo!==false?'checked':'')+'> Activa (si la apagas queda deshabilitada: deja de aparecer al cobrar y pagar)</label>':'')+
       '<div class="hintx" style="margin-top:10px">Puedes crear <b>cuantas cajas y bancos necesites</b>. '+
       'El <i>medio asociado</i> es el que se propone al cobrar o al pagar; si hay varias con el mismo medio, '+
       'la app te deja escoger en el momento.</div>',
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
     onOpen:m=>{ $('#ok',m).onclick=()=>{ ed.nombre=$('#n',m).value.trim()||'Cuenta'; ed.tipo=$('#t',m).value;
       ed.medio=$('#m',m).value; ed.saldoInicial=toN($('#s',m).value);
-      if($('#a',m)) ed.activo=$('#a',m).checked;
-      put('cuentas',ed); closeModal(); render(); toast('Cuenta guardada','ok'); }; }});
+      if($('#a',m)){ const quiere=$('#a',m).checked;
+        if(c && c.activo!==false && !quiere){ const pq=porQueNoDeshabilitar(c); if(pq) return toast(pq,'warn',7000); }
+        ed.activo=quiere; }
+      put('cuentas',ed); closeModal(); render(); toast('Cuenta guardada','ok');
+      if(typeof despues==='function') despues(); }; }});
 }
 function mMovimiento(){
   modal({title:'Movimiento de tesorería',
@@ -5779,9 +5861,9 @@ function mMovimiento(){
         '<option value="traslado">Traslado entre cuentas</option></select></div>'+
       '<div class="f"><label>Monto</label><input id="mt" type="number" step="any"></div></div>'+
       '<div class="f" style="margin-bottom:10px"><label>Cuenta</label><select id="c1">'+
-        selOpts(S.cuentas.filter(c=>c.activo),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
+        selOpts(S.cuentas.filter(c=>c.activo!==false),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
       '<div class="f hide" id="c2b" style="margin-bottom:10px"><label>Cuenta destino</label><select id="c2">'+
-        selOpts(S.cuentas.filter(c=>c.activo),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
+        selOpts(S.cuentas.filter(c=>c.activo!==false),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
       '<div id="nocuenta">'+
         '<div class="f" style="margin-bottom:10px"><label>¿De qué es? (categoría)</label><div id="cat"></div></div>'+
         '<div class="f" style="margin-bottom:10px"><label>Concepto</label>'+
@@ -5982,7 +6064,8 @@ function viewCaja(vw){
   topact((can('caja')? (t? '<button class="btn danger sm" id="tcerrar">🔒 Cerrar caja</button>'
                          : '<button class="btn pri sm" id="tabrir">Abrir caja</button>')
                      : '')+
-         (esMovil()? '' : '<button class="btn sm" id="tmov">+ Movimiento</button>'));
+         (esMovil()? '' : '<button class="btn sm" id="tmov">+ Movimiento</button>')+
+         (puedeEditar()? '<button class="btn sm" id="tcts">🏦 Cajas y bancos</button>':''));
   vw.innerHTML='<div id="ctabs"></div><div id="cbody"></div>';
   const tabs=[['resumen','📋 Resumen']]
     .concat(cts.map(c=>[c.id,(c.tipo==='caja'?'💵 ':'🏦 ')+c.nombre]))
@@ -5991,6 +6074,7 @@ function viewCaja(vw){
   if($('#tabrir')) $('#tabrir').onclick=mAbrirCaja;
   if($('#tcerrar')) $('#tcerrar').onclick=mCerrarCaja;
   if($('#tmov')) $('#tmov').onclick=mMovimiento;
+  if($('#tcts')) $('#tcts').onclick=mCuentas;
   pinta();
 
   function pinta(){
@@ -7117,7 +7201,7 @@ function resumenVentas(d1,d2){
     ing,egr,saldo:round(ing-egr,2), cajaIng,cajaEgr, cajaNeto:round(cajaIng-cajaEgr,2),
     gastos, totalGastos:sum(gastos,m=>m.monto),
     top, porUsuario:Object.values(porUsuario).sort((a,b)=>b.valor-a.valor),
-    cuentas:S.cuentas.filter(c=>c.activo).map(c=>({nombre:c.nombre,tipo:c.tipo,saldo:saldoCuenta(c.id)}))};
+    cuentas:S.cuentas.filter(c=>c.activo!==false).map(c=>({nombre:c.nombre,tipo:c.tipo,saldo:saldoCuenta(c.id)}))};
 }
 
 function imprimirResumen(d1,d2,detallado){
