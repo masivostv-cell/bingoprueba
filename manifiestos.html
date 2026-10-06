@@ -61,6 +61,15 @@ body{
 .menu button:hover{background:#e9fbf8;}
 .menu button.activo{background:var(--verde-oscuro);color:#fff;box-shadow:inset 0 0 0 2px #fff;}
 
+/* Botón a la hoja de cálculo (solo administración) */
+.btn-hoja{
+  display:block;margin:0 0 14px;padding:12px 14px;border-radius:8px;
+  background:#188038;color:#fff;font-size:14px;font-weight:600;
+  text-decoration:none;text-align:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.18);transition:background .15s ease;
+}
+.btn-hoja:hover{background:#136c2e;}
+
 .contenido{flex:1;padding:30px;min-width:0;}
 
 /* Una sola regla controla qué sección se ve */
@@ -139,6 +148,16 @@ input[type="date"]{width:170px;}
 .item.vacio{cursor:default;color:#64748b;}
 .item.vacio:hover{background:#fff;}
 .item-dato{color:#475569;font-size:13px;}
+/* Datos a la izquierda y frecuencia de recolección a la derecha */
+.item-fila{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.item-info{flex:1;min-width:0;}
+.item-frecuencia{
+  flex-shrink:0;text-align:right;font-size:12px;color:#334155;
+  background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;
+  padding:3px 8px;max-width:45%;
+}
+.item-frecuencia small{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.03em;}
+.item-frecuencia.vacia{color:#94a3b8;font-style:italic;}
 .item-ruta{
   display:inline-block;background:#e0f2fe;color:#075985;
   border-radius:20px;padding:1px 9px;font-size:12px;
@@ -326,6 +345,33 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 .opcion input{width:auto;margin:3px 0 0;flex-shrink:0;}
 .opcion .cifras{margin-left:auto;color:#64748b;font-size:13px;white-space:nowrap;padding-left:12px;}
 
+/* Interruptor por cliente: con tarifa (factura) o solo certificado */
+.opcion-cert{display:flex;align-items:center;gap:8px;border-bottom:1px solid #eef2f7;padding-right:10px;}
+.opcion-cert .opcion{flex:1;border-bottom:0;min-width:0;}
+.interruptor-tarifa{
+  flex-shrink:0;display:inline-flex;align-items:center;gap:6px;
+  border:1px solid #cbd5e1;background:#fff;color:#64748b;
+  border-radius:20px;padding:4px 10px 4px 4px;font-size:12px;font-weight:600;
+  cursor:pointer;white-space:nowrap;
+}
+.interruptor-tarifa .bola{
+  width:28px;height:16px;border-radius:10px;background:#cbd5e1;position:relative;transition:background .15s;
+}
+.interruptor-tarifa .bola::after{
+  content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;
+  background:#fff;transition:left .15s;
+}
+.interruptor-tarifa.on{border-color:#16a34a;color:#15803d;background:#f0fdf4;}
+.interruptor-tarifa.on .bola{background:#16a34a;}
+.interruptor-tarifa.on .bola::after{left:14px;}
+.interruptor-tarifa.sin-tarifa-ficha{border-color:#fca5a5;color:#b91c1c;}
+.tarifa-masivo{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;
+  border-bottom:1px solid var(--borde);font-size:13px;color:#334155;}
+@media (max-width:600px){
+  .opcion-cert{flex-wrap:wrap;padding:0 10px 8px 0;}
+  .interruptor-tarifa{margin-left:36px;}
+}
+
 .btn-mini{
   border:1px solid var(--verde-oscuro);background:#fff;color:var(--verde-oscuro);
   border-radius:6px;padding:7px 12px;cursor:pointer;font-size:13px;font-weight:600;
@@ -376,6 +422,9 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 .hoja th{background:#dbeafe;color:#000;text-align:center;font-weight:bold;}
 .hoja td.texto{text-align:left;width:24%;}
 .hoja td.centro{text-align:center;white-space:nowrap;}
+.hoja td.tarifa-cert{text-align:center;font-size:7.5pt;}
+.hoja td.valor-cert{text-align:right;white-space:nowrap;font-weight:bold;}
+.hoja .detalle-valor{font-weight:normal;font-size:9pt;color:#444;}
 .hoja tr.fila-total td{font-weight:bold;background:#f1f5f9;}
 
 .hoja .gran-total{font-weight:bold;font-size:10pt;margin:6px 0 14px;}
@@ -535,6 +584,23 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   box-shadow:0 10px 30px rgba(0,0,0,.35);
 }
 .modal-contenido textarea{width:100%;}
+
+/* Formulario de cliente: cada dato con su nombre encima */
+.form-cliente{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+.form-cliente .campo{display:flex;flex-direction:column;min-width:0;}
+.form-cliente .campo.ancho{grid-column:1 / -1;}
+.form-cliente label{font-size:12px;font-weight:600;color:#475569;margin-bottom:3px;}
+.form-cliente input,.form-cliente textarea{width:100%;box-sizing:border-box;margin:0;}
+.form-cliente input:disabled{background:#f1f5f9;color:#64748b;}
+.form-cliente .seccion-form{grid-column:1 / -1;margin:8px 0 0;padding-top:8px;
+  border-top:1px solid #e2e8f0;font-size:13px;font-weight:700;color:#0f172a;}
+.tarifa-ayuda{font-size:12px;color:#475569;margin-top:4px;min-height:16px;}
+.tarifa-ayuda.mal{color:#b91c1c;}
+@media (max-width:600px){ .form-cliente{grid-template-columns:1fr;} }
+
+/* Tarifa en la tabla de clientes */
+td.celda-tarifa{white-space:nowrap;}
+td.celda-tarifa .sin-tarifa{color:#b91c1c;font-style:italic;font-size:12px;}
 
 /* ---------- << v5 >> acceso ---------- */
 #pantallaAcceso{
@@ -706,6 +772,11 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
       <button type="button" onclick="salir()">Salir</button>
     </div>
 
+    <!-- Acceso directo a la hoja de cálculo: solo administración -->
+    <a class="btn-hoja" data-solo-admin target="_blank" rel="noopener"
+       href="https://docs.google.com/spreadsheets/d/121NH1L18n4B8PgWljK0maoAzh2RXiDurFbvLbzFmBU4/edit?gid=1399769606#gid=1399769606"
+       title="Abre la hoja de Google Sheets en una pestaña nueva">📊 Abrir tabla en Google Sheets</a>
+
     <button type="button" data-seccion="nuevo"     onclick="mostrar('nuevo')">📄 Nuevo manifiesto</button>
     <button type="button" data-seccion="clientes"  data-solo-admin onclick="mostrar('clientes')">👥 Clientes</button>
     <button type="button" data-seccion="historial" data-solo-admin onclick="mostrar('historial')">📚 Historial de manifiestos</button>
@@ -829,6 +900,8 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
                           title="Filtrar esta columna"
                           onclick="alternarPanelFiltro(event,'cliRecoleccion')">▼</button>
                 </th>
+                <th>Tipo cliente</th>
+                <th title="Valor por recolección / valor del kilo adicional (kilos incluidos)">Tarifa</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -955,6 +1028,12 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
             <input type="checkbox" id="certPorRuta" checked>
             Al marcar un cliente, marcar también las demás sedes de su ruta
           </label>
+          <div class="tarifa-masivo">
+            💲 Con el interruptor de cada cliente decide si su certificado sale
+            <b>con tarifa y valor a facturar</b> o <b>solo como certificado</b>.
+            <button type="button" class="btn-mini" onclick="tarifaTodosCert(true)">Todos con tarifa</button>
+            <button type="button" class="btn-mini" onclick="tarifaTodosCert(false)">Todos sin tarifa</button>
+          </div>
           <div id="certLista" class="selector-lista"></div>
           <div class="selector-pie">
             <span id="certResumen">0 clientes seleccionados</span>
@@ -1139,23 +1218,36 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
   <div class="modal-contenido">
     <h2 id="tituloModalCliente">Nuevo cliente</h2>
 
-    <input id="cliCodigo"    placeholder="Código">
-    <input id="cliNombre"    placeholder="Nombre cliente">
+    <div class="form-cliente">
+      <div class="seccion-form">Datos generales</div>
+      <div class="campo"><label for="cliCodigo">Código</label><input id="cliCodigo"></div>
+      <div class="campo"><label for="cliNit">NIT</label><input id="cliNit"></div>
+      <div class="campo ancho"><label for="cliNombre">Nombre del cliente</label><input id="cliNombre"></div>
+      <div class="campo ancho"><label for="cliDireccion">Dirección</label><input id="cliDireccion"></div>
+      <div class="campo"><label for="cliMunicipio">Municipio</label><input id="cliMunicipio"></div>
+      <div class="campo"><label for="cliRuta">Ruta</label><input id="cliRuta"></div>
+
+      <div class="seccion-form">Contacto</div>
+      <div class="campo"><label for="cliContacto">Contacto</label><input id="cliContacto"></div>
+      <div class="campo"><label for="cliTelefono">Teléfono</label><input id="cliTelefono" inputmode="tel"></div>
+      <div class="campo ancho"><label for="cliCorreo">Correo</label><input id="cliCorreo" type="email"></div>
+
+      <div class="seccion-form">Recolección y facturación</div>
+      <div class="campo"><label for="cliTipo">Tipo de cliente</label>
+        <input id="cliTipo" list="opcionesTipo" placeholder="PEQUEÑO, IMSALUD...">
+        <datalist id="opcionesTipo"></datalist></div>
+      <div class="campo"><label for="cliFrecuencia">Frecuencia de recolección</label>
+        <input id="cliFrecuencia" list="opcionesFrecuencia">
+        <datalist id="opcionesFrecuencia"></datalist></div>
+      <div class="campo ancho"><label for="cliRecoleccion">Tipo de recolección</label><input id="cliRecoleccion"></div>
+      <div class="campo ancho"><label for="cliTarifa">Tarifa</label>
+        <input id="cliTarifa" placeholder="Ej.: 25.000 / 5.000 (0-4)" oninput="explicarTarifa()">
+        <div id="cliTarifaAyuda" class="tarifa-ayuda"></div></div>
+
+      <div class="campo ancho"><label for="cliObservacion">Observaciones</label>
+        <textarea id="cliObservacion" rows="3"></textarea></div>
+    </div>
     <br>
-    <input id="cliNit"       placeholder="NIT">
-    <input id="cliTelefono"  placeholder="Teléfono">
-    <br>
-    <input id="cliDireccion" placeholder="Dirección">
-    <input id="cliRuta"      placeholder="Ruta">
-    <br>
-    <input id="cliMunicipio" placeholder="Municipio">
-    <input id="cliContacto"  placeholder="Contacto">
-    <br>
-    <input id="cliCorreo"       placeholder="Correo">
-    <input id="cliRecoleccion"  placeholder="Tipo de recolección">
-    <br><br>
-    <textarea id="cliObservacion" placeholder="Observaciones" rows="4"></textarea>
-    <br><br>
 
     <button type="button" id="btnGuardarCliente" class="btn-pro btn-guardar" onclick="guardarCliente()">💾 Guardar cliente</button>
     <button type="button" class="btn-pro btn-consultar" onclick="cerrarFormularioCliente()">❌ Cancelar</button>
@@ -2224,9 +2316,16 @@ function buscarCliente(){
   // cuando varios clientes comparten nombre.
   lista.innerHTML = resultadosBusqueda.map((c, i) => `
     <div class="item" onclick="seleccionar(${i})">
-      <b>${esc(c.nombre)}</b><br>
-      <span class="item-dato">${esc(c.direccion) || "Sin dirección registrada"}</span>
-      ${c.ruta ? `<span class="item-ruta">Ruta ${esc(c.ruta)}</span>` : ""}
+      <div class="item-fila">
+        <div class="item-info">
+          <b>${esc(c.nombre)}</b><br>
+          <span class="item-dato">${esc(c.direccion) || "Sin dirección registrada"}</span>
+          ${c.ruta ? `<span class="item-ruta">Ruta ${esc(c.ruta)}</span>` : ""}
+        </div>
+        ${String(c.frecuencia || "").trim()
+          ? `<div class="item-frecuencia"><small>Frecuencia</small>${esc(c.frecuencia)}</div>`
+          : `<div class="item-frecuencia vacia"><small>Frecuencia</small>Sin definir</div>`}
+      </div>
     </div>`).join("");
   lista.classList.add("abierta");
 }
@@ -2256,7 +2355,7 @@ function renderizarTablaClientes(lista){
   if(!cuerpo) return;
 
   if(!lista || lista.length === 0){
-    cuerpo.innerHTML = '<tr><td colspan="6">No hay clientes para mostrar</td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="8">No hay clientes para mostrar</td></tr>';
     return;
   }
 
@@ -2279,6 +2378,10 @@ function renderizarTablaClientes(lista){
       </td>
       <td class="celda-recoleccion">
         ${celdaFicha(c.recoleccion, c.recoleccionFija, "recoleccion", i)}
+      </td>
+      <td>${esc(c.tipo)}</td>
+      <td class="celda-recoleccion celda-tarifa">
+        ${celdaFicha(c.tarifa, c.tarifaFija, "tarifa", i)}
       </td>
       <td class="acciones">
         <button type="button" title="Editar" onclick="editarCliente(${i})">✏️</button>
@@ -2580,11 +2683,71 @@ document.addEventListener("keydown", e => {
 
 /* ----- formulario de cliente ----- */
 
+// Campo de la ficha -> casilla del formulario
+const CAMPOS_FORM_CLIENTE = {
+  codigo:"cliCodigo", nombre:"cliNombre", nit:"cliNit", telefono:"cliTelefono",
+  direccion:"cliDireccion", ruta:"cliRuta", municipio:"cliMunicipio",
+  contacto:"cliContacto", correo:"cliCorreo", observaciones:"cliObservacion",
+  recoleccion:"cliRecoleccion", frecuencia:"cliFrecuencia",
+  tipo:"cliTipo", tarifa:"cliTarifa"
+};
+
 function limpiarFormularioCliente(){
-  ["cliCodigo","cliNombre","cliNit","cliTelefono","cliDireccion",
-   "cliRuta","cliMunicipio","cliContacto","cliCorreo","cliObservacion","cliRecoleccion"]
-   .forEach(id => { const el = $(id); if(el) el.value = ""; });
+  Object.keys(CAMPOS_FORM_CLIENTE).forEach(k => {
+    const el = $(CAMPOS_FORM_CLIENTE[k]);
+    if(!el) return;
+    el.value = "";
+    el.disabled = false;
+    el.title = "";
+  });
+  llenarOpcionesFormCliente();
+  explicarTarifa();
   mensaje("estadoFormCliente","");
+}
+
+// Sugerencias con los valores que ya existen, para escribirlos igual.
+function llenarOpcionesFormCliente(){
+  const unicos = campo => Array.from(new Set(
+    clientes.map(c => String(c[campo] || "").trim()).filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b, "es"));
+
+  $("opcionesTipo").innerHTML = unicos("tipo").map(v => `<option value="${esc(v)}">`).join("");
+  $("opcionesFrecuencia").innerHTML = unicos("frecuencia").map(v => `<option value="${esc(v)}">`).join("");
+}
+
+// Debajo de la tarifa se explica cómo se va a leer al facturar.
+function explicarTarifa(){
+  const caja = $("cliTarifaAyuda");
+  if(!caja) return;
+  const texto = $("cliTarifa").value.trim();
+  caja.classList.remove("mal");
+
+  if(!texto){ caja.textContent = "Formato: valor recolección / valor kilo adicional (kilos incluidos)"; return; }
+
+  const t = parsearTarifa(texto);
+  if(!t.base){
+    caja.textContent = "⚠️ No se encontró el valor de la recolección.";
+    caja.classList.add("mal");
+    return;
+  }
+
+  caja.textContent = "Se facturará: " + pesos(t.base) + " por recolección" +
+    (t.limite ? " (incluye hasta " + t.limite + " kg)" : "") +
+    (t.extra && t.limite ? " + " + pesos(t.extra) + " por kilo adicional" : "") +
+    (t.extra && !t.limite ? " · ⚠️ falta el rango de kilos, ej. (0-4)" : "");
+  if(t.extra && !t.limite) caja.classList.add("mal");
+}
+
+// Todos los datos de la ficha listos para guardarCliente. Los campos que en
+// la hoja son fórmula no se mandan, para no borrar la fórmula.
+function datosFichaCompleta(ficha){
+  const datos = { accion:"guardarCliente" };
+  Object.keys(CAMPOS_FORM_CLIENTE).forEach(k => {
+    if(ficha[k + "Fija"]) return;
+    datos[k] = String(ficha[k] || "").trim();
+  });
+  if(ficha.fila) datos.fila = ficha.fila;
+  return datos;
 }
 
 function nuevoCliente(){
@@ -2605,17 +2768,17 @@ function editarCliente(indice){
   // cliente correcto aunque se le cambie el nombre o no tenga código.
   clienteEditando = c;
 
-  $("cliCodigo").value     = c.codigo      || "";
-  $("cliNombre").value     = c.nombre      || "";
-  $("cliRuta").value       = c.ruta        || "";
-  $("cliNit").value        = c.nit         || "";
-  $("cliTelefono").value   = c.telefono    || "";
-  $("cliDireccion").value  = c.direccion   || "";
-  $("cliMunicipio").value  = c.municipio   || "";
-  $("cliContacto").value   = c.contacto    || "";
-  $("cliCorreo").value     = c.correo      || "";
-  $("cliObservacion").value= c.observaciones || "";
-  $("cliRecoleccion").value= c.recoleccion || "";
+  Object.keys(CAMPOS_FORM_CLIENTE).forEach(k => {
+    const el = $(CAMPOS_FORM_CLIENTE[k]);
+    if(!el) return;
+    el.value = c[k] || "";
+    // Si en la hoja es fórmula, se muestra pero no se deja cambiar aquí.
+    if(c[k + "Fija"]){
+      el.disabled = true;
+      el.title = "Esta celda es una fórmula en la hoja. Cámbiela allí.";
+    }
+  });
+  explicarTarifa();
 
   mensaje("estadoFormCliente", c.fila ? "" :
     "Este cliente viene de una versión anterior del servidor: puede que al " +
@@ -2648,20 +2811,14 @@ function guardarCliente(){
     return;
   }
 
-  const datos = {
-    accion:"guardarCliente",
-    codigo:codigo,
-    nombre:nombre,
-    nit:$("cliNit").value.trim(),
-    telefono:$("cliTelefono").value.trim(),
-    direccion:$("cliDireccion").value.trim(),
-    ruta:$("cliRuta").value.trim(),
-    municipio:$("cliMunicipio").value.trim(),
-    contacto:$("cliContacto").value.trim(),
-    correo:$("cliCorreo").value.trim(),
-    observaciones:$("cliObservacion").value.trim(),
-    recoleccion:$("cliRecoleccion").value.trim()
-  };
+  const datos = { accion:"guardarCliente" };
+  Object.keys(CAMPOS_FORM_CLIENTE).forEach(k => {
+    const el = $(CAMPOS_FORM_CLIENTE[k]);
+    if(!el || el.disabled) return;      // las fórmulas no se tocan
+    datos[k] = el.value.trim();
+  });
+  datos.codigo = codigo;
+  datos.nombre = nombre;
 
   // La fila de la hoja identifica al cliente aunque se le cambie el nombre.
   if(clienteEditando && clienteEditando.fila) datos.fila = clienteEditando.fila;
@@ -2685,9 +2842,7 @@ function guardarCliente(){
  */
 function aplicarCambioClienteLocal(datos){
 
-  const campos = ["codigo","nombre","nit","telefono","direccion",
-                  "ruta","municipio","contacto","correo","observaciones",
-                  "recoleccion","frecuencia"];
+  const campos = Object.keys(CAMPOS_FORM_CLIENTE);
 
   let ficha = null;
 
@@ -4841,7 +4996,8 @@ const ACCION_CAMPO = {
 
 const ETIQUETA_CAMPO = {
   frecuencia:  "Frecuencia",
-  recoleccion: "Recolección"
+  recoleccion: "Recolección",
+  tarifa:      "Tarifa"
 };
 
 let celdaEditando = null;
@@ -4859,7 +5015,9 @@ function celdaFicha(valor, calculada, campo, indice){
          + `${esc(valor)} <small>fx</small></span>`;
   }
 
-  return `<span class="valor-celda">${esc(valor)}</span>`
+  const vacio = (campo === "tarifa" && !String(valor || "").trim())
+    ? `<span class="valor-celda sin-tarifa">Sin tarifa</span>` : "";
+  return (vacio || `<span class="valor-celda">${esc(valor)}</span>`)
        + `<button type="button" class="lapiz" title="Editar ${esc(ETIQUETA_CAMPO[campo] || campo)}"`
        + ` onclick="editarCelda(this,'${campo}',${indice})">✏️</button>`;
 }
@@ -4939,11 +5097,11 @@ function guardarCampoFicha(ficha, campo, valor){
     return false;
   }
 
-  const datos = {
-    accion: ACCION_CAMPO[campo],
-    codigo: ficha.codigo || "",
-    nombre: ficha.nombre || ""
-  };
+  // La tarifa no tiene acción propia en el servidor: se manda la ficha
+  // completa con guardarCliente, igual que al editar desde el formulario.
+  const datos = ACCION_CAMPO[campo]
+    ? { accion: ACCION_CAMPO[campo], codigo: ficha.codigo || "", nombre: ficha.nombre || "" }
+    : datosFichaCompleta(ficha);
   datos[campo] = valor;
 
   // La fila de la hoja es lo único fiable: la mayoría no tiene código.
@@ -4960,6 +5118,7 @@ function guardarCampoFicha(ficha, campo, valor){
 
   // Los caches por nombre son pequeños: se rehacen al instante.
   frecuenciaPorCliente = {};
+  tarifaPorCliente = {};
 
   programarSincronizacionClientes();
 
@@ -5018,6 +5177,48 @@ function limiteDeTarifa(tarifa){
   if(!partes) return 0;
 
   return Number(String(partes[2]).replace(",", ".")) || 0;
+}
+
+/**
+ * Desarma la tarifa "25.000 / 5.000 (0-4)" en:
+ *   base   = 25000  -> valor de cada recolección (manifiesto)
+ *   extra  = 5000   -> valor de cada kilo que pase del límite
+ *   limite = 4      -> kilos incluidos en la base
+ * Los puntos son separadores de miles (pesos colombianos, sin decimales).
+ */
+function parsearTarifa(tarifa){
+  const texto = String(tarifa || "");
+  const sinRango = texto.replace(/\([^)]*\)/g, "");
+  const partes = sinRango.split("/");
+  const numero = t => Number(String(t || "").replace(/[^0-9]/g, "")) || 0;
+  return {
+    base:   numero(partes[0]),
+    extra:  partes.length > 1 ? numero(partes[1]) : 0,
+    limite: limiteDeTarifa(texto)
+  };
+}
+
+// true: un kilo adicional empezado se cobra completo (4,3 kg extra -> 5).
+// false: se cobran los kilos exactos con decimales.
+const REDONDEAR_KG_EXTRA = false;
+
+// Kilos que pasan de los incluidos en la tarifa, para un manifiesto.
+function kilosExtra(total, limite){
+  if(!(limite > 0)) return 0;
+  const exceso = Math.max(0, (Number(total) || 0) - limite);
+  if(REDONDEAR_KG_EXTRA) return Math.ceil(exceso - 1e-9);
+  return Math.round(exceso * 100) / 100;
+}
+
+// Valor a facturar de un manifiesto: base + kilos extra x valor del kilo.
+function valorManifiesto(m, tarifa){
+  const t = parsearTarifa(tarifa);
+  return t.base + kilosExtra(m.total, t.limite) * t.extra;
+}
+
+// Suma de lo que se le factura a un cliente en el periodo.
+function valorCliente(cliente){
+  return cliente.manifiestos.reduce((s, m) => s + valorManifiesto(m, cliente.tarifa), 0);
 }
 
 function limiteDeCliente(nombreEnManifiesto){
@@ -5106,6 +5307,7 @@ function agruparClientesCertificado(){
         nombre: nombre,
         codigo: ficha ? (ficha.codigo || "") : "",
         direccion: ficha ? (ficha.direccion || "") : "",
+        tarifa: tarifaDeCliente(nombre),
         // Se completa abajo con la ruta de los propios manifiestos.
         ruta: "",
         manifiestos: [],
@@ -5123,6 +5325,9 @@ function agruparClientesCertificado(){
   certClientes = Object.keys(porCliente)
     .map(k => porCliente[k])
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+  // Lo que se le factura a cada cliente según su tarifa
+  certClientes.forEach(c => { c.valor = valorCliente(c); });
 
   // Conserva las marcas de una consulta anterior si el cliente sigue estando
   const previas = certMarcados;
@@ -5153,14 +5358,23 @@ function pintarClientesCertificado(){
       const etiquetaRuta = c.ruta
         ? `<span class="ruta" title="${enRuta} cliente(s) de esta ruta">Ruta ${esc(c.ruta)}</span>`
         : "";
+      const on = conTarifa(c.nombre);
+      const valorTxt = !on ? "" : (c.tarifa ? " · " + pesos(c.valor) : " · ⚠️ sin tarifa en ficha");
       return `
-      <label class="opcion">
-        <input type="checkbox" value="${esc(c.nombre)}"
-               ${certMarcados[c.nombre] ? "checked" : ""}
-               onchange="marcarCliente(this)">
-        <span>${esc(c.nombre)}${c.codigo ? " <b>(" + esc(c.codigo) + ")</b>" : ""} ${etiquetaRuta}</span>
-        <span class="cifras">${c.manifiestos.length} man. · ${dosDecimales(c.total)} KG</span>
-      </label>`;
+      <div class="opcion-cert">
+        <label class="opcion">
+          <input type="checkbox" value="${esc(c.nombre)}"
+                 ${certMarcados[c.nombre] ? "checked" : ""}
+                 onchange="marcarCliente(this)">
+          <span>${esc(c.nombre)}${c.codigo ? " <b>(" + esc(c.codigo) + ")</b>" : ""} ${etiquetaRuta}</span>
+          <span class="cifras">${c.manifiestos.length} man. · ${dosDecimales(c.total)} KG${valorTxt}</span>
+        </label>
+        <button type="button" class="interruptor-tarifa${on ? " on" : ""}${on && !c.tarifa ? " sin-tarifa-ficha" : ""}"
+                data-nombre="${esc(c.nombre)}" onclick="alternarTarifaCert(this, event)"
+                title="Clic para cambiar">
+          <span class="bola"></span>${on ? "Con tarifa" : "Solo certificado"}
+        </button>
+      </div>`;
     }).join("");
   }
 
@@ -5172,6 +5386,41 @@ function pintarClientesCertificado(){
  * que es como se atienden en terreno. Al DESMARCAR se quita solo ese, para
  * poder dejar fuera una sede puntual sin perder el resto.
  */
+/* ----- con tarifa / solo certificado, cliente por cliente ----- */
+
+// Se recuerda la elección de cada cliente para la próxima vez.
+let certConTarifa = (() => {
+  try{ return JSON.parse(leerCache("cert_con_tarifa") || "{}") || {}; }
+  catch(e){ return {}; }
+})();
+
+// Por defecto: con tarifa, salvo que antes se haya desmarcado.
+function conTarifa(nombre){
+  return certConTarifa[nombre] !== false;
+}
+
+function guardarConTarifa(){
+  guardarCache("cert_con_tarifa", JSON.stringify(certConTarifa));
+}
+
+function alternarTarifaCert(boton, e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const nombre = boton.dataset.nombre;
+  certConTarifa[nombre] = !conTarifa(nombre);
+  guardarConTarifa();
+  pintarClientesCertificado();
+}
+
+// Aplica a los que se están viendo, igual que «Todos» / «Ninguno».
+function tarifaTodosCert(valor){
+  const texto = normalizar($("certBuscar").value);
+  certClientes.forEach(c => {
+    if(!texto || normalizar(c.nombre + " " + c.ruta).includes(texto)) certConTarifa[c.nombre] = valor;
+  });
+  guardarConTarifa();
+  pintarClientesCertificado();
+}
+
 function marcarCliente(casilla){
 
   const nombre = casilla.value;
@@ -5208,9 +5457,13 @@ function clientesSeleccionados(){
 function actualizarResumenCert(){
   const elegidos = clientesSeleccionados();
   const kilos = elegidos.reduce((s, c) => s + c.total, 0);
+  const facturables = elegidos.filter(c => conTarifa(c.nombre));
+  const valor = facturables.reduce((s, c) => s + (c.valor || 0), 0);
+  const sinTarifa = facturables.filter(c => !c.tarifa).length;
   $("certResumen").textContent =
     elegidos.length + " de " + certClientes.length + " clientes seleccionados" +
-    (elegidos.length ? "  ·  " + dosDecimales(kilos) + " KG" : "");
+    (elegidos.length ? "  ·  " + dosDecimales(kilos) + " KG  ·  " + facturables.length + " con tarifa: " + pesos(valor) + " a facturar" : "") +
+    (sinTarifa ? "  ·  ⚠️ " + sinTarifa + " sin tarifa" : "");
 }
 
 /* ----- armado de las hojas ----- */
@@ -5286,20 +5539,28 @@ function sumarResiduos(manifiestos){
   return suma;
 }
 
-function hojaUnitaria(cliente, inicio, fin, fecha){
+function hojaUnitaria(cliente, inicio, fin, fecha, valores){
 
   const suma = sumarResiduos(cliente.manifiestos);
+  const t = parsearTarifa(cliente.tarifa);
+  let valorTotal = 0;
 
   const filas = cliente.manifiestos
     .slice()
     .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)))
-    .map(m => `
+    .map(m => {
+      const v = valorManifiesto(m, cliente.tarifa);
+      valorTotal += v;
+      return `
       <tr>
         <td class="centro">${esc(m.fecha)}</td>
         <td class="centro">${esc(m.manifiesto)}</td>
         ${COLUMNAS_RESIDUOS.map(c => `<td>${dosDecimales(m[c.clave])}</td>`).join("")}
         <td>${dosDecimales(m.total)}</td>
-      </tr>`).join("");
+        ${valores ? `<td class="centro">${dosDecimales(kilosExtra(m.total, t.limite))}</td>
+        <td class="valor-cert">${pesos(v)}</td>` : ""}
+      </tr>`;
+    }).join("");
 
   return `
     <div class="hoja">
@@ -5312,6 +5573,7 @@ function hojaUnitaria(cliente, inicio, fin, fecha){
         <b>CÓDIGO</b> ${esc(cliente.codigo || "—")}<br>
         <b>CLIENTE</b> ${esc(cliente.nombre)}<br>
         <b>DIRECCIÓN</b> ${esc(cliente.direccion || "—")}
+        ${valores ? `<br><b>TARIFA</b> ${esc(cliente.tarifa || "SIN TARIFA REGISTRADA")}` : ""}
       </div>
 
       <table>
@@ -5319,11 +5581,13 @@ function hojaUnitaria(cliente, inicio, fin, fecha){
           <tr>
             <th colspan="2"></th>
             <th colspan="${COLUMNAS_RESIDUOS.length + 1}">Clasificación de Residuos</th>
+            ${valores ? `<th colspan="2">Facturación</th>` : ""}
           </tr>
           <tr>
             <th>Fecha</th><th>Manifiesto</th>
             ${COLUMNAS_RESIDUOS.map(c => `<th>${c.titulo}</th>`).join("")}
             <th>Totales</th>
+            ${valores ? `<th>KG extra</th><th>Valor</th>` : ""}
           </tr>
         </thead>
         <tbody>
@@ -5332,11 +5596,14 @@ function hojaUnitaria(cliente, inicio, fin, fecha){
             <td class="centro" colspan="2">TOTAL</td>
             ${COLUMNAS_RESIDUOS.map(c => `<td>${dosDecimales(suma[c.clave])}</td>`).join("")}
             <td>${dosDecimales(suma.total)}</td>
+            ${valores ? `<td></td><td class="valor-cert">${pesos(valorTotal)}</td>` : ""}
           </tr>
         </tbody>
       </table>
 
       <p class="gran-total">TOTAL DE KILOS RESIDUOS: ${dosDecimales(suma.total)} Kilogramos</p>
+      ${valores ? `<p class="gran-total">VALOR A FACTURAR: ${pesos(valorTotal)}
+        <span class="detalle-valor">(${cliente.manifiestos.length} recolección(es))</span></p>` : ""}
       ${pieHoja()}
     </div>`;
 }
@@ -5371,11 +5638,13 @@ function destinatarioHoja(listaClientes){
          ubas.map(u => `<b>${esc(u)}</b>`).join("<br>") + `</p>`;
 }
 
-function hojaMensual(listaClientes, inicio, fin, fecha){
+function hojaMensual(listaClientes, inicio, fin, fecha, valores){
 
   const suma = sumarResiduos(
     listaClientes.reduce((acc, c) => acc.concat(c.manifiestos), [])
   );
+  const valorTotal = listaClientes.reduce((s, c) => s + (c.conTarifa ? valorCliente(c) : 0), 0);
+  const colsCliente = valores ? 4 : 2;
 
   const filas = listaClientes.map((c, i) => {
     const s = sumarResiduos(c.manifiestos);
@@ -5383,8 +5652,11 @@ function hojaMensual(listaClientes, inicio, fin, fecha){
       <tr>
         <td class="centro">${i + 1}</td>
         <td class="texto">${esc(c.nombre)}</td>
+        ${valores ? `<td class="tarifa-cert">${c.conTarifa ? esc(c.tarifa || "SIN TARIFA") : "—"}</td>
+        <td class="centro">${c.manifiestos.length}</td>` : ""}
         ${COLUMNAS_RESIDUOS.map(x => `<td>${dosDecimales(s[x.clave])}</td>`).join("")}
         <td>${dosDecimales(s.total)}</td>
+        ${valores ? `<td class="valor-cert">${c.conTarifa ? pesos(valorCliente(c)) : "—"}</td>` : ""}
       </tr>`;
   }).join("");
 
@@ -5398,11 +5670,13 @@ function hojaMensual(listaClientes, inicio, fin, fecha){
       <table>
         <thead>
           <tr>
-            <th colspan="2">CLIENTE</th>
+            <th colspan="${colsCliente}">CLIENTE</th>
             <th colspan="${COLUMNAS_RESIDUOS.length + 1}">Clasificación de Residuos</th>
+            ${valores ? `<th rowspan="2">Valor a facturar</th>` : ""}
           </tr>
           <tr>
             <th>ITEM</th><th>CLIENTE</th>
+            ${valores ? `<th>TARIFA</th><th>Recol.</th>` : ""}
             ${COLUMNAS_RESIDUOS.map(c => `<th>${c.titulo}</th>`).join("")}
             <th>Totales</th>
           </tr>
@@ -5410,14 +5684,16 @@ function hojaMensual(listaClientes, inicio, fin, fecha){
         <tbody>
           ${filas}
           <tr class="fila-total">
-            <td class="centro" colspan="2">TOTAL</td>
+            <td class="centro" colspan="${colsCliente}">TOTAL</td>
             ${COLUMNAS_RESIDUOS.map(c => `<td>${dosDecimales(suma[c.clave])}</td>`).join("")}
             <td>${dosDecimales(suma.total)}</td>
+            ${valores ? `<td class="valor-cert">${pesos(valorTotal)}</td>` : ""}
           </tr>
         </tbody>
       </table>
 
       <p class="gran-total">TOTAL DE KILOS RESIDUOS: ${dosDecimales(suma.total)} Kilogramos</p>
+      ${valores ? `<p class="gran-total">TOTAL A FACTURAR: ${pesos(valorTotal)}</p>` : ""}
       ${pieHoja()}
     </div>`;
 }
@@ -5503,6 +5779,9 @@ function datosCertificado(){
     return null;
   }
 
+  // Cada cliente lleva su elección: con tarifa o solo certificado.
+  elegidos.forEach(c => { c.conTarifa = conTarifa(c.nombre); });
+
   return {
     elegidos: elegidos,
     inicio: $("certInicio").value,
@@ -5520,8 +5799,8 @@ function generarCertificados(){
   const area = $("areaCertificados");
 
   const contenido = (d.tipo === "unitario")
-    ? d.elegidos.map(c => hojaUnitaria(c, d.inicio, d.fin, d.fecha))
-    : [hojaMensual(d.elegidos, d.inicio, d.fin, d.fecha)];
+    ? d.elegidos.map(c => hojaUnitaria(c, d.inicio, d.fin, d.fecha, c.conTarifa))
+    : [hojaMensual(d.elegidos, d.inicio, d.fin, d.fecha, d.elegidos.some(c => c.conTarifa))];
 
   area.innerHTML = envolverEnMarco(contenido);
 
@@ -5620,67 +5899,120 @@ function pieExcel(total){
   ];
 }
 
-function hojaExcelUnitaria(cliente, inicio, fin, fecha){
+function hojaExcelUnitaria(cliente, inicio, fin, fecha, valores){
 
   const suma = sumarResiduos(cliente.manifiestos);
   const titulos = COLUMNAS_RESIDUOS.map(c => c.titulo);
+  const t = parsearTarifa(cliente.tarifa);
+  let valorTotal = 0;
 
   const filas = cliente.manifiestos
     .slice()
     .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)))
-    .map(m => [m.fecha, m.manifiesto]
-      .concat(COLUMNAS_RESIDUOS.map(c => redondear(m[c.clave])))
-      .concat([redondear(m.total)]));
+    .map(m => {
+      const v = valorManifiesto(m, cliente.tarifa);
+      valorTotal += v;
+      return [m.fecha, m.manifiesto]
+        .concat(COLUMNAS_RESIDUOS.map(c => redondear(m[c.clave])))
+        .concat([redondear(m.total)])
+        .concat(valores ? [kilosExtra(m.total, t.limite), Math.round(v)] : []);
+    });
 
   const datos = cabeceraExcel(inicio, fin, fecha, [cliente])
     .concat([
       ["CÓDIGO", cliente.codigo || ""],
       ["CLIENTE", cliente.nombre],
-      ["DIRECCIÓN", cliente.direccion || ""],
+      ["DIRECCIÓN", cliente.direccion || ""]
+    ])
+    .concat(valores ? [["TARIFA", cliente.tarifa || "SIN TARIFA REGISTRADA"]] : [])
+    .concat([
       [],
       ["Fecha", "Manifiesto"].concat(titulos).concat(["Totales"])
+        .concat(valores ? ["KG extra", "Valor"] : [])
     ])
     .concat(filas)
     .concat([
       ["TOTAL", ""]
         .concat(COLUMNAS_RESIDUOS.map(c => redondear(suma[c.clave])))
         .concat([redondear(suma.total)])
+        .concat(valores ? ["", Math.round(valorTotal)] : [])
     ])
+    .concat(valores ? [[], ["VALOR A FACTURAR:", Math.round(valorTotal)]] : [])
     .concat(pieExcel(suma.total));
 
   const hoja = XLSX.utils.aoa_to_sheet(datos);
-  hoja["!cols"] = [{wch:12},{wch:14}].concat(titulos.map(() => ({wch:15})), [{wch:12}]);
+  hoja["!cols"] = [{wch:12},{wch:14}].concat(titulos.map(() => ({wch:15})), [{wch:12}],
+    valores ? [{wch:10},{wch:14}] : []);
   formatearDecimales(hoja);
+  if(valores) formatearPesos(hoja, datos);
   return hoja;
 }
 
-function hojaExcelMensual(listaClientes, inicio, fin, fecha){
+/* Las celdas de valor en pesos llevan formato $ sin decimales. Se ubican por
+   el título de su columna ("Valor", "Valor a facturar") y por las filas
+   "VALOR A FACTURAR:" / "TOTAL A FACTURAR:". */
+function formatearPesos(hoja, datos){
+  const formato = '"$"#,##0';
+  let colValor = -1;
+  datos.forEach((fila, r) => {
+    const iTitulo = fila.findIndex(x => x === "Valor" || x === "Valor a facturar");
+    if(iTitulo >= 0) colValor = iTitulo;
+    const marcar = c => {
+      const ref = XLSX.utils.encode_cell({ r: r, c: c });
+      if(hoja[ref] && hoja[ref].t === "n") hoja[ref].z = formato;
+    };
+    if(colValor >= 0) marcar(colValor);
+    if(fila[0] === "VALOR A FACTURAR:" || fila[0] === "TOTAL A FACTURAR:") marcar(1);
+  });
+}
+
+function hojaExcelMensual(listaClientes, inicio, fin, fecha, valores){
 
   const suma = sumarResiduos(
     listaClientes.reduce((acc, c) => acc.concat(c.manifiestos), [])
   );
   const titulos = COLUMNAS_RESIDUOS.map(c => c.titulo);
+  const valorTotal = listaClientes.reduce((s, c) => s + (c.conTarifa ? valorCliente(c) : 0), 0);
 
   const filas = listaClientes.map((c, i) => {
     const s = sumarResiduos(c.manifiestos);
     return [i + 1, c.nombre]
+      .concat(valores ? [c.conTarifa ? (c.tarifa || "SIN TARIFA") : "—", c.manifiestos.length] : [])
       .concat(COLUMNAS_RESIDUOS.map(x => redondear(s[x.clave])))
-      .concat([redondear(s.total)]);
+      .concat([redondear(s.total)])
+      .concat(valores ? [c.conTarifa ? Math.round(valorCliente(c)) : "—"] : []);
   });
 
   const datos = cabeceraExcel(inicio, fin, fecha, listaClientes)
-    .concat([["ITEM", "CLIENTE"].concat(titulos).concat(["Totales"])])
+    .concat([["ITEM", "CLIENTE"]
+      .concat(valores ? ["TARIFA", "Recolecciones"] : [])
+      .concat(titulos).concat(["Totales"])
+      .concat(valores ? ["Valor a facturar"] : [])])
     .concat(filas)
     .concat([
       ["", "TOTAL"]
+        .concat(valores ? ["", listaClientes.reduce((s, c) => s + c.manifiestos.length, 0)] : [])
         .concat(COLUMNAS_RESIDUOS.map(c => redondear(suma[c.clave])))
         .concat([redondear(suma.total)])
+        .concat(valores ? [Math.round(valorTotal)] : [])
     ])
+    .concat(valores ? [[], ["TOTAL A FACTURAR:", Math.round(valorTotal)]] : [])
     .concat(pieExcel(suma.total));
 
   const hoja = XLSX.utils.aoa_to_sheet(datos);
-  hoja["!cols"] = [{wch:6},{wch:48}].concat(titulos.map(() => ({wch:15})), [{wch:12}]);
+  hoja["!cols"] = [{wch:6},{wch:48}]
+    .concat(valores ? [{wch:24},{wch:13}] : [])
+    .concat(titulos.map(() => ({wch:15})), [{wch:12}])
+    .concat(valores ? [{wch:16}] : []);
   formatearDecimales(hoja);
+  if(valores){
+    // Recolecciones es un conteo: sin decimales
+    datos.forEach((fila, r) => {
+      const ref = XLSX.utils.encode_cell({ r: r, c: 3 });
+      if(hoja[ref] && hoja[ref].t === "n" && Number.isInteger(fila[3])) hoja[ref].z = "0";
+    });
+    formatearPesos(hoja, datos);
+  }
   return hoja;
 }
 
@@ -5704,14 +6036,14 @@ function generarCertificadosExcel(){
     d.elegidos.forEach(c => {
       XLSX.utils.book_append_sheet(
         libro,
-        hojaExcelUnitaria(c, d.inicio, d.fin, d.fecha),
+        hojaExcelUnitaria(c, d.inicio, d.fin, d.fecha, c.conTarifa),
         nombreHoja(c.nombre, usados)
       );
     });
   }else{
     XLSX.utils.book_append_sheet(
       libro,
-      hojaExcelMensual(d.elegidos, d.inicio, d.fin, d.fecha),
+      hojaExcelMensual(d.elegidos, d.inicio, d.fin, d.fecha, d.elegidos.some(c => c.conTarifa)),
       "Consolidado"
     );
   }
