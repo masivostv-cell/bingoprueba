@@ -658,7 +658,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.02-6';
+const APP_VERSION='2026.10.02-7';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -1067,6 +1067,7 @@ function paintSync(){
   const n=S.outbox.length;
   el.className='';
   if(S.cfg.prueba){ el.classList.add('pend'); tx.textContent='🧪 Prueba'; return; }
+  if(!navigator.onLine){ el.classList.add('pend'); tx.textContent='📴 Sin internet'+(n?' · '+n+' por subir':''); return; }
   if(!S.cfg.fbOn){ el.classList.add('off'); tx.textContent = 'Local'; }
   else if(!FB.listo()){ el.classList.add('err'); tx.textContent='Sin sesión'+(n?' · '+n:''); }
   else if(syncing||pulling){ el.classList.add('busy'); tx.textContent= syncing?'Enviando…':'Recibiendo…'; }
@@ -7966,6 +7967,9 @@ function viewAjustes(vw){
             '<div><b>'+APP_NOMBRE+'</b><div class="tiny muted">software para restaurantes</div></div></div>'+
           '<div class="tline"><span>Versión de este equipo</span><span class="v mono">'+esc(APP_VERSION)+'</span></div>'+
           '<div class="tline"><span>Se abre desde</span><span class="v">'+(enLinea()? '🌐 '+esc(location.host) : '📁 archivo en el PC')+'</span></div>'+
+          '<div class="tline"><span>Funciona sin internet</span><span class="v">'+
+            ({listo:'✅ sí, guardada en este equipo',guardando:'⏳ guardándose…','sin-archivo':'❌ falta subir sw.js al servidor',
+              error:'❌ el navegador no lo permitió',no:(enLinea()?'⏳ revisando…':'— solo desde internet')})[_swEstado]+'</span></div>'+
           (enLinea()? '<div class="hintx" style="margin-top:6px">Se actualiza sola: al abrir, cada 10 minutos y al volver a la ventana.</div>'
             : '<div class="hintx" style="margin-top:6px;color:var(--warn)">Abierta desde el archivo no se puede actualizar sola. '+
               'Ábrela desde internet: https://mercadodigital.com.co/restaurante</div>')+
@@ -9892,6 +9896,22 @@ function bannerActualizacion(atascada){
       return confirmar('Hay un pedido en el carrito. Si es de una mesa o domicilio ya está guardado; si es de mostrador se pierde. ¿Actualizar igual?',recargarYa);
     recargarYa(); };
 }
+/* ---------- trabajar sin internet ----------
+   sw.js (al lado de la app en el servidor) guarda una copia de la app en el
+   equipo. Los datos ya viven en el equipo (IndexedDB) y se suben solos al volver. */
+let _swEstado='no';                     // no | listo | sin-archivo | error
+function registrarOffline(){
+  if(!enLinea() || !('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('sw.js').then(()=>navigator.serviceWorker.ready).then(reg=>{
+    navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.tipo==='cacheado'&&e.data.ok) _swEstado='listo'; });
+    (reg.active||{postMessage(){}}).postMessage({tipo:'cachear', url:location.origin+location.pathname});
+    _swEstado=_swEstado==='listo'?'listo':'guardando';
+  }).catch(e=>{ _swEstado= /404|fetch|bad HTTP/i.test(String(e&&e.message||e))? 'sin-archivo' : 'error';
+    console.warn('Sin modo offline:',e); });
+}
+window.addEventListener('load',()=>setTimeout(registrarOffline,1500));
+window.addEventListener('offline',()=>{ paintSync(); toast('📴 Sin internet: sigue trabajando normal. Todo se sube solo cuando vuelva.','warn',6000); });
+window.addEventListener('online',()=>{ paintSync(); toast('🌐 Volvió internet: subiendo lo pendiente…','ok',3500); });
 setInterval(()=>revisarActualizacion(false), 10*60*1000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) revisarActualizacion(false); });
 
