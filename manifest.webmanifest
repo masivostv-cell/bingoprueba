@@ -1,8 +1,9 @@
 {
+  "id": "mrcheff",
   "name": "Mr Cheff",
   "short_name": "Mr Cheff",
   "description": "Mr Cheff · software para restaurantes",
-  "start_url": "./",
+  "start_url": "restaurante.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#16181f",

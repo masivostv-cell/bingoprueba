@@ -1,10 +1,11 @@
 # Mr Cheff: renombrar este archivo a  .htaccess  (con el punto al inicio)
 AddType application/manifest+json .webmanifest
 AddType image/x-icon .ico
+AddType application/javascript .js
 
-# Que el navegador siempre pida la versión más reciente de la app
+# Que el navegador siempre pida la versión más reciente de la app y del modo sin internet
 <IfModule mod_headers.c>
-  <FilesMatch "\.(html|htm|webmanifest)$">
+  <FilesMatch "(\.html?|\.webmanifest|sw\.js)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
     Header set Pragma "no-cache"
     Header set Expires "0"
