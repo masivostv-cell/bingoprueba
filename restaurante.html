@@ -672,7 +672,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.06-2';
+const APP_VERSION='2026.10.06-5';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -2025,11 +2025,17 @@ const TITLES={pos:'Punto de venta',mesas:'Mesas y comandas',ventas:'Ventas',comp
   inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',cocina:'Cocina · pedidos que llegan',entregas:'Entregas · tiempo de los pedidos',
   caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes',ajustes:'Ajustes'};
 
+/* el nombre de arriba: para cualquier administrador abre la lista de sus
+   restaurantes (si tiene uno solo, le dice cómo agregar más) */
 function pintarSelectorNegocio(){
-  const multi=puedeCambiarNegocio(), br=$('#brandbtn'); if(!br) return;
-  br.classList.toggle('multi',multi); $('#bizswap').classList.toggle('hide',!multi);
-  $('#bizsub').textContent= multi? 'Toca para cambiar de restaurante' : 'Punto de venta';
-  br.onclick= multi? mCambiarNegocio : null;
+  const br=$('#brandbtn'); if(!br) return;
+  const admin=esAdminNube(), multi=puedeCambiarNegocio();
+  br.classList.toggle('multi',admin);
+  $('#bizswap').classList.toggle('hide',!admin);
+  $('#bizswap').textContent= multi? '⇄' : '▾';
+  $('#bizsub').textContent= multi? 'Toca para cambiar de restaurante' : (admin? 'Toca para ver tus restaurantes' : 'Punto de venta');
+  br.title= admin? 'Mis restaurantes' : '';
+  br.onclick= admin? mCambiarNegocio : null;
 }
 function buildNav(){
   try{ pintarSelectorNegocio(); }catch(e){}
@@ -2725,7 +2731,7 @@ function paintCart(){
   if(!cn){ cn=document.createElement('div'); cn.id='cnom';
     cn.style.cssText='padding:8px 12px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center';
     cn.innerHTML='<span style="font-size:17px">👤</span><input id="cnomi" autocomplete="off" '+
-      'placeholder="Nombre del cliente (para llamarlo)" style="flex:1;font-size:15px;font-weight:650;padding:8px 10px">';
+      'placeholder="Nombre del cliente (obligatorio)" style="flex:1;font-size:15px;font-weight:650;padding:8px 10px">';
     hd.after(cn);
     $('#cnomi').oninput=e=>{ S.cart.nombrePedido=e.target.value.trimStart(); };
     $('#cnomi').onchange=e=>{ const v=e.target.value.trim(); S.cart.nombrePedido=v;
@@ -2842,7 +2848,31 @@ function marcarEnviado(c){
 }
 /* Manda a cocina SOLO lo que falta. Si ya se había comandado, sale una
    comanda de agregado, no el pedido completo otra vez. */
+/* ============ NOMBRE DEL CLIENTE OBLIGATORIO ============
+   Sin nombre no se manda a cocina, no se guarda y no se cobra, sea mesa,
+   mostrador o domicilio (en domicilio cuenta el nombre del domicilio). */
+function faltaNombre(c){ c=c||S.cart; return !!(c && !c.editandoId && !String(nombreDePedido(c)||'').trim()); }
+function pedirNombre(accion,seguir){
+  const i=$('#cnomi');
+  if(i){ i.focus(); i.style.borderColor='var(--bad)'; i.style.boxShadow='0 0 0 3px var(--bad-soft)';
+    i.parentNode.classList.remove('shake'); void i.parentNode.offsetWidth; i.parentNode.classList.add('shake');
+    setTimeout(()=>{ i.style.borderColor=''; i.style.boxShadow=''; },2500); }
+  modal({title:'👤 ¿Cómo se llama el cliente?', size:'slim',
+    body:'<div class="hintx" style="margin-bottom:10px">Es obligatorio para '+esc(accion)+': así se le llama cuando el pedido esté listo.</div>'+
+      '<input id="pnomb" autocomplete="off" placeholder="Nombre del cliente" style="font-size:20px;font-weight:700;padding:12px;width:100%">',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="pnok">Continuar</button>',
+    onOpen:m=>{ const inp=$('#pnomb',m); setTimeout(()=>inp.focus(),50);
+      const ok=()=>{ const n=inp.value.trim(); if(!n){ inp.focus(); return toast('Escribe el nombre del cliente','warn'); }
+        S.cart.nombrePedido=n;
+        const mm=S.cart.mesaId? byId('mesas',S.cart.mesaId):null;
+        if(mm && mm.temporal){ mm.nombre=n; put('mesas',mm); }
+        if(S.cart.comandaId || S.cart.mesaId) persistComanda();
+        const ci=$('#cnomi'); if(ci) ci.value=n;
+        closeModal(); paintCart(); setTimeout(seguir,30); };
+      $('#pnok',m).onclick=ok; inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } }; }});
+}
 function enviarACocina(){
+  if(faltaNombre()) return pedirNombre('mandar a cocina',enviarACocina);
   const c=S.cart; if(!c) return;
   const d=pendientesComanda(c);
   if(!d.nuevos.length && !d.cambios.length && !d.bajas.length)
@@ -2894,6 +2924,7 @@ function guardarPedido(prefijo,desdeCocina){
   const c=S.cart;
   if(!c) return;
   if(!c.items.length) return toast('El pedido está vacío','warn');
+  if(faltaNombre(c)) return pedirNombre('guardar el pedido',()=>guardarPedido(prefijo,desdeCocina));
   if(!c.mesaId){                         // mostrador: se guarda a nombre del cliente
     const crear=n=>{ const ml=nuevoLlevar(n); c.mesaId=ml.id; c.tipo='mostrador'; c.nombrePedido=n; guardarPedido(prefijo,desdeCocina); };
     if(c.nombrePedido) return crear(c.nombrePedido);
@@ -3116,6 +3147,7 @@ function mDestino(){
 function mCobrar(){
   const c=S.cart, t=cartTot(c);
   if(!t.total) return;
+  if(faltaNombre(c)) return pedirNombre('cobrar',mCobrar);
   if(!S.turno){ toast('La caja está cerrada. Ábrela antes de cobrar.','warn'); go('caja'); return; }
   let pagos=[], medio='efectivo', plazo=30;
   const qa=[1000,2000,5000,10000,20000,50000,100000];
@@ -8748,7 +8780,9 @@ function hayNube(){ return !!(S.cfg.fbOn && S.cfg.fbNegocio); }   /* conectado a
 function puedeCrearUsuarios(){ return esSuper() || !!(S.user && S.user._super) || !nubeDisponible(); }
 function negociosDe(p){
   p=p||S.perfil; if(!p) return [];
-  return [...new Set([p.negocioId].concat(p.negocios||[]).filter(Boolean))];
+  if(p.rol==='superadmin')          // el superadmin puede entrar a todos los que conoce
+    return [...new Set(Object.keys(lsJSON('pos_negnombres',{})).concat([S.cfg.fbNegocio]).filter(Boolean))];
+  return [...new Set([p.negocioId].concat(Array.isArray(p.negocios)?p.negocios:[]).filter(Boolean))];
 }
 function puedeVerNegocio(p,id){ return !!p && (p.rol==='superadmin' || negociosDe(p).indexOf(id)>=0); }
 function negocioActual(){ return (S.perfil&&S.perfil.negocioId)||S.cfg.fbNegocio||''; }
@@ -8835,19 +8869,31 @@ const CFG_EQUIPO=['fbApiKey','fbProjectId','fbOn','autoSync','pullSeg','tema','t
   'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp','letra'];
 function nombreNegocio(id){ const nn=lsJSON('pos_negnombres',{});
   return nn[id] || (id===S.cfg.fbNegocio? S.cfg.nombre : '') || id; }
-function puedeCambiarNegocio(){ return !!(S.user && !S.user._super && S.perfil && negociosDe(S.perfil).length>1); }
+function puedeCambiarNegocio(){ return !!(S.user && S.perfil && negociosDe(S.perfil).length>1); }
+function esAdminNube(){ return !!(S.user && (S.user._super || S.user.rol==='admin')); }
 async function refrescarNombresNegocios(){
   if(!navigator.onLine || !S.cfg.fbOn) return;
   const nn=lsJSON('pos_negnombres',{});
+  if(S.perfil && S.perfil.rol==='superadmin'){
+    try{ (await fbLista('negocios')).forEach(n=>{ if(n&&n.id) nn[n.id]=n.nombre||n.id; }); }catch(e){}
+    lsSet('pos_negnombres',nn); return; }
   await Promise.all(negociosDe(S.perfil).map(async id=>{ try{ const f=await fbGet('negocios/'+id); if(f&&f.nombre) nn[id]=f.nombre; }catch(e){} }));
   lsSet('pos_negnombres',nn);
 }
 async function mCambiarNegocio(){
-  if(!puedeCambiarNegocio()) return;
+  if(!S.user) return;
   /* el perfil puede haber cambiado en la nube: se revisa si hay internet */
   if(navigator.onLine && S.cfg.fbOn){ try{ if(FB.listo()||await fbRestaurarSesion()) await resolverPerfil(); }catch(e){} }
   try{ await refrescarNombresNegocios(); }catch(e){}
   const ids=negociosDe(S.perfil), dbs=lsJSON('pos_dbs',{}), lics=lsJSON('pos_lics',{});
+  pintarSelectorNegocio();
+  if(ids.length<=1) return modal({title:'🏪 Tus restaurantes', size:'slim',
+    body:'<p style="margin:0 0 8px">Esta cuenta (<b>'+esc((S.perfil&&S.perfil.email)||FB.email||(S.user&&S.user.email)||'')+'</b>) '+
+      'solo tiene <b>'+esc(S.cfg.nombre||'este restaurante')+'</b>.</p>'+
+      '<p class="muted" style="margin:0">Para manejar otros: el superadministrador edita esta cuenta en su panel y marca los '+
+      'restaurantes en «También administra». Después cierra sesión y vuelve a entrar con internet.</p>'+
+      (!S.perfil? '<p class="tiny" style="color:var(--warn);margin:8px 0 0">Este equipo no ha leído tu cuenta de la nube. Cierra sesión y entra con tu correo y clave con internet.</p>':''),
+    footer:'<button class="btn pri" data-x>Entendido</button>'});
   modal({title:'🏪 Cambiar de restaurante', size:'slim',
     body:'<div class="hintx" style="margin-bottom:10px">Toca el restaurante que quieres ver. Cada uno tiene su propia información.</div>'+
       ids.map(id=>{ const act=id===S.cfg.fbNegocio, visto=!!(dbs[id]||lics[id]);
@@ -8918,6 +8964,7 @@ async function terminarCambioNegocio(){
 async function cargarDirectorio(){
   const [negs,cts]=await Promise.all([fbLista('negocios'),fbLista('usuariosNube')]);
   S.negocios=negs.sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||'')));
+  { const nn=lsJSON('pos_negnombres',{}); S.negocios.forEach(n=>{ if(n&&n.id) nn[n.id]=n.nombre||n.id; }); lsSet('pos_negnombres',nn); }
   S.cuentasNube=cts.sort((a,b)=>String(a.email||'').localeCompare(String(b.email||'')));
 }
 function viewSuper(vw){
@@ -9804,6 +9851,7 @@ function mBloqueo(ficha,motivo){
 async function verificarEnSegundoPlano(){
   try{
     if(!FB.listo() && !(await fbRestaurarSesion())) return;
+    try{ await resolverPerfil(); await refrescarNombresNegocios(); buildNav(); }catch(e){}
     if(S.cfg.fbNegocio){
       const ficha=await fbGet('negocios/'+S.cfg.fbNegocio);
       S.suscripcion=ficha||null;
@@ -10019,7 +10067,7 @@ $('#btnuser').onclick=()=>{
         ' <span><b>Limpiar este equipo al salir</b><br><span class="muted">Vacía lo guardado aquí y al volver '+
         'a entrar se descarga todo de la nube. Úselo si le sale «cuota excedida» o si va lento.</span></span></label>'+
       '</div></div>',
-    footer:(puedeCambiarNegocio()?'<button class="btn" id="u_neg">🏪 Cambiar de restaurante</button>':'')+
+    footer:(esAdminNube()?'<button class="btn" id="u_neg">🏪 '+(puedeCambiarNegocio()?'Cambiar de restaurante':'Mis restaurantes')+'</button>':'')+
       '<button class="btn" data-x>Cerrar</button><button class="btn danger" id="lo">Cerrar sesión</button>',
     onOpen:m=>{
       if($('#u_neg',m)) $('#u_neg',m).onclick=()=>{ closeModal(); mCambiarNegocio(); };
@@ -10169,7 +10217,8 @@ async function boot(){
         if(m==='SIN_PERFIL'||m==='CUENTA_INACTIVA'){ salirDeLaNube();
           toast('Tu cuenta ya no tiene acceso a un restaurante','bad',6000); return; }
       }
-      paintLogin();
+      try{ await refrescarNombresNegocios(); }catch(e){}
+      paintLogin(); try{ buildNav(); }catch(e){}
       if(!S.user && esSuper() && !S.usuarios.length) loginSuper();
       pullCloud();
       if(S.cfg.autoSync && S.outbox.length) scheduleSync(2000);
