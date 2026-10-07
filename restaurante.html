@@ -672,7 +672,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.06-5';
+const APP_VERSION='2026.10.06-6';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -1094,10 +1094,22 @@ setInterval(()=>{ if(S.cfg.autoSync && S.cfg.fbOn && !S.cfg.prueba && S.outbox.l
 /* Ritmo de consulta. Cada vuelta cuesta 1 lectura (el pulso). Si no ha
    pasado nada en un buen rato y este equipo no es la estación de cocina,
    pregunta más despacio; apenas hay movimiento vuelve al ritmo normal. */
+/* Menos lecturas: si nadie está usando el equipo (sin tocar pantalla ni
+   teclado) pregunta mucho más despacio; al tocar algo vuelve al ritmo normal
+   y se pone al día de una vez. La estación de cocina siempre va normal. */
+let _ultToque=Date.now();
+['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{
+  const dormido=Date.now()-_ultToque>3*60000; _ultToque=Date.now();
+  if(dormido && S.user && S.cfg.fbOn){ _quietos=0; pullCloud().catch(()=>{}); programarPull(); }
+},{passive:true,capture:true}));
 function pullSegActual(){
   const base=Math.max(5,Number(S.cfg.pullSeg)||12);
   if(esEstacion()) return base;                       // la cocina no se puede dormir
-  if(_quietos>=20) return Math.min(60, base*4);
+  const quieto=Date.now()-_ultToque;
+  if(!S.user) return 120;                             // pantalla de entrada: casi nada
+  if(quieto>20*60000) return 180;                     // nadie lo usa hace 20 min
+  if(quieto>3*60000) return 60;                       // nadie lo toca hace 3 min
+  if(_quietos>=10) return Math.min(45, base*3);       // sin cambios de otros equipos
   return base;
 }
 function programarPull(){
@@ -4970,12 +4982,42 @@ function arreglarPedidos(){
   });
   return out;
 }
+/* Lo que se borra directamente en la consola de Firebase no le avisa a los
+   equipos: se queda en su copia local. Aquí se pregunta a la nube por cada
+   documento pendiente de cartera (y pedidos abiertos) y se quita del equipo
+   lo que allá ya no existe. Cuesta 1 lectura por documento revisado. */
+async function compararConNube(){
+  const out=[];
+  if(!S.cfg.fbOn || !navigator.onLine) return out;
+  if(!FB.listo() && !(await fbRestaurarSesion())) return out;
+  const enCola=new Set(S.outbox.map(o=>o.entidad+'/'+((o.payload||{}).id||'')));
+  const revisar=[];
+  cxc().concat(cxp()).forEach(d=>revisar.push({coll:coleccionDoc(d), d:d}));
+  S.comandas.filter(c=>c.estado==='abierta').forEach(c=>revisar.push({coll:'comandas', d:c}));
+  const lista=revisar.filter(x=>!enCola.has(x.coll+'/'+x.d.id));
+  if(!lista.length) return out;
+  const hdr=await fbAuthHdr();
+  for(let i=0;i<lista.length;i+=100){
+    const tramo=lista.slice(i,i+100);
+    const res=await fbJson(fbUrl(':batchGet'),{method:'POST',headers:hdr,
+      body:JSON.stringify({documents:tramo.map(x=>fbDocRoot()+'/'+x.coll+'/'+x.d.id)})});
+    contarLectura(tramo.length);
+    const existe={};
+    (res||[]).forEach(r=>{ if(r && r.found){ const o=fsDoc(r.found.fields||{}); existe[r.found.name.split('/').pop()]=!o._del; } });
+    tramo.forEach(x=>{ if(existe[x.d.id]) return;
+      remove(x.coll,x.d.id,{sync:false});
+      out.push((x.d.no||x.coll)+' se quitó: ya no existe en la nube'+(x.coll==='comandas'?' (pedido)':'')); });
+  }
+  return out;
+}
 async function recalcularTodo(){
   if(!S.user || S.user.rol==='mesero') return toast('Solo caja o administrador','warn');
   const b=$('#btnrecalc'); if(b){ b.disabled=true; b.textContent='⏳ Recalculando…'; }
   try{
     if(S.cfg.fbOn){ try{ await pullCloud(true); }catch(e){} }     // primero lo último de la nube
+    let nube=[]; try{ nube=await compararConNube(); }catch(e){ nube=['No se pudo comparar con la nube: '+(e.message||e)]; }
     const res=[
+      {t:'☁️ Comparado con la nube', l:nube},
       {t:'💳 Cartera', l:arreglarCartera()},
       {t:'🍽️ Pedidos y mesas', l:arreglarPedidos()},
       {t:'📦 Inventario', l:recalcularInventario().map(x=>x.g.nombre+': '+num(x.antes,2)+' → '+num(x.ahora,2)+' '+(x.g.unidad||'')+' · '+x.porque)}
