@@ -54,6 +54,9 @@ input[type=checkbox]{width:auto}
 .brand .logo{width:32px;height:32px;border-radius:9px;background:var(--brand);display:grid;place-items:center;font-size:17px;flex:0 0 auto}
 .brand b{font-size:14px;letter-spacing:.2px;display:block;line-height:1.2}
 .brand small{color:var(--sb-ink);font-size:11px}
+.brand.multi{cursor:pointer;border-radius:12px;margin:6px 8px 0;padding:10px 10px 10px 8px;background:rgba(255,255,255,.06)}
+.brand.multi:hover{background:rgba(255,255,255,.12)}
+#bizswap{font-size:16px;color:#fff;background:var(--brand);border-radius:8px;padding:2px 7px;flex:0 0 auto}
 .nav{flex:1;overflow-y:auto;padding:6px 8px 12px}
 .nav .sec{font-size:10px;letter-spacing:.9px;text-transform:uppercase;color:#5c6679;padding:14px 10px 6px;font-weight:700}
 .nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--sb-ink);text-decoration:none;font-size:13.5px;margin-bottom:1px}
@@ -461,7 +464,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 
 <div id="app">
   <aside id="sidebar">
-    <div class="brand"><div class="logo">🍽️</div><div><b id="bizname">Mi Restaurante</b><small>Punto de venta</small></div></div>
+    <div class="brand" id="brandbtn"><div class="logo">🍽️</div><div style="min-width:0;flex:1"><b id="bizname">Mi Restaurante</b><small id="bizsub">Punto de venta</small></div><span id="bizswap" class="hide" title="Cambiar de restaurante">⇄</span></div>
     <nav class="nav" id="nav"></nav>
     <div id="sbfoot">
       <button class="userchip" id="btnuser">
@@ -555,7 +558,18 @@ function num(n,d){ return (round(Number(n)||0,d==null?2:d)).toLocaleString('es-C
 function toN(v){ const n=parseFloat(String(v==null?'':v).replace(/[^\d.,-]/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.')); return isNaN(n)?0:n; }
 
 /* ------------------------------ IndexedDB --------------------------- */
-const DBNAME='pos_restaurante', DBVER=1;
+/* Cada restaurante guarda sus datos en su propia base del equipo, así se puede
+   pasar de uno a otro (incluso sin internet si ya se abrió antes). La base de
+   siempre, 'pos_restaurante', sigue siendo la del primer restaurante. */
+function lsJSON(k,def){ try{ const v=JSON.parse(localStorage.getItem(k)||'null'); return v==null?def:v; }catch(e){ return def; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function nombreBaseDe(neg){
+  const mapa=lsJSON('pos_dbs',{});
+  return mapa[neg] || 'pos_restaurante_'+String(neg).replace(/[^\w-]/g,'_');
+}
+let DBNAME=(()=>{ let a=null; try{ a=localStorage.getItem('pos_neg'); }catch(e){}
+  return a? nombreBaseDe(a) : 'pos_restaurante'; })();
+const DBVER=1;
 const STORES=['config','usuarios','categorias','ingredientes','productos','proveedores','clientes','mesas',
   'comandas','ventas','compras','abonos','cuentas','movimientos','turnos','movinv','capas','imagenes','otrosdocs','outbox','meta'];
 let _db=null, MODE='idb';                 // idb | ls | mem
@@ -658,7 +672,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.02-7';
+const APP_VERSION='2026.10.06-2';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -2011,7 +2025,14 @@ const TITLES={pos:'Punto de venta',mesas:'Mesas y comandas',ventas:'Ventas',comp
   inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',cocina:'Cocina · pedidos que llegan',entregas:'Entregas · tiempo de los pedidos',
   caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes',ajustes:'Ajustes'};
 
+function pintarSelectorNegocio(){
+  const multi=puedeCambiarNegocio(), br=$('#brandbtn'); if(!br) return;
+  br.classList.toggle('multi',multi); $('#bizswap').classList.toggle('hide',!multi);
+  $('#bizsub').textContent= multi? 'Toca para cambiar de restaurante' : 'Punto de venta';
+  br.onclick= multi? mCambiarNegocio : null;
+}
 function buildNav(){
+  try{ pintarSelectorNegocio(); }catch(e){}
   { const b=$('#btnrecalc'); if(b) b.classList.toggle('hide', !(S.user && S.user.rol!=='mesero')); }
   const n=$('#nav'); let h='';
   VIEWS.forEach(v=>{
@@ -7410,6 +7431,78 @@ const GASTO_FUERA=['compra','proveedores','traslado','anulacion','venta','carter
 function esGasto(m){ return m.tipo==='egreso' && GASTO_FUERA.indexOf(m.categoria||'')<0
   && !esCategoriaCartera(m.categoria) && m.refTipo!=='cxc' && m.refTipo!=='cxp'; }
 
+/* ========================= GASTOS FIJOS =========================
+   Arriendo, luz, agua, internet… Se configuran una vez con su valor y cada
+   cuántos días se pagan; cada día se descuenta la parte que le toca.
+   Ej: arriendo $1.800.000 cada 30 días = $60.000 por día; del 1 al 6 = $360.000.
+   Para no restarlo dos veces, el pago real en Tesorería con la misma
+   categoría no se vuelve a contar como gasto (ya está en el valor diario). */
+function gastosFijos(){ return (S.cfg.gastosFijos||[]).filter(g=>g && g.activo!==false && Number(g.valor)>0); }
+function diarioFijo(g){ return (Number(g.valor)||0)/Math.max(1,Number(g.dias)||30); }
+function diasEntre(a,b){ return Math.max(0,Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000)+1); }
+function calcFijos(d1,d2){
+  const items=gastosFijos().map(g=>{
+    const desde= g.desde && g.desde>d1 ? g.desde : d1;
+    const dias= desde>d2? 0 : diasEntre(desde,d2);
+    const diario=diarioFijo(g);
+    return {g:g, nombre:g.nombre, diario:round(diario,2), dias:dias, valor:round(diario*dias,2), cat:g.categoria||''};
+  }).filter(x=>x.dias>0);
+  const cats=[...new Set(gastosFijos().map(g=>normTxt(g.categoria||'')).filter(Boolean))];
+  return {items:items, total:round(sum(items,x=>x.valor),2), diarioTotal:round(sum(gastosFijos(),diarioFijo),2),
+    dias:diasEntre(d1,d2), cats:cats};
+}
+function esPagoDeFijo(m,cats){ return !!(m.categoria && cats.indexOf(normTxt(m.categoria))>=0); }
+function mGastosFijos(despues){
+  if(!puedeEditar()) return pedirAlAdmin('configurar los gastos fijos');
+  let lista=(S.cfg.gastosFijos||[]).map(g=>Object.assign({},g));
+  const cats=categoriasGasto().map(c=>c.nombre);
+  const pintar=m=>{
+    $('#gf_rows',m).innerHTML= lista.length? lista.map((g,i)=>
+      '<div class="itrow" data-i="'+i+'" style="display:grid;grid-template-columns:1.4fr 1fr 90px 1.1fr 34px;gap:8px;align-items:center;margin-bottom:8px;padding:6px">'+
+        '<input data-k="nombre" value="'+esc(g.nombre||'')+'" placeholder="Ej: Arriendo">'+
+        '<input data-k="valor" type="number" step="any" inputmode="decimal" value="'+(g.valor||'')+'" placeholder="$ valor" style="text-align:right">'+
+        '<input data-k="dias" type="number" min="1" value="'+(g.dias||30)+'" style="text-align:right" title="Cada cuántos días se paga">'+
+        '<select data-k="categoria"><option value="">— sin categoría —</option>'+
+          cats.map(c=>'<option'+(normTxt(c)===normTxt(g.categoria||'')?' selected':'')+'>'+esc(c)+'</option>').join('')+'</select>'+
+        '<button class="btn ghost sm" data-del="'+i+'" title="Quitar">✕</button>'+
+        '<div class="tiny muted" style="grid-column:1/-1" data-dia="'+i+'"></div>'+
+      '</div>').join('')
+      : '<div class="hintx" style="text-align:center;padding:10px">Todavía no hay gastos fijos.</div>';
+    const calc=()=>{ let t=0;
+      lista.forEach((g,i)=>{ const d=diarioFijo(g); t+=Number(g.valor)>0?d:0;
+        const el=$('[data-dia="'+i+'"]',m); if(el) el.textContent= Number(g.valor)>0? '= '+money(round(d,0))+' por día':''; });
+      $('#gf_tot',m).innerHTML='Se descuentan <b>'+money(round(t,0))+'</b> por día · <b>'+money(round(t*30,0))+'</b> en 30 días'; };
+    $$('[data-i]',m).forEach(row=>{ const i=+row.dataset.i;
+      $$('[data-k]',row).forEach(inp=>inp.oninput=inp.onchange=()=>{ const k=inp.dataset.k;
+        lista[i][k]= (k==='valor'||k==='dias')? toN(inp.value) : inp.value; calc(); }); });
+    $$('[data-del]',m).forEach(b=>b.onclick=()=>{ lista.splice(+b.dataset.del,1); pintar(m); });
+    calc();
+  };
+  modal({title:'📌 Gastos fijos', size:'wide',
+    body:'<div class="hintx" style="margin-bottom:10px">Pon cada gasto fijo con su <b>valor</b> y <b>cada cuántos días</b> se paga '+
+        '(30 = mensual). La app descuenta de la utilidad la parte de cada día. Si eliges la <b>categoría</b> con la que lo pagas en '+
+        'Tesorería, ese pago no se resta dos veces.</div>'+
+      '<div class="ithead" style="display:grid;grid-template-columns:1.4fr 1fr 90px 1.1fr 34px;gap:8px;padding:0 6px 6px">'+
+        '<span>Gasto</span><span style="text-align:right">Valor</span><span style="text-align:right">Cada (días)</span><span>Categoría en Tesorería</span><span></span></div>'+
+      '<div id="gf_rows"></div>'+
+      '<button class="btn-add" id="gf_add" style="margin-top:6px">➕ Añadir gasto fijo</button>'+
+      '<div class="card" style="margin-top:12px;background:var(--panel2)"><div class="bd" id="gf_tot"></div></div>',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="gf_ok">Guardar</button>',
+    onOpen:m=>{
+      if(!lista.length) lista=[{nombre:'Arriendo',dias:30,categoria:''},{nombre:'Luz',dias:30},{nombre:'Agua',dias:30},{nombre:'Internet',dias:30}]
+        .map(g=>Object.assign({id:uid('gf'),valor:0,activo:true},g));
+      pintar(m);
+      $('#gf_add',m).onclick=()=>{ lista.push({id:uid('gf'),nombre:'',valor:0,dias:30,categoria:'',activo:true}); pintar(m);
+        const rs=$$('[data-i]',m); const u=rs[rs.length-1]; if(u) $('[data-k="nombre"]',u).focus(); };
+      $('#gf_ok',m).onclick=()=>{
+        const limpia=lista.filter(g=>String(g.nombre||'').trim() && Number(g.valor)>0)
+          .map(g=>Object.assign(g,{nombre:String(g.nombre).trim(),dias:Math.max(1,Math.round(Number(g.dias)||30)),
+            activo:g.activo!==false}));
+        S.cfg.gastosFijos=limpia; saveCfg(); closeModal(); render();
+        toast(limpia.length? 'Gastos fijos guardados: '+money(round(sum(limpia,diarioFijo),0))+' por día' : 'Sin gastos fijos','ok',4500);
+        if(typeof despues==='function') despues(); };
+    }});
+}
 function calcConta(d1,d2){
   const vs=S.ventas.filter(v=>v.estado!=='anulada' && dISO(v.fecha)>=d1 && dISO(v.fecha)<=d2);
   const cs=S.compras.filter(c=>c.estado!=='anulada' && c.fecha>=d1 && c.fecha<=d2);
@@ -7421,9 +7514,11 @@ function calcConta(d1,d2){
   const ventasNetas=round(bruto-propinas-impuestos,2);
   const costo=sum(vs,v=>v.costo||0);
   const bruta=round(ventasNetas-costo,2);
-  const gastos=ms.filter(esGasto);
+  const fijos=calcFijos(d1,d2);
+  const pagosFijos=ms.filter(m=>esGasto(m) && esPagoDeFijo(m,fijos.cats));   // ya van en el valor diario
+  const gastos=ms.filter(m=>esGasto(m) && !esPagoDeFijo(m,fijos.cats));
   const totalGastos=sum(gastos,m=>m.monto);
-  const neta=round(bruta-totalGastos,2);
+  const neta=round(bruta-fijos.total-totalGastos,2);
 
   /* por producto: el costo real que se consumió, no el teórico */
   const prods={};
@@ -7480,7 +7575,7 @@ function calcConta(d1,d2){
   const caja={ing:sum(ms.filter(m=>m.tipo==='ingreso'),m=>m.monto),
                egr:sum(ms.filter(m=>m.tipo==='egreso'),m=>m.monto)};
 
-  return {d1,d2,vs,cs,ms,bruto,propinas,impuestos,descuentos,ventasNetas,costo,bruta,
+  return {d1,d2,vs,cs,ms,bruto,propinas,impuestos,descuentos,ventasNetas,costo,bruta,fijos,pagosFijos,
           gastos,totalGastos,neta,porProducto,porCategoria,porGasto,porGastoTercero,porProveedor,medios,caja,
           compras:sum(cs,c=>c.total||0)};
 }
@@ -7501,6 +7596,7 @@ function viewContabilidad(vw){
       '<button class="btn sm" data-ver title="Ver sin imprimir">👁️ Ver</button>'+'<button class="btn pri sm" id="k_imp">🖨️ Informe</button></div></div>'+
     '</div></div></div>';
   const set=(a,b)=>{ d1=a; d2=b; $('#k1').value=a; $('#k2').value=b; paint(); };
+  $('#cbody').onclick=e=>{ if(e.target.closest && e.target.closest('#k_fijos')) mGastosFijos(); };
   $('#k1').onchange=e=>{d1=e.target.value;paint();};
   $('#k2').onchange=e=>{d2=e.target.value;paint();};
   $$('[data-r]',$('#cfil')).forEach(b=>b.onclick=()=>{
@@ -7531,7 +7627,8 @@ function viewContabilidad(vw){
         kpi('Ventas netas',money(r.ventasNetas),r.vs.length+' facturas','brand')+
         kpi('Costo de ventas',money(r.costo),'costo promedio real','')+
         kpi('Utilidad bruta',money(r.bruta),mrg+'% margen','ok')+
-        kpi('Gastos',money(r.totalGastos),r.gastos.length+' movimientos','bad')+
+        kpi('Gastos fijos',money(r.fijos.total),r.fijos.dias+' días × '+money(round(r.fijos.diarioTotal,0)),'bad')+
+        kpi('Otros gastos',money(r.totalGastos),r.gastos.length+' movimientos','bad')+
         kpi('Utilidad neta',money(r.neta),mrgN+'% sobre ventas',r.neta>=0?'ok':'bad')+
         kpi('Ticket promedio',money(r.vs.length? r.bruto/r.vs.length:0),'','')+
       '</div>'+
@@ -7545,12 +7642,22 @@ function viewContabilidad(vw){
           linea('Costo de ventas','−'+money(r.costo),{color:'var(--bad)'})+
           linea('UTILIDAD BRUTA',money(r.bruta),{borde:1,fuerte:1,color:'var(--ok)'})+
           '<div style="height:8px"></div>'+
+          '<div class="row" style="padding:4px 0"><b>Gastos fijos</b><span class="spacer"></span>'+
+            (puedeEditar()?'<button class="btn ghost sm" id="k_fijos">⚙️ Configurar</button>':'')+'</div>'+
+          (r.fijos.items.length? r.fijos.items.map(x=>linea(x.nombre+' · '+x.dias+' día'+(x.dias===1?'':'s')+' × '+money(round(x.diario,0)),
+              '−'+money(x.valor),{sangria:1})).join('')
+            : '<div class="tiny muted" style="padding:0 0 6px 16px">Sin configurar'+(puedeEditar()?' · toca ⚙️ Configurar':'')+'</div>')+
+          linea('Total gastos fijos','−'+money(r.fijos.total),{borde:1,color:'var(--bad)'})+
+          '<div style="height:8px"></div>'+
+          '<div class="row" style="padding:4px 0"><b>Otros gastos</b></div>'+
           r.porGasto.map(g=>linea(g.nombre,'−'+money(g.valor),{sangria:1})).join('')+
-          linea('Total gastos','−'+money(r.totalGastos),{borde:1,color:'var(--bad)'})+
+          linea('Total otros gastos','−'+money(r.totalGastos),{borde:1,color:'var(--bad)'})+
           linea('UTILIDAD NETA',money(r.neta),{borde:1,fuerte:1,color:r.neta>=0?'var(--ok)':'var(--bad)'})+
           '<div class="hintx" style="margin-top:14px;border-top:1px dashed var(--line);padding-top:10px">'+
           'Las compras del período (<b>'+money(r.compras)+'</b>) no aparecen como gasto: entran al inventario y '+
           'se vuelven costo a medida que los platos se venden. '+
+          (r.pagosFijos.length? 'Los pagos de gastos fijos hechos en Tesorería en estas fechas (<b>'+money(sum(r.pagosFijos,m=>m.monto))+
+            '</b>) no se restan otra vez: ya están en el valor diario. ':'')+
           (r.propinas? 'Las propinas tampoco son ingreso del negocio.':'')+'</div>'+
         '</div></div>'+
         '<div class="card"><div class="hd"><h3>Qué te costó cada producto</h3>'+
@@ -7632,8 +7739,10 @@ function csvConta(r){
   f.push(['Ventas netas',r.ventasNetas]);
   f.push(['Costo de ventas',-r.costo]);
   f.push(['Utilidad bruta',r.bruta]);
+  r.fijos.items.forEach(x=>f.push(['Gasto fijo: '+x.nombre,-x.valor,x.dias+' dias x '+round(x.diario,0)]));
+  f.push(['Total gastos fijos',-r.fijos.total]);
   r.porGasto.forEach(g=>f.push(['Gasto: '+g.nombre,-g.valor,g.n+' mov.',g.parte+'% de los gastos']));
-  f.push(['Total gastos',-r.totalGastos]);
+  f.push(['Total otros gastos',-r.totalGastos]);
   f.push(['UTILIDAD NETA',r.neta]);
   f.push([]); f.push(['Compras del periodo (van a inventario)',r.compras]);
   f.push([]); f.push(['PRODUCTO','Unidades','Precio promedio','Costo unitario','Costo hoy','Venta','Utilidad','Margen %','% ventas']);
@@ -7670,8 +7779,10 @@ function imprimirInforme(r){
     fila('Ventas netas',money(r.ventasNetas))+
     fila('Costo de ventas','−'+money(r.costo))+
     '<tr class="tot"><td>Utilidad bruta</td><td class="r">'+money(r.bruta)+'</td></tr>'+
+    r.fijos.items.map(x=>fila('Fijo: '+x.nombre+' ('+x.dias+' días × '+money(round(x.diario,0))+')','−'+money(x.valor))).join('')+
+    fila('Total gastos fijos','−'+money(r.fijos.total))+
     r.porGasto.map(g=>fila(g.nombre,'−'+money(g.valor))).join('')+
-    fila('Total gastos','−'+money(r.totalGastos))+
+    fila('Total otros gastos','−'+money(r.totalGastos))+
     '<tr class="tot"><td>UTILIDAD NETA</td><td class="r">'+money(r.neta)+'</td></tr></table>'+
     '<h2>Detalle por producto</h2><table><tr><th>Producto</th><th class="r">Uds</th><th class="r">Precio</th>'+
       '<th class="r">Costo</th><th class="r">Venta</th><th class="r">Utilidad</th><th class="r">Margen</th></tr>'+
@@ -7843,6 +7954,8 @@ function viewReportes(vw){
         kpi('Compras',money(sum(cs,c=>c.total)),cs.length+' facturas','bad')+
         kpi('Propinas',money(prop),'','')+
         kpi('Ticket promedio',money(vs.length?tot/vs.length:0),'','')+
+        (verCostos()&&gastosFijos().length? kpi('Utilidad después de fijos',money(tot-cst-calcFijos(d1,d2).total),
+          'gastos fijos '+money(calcFijos(d1,d2).total)+' ('+diasEntre(d1,d2)+' días)',(tot-cst-calcFijos(d1,d2).total)>=0?'ok':'bad'):'')+
         kpi('Tiempo prom. domicilio',fmtMin(stD.prom),stD.n? stD.n+' entregas · '+stD.pct+'% a tiempo':'sin entregas registradas',
           stD.prom==null?'':(stD.prom<=meta?'ok':'bad'))+
       '</div>'+
@@ -8328,7 +8441,7 @@ function viewAjustes(vw){
             const pf=await resolverPerfil();
             toast('Conectado como '+pf.rol,'ok');
             if(pf.rol==='superadmin'){ loginSuper(); return; }
-            if(pf.negocioId && c.fbNegocio!==pf.negocioId){ await entrarANegocio(pf.negocioId,null); return; }
+            if(pf.negocioId && !puedeVerNegocio(pf,c.fbNegocio)){ await entrarANegocio(pf.negocioId,null); return; }
             /* también por aquí queda activado el equipo y verificada la licencia */
             try{ const fi=await fbGet('negocios/'+(pf.negocioId||c.fbNegocio));
               if(fi){ S.suscripcion=fi; guardarLicencia(fi,pf.negocioId||c.fbNegocio); } }catch(e){}
@@ -8633,6 +8746,11 @@ function esSuper(){ return !!(S.perfil && S.perfil.rol==='superadmin'); }
    administrador sí puede hacerlo. */
 function hayNube(){ return !!(S.cfg.fbOn && S.cfg.fbNegocio); }   /* conectado a un negocio concreto */
 function puedeCrearUsuarios(){ return esSuper() || !!(S.user && S.user._super) || !nubeDisponible(); }
+function negociosDe(p){
+  p=p||S.perfil; if(!p) return [];
+  return [...new Set([p.negocioId].concat(p.negocios||[]).filter(Boolean))];
+}
+function puedeVerNegocio(p,id){ return !!p && (p.rol==='superadmin' || negociosDe(p).indexOf(id)>=0); }
 function negocioActual(){ return (S.perfil&&S.perfil.negocioId)||S.cfg.fbNegocio||''; }
 /* Le crea la cuenta en la nube a un mesero o cajero, para que pueda entrar
    desde CUALQUIER equipo sin que el administrador tenga que abrirlo primero. */
@@ -8709,6 +8827,93 @@ async function entrarANegocio(id,nombre){
   render();
 }
 
+/* ======================= CAMBIAR DE RESTAURANTE =======================
+   El administrador con varios restaurantes toca el nombre (arriba a la
+   izquierda) y escoge. Cada uno tiene su base en el equipo; la primera vez
+   se descarga de la nube y después abre aunque no haya internet. */
+const CFG_EQUIPO=['fbApiKey','fbProjectId','fbOn','autoSync','pullSeg','tema','ticketAncho','comandaAncho','terminal',
+  'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp','letra'];
+function nombreNegocio(id){ const nn=lsJSON('pos_negnombres',{});
+  return nn[id] || (id===S.cfg.fbNegocio? S.cfg.nombre : '') || id; }
+function puedeCambiarNegocio(){ return !!(S.user && !S.user._super && S.perfil && negociosDe(S.perfil).length>1); }
+async function refrescarNombresNegocios(){
+  if(!navigator.onLine || !S.cfg.fbOn) return;
+  const nn=lsJSON('pos_negnombres',{});
+  await Promise.all(negociosDe(S.perfil).map(async id=>{ try{ const f=await fbGet('negocios/'+id); if(f&&f.nombre) nn[id]=f.nombre; }catch(e){} }));
+  lsSet('pos_negnombres',nn);
+}
+async function mCambiarNegocio(){
+  if(!puedeCambiarNegocio()) return;
+  /* el perfil puede haber cambiado en la nube: se revisa si hay internet */
+  if(navigator.onLine && S.cfg.fbOn){ try{ if(FB.listo()||await fbRestaurarSesion()) await resolverPerfil(); }catch(e){} }
+  try{ await refrescarNombresNegocios(); }catch(e){}
+  const ids=negociosDe(S.perfil), dbs=lsJSON('pos_dbs',{}), lics=lsJSON('pos_lics',{});
+  modal({title:'🏪 Cambiar de restaurante', size:'slim',
+    body:'<div class="hintx" style="margin-bottom:10px">Toca el restaurante que quieres ver. Cada uno tiene su propia información.</div>'+
+      ids.map(id=>{ const act=id===S.cfg.fbNegocio, visto=!!(dbs[id]||lics[id]);
+        return '<button class="btn blk" data-neg="'+esc(id)+'" style="justify-content:flex-start;gap:10px;padding:12px;margin-bottom:8px;text-align:left'+
+          (act?';border:2px solid var(--brand)':'')+'"'+(act?' disabled':'')+'>'+
+          '<span style="font-size:20px">🏪</span><span style="flex:1"><b>'+esc(nombreNegocio(id))+'</b><br>'+
+          '<span class="tiny muted">'+(act?'estás aquí':(visto?'ya está en este equipo':'se descarga la primera vez (necesita internet)'))+'</span></span>'+
+          (act?'<span class="pill ok">actual</span>':'')+'</button>'; }).join(''),
+    footer:'<button class="btn" data-x>Cerrar</button>',
+    onOpen:m=>{ $$('[data-neg]',m).forEach(b=>b.onclick=()=>{ closeModal(); cambiarNegocio(b.dataset.neg); }); }});
+}
+async function cambiarNegocio(id){
+  if(!id || id===S.cfg.fbNegocio) return;
+  if(!puedeVerNegocio(S.perfil,id)) return toast('No tienes acceso a ese restaurante','bad');
+  const dbs=lsJSON('pos_dbs',{}), lics=lsJSON('pos_lics',{}), yaEsta=!!(dbs[id]||lics[id]);
+  if(!yaEsta && !navigator.onLine) return toast('La primera vez que entras a '+nombreNegocio(id)+' se necesita internet para descargarlo','warn',6000);
+  if(S.cart && S.cart.items && S.cart.items.length && !S.cart.mesaId)
+    return toast('Tienes una venta de mostrador en el carrito. Cóbrala o guárdala antes de cambiar.','warn',6000);
+  /* lo pendiente de este restaurante se sube antes de irse */
+  if(S.outbox.length && navigator.onLine && S.cfg.fbOn){ toast('Subiendo lo pendiente…','ok',2500); try{ await flushOutbox(true); }catch(e){} }
+  if(S.outbox.length) toast('Quedan '+S.outbox.length+' cambios de '+(S.cfg.nombre||'este restaurante')+
+    ' sin subir: se suben cuando vuelvas a él con internet.','warn',6000);
+  /* recordar la base del restaurante actual (la de siempre si no tenía nombre propio) */
+  if(S.cfg.fbNegocio && !dbs[S.cfg.fbNegocio]){ dbs[S.cfg.fbNegocio]=DBNAME; lsSet('pos_dbs',dbs); }
+  /* datos del equipo que viajan al otro restaurante */
+  const lleva={fbNegocio:id}; CFG_EQUIPO.forEach(k=>{ if(S.cfg[k]!==undefined) lleva[k]=S.cfg[k]; });
+  lsSet('pos_limpieza',lleva);
+  const u=S.user||{};
+  lsSet('pos_cambio_neg',{neg:id, email:u.email||FB.email||'', nombre:u.nombre||'', rol:(S.perfil&&S.perfil.rol)||u.rol||'admin',
+    sal:u.sal||'', clave:u.clave||'', uidNube:u.uidNube||(S.perfil&&(S.perfil.uid||S.perfil.id))||''});
+  try{ if(lics[id]) localStorage.setItem('pos_lic',JSON.stringify(lics[id])); localStorage.setItem('pos_neg',id); }catch(e){}
+  toast('Abriendo '+nombreNegocio(id)+'…','ok',2000);
+  setTimeout(()=>location.reload(),400);
+}
+/* al arrancar en el restaurante nuevo: entra con el mismo usuario y, si es
+   la primera vez, descarga todo */
+async function terminarCambioNegocio(){
+  const h=lsJSON('pos_cambio_neg',null);
+  if(!h || h.neg!==S.cfg.fbNegocio) return false;
+  try{ localStorage.removeItem('pos_cambio_neg'); }catch(e){}
+  const primera=(!S.meta.pull || !Object.keys(S.meta.pull).length) && !S.usuarios.length && !S.ventas.length;
+  if(primera){
+    if(!navigator.onLine) { toast('Sin internet: no se pudo descargar este restaurante','bad',6000); return false; }
+    $('#lgsub') && ($('#lgsub').textContent='Descargando '+nombreNegocio(h.neg)+'…');
+    try{ if(!FB.listo()) await fbRestaurarSesion(); }catch(e){}
+    try{ const f=await fbGet('negocios/'+h.neg); if(f){ S.suscripcion=f; guardarLicencia(f,h.neg);
+      S.cfg.nombre=f.nombre||S.cfg.nombre; saveCfg(); } }catch(e){}
+    if(!S.cfg.nombre || S.cfg.nombre==='Mi Restaurante'){ S.cfg.nombre=nombreNegocio(h.neg); saveCfg(); applyCfg(); }
+    try{ await pullCloud(true); }catch(e){}
+    if(!S.cuentas.length) put('cuentas',{id:'ct1',nombre:'Caja general',tipo:'caja',medio:'efectivo',saldoInicial:0,activo:true});
+    migrarAPeps();
+  }
+  /* el mismo usuario, con su misma clave para entrar sin internet */
+  let u=usuarioPorCorreo(h.email);
+  const rol=['admin','cajero','mesero'].indexOf(h.rol)>=0? h.rol : 'admin';
+  if(!u){ u={id:uid('u'),nombre:h.nombre||h.email,email:h.email,rol:rol,activo:true}; }
+  u.rol=rol; u.activo=true; if(h.clave && !u.clave){ u.sal=h.sal; u.clave=h.clave; }
+  if(h.uidNube) u.uidNube=h.uidNube;
+  put('usuarios',u);
+  S.turno=turnoAbierto();
+  login(u);
+  toast('🏪 Estás en '+(S.cfg.nombre||nombreNegocio(h.neg)),'ok',4000);
+  if(!primera && navigator.onLine && S.cfg.fbOn) setTimeout(()=>{ pullCloud(); scheduleSync(500); },800);
+  return true;
+}
+
 /* ------------------------- panel del superadmin ---------------------- */
 async function cargarDirectorio(){
   const [negs,cts]=await Promise.all([fbLista('negocios'),fbLista('usuariosNube')]);
@@ -8762,7 +8967,9 @@ function viewSuper(vw){
         {t:'Nombre',f:c=>esc(c.nombre||'—')},
         {t:'Rol',f:c=>'<span class="pill '+(c.rol==='superadmin'?'brand':'info')+'">'+esc(c.rol)+'</span>'},
         {t:'Restaurante',f:c=>{const n=S.negocios.find(x=>x.id===c.negocioId);
-          return c.rol==='superadmin'?'<span class="muted">todos</span>':esc(n?n.nombre:(c.negocioId||'—'));}},
+          const extra=(c.negocios||[]).filter(x=>x!==c.negocioId).map(x=>{ const o=S.negocios.find(y=>y.id===x); return o?o.nombre:x; });
+          return c.rol==='superadmin'?'<span class="muted">todos</span>':esc(n?n.nombre:(c.negocioId||'—'))+
+            (extra.length? '<div class="tiny muted">+ '+esc(extra.join(', '))+'</div>':'');}},
         {t:'Estado',f:c=>c.activo===false?'<span class="pill bad">inactiva</span>':'<span class="pill ok">activa</span>'},
         {t:'',f:c=> c.rol==='superadmin'?'':'<button class="btn ghost sm" data-ec="'+esc(c.uid||c.id)+'">✎</button>'}
       ],S.cuentasNube,{empty:'Sin cuentas creadas',icon:'👤'})+'</div></div>';
@@ -8845,6 +9052,8 @@ function leerLicencia(){
 function escribirLicencia(o){
   LIC=o||false;
   try{ if(o) localStorage.setItem('pos_lic',JSON.stringify(o)); else localStorage.removeItem('pos_lic'); }catch(e){}
+  if(o && o.negocio){ const m=lsJSON('pos_lics',{}); m[o.negocio]=o; lsSet('pos_lics',m);
+    const nn=lsJSON('pos_negnombres',{}); if(o.nombre){ nn[o.negocio]=o.nombre; lsSet('pos_negnombres',nn); } }
   if(S.meta){ if(o) S.meta.lic=o; else delete S.meta.lic; saveMeta(); }
 }
 /* la hora más alta que este equipo ha visto */
@@ -8984,9 +9193,13 @@ function edCuentaNube(c){
   const ed=c||{uid:'',email:'',nombre:'',rol:'admin',negocioId:S.negocios[0]?S.negocios[0].id:'',activo:true};
   if(!S.negocios.length && nuevo) return toast('Crea primero un restaurante','warn');
   modal({title:nuevo?'Nueva cuenta de acceso':'Editar cuenta',
-    body:'<div class="f" style="margin-bottom:10px"><label>Restaurante</label><select id="g">'+
+    body:'<div class="f" style="margin-bottom:10px"><label>Restaurante principal</label><select id="g">'+
         S.negocios.map(n=>'<option value="'+esc(n.id)+'"'+(n.id===ed.negocioId?' selected':'')+'>'+esc(n.nombre||n.id)+'</option>').join('')+
       '</select></div>'+
+      '<div class="f" id="gmasbox" style="margin-bottom:10px"><label>También administra (puede cambiar entre ellos)</label>'+
+        '<div style="max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px 10px">'+
+        S.negocios.map(n=>'<label class="row tiny" style="gap:8px;padding:4px 0"><input type="checkbox" data-gx="'+esc(n.id)+'"'+
+          ((ed.negocios||[]).indexOf(n.id)>=0?' checked':'')+'> '+esc(n.nombre||n.id)+'</label>').join('')+'</div></div>'+
       '<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
         '<div class="f"><label>Nombre</label><input id="n" value="'+esc(ed.nombre||'')+'" placeholder="Ana Pérez"></div>'+
         '<div class="f"><label>Rol</label><select id="r">'+
@@ -9010,8 +9223,12 @@ function edCuentaNube(c){
       if($('#rst',m)) $('#rst',m).onclick=async()=>{
         try{ await fbResetPass(ed.email); toast('Correo enviado a '+ed.email,'ok'); }
         catch(e){ toast(fbErr(e),'bad',5000); } };
+      const verMas=()=>{ $('#gmasbox',m).classList.toggle('hide',$('#r',m).value!=='admin');
+        $$('[data-gx]',m).forEach(ch=>{ const pri=ch.dataset.gx===$('#g',m).value; ch.disabled=pri; if(pri) ch.checked=false; }); };
+      $('#r',m).onchange=verMas; $('#g',m).onchange=verMas; verMas();
       $('#ok',m).onclick=async()=>{
         const neg=$('#g',m).value, nombre=$('#n',m).value.trim(), rol=$('#r',m).value;
+        const otros= rol==='admin'? $$('[data-gx]',m).filter(ch=>ch.checked && ch.dataset.gx!==neg).map(ch=>ch.dataset.gx) : [];
         try{
           if(nuevo){
             const email=$('#e',m).value.trim().toLowerCase(), pass=$('#p',m).value;
@@ -9020,7 +9237,7 @@ function edCuentaNube(c){
             if(email===SUPERADMIN) return toast('Ese correo ya es el del superadministrador','warn');
             const cta=await fbCrearCuenta(email,pass);
             await fbSet('usuariosNube/'+cta.uid,
-              {id:cta.uid,uid:cta.uid,email:email,nombre:nombre||email,rol:rol,negocioId:neg,activo:true});
+              {id:cta.uid,uid:cta.uid,email:email,nombre:nombre||email,rol:rol,negocioId:neg,negocios:otros,activo:true});
             closeModal();
             modal({title:'Cuenta creada',size:'slim',
               body:'<p>Entrégale estos datos a <b>'+esc(nombre||email)+'</b> ('+esc(rol)+') de <b>'+
@@ -9034,7 +9251,7 @@ function edCuentaNube(c){
             render();
           } else {
             await fbSet('usuariosNube/'+(ed.uid||ed.id),
-              Object.assign({},ed,{nombre:nombre||ed.email,rol:rol,negocioId:neg,activo:$('#a',m).checked}));
+              Object.assign({},ed,{nombre:nombre||ed.email,rol:rol,negocioId:neg,negocios:otros,activo:$('#a',m).checked}));
             closeModal(); toast('Cuenta actualizada','ok'); render();
           }
         }catch(e){
@@ -9362,7 +9579,7 @@ function limpiarEquipo(recargar){
    'modoImp','comandaAncho','letra','nombre','simbolo','decimales','respaldoCierre'].forEach(k=>{
      if(S.cfg[k]!==undefined) guardar[k]=S.cfg[k]; });
   const keep={};
-  ['pos_fb','pos_perfil','pos_lic','pos_reloj'].forEach(k=>{
+  ['pos_fb','pos_perfil','pos_lic','pos_reloj','pos_neg','pos_dbs','pos_lics','pos_negnombres'].forEach(k=>{
     try{ const v=localStorage.getItem(k); if(v!=null) keep[k]=v; }catch(e){} });
   try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf('pos_')===0) localStorage.removeItem(k); }); }catch(e){}
   try{ localStorage.setItem('pos_limpieza',JSON.stringify(guardar)); }catch(e){}
@@ -9519,16 +9736,17 @@ async function ingresar(){
         if(pf.rol==='superadmin'){ paintLogin(); loginSuper(); terminar(); return; }
         /* la mensualidad manda: se revisa antes de dejar entrar */
         let ficha=null;
-        try{ ficha=await fbGet('negocios/'+pf.negocioId); }catch(e){}
+        const negLog = puedeVerNegocio(pf,S.cfg.fbNegocio)? S.cfg.fbNegocio : pf.negocioId;
+        try{ ficha=await fbGet('negocios/'+negLog); }catch(e){}
         S.suscripcion=ficha||null;
-        if(ficha) guardarLicencia(ficha,pf.negocioId);
+        if(ficha) guardarLicencia(ficha,negLog);
         else if(!equipoActivado()){ fbSalir();
           lgError('Entré a su cuenta pero no pude leer la licencia del restaurante. '+
             'Revise la conexión e intente de nuevo; este equipo todavía no queda activado.');
           return terminar(); }
         if(ficha && !vigente(ficha)){ paintLogin(); mBloqueo(ficha); return terminar(); }
-        const cambio = pf.negocioId && S.cfg.fbNegocio!==pf.negocioId;
-        if(cambio || !S.meta.pull || !Object.keys(S.meta.pull).length) await entrarANegocio(pf.negocioId,null);
+        const cambio = negLog && S.cfg.fbNegocio!==negLog;
+        if(cambio || !S.meta.pull || !Object.keys(S.meta.pull).length) await entrarANegocio(negLog,null);
         else await pullCloud();
         /* deja su acceso guardado en el local para que después entre sin internet.
            OJO: el rol es el que diga la nube (mesero, cajero o admin), nunca
@@ -9801,8 +10019,10 @@ $('#btnuser').onclick=()=>{
         ' <span><b>Limpiar este equipo al salir</b><br><span class="muted">Vacía lo guardado aquí y al volver '+
         'a entrar se descarga todo de la nube. Úselo si le sale «cuota excedida» o si va lento.</span></span></label>'+
       '</div></div>',
-    footer:'<button class="btn" data-x>Cerrar</button><button class="btn danger" id="lo">Cerrar sesión</button>',
+    footer:(puedeCambiarNegocio()?'<button class="btn" id="u_neg">🏪 Cambiar de restaurante</button>':'')+
+      '<button class="btn" data-x>Cerrar</button><button class="btn danger" id="lo">Cerrar sesión</button>',
     onOpen:m=>{
+      if($('#u_neg',m)) $('#u_neg',m).onclick=()=>{ closeModal(); mCambiarNegocio(); };
       espacioUsado().then(e=>{ const el=$('#u_esp',m); if(!el) return;
         el.innerHTML = e? (pesoTexto(e.usado)+(e.tope? ' de '+pesoTexto(e.tope)+
           ' <span class="pill '+(e.pct>=80?'bad':e.pct>=60?'warn':'ok')+'">'+e.pct+'%</span>':''))
@@ -9935,7 +10155,9 @@ async function boot(){
 
   let last=null; try{ last=localStorage.getItem('pos_user'); }catch(e){}
   const u=last? byId('usuarios',last):null;
-  if(u && u.activo) login(u);
+  if(lsJSON('pos_cambio_neg',null)){ if(await terminarCambioNegocio()) last='__ok__'; }
+  if(last==='__ok__'){ /* ya entró en el restaurante nuevo */ }
+  else if(u && u.activo) login(u);
   else if(hayLegado()) setTimeout(mRecuperarAcceso,500);
 
   if(S.cfg.fbOn && leerSesionFB()){
