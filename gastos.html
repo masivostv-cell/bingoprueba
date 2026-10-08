@@ -55,7 +55,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                     Imprimir
                 </button>
-                <div id="networkBadge" class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-white border border-white/30 text-sm font-medium">
+                <div id="networkBadge" onclick="abrirPendientes()" title="Ver qué falta por subir" class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-white border border-white/30 text-sm font-medium cursor-pointer hover:bg-white/25 transition">
                     <span id="networkDot" class="w-2 h-2 rounded-full bg-green-400"></span>
                     <span id="networkText">Cargando...</span>
                 </div>
@@ -324,13 +324,34 @@
         </div>
     </div>
 
+    <!-- ===================== PENDIENTES DE SUBIR ===================== -->
+    <div id="modalPendientes" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-full overflow-y-auto">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Subida a Google Sheets</h3>
+                    <p id="pendConexion" class="text-xs text-slate-500 break-all"></p>
+                </div>
+                <button type="button" onclick="cerrarPendientes()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div id="pendDiagnostico" class="hidden text-sm rounded-lg px-4 py-3"></div>
+                <div id="pendLista" class="space-y-2"></div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 flex flex-wrap justify-end gap-3">
+                <button type="button" onclick="probarConexion()" class="px-4 py-2 text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition">Probar conexión</button>
+                <button type="button" onclick="reintentarYa()" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">Reintentar ahora</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toasts" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2 w-full max-w-md px-4 pointer-events-none"></div>
 
     <script>
         // ================== CONFIGURACIÓN ==================
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHWcxI6CaZozoBRVAve-RFv-kdV49JliPr6gXPiE2jBaFPQUipN_uXGvYMPZh44pJ_/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjVK_2OC3PR5-c7GWZ1p6moj7vTHcPl0xZfhsVrropNSpaJb8DNus-egPNirjA6vdH/exec";
         const INTERVALO_SYNC_MS = 15000;
-        const TIMEOUT_MS = 25000;
+        const TIMEOUT_MS = 60000;   // Apps Script a veces tarda; el ID evita duplicados si se reintenta
         const MAX_HISTORIAL_LOCAL = 3000;
 
         const LS = {
@@ -400,13 +421,17 @@
 
         function encolar(item) { const c = cola(); c.push(item); escribir(LS.COLA, c); }
         function quitarDeCola(id) { escribir(LS.COLA, cola().filter(i => i.id !== id)); }
-        function marcarFallo(id, motivo) {
+        function marcarFallo(id, motivo, detalle) {
             const c = cola();
             const it = c.find(i => i.id === id);
             if (!it) return;
             it.intentos = (it.intentos || 0) + 1;
             it.ultimoError = motivo;
-            it.proximoIntento = Date.now() + Math.min(5000 * 2 ** it.intentos, 5 * 60000);
+            it.detalle = detalle || (motivo === 'red' ? 'Sin conexión con Google' : motivo);
+            it.ultimoIntento = Date.now();
+            // fallas de red: reintento rápido (máx. 30 s); errores del servidor: hasta 5 min
+            const tope = motivo === 'red' ? 30000 : 5 * 60000;
+            it.proximoIntento = Date.now() + Math.min(3000 * 2 ** it.intentos, tope);
             escribir(LS.COLA, c);
             if (it.tipo === 'gasto' && motivo !== 'red') actualizarHistorial(id, { estado: 'error', error: motivo });
         }
@@ -431,16 +456,31 @@
         }
 
         // ================== ENVÍO A GOOGLE SHEETS ==================
+        // Error que no es de internet sino de la configuración del Apps Script
+        class ErrorConfig extends Error {}
+
+        function explicarRespuestaNoJSON(texto) {
+            if (/function not found: doPost|no se encontr[oó] la funci[oó]n.*doPost/i.test(texto)) return 'Esa URL del Apps Script no tiene la función doPost (falta el código o no se implementó la nueva versión).';
+            if (/function not found: doGet/i.test(texto)) return 'Esa URL del Apps Script no tiene el código (falta doGet).';
+            if (/accounts\.google\.com|ServiceLogin|Iniciar sesi[oó]n|Sign in/i.test(texto)) return 'La implementación no está abierta para "Cualquier persona". Cámbialo en Implementar → Gestionar implementaciones.';
+            if (/autorizaci[oó]n|authorization/i.test(texto)) return 'El Apps Script necesita que lo autorices: ábrelo y ejecuta "probarConfiguracion" una vez.';
+            const m = texto.match(/<title>([^<]*)/i);
+            return 'Google respondió algo inesperado' + (m ? ': ' + m[1].trim() : '') + '.';
+        }
+
         async function enviar(payload) {
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+            let texto;
             try {
                 const r = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload), redirect: 'follow', signal: ctrl.signal
                 });
-                return await r.json();
+                texto = await r.text();
             } finally { clearTimeout(t); }
+            try { return JSON.parse(texto); }
+            catch (e) { throw new ErrorConfig(explicarRespuestaNoJSON(texto)); }
         }
 
         async function sincronizar() {
@@ -454,7 +494,13 @@
                     if (!item) break;
                     let data;
                     try { data = await enviar(item.payload); }
-                    catch (err) { marcarFallo(item.id, 'red'); break; }
+                    catch (err) {
+                        if (err instanceof ErrorConfig) { marcarFallo(item.id, err.message); pintarEstado(); pintarPendientes(); break; }
+                        marcarFallo(item.id, 'red', err.name === 'AbortError'
+                            ? `Google tardó más de ${TIMEOUT_MS / 1000} s en responder`
+                            : 'Sin conexión con Google (revisa el internet)');
+                        break;
+                    }
 
                     if (data && data.status === 'success') {
                         quitarDeCola(item.id);
@@ -722,6 +768,7 @@
 
         function refrescarVistas() {
             pintarPanel();
+            pintarPendientes();
             if (historialAbierto()) pintarTabla();
         }
 
@@ -1006,10 +1053,79 @@
             sincronizar();
         });
 
+        // ================== PENDIENTES DE SUBIR ==================
+        const pendAbierto = () => !$('modalPendientes').classList.contains('hidden');
+        function abrirPendientes() { $('modalPendientes').classList.remove('hidden'); pintarPendientes(); }
+        function cerrarPendientes() { $('modalPendientes').classList.add('hidden'); }
+        function reintentarYa() { reiniciarEsperas(); sincronizar(); toast('Reintentando...'); pintarPendientes(); }
+
+        function pintarPendientes() {
+            if (!pendAbierto()) return;
+            $('pendConexion').textContent = 'Conectado a: …' + GOOGLE_SCRIPT_URL.split('/s/')[1]?.slice(-14, -5);
+            const c = cola();
+            if (!c.length) { $('pendLista').innerHTML = '<p class="text-sm text-green-700 font-semibold">✓ No hay nada pendiente. Todo está en Google Sheets.</p>'; return; }
+            const ahora = Date.now();
+            $('pendLista').innerHTML = c.map((it, i) => {
+                const p = it.payload || {};
+                const etiqueta = it.tipo === 'gasto' ? 'Gasto' : it.tipo === 'tercero' ? 'Tercero nuevo' : 'Edición';
+                const h = it.tipo === 'gasto' ? leer(LS.HIST, []).find(x => x.id === it.id) : null;
+                const rec = it.tipo === 'gasto' ? (h && h.provisional !== null && h.provisional !== undefined ? `#${h.provisional}*` : '') : (p.recibo ? `#${p.recibo}` : '');
+                const espera = it.proximoIntento > ahora ? `reintenta en ${Math.ceil((it.proximoIntento - ahora) / 1000)} s` : (sincronizando && i === 0 ? 'subiendo…' : 'en turno');
+                const err = it.detalle || (it.ultimoError && it.ultimoError !== 'red' ? it.ultimoError : '');
+                const esConfig = it.ultimoError && it.ultimoError !== 'red';
+                return `<div class="border ${esConfig ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'} rounded-lg px-3 py-2 text-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-600 shrink-0">${etiqueta}</span>
+                        <span class="font-bold tabular-nums shrink-0">${esc(rec)}</span>
+                        <span class="flex-1 min-w-0 truncate font-medium">${esc(p.nombre || '')}${p.concepto ? ' · ' + esc(p.concepto) : ''}</span>
+                        ${p.valor_neto !== undefined ? `<span class="tabular-nums shrink-0">${pesos(p.valor_neto)}</span>` : ''}
+                        <button type="button" data-quitar="${esc(it.id)}" class="text-xs text-red-600 hover:underline shrink-0">Quitar</button>
+                    </div>
+                    <div class="text-xs mt-1 ${esConfig ? 'text-red-700 font-semibold' : 'text-slate-500'}">${it.intentos ? `Intentos: ${it.intentos} · ` : ''}${esc(espera)}${err ? ' · ' + esc(err) : ''}</div>
+                </div>`;
+            }).join('');
+        }
+        $('pendLista').addEventListener('click', e => {
+            const b = e.target.closest('[data-quitar]');
+            if (!b) return;
+            const it = cola().find(i => i.id === b.dataset.quitar);
+            if (!it) return;
+            if (!confirm(`¿Quitar este ${it.tipo === 'gasto' ? 'gasto' : 'registro'} de la cola? NO se subirá a Sheets y se borrará de este dispositivo.`)) return;
+            quitarDeCola(it.id);
+            if (it.tipo === 'gasto') escribir(LS.HIST, leer(LS.HIST, []).filter(x => x.id !== it.id));
+            pintarEstado(); pintarRecibo(); refrescarVistas();
+        });
+
+        async function probarConexion() {
+            const d = $('pendDiagnostico');
+            d.className = 'text-sm rounded-lg px-4 py-3 bg-blue-50 text-blue-700';
+            d.textContent = 'Probando conexión con Google Sheets...';
+            const t0 = performance.now();
+            try {
+                const sep = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
+                const r = await fetch(`${GOOGLE_SCRIPT_URL}${sep}action=proximoRecibo&t=${Date.now()}`, { redirect: 'follow', cache: 'no-store' });
+                const texto = await r.text();
+                const seg = ((performance.now() - t0) / 1000).toFixed(1);
+                let res = null; try { res = JSON.parse(texto); } catch (e) {}
+                if (res && res.status === 'success' && res.proximoRecibo !== undefined) {
+                    d.className = 'text-sm rounded-lg px-4 py-3 bg-green-50 text-green-800';
+                    d.textContent = `✓ Google Sheets responde bien (${seg} s). Próximo recibo en la hoja: ${res.proximoRecibo}.`;
+                } else {
+                    d.className = 'text-sm rounded-lg px-4 py-3 bg-red-50 text-red-700 font-semibold';
+                    d.textContent = res ? `El Apps Script respondió con error: ${res.message || JSON.stringify(res).slice(0, 150)}` : explicarRespuestaNoJSON(texto);
+                }
+            } catch (e) {
+                d.className = 'text-sm rounded-lg px-4 py-3 bg-red-50 text-red-700 font-semibold';
+                d.textContent = 'No se pudo conectar con Google. Revisa el internet de este equipo.';
+            }
+        }
+        setInterval(() => { if (pendAbierto()) pintarPendientes(); }, 1000);
+
         // ================== ARRANQUE ==================
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return;
-            if (!$('modalImpresion').classList.contains('hidden')) cerrarImpresion();
+            if (!$('modalPendientes').classList.contains('hidden')) cerrarPendientes();
+            else if (!$('modalImpresion').classList.contains('hidden')) cerrarImpresion();
             else if (!$('modalEditor').classList.contains('hidden')) cerrarEditor();
             else if (historialAbierto()) cerrarHistorial();
         });
