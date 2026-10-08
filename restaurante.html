@@ -672,7 +672,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.06-6';
+const APP_VERSION='2026.10.07-2';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -986,7 +986,7 @@ async function pullCloud(manual){
     } else sinPulso=true;                          // negocio viejo: se barre y se deja el pulso
 
     for(const coll of listas){
-      let cursor=S.meta.pull[coll]||'';
+      let cursor=S.meta.pull[coll]||'', completo=false;
       for(let pag=0; pag<25; pag++){
         const q={structuredQuery:{ from:[{collectionId:coll}],
           where:{fieldFilter:{field:{fieldPath:'upd'},op:'GREATER_THAN',value:{stringValue:cursor}}},
@@ -998,9 +998,10 @@ async function pullCloud(manual){
         docs.forEach(r=>{ const o=fsDoc(r.document.fields);
           if(aplicarRemoto(coll,o)) cambios++;
           if(String(o.upd||'')>cursor) cursor=o.upd; });
-        if(docs.length<300) break;
+        if(docs.length<300){ completo=true; break; }
       }
       S.meta.pull[coll]=cursor;
+      S.meta.pullInc=S.meta.pullInc||{}; S.meta.pullInc[coll]=!completo;   // faltó bajar algo: sigue en la próxima vuelta
     }
     /* queda anotado lo que traía el pulso que acabo de leer */
     if(pulso){ const m={}; listas.forEach(c=>{ m[c]=String(pulso['c_'+c]||''); }); anotarPulso(m); }
@@ -1008,6 +1009,8 @@ async function pullCloud(manual){
     saveMeta(); lastPull=now(); syncErr=0;
     S.turno=turnoAbierto();
     pulling=false; paintSync();
+    if(cambios && (listas.indexOf('movinv')>=0 || listas.indexOf('ingredientes')>=0)){
+      try{ const r=reconciliarStock(); if(r) console.log('Stock corregido desde el historial:',r); }catch(e){} }
     if(cambios){ toast(cambios+' cambio(s) recibidos de otra terminal','ok'); if(S.user) render(); }
     if(esEstacion() && S.user) setTimeout(revisarCocina,300);
     else if(manual) toast('Todo al día','ok');
@@ -2749,7 +2752,11 @@ function paintCart(){
     $('#cnomi').onchange=e=>{ const v=e.target.value.trim(); S.cart.nombrePedido=v;
       const mm=S.cart.mesaId? byId('mesas',S.cart.mesaId):null;
       if(mm && mm.temporal && v){ mm.nombre=v; put('mesas',mm); }
-      persistComanda(); paintCart(); };
+      /* NO se repinta el carrito aquí: este cambio pasa justo cuando se toca
+         Cocina, Guardar o Cobrar, y repintar borraba ese botón antes del clic
+         (por eso tocaba oprimirlo dos veces). Solo se guarda. */
+      persistComanda();
+      if(mm && mm.temporal) setTimeout(()=>{ const h=$('#cnomi'); if(h && document.activeElement!==h) paintCart(); },400); };
   }
   if(document.activeElement!==$('#cnomi')) $('#cnomi').value=c.nombrePedido||(mesa&&mesa.temporal? mesa.nombre:'');
   const viejo=$('#cedav'); if(viejo) viejo.remove();
@@ -5036,10 +5043,44 @@ async function recalcularTodo(){
   } catch(e){ toast('No se pudo terminar de recalcular: '+e.message,'bad',6000); }
   finally{ if(b){ b.disabled=false; b.textContent='🔄 Recalcular'; } }
 }
+/* ---------- el stock sale del historial (a prueba de varios equipos) ----------
+   Cada venta, compra y ajuste deja un movimiento propio que nunca se pisa.
+   La ficha del ingrediente, en cambio, la puede sobrescribir otro equipo con
+   un número viejo (dos cajas a la vez, relojes distintos, alguien que tocó
+   Recalcular antes de que subieran las ventas de otro equipo…). Por eso, cada
+   vez que llegan movimientos de inventario, el stock se vuelve a sacar de la
+   suma del historial, que es lo mismo en todos los equipos. */
+function historialTodos(){
+  const por={};
+  S.movinv.forEach(m=>{ (por[m.ingredienteId]=por[m.ingredienteId]||[]).push(m); });
+  const iniciales=new Set(S.capas.filter(c=>c.refTipo==='inicial').map(c=>c.ingredienteId));
+  const out={};
+  Object.keys(por).forEach(gid=>{
+    const movs=por[gid].sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+    const inicialSinMov=iniciales.has(gid) && !movs.some(m=>m.refTipo==='inicial'||m.refTipo==='importacion');
+    out[gid]={hist:round(sum(movs,m=>Number(m.cantidad)||0),4),
+      confiable: movs[0].tipo!=='salida' && !inicialSinMov};
+  });
+  return out;
+}
+function reconciliarStock(){
+  if(S.meta.pullInc && S.meta.pullInc.movinv) return 0;   // el historial todavía no termina de bajar
+  const H=historialTodos(); let n=0;
+  S.ingredientes.forEach(g=>{
+    const h=H[g.id]; if(!h || !h.confiable) return;
+    if(Math.abs(h.hist-(Number(g.stock)||0))>0.0001){
+      g.stock=h.hist; put('ingredientes',g);
+      try{ cuadrarValorConStock(g.id); }catch(e){}
+      n++;
+    }
+  });
+  return n;
+}
 function recalcularInventario(){
   const cambios=[];
   S.ingredientes.forEach(g=>{
-    const H=historialIng(g.id), confiable=H.confiable, hist=H.hist;
+    const H=historialIng(g.id), hist=H.hist;
+    const confiable=H.confiable && !(S.meta.pullInc && S.meta.pullInc.movinv);   // sin historial completo no se toca
     const antes=round(Number(g.stock)||0,4);
     let objetivo=confiable? hist : antes, porque=confiable? 'según compras, ventas y ajustes' : '';
     if(objetivo<0){ objetivo=0; porque='estaba en negativo (falta registrar una compra)'; }
@@ -5112,6 +5153,20 @@ function mAuditoriaInv(){
         '<div class="hintx" style="margin-bottom:6px">Sumando todas las entradas y salidas da otra cantidad. Puede ser de datos viejos (antes del historial) '+
         'o de dos equipos vendiendo a la vez sin internet. Recalcular lo deja como dice el historial.</div>'+
         A.malHist.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: stock '+num(x.stock,2)+' · según historial '+num(x.hist,2))).join(''),'info')+
+      (()=>{ const ult=S.ventas.filter(v=>v.estado!=='anulada').sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha))).slice(0,8);
+        if(!ult.length) return '';
+        return '<div class="card" style="margin-bottom:12px"><div class="hd"><h3>🔎 Últimas ventas: qué descontó cada una</h3></div><div class="bd">'+
+          ult.map(v=>{ const det=(v.items||[]).map(i=>{ const p=byId('productos',i.productoId);
+              const tiene=p && (p.receta||[]).some(r=>r.ingredienteId&&Number(r.cantidad)>0);
+              return '<div class="tiny" style="padding-left:10px">'+num(i.cant,0)+' × '+esc(i.nombre)+' → '+
+                (!p? '<span style="color:var(--bad)">el producto ya no existe</span>'
+                 : !tiene? '<span style="color:var(--warn)">sin receta: no descuenta</span>'
+                 : (p.receta||[]).filter(r=>r.ingredienteId).map(r=>{ const g=byId('ingredientes',r.ingredienteId);
+                     const q=round((Number(r.cantidad)||0)*i.cant,3);
+                     const hecho=(v.consumo||[]).some(x=>x.ingredienteId===r.ingredienteId);
+                     return (g? esc(g.nombre):'<span style="color:var(--bad)">ingrediente borrado</span>')+' −'+num(q,3)+(hecho?' ✅':' <span style="color:var(--bad)">❌ no se descontó</span>'); }).join(', '))+'</div>'; }).join('');
+            return '<div style="padding:6px 0;border-bottom:1px solid var(--line)"><b>'+esc(v.no)+'</b> <span class="tiny muted">'+fdate(v.fecha,true)+'</span>'+det+'</div>'; }).join('')+
+          '</div></div>'; })()+
       (A.sinUso.length? '<div class="hintx">ℹ️ '+A.sinUso.length+' ingrediente(s) activos no están en ninguna receta: '+
         A.sinUso.slice(0,12).map(x=>esc(x.g.nombre)).join(', ')+(A.sinUso.length>12?'…':'')+'.</div>':''),
     footer:'<button class="btn" data-x>Cerrar</button>',
@@ -10271,6 +10326,7 @@ async function boot(){
     setTimeout(()=>toast('✅ Sistema actualizado a la versión '+APP_VERSION,'ok',5000),1500); } }catch(e){}
   setTimeout(()=>revisarActualizacion(false),4000);
   setTimeout(()=>{ try{ if(S.user) respaldarNombresCartera(); }catch(e){} },9000);
+  setTimeout(()=>{ try{ if(S.user) reconciliarStock(); }catch(e){} },5000);
 }
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
