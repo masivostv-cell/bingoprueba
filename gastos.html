@@ -310,8 +310,8 @@
                 </div>
 
                 <label class="flex items-start gap-2 text-sm text-slate-600 cursor-pointer">
-                    <input type="checkbox" id="impProvisionales" class="mt-1">
-                    <span>Incluir registros que aún no han subido a Sheets (su número es provisional)</span>
+                    <input type="checkbox" id="impProvisionales" class="mt-1" checked>
+                    <span>Incluir lo que está guardado en este PC aunque todavía no haya subido a Sheets</span>
                 </label>
 
                 <div id="impResumen" class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-700"></div>
@@ -357,7 +357,7 @@
     <script>
         // ================== CONFIGURACIÓN ==================
         // Versión de esta página. Súbela junto con config.json cuando cambies el archivo en el hosting.
-        const APP_VERSION = '2026-10-08.1';
+        const APP_VERSION = '2026-10-08.3';
         const URL_SCRIPT_DEFECTO = "https://script.google.com/macros/s/AKfycbzLOumvAHB2bLY9b71IePG_KFez6LWXpUvLl_uzxrZ2Su7-TEW7EW2iSa_NWLrYQ-7K/exec";
         const URL_SCRIPT_VALIDA = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/;
         // Si el hosting tiene config.json con otra URL, se usa esa (así no hay que tocar el HTML)
@@ -524,16 +524,68 @@
             return res;
         }
 
-        async function enviar(payload) {
-            if (leer('modo_envio', 'post') === 'get') return enviarGet(payload);
-            try { return await enviarPost(payload); }
-            catch (e) {
-                if (e instanceof ErrorConfig || e.name === 'AbortError') throw e;
-                // El POST falló como "sin conexión" pero puede ser un bloqueo de este equipo: se intenta por GET
-                const res = await enviarGet(payload);
-                escribir('modo_envio', 'get');   // este equipo usará GET de aquí en adelante
-                return res;
+        const esperar = ms => new Promise(r => setTimeout(r, ms));
+
+        // Tercer camino: se envía "a ciegas" (sin leer la respuesta, así no hay bloqueo por CORS)
+        // y luego se confirma LEYENDO la hoja, que en todos los equipos funciona.
+        async function verificarEnHoja(payload) {
+            const sep = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
+            if (payload.action === 'guardarTercero') {
+                const r = comoJSON(await pedirTexto(`${GOOGLE_SCRIPT_URL}${sep}t=${Date.now()}`, { cache: 'no-store' }));
+                return (r.data || []).some(t => String(t.documento) === String(payload.documento)) ? { status: 'success', verificado: true } : null;
             }
+            const r = comoJSON(await pedirTexto(`${GOOGLE_SCRIPT_URL}${sep}action=listarGastos&t=${Date.now()}`, { cache: 'no-store' }));
+            const datos = r.data || [];
+            if (payload.action === 'guardarGasto') {
+                const f = datos.find(x => x.idLocal && String(x.idLocal) === String(payload.idLocal));
+                if (!f) return null;
+                const max = Math.max(...datos.filter(x => String(x.nombre || '').trim() || (x.valor !== '' && x.valor != null)).map(x => Number(x.recibo)).filter(isFinite));
+                return { status: 'success', verificado: true, numeroRecibo: Number(f.recibo), proximoRecibo: max + 1 };
+            }
+            if (payload.action === 'editarGasto') {
+                const f = datos.find(x => (payload.recibo != null && Number(x.recibo) === Number(payload.recibo)) || (payload.idLocal && x.idLocal === payload.idLocal));
+                if (f && String(f.concepto || '') === String(payload.concepto || '') && Number(f.valor_neto) === Number(payload.valor_neto)) return { status: 'success', verificado: true };
+                return null;
+            }
+            return null;
+        }
+
+        async function enviarSinCors(payload) {
+            const sep = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
+            try { await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) }); } catch (e) {}
+            try { await fetch(`${GOOGLE_SCRIPT_URL}${sep}d=${encodeURIComponent(aBase64(JSON.stringify(payload)))}&t=${Date.now()}`, { mode: 'no-cors', cache: 'no-store' }); } catch (e) {}
+            for (let i = 0; i < 3; i++) {
+                await esperar(2500 + i * 1500);
+                const v = await verificarEnHoja(payload);
+                if (v) return v;
+            }
+            throw new Error('no apareció en la hoja');
+        }
+
+        async function enviar(payload) {
+            const errores = [];
+            if (leer('modo_envio', 'post') === 'sincors') {
+                try { return await enviarSinCors(payload); } catch (e) { escribir('modo_envio', 'post'); }
+            }
+            const rutas = leer('modo_envio', 'post') === 'get'
+                ? [['GET', enviarGet], ['POST', enviarPost]]
+                : [['POST', enviarPost], ['GET', enviarGet]];
+            for (const [nombre, fn] of rutas) {
+                try {
+                    const r = await fn(payload);
+                    escribir('modo_envio', nombre === 'GET' ? 'get' : 'post');
+                    return r;
+                } catch (e) {
+                    if (e instanceof ErrorConfig) throw e;   // problema del Apps Script: no sirve seguir probando
+                    errores.push(`${nombre}: ${e.name === 'AbortError' ? 'tardó demasiado' : e.message}`);
+                }
+            }
+            try {
+                const r = await enviarSinCors(payload);
+                escribir('modo_envio', 'sincors');
+                return r;
+            } catch (e) { errores.push(`Envío directo: ${e.message}`); }
+            throw new Error(errores.join(' · '));
         }
 
         async function sincronizar() {
@@ -551,7 +603,7 @@
                         if (err instanceof ErrorConfig) { marcarFallo(item.id, err.message); pintarEstado(); pintarPendientes(); break; }
                         marcarFallo(item.id, 'red', err.name === 'AbortError'
                             ? `Google tardó más de ${TIMEOUT_MS / 1000} s en responder`
-                            : 'Sin conexión con Google' + (err.message ? ` (${err.message})` : ''));
+                            : 'No se pudo enviar → ' + (err.message || 'sin respuesta'));
                         break;
                     }
 
@@ -1115,7 +1167,7 @@
 
         function pintarPendientes() {
             if (!pendAbierto()) return;
-            $('pendConexion').textContent = 'Conectado a: …' + GOOGLE_SCRIPT_URL.split('/s/')[1]?.slice(-14, -5) + ' · envío por ' + (leer('modo_envio', 'post') === 'get' ? 'GET (respaldo)' : 'POST');
+            $('pendConexion').textContent = 'Conectado a: …' + GOOGLE_SCRIPT_URL.split('/s/')[1]?.slice(-14, -5) + ' · envío por ' + ({ get: 'GET (respaldo)', sincors: 'envío directo + verificación' }[leer('modo_envio', 'post')] || 'POST');
             const c = cola();
             if (!c.length) { $('pendLista').innerHTML = '<p class="text-sm text-green-700 font-semibold">✓ No hay nada pendiente. Todo está en Google Sheets.</p>'; return; }
             const ahora = Date.now();
@@ -1133,13 +1185,22 @@
                         <span class="font-bold tabular-nums shrink-0">${esc(rec)}</span>
                         <span class="flex-1 min-w-0 truncate font-medium">${esc(p.nombre || '')}${p.concepto ? ' · ' + esc(p.concepto) : ''}</span>
                         ${p.valor_neto !== undefined ? `<span class="tabular-nums shrink-0">${pesos(p.valor_neto)}</span>` : ''}
+                        ${it.tipo === 'gasto' ? `<button type="button" data-imprimir="${esc(it.id)}" class="text-xs text-blue-600 hover:underline shrink-0">Imprimir</button>` : ''}
                         <button type="button" data-quitar="${esc(it.id)}" class="text-xs text-red-600 hover:underline shrink-0">Quitar</button>
                     </div>
                     <div class="text-xs mt-1 ${esConfig ? 'text-red-700 font-semibold' : 'text-slate-500'}">${it.intentos ? `Intentos: ${it.intentos} · ` : ''}${esc(espera)}${err ? ' · ' + esc(err) : ''}</div>
                 </div>`;
             }).join('');
         }
-        $('pendLista').addEventListener('click', e => {
+        $('pendLista').addEventListener('click', async e => {
+            const bi = e.target.closest('[data-imprimir]');
+            if (bi) {
+                const reg = todosLosRegistros().find(r => r.idLocal === bi.dataset.imprimir);
+                if (!reg) { toast('No encontré ese registro', 'error'); return; }
+                try { entregarPdf(await Comprobante.individual(reg), `RECIBO_${reg.recibo ?? 'SIN_NUMERO'}.pdf`, 'imprimir'); }
+                catch (err) { toast('No se pudo generar el PDF', 'error'); }
+                return;
+            }
             const b = e.target.closest('[data-quitar]');
             if (!b) return;
             const it = cola().find(i => i.id === b.dataset.quitar);
@@ -1411,7 +1472,7 @@
                 const f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha || '')) ? String(r.fecha).split('-').map(Number) : null;
                 return {
                     fecha: f ? new Date(Date.UTC(f[0], f[1] - 1, f[2])) : null,
-                    numeracion: (r.recibo === null || r.recibo === undefined || r.recibo === '') ? '' : String(r.recibo) + (r.provisional ? ' (PROVISIONAL)' : ''),
+                    numeracion: (r.recibo === null || r.recibo === undefined || r.recibo === '') ? '' : String(r.recibo),
                     pagado: String(r.nombre || '').trim(),
                     documento: String(r.documento || '').trim(),
                     concepto: String(r.concepto || '').trim(),
@@ -1513,6 +1574,8 @@
         }
         document.querySelectorAll('.imp-modo').forEach(b => b.addEventListener('click', () => cambiarModo(b.dataset.modo)));
         ['impDesdeN', 'impHastaN', 'impDesdeF', 'impHastaF', 'impMesSel', 'impProvisionales'].forEach(id => $(id).addEventListener('input', calcularSeleccion));
+        try { if (localStorage.getItem('imp_incluir_pc') === '0') $('impProvisionales').checked = false; } catch (e) {}
+        $('impProvisionales').addEventListener('change', () => { try { localStorage.setItem('imp_incluir_pc', $('impProvisionales').checked ? '1' : '0'); } catch (e) {} });
         ['impDesdeN', 'impHastaN'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ejecutarImpresion('imprimir'); } }));
 
         function calcularSeleccion() {
@@ -1547,7 +1610,8 @@
                   (impSeleccion.length ? `<div class="text-xs text-slate-500 mt-1">Del N.º ${impSeleccion[0].recibo ?? '—'} al N.º ${impSeleccion[impSeleccion.length - 1].recibo ?? '—'}</div>` : '')
                 : 'No hay comprobantes con ese filtro.';
             if (faltan.length) html += `<div class="text-xs text-amber-700 mt-2">No encontrados: ${faltan.length > 25 ? faltan.slice(0, 25).join(', ') + ` y ${faltan.length - 25} más` : faltan.join(', ')}</div>`;
-            if (provisionales && !incluirProv) html += `<div class="text-xs text-slate-500 mt-1">${provisionales} registro(s) con número provisional quedaron fuera.</div>`;
+            if (provisionales && !incluirProv) html += `<div class="text-xs text-slate-500 mt-1">${provisionales} registro(s) de este PC sin subir quedaron fuera.</div>`;
+            if (provisionales && incluirProv) html += `<div class="text-xs text-amber-700 mt-1">Incluye ${provisionales} registro(s) que aún no han subido a Sheets. Si al subir les cambia el número, la página te avisará.</div>`;
             if (listadoSoportado === false) html += `<div class="text-xs text-amber-700 mt-2">Solo se ven los registros hechos desde este dispositivo (falta el código de historial en el Apps Script).</div>`;
             else if (cargandoListado) html += `<div class="text-xs text-blue-600 mt-2">Actualizando desde Sheets...</div>`;
             pintarResumen(html);
