@@ -672,7 +672,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.07-2';
+const APP_VERSION='2026.10.07-3';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -2759,6 +2759,8 @@ function paintCart(){
       if(mm && mm.temporal) setTimeout(()=>{ const h=$('#cnomi'); if(h && document.activeElement!==h) paintCart(); },400); };
   }
   if(document.activeElement!==$('#cnomi')) $('#cnomi').value=c.nombrePedido||(mesa&&mesa.temporal? mesa.nombre:'');
+  cn.style.display= modoNombre()==='oculto'? 'none' : 'flex';
+  $('#cnomi').placeholder= modoNombre()==='obligatorio'? 'Nombre del cliente (obligatorio)' : 'Nombre del cliente (opcional)';
   const viejo=$('#cedav'); if(viejo) viejo.remove();
   if(c.editandoId){
     const av=document.createElement('div');
@@ -2870,7 +2872,10 @@ function marcarEnviado(c){
 /* ============ NOMBRE DEL CLIENTE OBLIGATORIO ============
    Sin nombre no se manda a cocina, no se guarda y no se cobra, sea mesa,
    mostrador o domicilio (en domicilio cuenta el nombre del domicilio). */
-function faltaNombre(c){ c=c||S.cart; return !!(c && !c.editandoId && !String(nombreDePedido(c)||'').trim()); }
+/* Ajustes ▸ Nombre del cliente: 'obligatorio' (por defecto), 'opcional' u 'oculto' */
+function modoNombre(){ const m=S.cfg.nombreCliente; return m==='opcional'||m==='oculto'? m : 'obligatorio'; }
+function faltaNombre(c){ c=c||S.cart; return modoNombre()==='obligatorio' && !!(c && !c.editandoId && !String(nombreDePedido(c)||'').trim()); }
+function nombreAuto(){ const d=new Date(); return 'Pedido '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function pedirNombre(accion,seguir){
   const i=$('#cnomi');
   if(i){ i.focus(); i.style.borderColor='var(--bad)'; i.style.boxShadow='0 0 0 3px var(--bad-soft)';
@@ -2947,6 +2952,7 @@ function guardarPedido(prefijo,desdeCocina){
   if(!c.mesaId){                         // mostrador: se guarda a nombre del cliente
     const crear=n=>{ const ml=nuevoLlevar(n); c.mesaId=ml.id; c.tipo='mostrador'; c.nombrePedido=n; guardarPedido(prefijo,desdeCocina); };
     if(c.nombrePedido) return crear(c.nombrePedido);
+    if(modoNombre()==='oculto') return crear(nombreAuto());
     modal({title:'Guardar pedido de mostrador', size:'slim',
       body:'<div class="f"><label>¿A nombre de quién?</label>'+
         '<input id="gnom" autocomplete="off" placeholder="Ej: Juan" style="font-size:20px;font-weight:700;padding:11px"></div>'+
@@ -2954,7 +2960,9 @@ function guardarPedido(prefijo,desdeCocina){
         'Lo abres desde ahí y lo cobras.</div>',
       footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="gok">💾 Guardar</button>',
       onOpen:m=>{ const i=$('#gnom',m); setTimeout(()=>i.focus(),50);
-        const ok=()=>{ const n=i.value.trim(); if(!n) return toast('Escribe el nombre del cliente','warn'); closeModal(); crear(n); };
+        const ok=()=>{ let n=i.value.trim();
+          if(!n){ if(modoNombre()==='obligatorio') return toast('Escribe el nombre del cliente','warn'); n=nombreAuto(); }
+          closeModal(); crear(n); };
         $('#gok',m).onclick=ok; i.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } }; }});
     return;
   }
@@ -8204,6 +8212,14 @@ function viewAjustes(vw){
           '<label class="row tiny" style="gap:7px"><input type="checkbox" id="g_propinaAuto" '+(c.propinaAuto?'checked':'')+
             '> Sugerir propina automáticamente en cada venta</label>'+
         '</div></div>'+
+        '<div class="card"><div class="hd"><h3>👤 Nombre del cliente</h3></div><div class="bd">'+
+          '<div class="f"><label>¿Pedir el nombre del cliente en cada pedido?</label><select id="g_nomcli">'+
+            [['obligatorio','Obligatorio'],['opcional','Opcional'],['oculto','No se usa']].map(o=>'<option value="'+o[0]+'"'+(modoNombre()===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+
+          '</select></div>'+
+          '<div class="hintx" style="margin-top:6px"><b>Obligatorio:</b> no deja mandar a cocina, guardar ni cobrar sin nombre. '+
+            '<b>Opcional:</b> sale la casilla pero se puede dejar vacía. <b>No se usa:</b> la casilla no aparece. '+
+            'Cuando hay nombre, sale en la comanda y en la factura para llamar al cliente.</div>'+
+        '</div></div>'+
         '<div class="card"><div class="hd"><h3>🔄 Versión del sistema</h3></div><div class="bd">'+
           '<div class="row" style="gap:10px;margin-bottom:8px"><img src="'+APP_ICONO+'" style="width:38px;height:38px;border-radius:10px" alt="">'+
             '<div><b>'+APP_NOMBRE+'</b><div class="tiny muted">software para restaurantes</div></div></div>'+
@@ -8421,6 +8437,7 @@ function viewAjustes(vw){
         c.ticketAncho=leerPapel($('#g_ticketAncho').value);
         c.impIncluido=$('#g_impIncluido').checked; c.propinaAuto=$('#g_propinaAuto').checked;
         c.entregasDom=$('#g_entDom').checked; c.entregasTodos=$('#g_entTodos').checked;
+        if($('#g_nomcli')) c.nombreCliente=$('#g_nomcli').value;
         c.entregaMeta=Math.max(5,toN($('#g_entMeta').value)||40);
         saveCfg(); render(); toast('Configuración guardada','ok');
       };
@@ -9716,7 +9733,35 @@ function vaciarBaseLocal(){
   });
 }
 /* borra los datos de este equipo pero conserva la conexión a la nube */
-function limpiarEquipo(recargar){
+/* Limpiar el equipo obliga a bajar TODO otra vez de la nube (muchas lecturas).
+   Por eso solo se hace con el correo y la clave del superadministrador. */
+function pedirAccesoSuper(motivo,cb){
+  if(esSuper()) return cb();
+  if(!navigator.onLine || !S.cfg.fbApiKey) return toast('Para '+motivo+' se necesita internet y la autorización del superadministrador','warn',6000);
+  modal({title:'🔒 Autorización del superadministrador', size:'slim',
+    body:'<div class="hintx" style="margin-bottom:10px">Para '+esc(motivo)+' se necesita el acceso del superadministrador de '+APP_NOMBRE+
+        '. Esto evita que se borre la información del equipo por error y se gasten muchas lecturas.</div>'+
+      '<div class="f"><label>Correo del superadministrador</label><input id="sa_e" type="email" autocomplete="off"></div>'+
+      '<div class="f" style="margin-top:8px"><label>Clave</label><input id="sa_p" type="password" autocomplete="new-password"></div>',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn danger" id="sa_ok">Autorizar</button>',
+    onOpen:m=>{ setTimeout(()=>$('#sa_e',m).focus(),50);
+      const ok=async()=>{
+        const em=$('#sa_e',m).value.trim().toLowerCase(), pw=$('#sa_p',m).value;
+        if(em!==SUPERADMIN.toLowerCase()) return toast('Ese no es el correo del superadministrador','bad');
+        $('#sa_ok',m).disabled=true;
+        try{
+          /* se valida la clave sin cambiar la sesión de quien está en el equipo */
+          const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+encodeURIComponent(S.cfg.fbApiKey),
+            {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,returnSecureToken:false})});
+          const j=await r.json();
+          if(!r.ok || String(j.email||'').toLowerCase()!==SUPERADMIN.toLowerCase()) throw new Error('clave');
+          closeModal(); cb();
+        }catch(e){ $('#sa_ok',m).disabled=false; toast('Correo o clave incorrectos','bad'); }
+      };
+      $('#sa_ok',m).onclick=ok; $('#sa_p',m).onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } }; }});
+}
+function limpiarEquipo(recargar,autorizado){
+  if(!autorizado && !esSuper()) return pedirAccesoSuper('limpiar este equipo',()=>limpiarEquipo(recargar,true));
   const guardar={};
   ['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho',
    'terminal','estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket',
@@ -10161,8 +10206,8 @@ $('#btnuser').onclick=()=>{
       '<div class="tline"><span>Espacio del navegador</span><span class="v" id="u_esp">…</span></div>'+
       '<div class="card" style="background:var(--panel2);margin-top:12px"><div class="bd">'+
         '<label class="row tiny" style="gap:8px"><input type="checkbox" id="u_lim">'+
-        ' <span><b>Limpiar este equipo al salir</b><br><span class="muted">Vacía lo guardado aquí y al volver '+
-        'a entrar se descarga todo de la nube. Úselo si le sale «cuota excedida» o si va lento.</span></span></label>'+
+        ' <span><b>Limpiar este equipo al salir</b> 🔒<br><span class="muted">Vacía lo guardado aquí y al volver '+
+        'a entrar se descarga todo de la nube. Pide la autorización del superadministrador.</span></span></label>'+
       '</div></div>',
     footer:(esAdminNube()?'<button class="btn" id="u_neg">🏪 '+(puedeCambiarNegocio()?'Cambiar de restaurante':'Mis restaurantes')+'</button>':'')+
       '<button class="btn" data-x>Cerrar</button><button class="btn danger" id="lo">Cerrar sesión</button>',
