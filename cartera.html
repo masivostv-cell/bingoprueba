@@ -2363,10 +2363,13 @@
             const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
             const total = facturasAProcesar.reduce((sum, inv) => sum + inv.saldo, 0);
             
-            const facsTxt = formatearLista(facturasAProcesar.map(f => f.factura));
-            const mesesTxt = formatearLista([...new Set(facturasAProcesar.map(f => getMonthName(f.fecha)))]);
+            const detalleTxt = facturasAProcesar
+                .map(f => `• Factura *${f.factura}* (${formatDate(f.fecha)}): ${formatCurrency(f.saldo)}`)
+                .join('\n');
+            const cantidad = facturasAProcesar.length;
+            const tituloDetalle = cantidad === 1 ? 'Factura pendiente:' : `Facturas pendientes (${cantidad}):`;
             
-            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\nPresentas un saldo pendiente de ${formatCurrency(total)}, correspondiente a las facturas ${facsTxt}.\n\nEste saldo se encuentra distribuido así: ${mesesTxt}.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
+            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n*${tituloDetalle}*\n${detalleTxt}\n\n*TOTAL A PAGAR: ${formatCurrency(total)}*\n\nAgradecemos tu gestión para ponerte al día. Si ya realizaste el pago, por favor envíanos el soporte para actualizar tu estado de cuenta.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
             
             const textArea = document.createElement("textarea");
             textArea.value = msj;
