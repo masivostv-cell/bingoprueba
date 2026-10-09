@@ -2390,10 +2390,13 @@
 
             const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
             const total = facturasAProcesar.reduce((sum, inv) => sum + inv.saldo, 0);
-            const facsTxt = formatearLista(facturasAProcesar.map(f => f.factura));
-            const etiquetaFac = facturasAProcesar.length === 1 ? 'la factura' : 'las facturas';
+            const detalleTxt = facturasAProcesar
+                .map(f => `• Factura *${f.factura}* (${formatDate(f.fecha)}): ${formatCurrency(f.saldo)}`)
+                .join('\n');
+            const cantidad = facturasAProcesar.length;
+            const tituloDetalle = cantidad === 1 ? 'Factura pendiente:' : `Facturas pendientes (${cantidad}):`;
 
-            const msj = `Buen día. Le informamos que actualmente presenta facturas pendientes de pago con nuestra empresa.\n\nCliente: *${currentClient.nombre}*\nSaldo pendiente: *${formatCurrency(total)}*, correspondiente a ${etiquetaFac} ${facsTxt}.\n\nAgradecemos realizar el pago y ponerse al día con su obligación a la mayor brevedad posible. En caso de no recibir el pago o una propuesta de normalización, la cartera será remitida al Área Jurídica para iniciar el proceso de cobro correspondiente.\n\nSi ya realizó el pago, por favor envíenos el soporte para actualizar su estado de cuenta.\n\nGracias por su atención.`;
+            const msj = `Buen día. Le informamos que actualmente presenta facturas pendientes de pago con nuestra empresa.\n\nCliente: *${currentClient.nombre}*\n\n*${tituloDetalle}*\n${detalleTxt}\n\n*TOTAL A PAGAR: ${formatCurrency(total)}*\n\nAgradecemos realizar el pago y ponerse al día con su obligación a la mayor brevedad posible. En caso de no recibir el pago o una propuesta de normalización, la cartera será remitida al Área Jurídica para iniciar el proceso de cobro correspondiente.\n\nSi ya realizó el pago, por favor envíenos el soporte para actualizar su estado de cuenta.\n\nGracias por su atención.`;
 
             const textArea = document.createElement("textarea");
             textArea.value = msj;
