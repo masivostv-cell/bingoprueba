@@ -30,7 +30,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxj1ILx89prxIVR2CbwxjwgBEPTRbvtEOIvJyqnJAO6PyZlNwnJM3Le2fukrj4oaM57/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzV3L4n3vV10cTAM0tgnwru9JLTIx99lQ37YEXzuC3I6K5KyCKBkik--OfXc5iQgwql/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -51,6 +51,7 @@
         <div id="actualizarTodoStatus" class="hidden text-xs text-gray-500 px-2 pb-1"></div>
         <button type="button" onclick="abrirReporte('bancos')" class="w-full text-left px-4 py-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold">🏦 Descargar conciliación bancaria</button>
         <button type="button" onclick="abrirReporte('anticipos')" class="w-full text-left px-4 py-3 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 font-semibold">💰 Descargar anticipos pendientes</button>
+        <button type="button" id="btnCargarCartera" class="w-full text-left px-4 py-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-800 font-semibold">📥 Cargar archivo de cartera</button>
     </div>
     <div class="absolute bottom-0 left-0 right-0 p-4 border-t text-xs text-gray-500 bg-gray-50">
         El menú recuerda si lo dejaste abierto u oculto en este equipo.
@@ -133,6 +134,8 @@
                     </div>
                 </div>
                 
+                <div id="resumenClienteCartera" class="hidden px-5 py-4 border-b bg-white"></div>
+
                 <div class="p-0 overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -336,6 +339,33 @@
 
 
 <!-- Modal para agregar última factura manual -->
+<div id="cargarCarteraModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-y-auto" style="max-height: 92vh;">
+        <div class="p-5 border-b bg-red-50 rounded-t-xl flex justify-between items-start gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-red-900">Cargar archivo de cartera</h3>
+                <p class="text-xs text-red-800 mt-1">Sube el Excel "Resumen de cuentas por cobrar" tal como lo descarga TNS.</p>
+            </div>
+            <button type="button" id="btnCerrarCargarCartera" class="text-gray-500 hover:text-gray-900 text-2xl leading-none">&times;</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <label for="archivoCarteraInput" class="block text-xs font-semibold text-gray-600 mb-1">Archivo de TNS (.xlsx o .xls)</label>
+                <input type="file" id="archivoCarteraInput" accept=".xlsx,.xls" class="w-full border border-gray-300 rounded-md p-2 text-sm">
+            </div>
+            <div id="cargarCarteraEstado" class="hidden text-sm rounded-lg p-3"></div>
+            <div id="cargarCarteraResumen" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-700 space-y-1"></div>
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
+                Al confirmar se <b>borra todo el contenido de la hoja CARTERA</b> y se reemplaza por este archivo, ya acomodado (NIT en la columna A). Antes de borrar, el sistema guarda una copia en la hoja <b>CARTERA RESPALDO</b>.
+            </div>
+            <button type="button" id="btnConfirmarCargarCartera" disabled
+                    class="w-full font-bold py-3 px-4 rounded-lg text-base text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-500">
+                Reemplazar cartera
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="facturaManualModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-y-auto" style="max-height: 92vh;">
         <div class="p-5 border-b bg-yellow-50 rounded-t-xl flex justify-between items-start gap-4">
@@ -1058,6 +1088,178 @@
         if (menuToggle) menuToggle.addEventListener('click', () => setMenuOpen(true));
         if (menuClose) menuClose.addEventListener('click', () => setMenuOpen(false));
         try { if (localStorage.getItem('cartera_menu_abierto') === '1') setMenuOpen(true); } catch(e) {}
+
+        // ----------------------------------------------------
+        // CARGAR ARCHIVO DE CARTERA (TNS → hoja CARTERA)
+        // ----------------------------------------------------
+        function convertirCarteraTNS(XLSX, wb) {
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const filas = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, blankrows: true });
+            const limpiar = v => (v === null || v === undefined) ? '' : (v instanceof Date ? aFecha(v) : typeof v === 'string' ? v.replace(/_x000D_/gi, ' ').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim() : v);
+            const aFecha = v => {
+                if (v instanceof Date && !isNaN(v)) {
+                    const y = v.getFullYear(), m = String(v.getMonth() + 1).padStart(2, '0'), d = String(v.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                }
+                return limpiar(v);
+            };
+            const vacio = v => v === null || v === undefined || String(v).trim() === '';
+            const textoAll = filas.slice(0, 10).map(f => (f || []).join(' ')).join(' ').toUpperCase();
+            const filaEnc = filas.findIndex(f => f && String(f[0] || '').trim().toUpperCase() === 'DOCUMENTO' && String(f[8] || '').trim().toUpperCase() === 'SALDO');
+            if (!textoAll.includes('CUENTAS POR COBRAR') || filaEnc < 0) {
+                throw new Error('El archivo no parece ser el "Resumen de cuentas por cobrar" de TNS (no se encontró el encabezado DOCUMENTO … SALDO).');
+            }
+            const salida = [];
+            let nitActual = '';
+            let clientes = 0, facturas = 0, totalSaldo = 0, anticipos = 0, totalAnticipos = 0;
+            const reCliente = /^(\d[\d.]*(?:\s*-\s*\d+)?)\s+\S/;
+            filas.forEach((f, i) => {
+                f = f || [];
+                const c = Array.from({ length: 9 }, (_, k) => f[k] === undefined ? null : f[k]);
+                let nitCol = '';
+                const a = limpiar(c[0]);
+                const restoVacio = c.slice(1).every(vacio);
+                if (i > filaEnc && typeof a === 'string' && reCliente.test(a) && restoVacio) {
+                    nitActual = a.match(reCliente)[1].replace(/\s+/g, '');
+                    nitCol = nitActual;
+                    clientes++;
+                } else if (i > filaEnc && !vacio(a) && !vacio(c[2])) {
+                    nitCol = nitActual;
+                    facturas++;
+                    totalSaldo += Number(c[8]) || 0;
+                } else if (i > filaEnc && String(c[2] || '').trim().toUpperCase() === 'ANTICIPOS') {
+                    nitCol = nitActual;
+                    anticipos++;
+                    totalAnticipos += Math.abs(Number(c[5]) || 0);
+                }
+                // Columnas CARTERA: A NIT | B DOCUMENTO | C,D vacías | E DETALLE | F EMISION | G RADICA | H VCTO | I DIAS TRANS | J DIAS VEN | K VALOR | L SALDO
+                salida.push([
+                    nitCol, a, '', '', limpiar(c[1]),
+                    aFecha(c[2]), aFecha(c[3]), aFecha(c[4]),
+                    limpiar(c[5]), limpiar(c[6]), limpiar(c[7]), limpiar(c[8])
+                ]);
+            });
+            while (salida.length && salida[salida.length - 1].every(v => v === '' || v === null)) salida.pop();
+            return { filas: salida, clientes, facturas, totalSaldo, anticipos, totalAnticipos };
+        }
+
+        let sheetJsPromesa = null;
+        function cargarSheetJS() {
+            if (window.XLSX) return Promise.resolve(window.XLSX);
+            if (!sheetJsPromesa) {
+                sheetJsPromesa = new Promise((resolve, reject) => {
+                    const sc = document.createElement('script');
+                    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                    sc.onload = () => resolve(window.XLSX);
+                    sc.onerror = () => { sheetJsPromesa = null; reject(new Error('No se pudo cargar el lector de Excel. Revisa la conexión a Internet.')); };
+                    document.head.appendChild(sc);
+                });
+            }
+            return sheetJsPromesa;
+        }
+
+        const cargarCarteraModal = document.getElementById('cargarCarteraModal');
+        const archivoCarteraInput = document.getElementById('archivoCarteraInput');
+        const cargarCarteraEstado = document.getElementById('cargarCarteraEstado');
+        const cargarCarteraResumen = document.getElementById('cargarCarteraResumen');
+        const btnConfirmarCargarCartera = document.getElementById('btnConfirmarCargarCartera');
+        let carteraPreparada = null;
+        let subiendoCartera = false;
+
+        function estadoCargaCartera(texto, tipo) {
+            const clases = {
+                info: 'bg-blue-50 text-blue-800 border border-blue-200',
+                ok: 'bg-green-50 text-green-800 border border-green-200',
+                error: 'bg-red-50 text-red-800 border border-red-200'
+            };
+            cargarCarteraEstado.className = 'text-sm rounded-lg p-3 ' + (clases[tipo] || clases.info);
+            cargarCarteraEstado.textContent = texto;
+            cargarCarteraEstado.classList.toggle('hidden', !texto);
+        }
+
+        function abrirCargarCartera() {
+            if (subiendoCartera) { cargarCarteraModal.classList.remove('hidden'); cargarCarteraModal.classList.add('flex'); return; }
+            carteraPreparada = null;
+            archivoCarteraInput.value = '';
+            cargarCarteraResumen.classList.add('hidden');
+            btnConfirmarCargarCartera.disabled = true;
+            btnConfirmarCargarCartera.textContent = 'Reemplazar cartera';
+            estadoCargaCartera('', 'info');
+            cargarCarteraModal.classList.remove('hidden');
+            cargarCarteraModal.classList.add('flex');
+            cargarSheetJS().catch(() => {});
+        }
+        function cerrarCargarCartera() {
+            if (subiendoCartera) { showToast('Espera a que termine la carga de la cartera.'); return; }
+            cargarCarteraModal.classList.add('hidden');
+            cargarCarteraModal.classList.remove('flex');
+        }
+        document.getElementById('btnCargarCartera').addEventListener('click', () => { setMenuOpen(false); abrirCargarCartera(); });
+        document.getElementById('btnCerrarCargarCartera').addEventListener('click', cerrarCargarCartera);
+        cargarCarteraModal.addEventListener('click', e => { if (e.target === cargarCarteraModal) cerrarCargarCartera(); });
+
+        archivoCarteraInput.addEventListener('change', async function() {
+            carteraPreparada = null;
+            btnConfirmarCargarCartera.disabled = true;
+            cargarCarteraResumen.classList.add('hidden');
+            const archivo = this.files && this.files[0];
+            if (!archivo) { estadoCargaCartera('', 'info'); return; }
+            estadoCargaCartera('Leyendo el archivo...', 'info');
+            try {
+                const XLSX = await cargarSheetJS();
+                const buffer = await archivo.arrayBuffer();
+                const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+                const r = convertirCarteraTNS(XLSX, wb);
+                if (r.facturas === 0) throw new Error('No se encontraron facturas en el archivo.');
+                carteraPreparada = r;
+                cargarCarteraResumen.innerHTML = `
+                    <div><b>Archivo:</b> ${escHtml(archivo.name)}</div>
+                    <div><b>Clientes:</b> ${r.clientes.toLocaleString('es-CO')}</div>
+                    <div><b>Facturas:</b> ${r.facturas.toLocaleString('es-CO')}</div>
+                    <div><b>Saldo total de facturas:</b> ${formatCurrency(r.totalSaldo)}</div>
+                    ${r.anticipos > 0 ? `<div><b>Clientes con anticipo:</b> ${r.anticipos.toLocaleString('es-CO')} (total ${formatCurrency(r.totalAnticipos)})</div>` : ''}
+                    <div><b>Filas que se escribirán en CARTERA:</b> ${r.filas.length.toLocaleString('es-CO')}</div>`;
+                cargarCarteraResumen.classList.remove('hidden');
+                estadoCargaCartera('Archivo listo. Revisa el resumen y confirma para reemplazar la hoja CARTERA.', 'ok');
+                btnConfirmarCargarCartera.disabled = false;
+            } catch (err) {
+                console.error(err);
+                estadoCargaCartera(err.message || 'No se pudo leer el archivo.', 'error');
+            }
+        });
+
+        btnConfirmarCargarCartera.addEventListener('click', async function() {
+            if (!carteraPreparada || subiendoCartera) return;
+            if (!confirm(`Se borrará la hoja CARTERA actual y se reemplazará con ${carteraPreparada.facturas} facturas de ${carteraPreparada.clientes} clientes. ¿Continuar?`)) return;
+            subiendoCartera = true;
+            btnConfirmarCargarCartera.disabled = true;
+            btnConfirmarCargarCartera.textContent = 'Subiendo cartera...';
+            archivoCarteraInput.disabled = true;
+            estadoCargaCartera('Guardando copia de respaldo y reemplazando la hoja CARTERA. Esto puede tardar hasta un minuto, no cierres la página.', 'info');
+            try {
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'cargarCarteraTNS', filas: carteraPreparada.filas })
+                });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') throw new Error(data.message || 'El servidor no confirmó la carga.');
+                estadoCargaCartera(`Cartera reemplazada: ${data.filas || carteraPreparada.filas.length} filas escritas. Actualizando datos del sistema...`, 'ok');
+                showToast('¡Cartera cargada correctamente!', 'success');
+                carteraPreparada = null;
+                subiendoCartera = false;
+                cerrarCargarCartera();
+                if (typeof actualizarTodoManual === 'function') actualizarTodoManual();
+            } catch (err) {
+                console.error(err);
+                estadoCargaCartera('No se pudo cargar la cartera: ' + (err.message || err) + '. La hoja CARTERA no se modificó o quedó respaldada en CARTERA RESPALDO.', 'error');
+                btnConfirmarCargarCartera.disabled = false;
+                btnConfirmarCargarCartera.textContent = 'Reintentar';
+            } finally {
+                subiendoCartera = false;
+                archivoCarteraInput.disabled = false;
+            }
+        });
 
         function hoyIsoLocal() {
             const d = new Date();
@@ -2229,7 +2431,68 @@
             }
         });
 
+        // ----------------------------------------------------
+        // ANTICIPOS DEL CLIENTE + RESUMEN DE FACTURAS PENDIENTES
+        // ----------------------------------------------------
+        function anticiposDeCliente(nit) {
+            const clave = String(nit || '').trim();
+            const tnsFila = (allData.anticiposCartera || []).find(a => String(a.nit || '').trim() === clave);
+            const sistema = (allData.anticiposSistema || []).filter(a => String(a.nit || '').trim() === clave);
+            return {
+                tns: tnsFila ? (Number(tnsFila.valor) || 0) : 0,
+                sistema: sistema,
+                totalSistema: sistema.reduce((s, a) => s + (Number(a.saldo) || 0), 0)
+            };
+        }
+
+        function renderResumenCliente() {
+            const box = document.getElementById('resumenClienteCartera');
+            if (!box) return;
+            if (!currentClient) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+
+            const totalFacturas = currentInvoices.reduce((s, f) => s + (Number(f.saldo) || 0), 0);
+            const ant = anticiposDeCliente(currentClient.nit);
+            const neto = Math.max(0, totalFacturas - ant.tns);
+            const listaFacturas = currentInvoices.length
+                ? currentInvoices.map(f => `<li class="flex justify-between gap-3"><span><b>${escHtml(f.factura)}</b> <span class="text-gray-500">${escHtml(formatDate(f.fecha))}${f.detalle && f.detalle !== '-' ? ' · ' + escHtml(f.detalle) : ''}</span></span><span class="font-semibold whitespace-nowrap">${formatCurrency(f.saldo)}</span></li>`).join('')
+                : '<li class="text-gray-500">Sin facturas pendientes.</li>';
+            const listaSistema = ant.sistema.length
+                ? `<div class="mt-3 text-xs text-purple-900 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                        <b>Anticipos registrados desde este sistema pendientes de cruzar:</b> ${formatCurrency(ant.totalSistema)}
+                        <ul class="mt-1 space-y-0.5">${ant.sistema.map(a => `<li>Recibo ${escHtml(a.recibo)} · ${escHtml(formatDate(a.fecha))}: ${formatCurrency(a.saldo)}</li>`).join('')}</ul>
+                        <div class="mt-1 text-purple-700">Si ya se registraron en TNS, ya están incluidos en el anticipo de la cartera.</div>
+                   </div>`
+                : '';
+
+            box.innerHTML = `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div class="rounded-lg border border-gray-200 p-3"><div class="text-xs text-gray-500">Facturas pendientes</div><div class="text-lg font-bold text-gray-900">${currentInvoices.length}</div></div>
+                    <div class="rounded-lg border border-gray-200 p-3"><div class="text-xs text-gray-500">Total facturas</div><div class="text-lg font-bold text-red-600">${formatCurrency(totalFacturas)}</div></div>
+                    <div class="rounded-lg border ${ant.tns > 0 ? 'border-green-300 bg-green-50' : 'border-gray-200'} p-3"><div class="text-xs text-gray-500">Anticipo a favor (TNS)</div><div class="text-lg font-bold ${ant.tns > 0 ? 'text-green-700' : 'text-gray-400'}">${formatCurrency(ant.tns)}</div></div>
+                    <div class="rounded-lg border border-gray-200 p-3"><div class="text-xs text-gray-500">Debe realmente</div><div class="text-lg font-bold text-gray-900">${formatCurrency(neto)}</div></div>
+                </div>
+                <details class="mt-3 text-sm">
+                    <summary class="cursor-pointer text-blue-700 font-medium">Ver relación de facturas pendientes</summary>
+                    <ul class="mt-2 space-y-1">${listaFacturas}</ul>
+                </details>
+                ${listaSistema}`;
+            box.classList.remove('hidden');
+        }
+
+        function lineasAnticipoMensaje(total, tratoUsted) {
+            const ant = currentClient ? anticiposDeCliente(currentClient.nit).tns : 0;
+            if (ant <= 0.5) return `*TOTAL A PAGAR: ${formatCurrency(total)}*`;
+            const neto = Math.max(0, total - ant);
+            let t = `Total facturas: ${formatCurrency(total)}\n`;
+            t += `Anticipo a ${tratoUsted ? 'su' : 'tu'} favor: -${formatCurrency(ant)}\n`;
+            t += neto > 0
+                ? `*TOTAL A PAGAR: ${formatCurrency(neto)}*`
+                : `*TOTAL A PAGAR: $ 0* (el anticipo cubre estas facturas${ant - total > 0.5 ? ` y queda saldo a favor de ${formatCurrency(ant - total)}` : ''})`;
+            return t;
+        }
+
         function renderTable() {
+            renderResumenCliente();
             const tbody = document.getElementById('facturasTableBody');
             const selectAllCheckbox = document.getElementById('selectAllInvoices');
             
@@ -2369,7 +2632,7 @@
             const cantidad = facturasAProcesar.length;
             const tituloDetalle = cantidad === 1 ? 'Factura pendiente:' : `Facturas pendientes (${cantidad}):`;
             
-            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n*${tituloDetalle}*\n${detalleTxt}\n\n*TOTAL A PAGAR: ${formatCurrency(total)}*\n\nAgradecemos tu gestión para ponerte al día. Si ya realizaste el pago, por favor envíanos el soporte para actualizar tu estado de cuenta.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
+            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n*${tituloDetalle}*\n${detalleTxt}\n\n${lineasAnticipoMensaje(total, false)}\n\nAgradecemos tu gestión para ponerte al día. Si ya realizaste el pago, por favor envíanos el soporte para actualizar tu estado de cuenta.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
             
             const textArea = document.createElement("textarea");
             textArea.value = msj;
@@ -2396,7 +2659,7 @@
             const cantidad = facturasAProcesar.length;
             const tituloDetalle = cantidad === 1 ? 'Factura pendiente:' : `Facturas pendientes (${cantidad}):`;
 
-            const msj = `Buen día. Le informamos que actualmente presenta facturas pendientes de pago con nuestra empresa.\n\nCliente: *${currentClient.nombre}*\n\n*${tituloDetalle}*\n${detalleTxt}\n\n*TOTAL A PAGAR: ${formatCurrency(total)}*\n\nAgradecemos realizar el pago y ponerse al día con su obligación a la mayor brevedad posible. En caso de no recibir el pago o una propuesta de normalización, la cartera será remitida al Área Jurídica para iniciar el proceso de cobro correspondiente.\n\nSi ya realizó el pago, por favor envíenos el soporte para actualizar su estado de cuenta.\n\nGracias por su atención.`;
+            const msj = `Buen día. Le informamos que actualmente presenta facturas pendientes de pago con nuestra empresa.\n\nCliente: *${currentClient.nombre}*\n\n*${tituloDetalle}*\n${detalleTxt}\n\n${lineasAnticipoMensaje(total, true)}\n\nAgradecemos realizar el pago y ponerse al día con su obligación a la mayor brevedad posible. En caso de no recibir el pago o una propuesta de normalización, la cartera será remitida al Área Jurídica para iniciar el proceso de cobro correspondiente.\n\nSi ya realizó el pago, por favor envíenos el soporte para actualizar su estado de cuenta.\n\nGracias por su atención.`;
 
             const textArea = document.createElement("textarea");
             textArea.value = msj;
