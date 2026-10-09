@@ -3135,37 +3135,53 @@
             const totalPendienteWhatsApp = pendientesDespuesPago
                 .reduce((suma, f) => suma + (Number(f.saldo) || 0), 0);
 
-            let lineasPagos = [];
-            if (abonosRealizados.length > 0) {
-                lineasPagos = abonosRealizados.map(a => {
-                    const mes = String(a.mes || '').toUpperCase();
-                    const detalleFactura = String(a.detalle || '').trim();
-                    let linea = `* ${formatCurrency(a.abonado)} MES DE ${mes} / Factura ${a.factura}`;
-                    if (detalleFactura && detalleFactura !== '-') {
-                        linea += ` (${detalleFactura})`;
-                    }
-                    return linea;
-                });
-            } else {
-                lineasPagos = [`* ${formatCurrency(anticipo || abonoBruto)} ANTICIPO`];
-            }
+            const rfValor = Number(retData.rfValue) || 0;
+            const icaValor = Number(retData.icaValue) || 0;
+            const rfPorc = parseFloat(reteFuentePercInput.value) || 0;
+            const icaPorc = parseFloat(reteIcaPercInput.value) || 0;
+            const fmtPorc = n => String(n).replace('.', ',');
+
+            const lineasAbonos = abonosRealizados.map(a => {
+                const mes = String(a.mes || '').toUpperCase();
+                const detalleFactura = String(a.detalle || '').trim();
+                const facRest = carteraRestante.find(f => f.factura === a.factura);
+                const quedaFactura = facRest ? Math.max(0, Number(facRest.saldo) || 0) : 0;
+                let linea = `• Factura *${a.factura}* (${mes}`;
+                if (detalleFactura && detalleFactura !== '-') linea += ` - ${detalleFactura}`;
+                linea += `): ${formatCurrency(a.abonado)}`;
+                linea += quedaFactura > 0.5
+                    ? ` → abono parcial, queda debiendo ${formatCurrency(quedaFactura)}`
+                    : ` → PAGADA ✅`;
+                return linea;
+            });
 
             const lineasPendientes = pendientesDespuesPago.map(f => {
-                const mes = getMonthName(f.fecha);
-                return `Factura ${f.factura} mes ${mes} valor ${formatCurrency(f.saldo)}`;
+                const mes = String(getMonthName(f.fecha) || '').toUpperCase();
+                return `• Factura *${f.factura}* (${mes}): ${formatCurrency(f.saldo)}`;
             });
 
             let msj = `Hola, Buen día! ${nombreWhatsApp}\n\n`;
-            msj += `Pagos recibidos:\n${lineasPagos.join('\n')}\n\n`;
-            msj += `Saldo pendiente:\n`;
-            msj += lineasPendientes.length > 0
-                ? lineasPendientes.join('\n')
-                : 'Sin saldo pendiente.';
-            msj += `\n\nTotal pendiente: ${formatCurrency(totalPendienteWhatsApp)}`;
-            if (anticipo > 0) {
-                msj += `\nSaldo a favor: ${formatCurrency(anticipo)}`;
+            msj += `Confirmamos el pago recibido el *${fechaParaTexto}*.\n\n`;
+
+            msj += `*💵 Detalle del pago*\n`;
+            msj += `Valor recibido: *${formatCurrency(retData.netoBanco)}*\n`;
+            if (rfValor > 0) msj += `Retención en la fuente (${fmtPorc(rfPorc)}%): ${formatCurrency(rfValor)}\n`;
+            if (icaValor > 0) msj += `ReteICA (${fmtPorc(icaPorc)} x mil): ${formatCurrency(icaValor)}\n`;
+            if (rfValor > 0 || icaValor > 0) {
+                msj += `Total aplicado a su cuenta: *${formatCurrency(abonoBruto)}*\n`;
             }
-            msj += `\nAtt: Cartera`;
+
+            msj += `\n*🧾 Facturas abonadas*\n`;
+            msj += lineasAbonos.length > 0 ? lineasAbonos.join('\n') : 'Ninguna (todo el valor quedó como anticipo).';
+
+            if (anticipo > 0.5) {
+                msj += `\n\n*💰 Anticipo / saldo a favor:* ${formatCurrency(anticipo)}`;
+            }
+
+            msj += `\n\n*📌 Saldo pendiente*\n`;
+            msj += lineasPendientes.length > 0 ? lineasPendientes.join('\n') : 'Sin saldo pendiente. ¡Está al día! 🙌';
+            msj += `\n\n*TOTAL PENDIENTE: ${formatCurrency(totalPendienteWhatsApp)}*`;
+            msj += `\n\nAtt: Cartera`;
 
             document.getElementById('textoMensaje').value = msj;
             document.getElementById('facturasPanel').classList.add('hidden');
@@ -3193,6 +3209,15 @@
             } else {
                 detalleSheet = `anticipo ${fechaParaTexto} ${medioDetalle} JP`;
             }
+            const partesRet = [];
+            if (rfValor > 0) partesRet.push(`retención ${fmtPorc(rfPorc)}% ${formatCurrency(rfValor)}`);
+            if (icaValor > 0) partesRet.push(`ICA ${fmtPorc(icaPorc)}x mil ${formatCurrency(icaValor)}`);
+            if (partesRet.length > 0) {
+                detalleSheet += ` | ${partesRet.join(' + ')} (abono bruto ${formatCurrency(abonoBruto)}, recibido ${formatCurrency(retData.netoBanco)})`;
+            }
+            if (abonosRealizados.length > 0 && anticipo > 0.5) {
+                detalleSheet += ` | anticipo ${formatCurrency(anticipo)}`;
+            }
             if (obs) detalleSheet += ` (obs. ${obs})`;
 
             // Primero se guarda el pago NORMAL. Solo si fue exitoso se guarda
@@ -3204,6 +3229,9 @@
                 telefono: clientePago.telefono || '',
                 detalle: detalleSheet,
                 valor: retData.netoBanco,
+                reteFuente: rfValor,
+                reteIca: icaValor,
+                valorAbonoBruto: abonoBruto,
                 formaPago: formaPago,
                 recibo: reciboId,
                 comprobanteBase64: comprobanteDataUrl || '',
