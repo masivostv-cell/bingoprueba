@@ -112,6 +112,10 @@
                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                                 Copiar Deuda
                             </button>
+                            <button type="button" onclick="copiarCobroJuridico()" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l9-3 9 3M5 6v2m14-2v2M3 21h18M6 10v8m4-8v8m4-8v8m4-8v8"></path></svg>
+                                Cobro Jurídico
+                            </button>
                         </div>
                     </div>
 
@@ -2373,6 +2377,29 @@
             textArea.remove();
         }
 
+
+        // ----------------------------------------------------
+        // BOTÓN COBRO JURÍDICO
+        // ----------------------------------------------------
+        window.copiarCobroJuridico = function() {
+            if(!currentClient) { showToast("Selecciona un cliente primero."); return; }
+            if(selectedInvoices.length === 0) { showToast("Selecciona al menos una factura en la tabla."); return; }
+
+            const facturasAProcesar = currentInvoices.filter(inv => selectedInvoices.includes(inv.factura));
+            const total = facturasAProcesar.reduce((sum, inv) => sum + inv.saldo, 0);
+            const facsTxt = formatearLista(facturasAProcesar.map(f => f.factura));
+            const etiquetaFac = facturasAProcesar.length === 1 ? 'la factura' : 'las facturas';
+
+            const msj = `Buen día. Le informamos que actualmente presenta facturas pendientes de pago con nuestra empresa.\n\nCliente: *${currentClient.nombre}*\nSaldo pendiente: *${formatCurrency(total)}*, correspondiente a ${etiquetaFac} ${facsTxt}.\n\nAgradecemos realizar el pago y ponerse al día con su obligación a la mayor brevedad posible. En caso de no recibir el pago o una propuesta de normalización, la cartera será remitida al Área Jurídica para iniciar el proceso de cobro correspondiente.\n\nSi ya realizó el pago, por favor envíenos el soporte para actualizar su estado de cuenta.\n\nGracias por su atención.`;
+
+            const textArea = document.createElement("textarea");
+            textArea.value = msj;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try { document.execCommand('copy'); showToast("¡Mensaje de cobro jurídico copiado!", "success"); }
+            catch (err) { showToast("Error al copiar."); }
+            textArea.remove();
+        }
 
         // ----------------------------------------------------
         // PREVENCIÓN DE RECIBOS DUPLICADOS
