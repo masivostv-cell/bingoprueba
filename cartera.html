@@ -3128,7 +3128,11 @@
             ];
             const nombreWhatsApp = limpiarNombreParaWhatsApp(clientePago.nombre, detallesParaNombre);
 
+            // Solo se tienen en cuenta las facturas seleccionadas (las deseleccionadas
+            // pueden ser de otra sede y no deben aparecer en el mensaje).
+            const facturasSeleccionadasMsj = new Set(selectedInvoices);
             const pendientesDespuesPago = carteraRestante
+                .filter(f => facturasSeleccionadasMsj.has(f.factura))
                 .filter(f => (Number(f.saldo) || 0) > 0.5)
                 .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
