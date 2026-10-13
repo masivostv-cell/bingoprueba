@@ -2634,7 +2634,7 @@
             const cantidad = facturasAProcesar.length;
             const tituloDetalle = cantidad === 1 ? 'Factura pendiente:' : `Facturas pendientes (${cantidad}):`;
             
-            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n*${tituloDetalle}*\n${detalleTxt}\n\n${lineasAnticipoMensaje(total, false)}\n\nAgradecemos tu gestión para ponerte al día. Si ya realizaste el pago, por favor envíanos el soporte para actualizar tu estado de cuenta.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
+            const msj = `Hola, Buen dia.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n*${tituloDetalle}*\n${detalleTxt}\n\n${lineasAnticipoMensaje(total, false)}\n\nAgradecemos tu gestión para ponerte al día. Si ya realizaste el pago, por favor envíanos el soporte para actualizar tu estado de cuenta.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
             
             const textArea = document.createElement("textarea");
             textArea.value = msj;
