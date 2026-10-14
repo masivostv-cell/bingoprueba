@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Donatón | Banco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fondo:#F1F2F8; --superficie:#FFFFFF; --tinta:#1B1F3B; --suave:#5C6290;
+    --linea:#DCDEEB; --ladrillo:#B4502E; --ladrillo-txt:#FFFFFF; --oro:#9A6B00; --error:#B3261E;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --fondo:#1B1F3B; --superficie:#262B52; --tinta:#EADFC8; --suave:#A3A9D1;
+      --linea:#3A4074; --ladrillo:#C25E37; --oro:#F3C454; --error:#FF9C8A;
+    }
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--fondo);color:var(--tinta);font-family:"Alegreya Sans","Trebuchet MS",sans-serif;font-size:17px;line-height:1.4}
+  .app{max-width:540px;margin:0 auto;padding:20px 16px 120px;display:flex;flex-direction:column;gap:16px}
+  h1{font-family:"Alegreya",Georgia,serif;font-weight:800;font-size:1.9rem;line-height:1.1}
+  h2{font-size:1.15rem;font-weight:700}
+  .panel{background:var(--superficie);border:1px solid var(--linea);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
+  label{font-weight:700;font-size:.95rem}
+  small{font-weight:400;color:var(--suave)}
+  input{
+    width:100%;font:inherit;color:var(--tinta);background:var(--fondo);
+    border:1.5px solid var(--linea);border-radius:10px;padding:12px 14px;
+  }
+  input:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--oro);outline-offset:2px}
+  button{font:inherit;font-weight:700;border-radius:10px;padding:12px 16px;cursor:pointer;border:1.5px solid var(--linea);background:var(--superficie);color:var(--tinta)}
+  button:disabled{opacity:.6;cursor:wait}
+  .prim{background:var(--ladrillo);border-color:var(--ladrillo);color:var(--ladrillo-txt);font-size:1.1rem;padding:15px}
+  .barra{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .barra p{color:var(--suave);font-size:.9rem}
+
+  .resumen{padding:4px 2px}
+  .resumen .etq{color:var(--suave)}
+  .total{font-weight:800;font-size:2.4rem;line-height:1.1;color:var(--oro);font-variant-numeric:tabular-nums}
+
+  .monto-wrap{display:flex;align-items:center;gap:6px;border:1.5px solid var(--linea);border-radius:10px;background:var(--fondo);padding:0 14px}
+  .monto-wrap:focus-within{outline:3px solid var(--oro);outline-offset:2px}
+  .monto-wrap span{font-size:1.8rem;font-weight:800;color:var(--suave)}
+  .monto-wrap input{border:none;background:transparent;font-size:2rem;font-weight:800;padding:10px 0;font-variant-numeric:tabular-nums}
+  .monto-wrap input:focus-visible{outline:none}
+  .rapidos{display:flex;flex-wrap:wrap;gap:8px}
+  .rapidos button{padding:8px 12px;font-size:.95rem}
+
+  #lista{list-style:none;padding:0;display:flex;flex-direction:column}
+  #lista li{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--linea)}
+  #lista li:first-child{border-top:none}
+  #lista .hora{color:var(--suave);font-size:.85rem;font-variant-numeric:tabular-nums}
+  #lista .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #lista .val{font-weight:700;font-variant-numeric:tabular-nums}
+  #lista button{padding:6px 10px;font-size:.85rem;color:var(--error)}
+  #lista .vacio{display:block;color:var(--suave);font-style:italic}
+
+  summary{font-weight:700;cursor:pointer}
+  details[open] summary{margin-bottom:6px}
+  .error{color:var(--error);font-size:.95rem}
+
+  .toast{
+    position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    width:min(500px,calc(100% - 32px));
+    background:var(--tinta);color:var(--fondo);border-radius:12px;padding:12px 14px;
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.25);
+  }
+  .toast button{background:transparent;color:inherit;border-color:currentColor;padding:6px 12px}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<main class="app">
+
+  <section id="login" class="panel" hidden>
+    <h1>Banco de la Donatón</h1>
+    <p>Entra con el correo y la contraseña de la cuenta creada en Firebase para registrar las ofrendas.</p>
+    <form id="f-login" class="panel" style="padding:0;border:none">
+      <label for="correo">Correo</label>
+      <input id="correo" type="email" autocomplete="username" required>
+      <label for="clave">Contraseña</label>
+      <input id="clave" type="password" autocomplete="current-password" required>
+      <button class="prim" type="submit" id="entrar">Entrar</button>
+      <p id="login-error" class="error" hidden></p>
+    </form>
+  </section>
+
+  <section id="caja" hidden style="display:flex;flex-direction:column;gap:16px">
+    <header class="barra">
+      <div><h1>Banco</h1><p id="usuario"></p></div>
+      <button id="salir" type="button">Salir</button>
+    </header>
+
+    <div class="resumen">
+      <p class="etq">Recaudado</p>
+      <p id="total" class="total">$ 0</p>
+      <p id="avance" class="etq"></p>
+    </div>
+
+    <form id="f-don" class="panel" autocomplete="off">
+      <label for="monto">Monto confirmado en la cuenta</label>
+      <div class="monto-wrap"><span>$</span><input id="monto" inputmode="numeric" placeholder="0"></div>
+      <div class="rapidos" aria-label="Sumar al monto">
+        <button type="button" data-suma="5000">+5.000</button>
+        <button type="button" data-suma="10000">+10.000</button>
+        <button type="button" data-suma="20000">+20.000</button>
+        <button type="button" data-suma="50000">+50.000</button>
+        <button type="button" data-suma="100000">+100.000</button>
+        <button type="button" id="limpiar">Borrar</button>
+      </div>
+      <label for="nombre">Nombre del donante <small>(opcional, sale en pantalla)</small></label>
+      <input id="nombre" maxlength="40" placeholder="Anónimo">
+      <button id="registrar" type="submit" class="prim">Registrar donación</button>
+    </form>
+
+    <section class="panel">
+      <h2>Donaciones registradas</h2>
+      <ul id="lista"><li class="vacio">Todavía no hay donaciones registradas.</li></ul>
+    </section>
+
+    <details class="panel">
+      <summary>Ajustes del evento</summary>
+      <form id="f-ajustes" style="display:flex;flex-direction:column;gap:10px">
+        <label for="titulo-in">Título en pantalla</label>
+        <input id="titulo-in" maxlength="40" placeholder="Donatón">
+        <label for="meta-in">Meta a recaudar</label>
+        <input id="meta-in" inputmode="numeric" placeholder="50.000.000">
+        <button type="submit">Guardar ajustes</button>
+      </form>
+    </details>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden role="status"><span id="toast-txt"></span><button id="deshacer" type="button" hidden>Deshacer</button></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDy9nmz3x8h20vSX5OMVEDAV1B5JCg73Hg",
+  authDomain: "donaton-701fc.firebaseapp.com",
+  projectId: "donaton-701fc",
+  storageBucket: "donaton-701fc.firebasestorage.app",
+  messagingSenderId: "445516813987",
+  appId: "1:445516813987:web:fbbd11132a9a726b031116"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = s => document.querySelector(s);
+const formato = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+const cop = n => formato.format(Math.round(n));
+const num = s => Number(String(s).replace(/\D/g, "")) || 0;
+const miles = n => n ? n.toLocaleString("es-CO") : "";
+
+let total = 0, meta = 50000000, ultimo = null, unsubs = [];
+
+/* ---------- Avisos ---------- */
+let tToast;
+function toast(txt, conDeshacer = false) {
+  $("#toast-txt").textContent = txt;
+  $("#deshacer").hidden = !conDeshacer;
+  $("#toast").hidden = false;
+  clearTimeout(tToast);
+  tToast = setTimeout(() => { $("#toast").hidden = true; }, conDeshacer ? 8000 : 4000);
+}
+
+/* ---------- Sesión ---------- */
+onAuthStateChanged(auth, u => {
+  $("#login").hidden = !!u;
+  $("#caja").hidden = !u;
+  if (u) { $("#usuario").textContent = u.email; escuchar(); }
+  else { unsubs.forEach(f => f()); unsubs = []; }
+});
+
+$("#f-login").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = $("#entrar");
+  btn.disabled = true; btn.textContent = "Entrando…"; $("#login-error").hidden = true;
+  try {
+    await signInWithEmailAndPassword(auth, $("#correo").value.trim(), $("#clave").value);
+  } catch (err) {
+    const msg = ["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found"].includes(err.code)
+      ? "Correo o contraseña incorrectos." : "No se pudo entrar: " + err.message;
+    $("#login-error").textContent = msg; $("#login-error").hidden = false;
+  } finally { btn.disabled = false; btn.textContent = "Entrar"; }
+});
+$("#salir").addEventListener("click", () => signOut(auth));
+
+/* ---------- Datos en vivo ---------- */
+function escuchar() {
+  unsubs.forEach(f => f()); unsubs = [];
+  unsubs.push(onSnapshot(query(collection(db, "donaciones"), orderBy("fecha", "desc")), s => {
+    const docs = s.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) }));
+    total = docs.reduce((t, d) => t + (Number(d.monto) || 0), 0);
+    resumen(); lista(docs);
+  }, err => toast("No se pudieron leer las donaciones: " + err.message)));
+
+  unsubs.push(onSnapshot(doc(db, "config", "evento"), s => {
+    const d = s.data() || {};
+    meta = Number(d.meta) > 0 ? Number(d.meta) : 50000000;
+    if (document.activeElement !== $("#meta-in")) $("#meta-in").value = miles(meta);
+    if (document.activeElement !== $("#titulo-in")) $("#titulo-in").value = d.titulo || "";
+    resumen();
+  }, err => toast("No se pudo leer la configuración: " + err.message)));
+}
+
+function resumen() {
+  $("#total").textContent = cop(total);
+  const pct = meta > 0 ? Math.floor(total / meta * 100) : 0;
+  $("#avance").textContent = `de ${cop(meta)} (${pct}% de la meta)`;
+}
+
+function lista(docs) {
+  const ul = $("#lista");
+  ul.replaceChildren();
+  if (!docs.length) {
+    const li = document.createElement("li"); li.className = "vacio";
+    li.textContent = "Todavía no hay donaciones registradas."; ul.append(li); return;
+  }
+  for (const d of docs) {
+    const li = document.createElement("li");
+    const fecha = d.fecha?.toDate?.();
+    const hora = document.createElement("span"); hora.className = "hora";
+    hora.textContent = fecha ? fecha.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }) : "";
+    const nom = document.createElement("span"); nom.className = "nom"; nom.textContent = (d.nombre || "").trim() || "Anónimo";
+    const val = document.createElement("span"); val.className = "val"; val.textContent = cop(Number(d.monto) || 0);
+    const del = document.createElement("button"); del.type = "button"; del.textContent = "Eliminar";
+    del.addEventListener("click", async () => {
+      if (!confirm(`¿Eliminar la donación de ${nom.textContent} por ${val.textContent}? Se restará del total en pantalla.`)) return;
+      try { await deleteDoc(doc(db, "donaciones", d.id)); toast("Donación eliminada"); }
+      catch (err) { toast("No se pudo eliminar: " + err.message); }
+    });
+    li.append(hora, nom, val, del);
+    ul.append(li);
+  }
+}
+
+/* ---------- Registrar ---------- */
+const montoIn = $("#monto");
+montoIn.addEventListener("input", () => { montoIn.value = miles(num(montoIn.value)); });
+document.querySelectorAll("[data-suma]").forEach(b => b.addEventListener("click", () => {
+  montoIn.value = miles(num(montoIn.value) + Number(b.dataset.suma));
+}));
+$("#limpiar").addEventListener("click", () => { montoIn.value = ""; montoIn.focus(); });
+
+$("#f-don").addEventListener("submit", async e => {
+  e.preventDefault();
+  const monto = num(montoIn.value);
+  if (!monto) { toast("Escribe el monto que entró a la cuenta"); montoIn.focus(); return; }
+  if (monto >= 5000000 && !confirm(`Vas a registrar ${cop(monto)}. ¿El monto es correcto?`)) return;
+  const btn = $("#registrar");
+  btn.disabled = true; btn.textContent = "Registrando…";
+  try {
+    ultimo = await addDoc(collection(db, "donaciones"), {
+      monto, nombre: $("#nombre").value.trim(), fecha: serverTimestamp()
+    });
+    montoIn.value = ""; $("#nombre").value = "";
+    toast(`Donación de ${cop(monto)} registrada`, true);
+  } catch (err) {
+    toast("No se pudo registrar: " + err.message);
+  } finally { btn.disabled = false; btn.textContent = "Registrar donación"; }
+});
+
+$("#deshacer").addEventListener("click", async () => {
+  if (!ultimo) return;
+  try { await deleteDoc(ultimo); ultimo = null; toast("Donación deshecha"); }
+  catch (err) { toast("No se pudo deshacer: " + err.message); }
+});
+
+/* ---------- Ajustes ---------- */
+$("#meta-in").addEventListener("input", e => { e.target.value = miles(num(e.target.value)); });
+$("#f-ajustes").addEventListener("submit", async e => {
+  e.preventDefault();
+  const nuevaMeta = num($("#meta-in").value);
+  if (!nuevaMeta) { toast("Escribe una meta mayor que cero"); return; }
+  try {
+    await setDoc(doc(db, "config", "evento"), { meta: nuevaMeta, titulo: $("#titulo-in").value.trim() || "Donatón" }, { merge: true });
+    toast("Ajustes guardados");
+  } catch (err) { toast("No se pudieron guardar los ajustes: " + err.message); }
+});
+</script>
+</body>
+</html>

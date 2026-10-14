@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Donatón | Pantalla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,700;0,800;1,500&family=Alegreya+Sans:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+  :root{
+    --noche:#1B1F3B; --noche2:#2E3466; --crema:#EADFC8; --oro:#F3C454; --ladrillo:#B4502E;
+    --tenue:#A3A9D1; --plano:rgba(234,223,200,.3);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(ellipse at 30% 115%, var(--noche2) 0%, var(--noche) 62%);
+    background-color:var(--noche);color:var(--crema);
+    font-family:"Alegreya Sans","Trebuchet MS",sans-serif;overflow:hidden;
+  }
+  .stage{
+    height:100vh;display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);
+    grid-template-rows:auto minmax(0,1fr) auto;
+    gap:2vh 4vw;padding:4vh 4vw 2.5vh;
+  }
+  .top{grid-column:1/-1;display:flex;align-items:baseline;gap:1.6vw;flex-wrap:wrap}
+  h1{font-family:"Alegreya",Georgia,serif;font-weight:800;font-size:clamp(2rem,4.4vw,5.4rem);line-height:1}
+  .sub{font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1rem,2vw,2.3rem);color:var(--tenue)}
+
+  /* Iglesia */
+  .obra{position:relative;display:flex;align-items:flex-end;justify-content:center;min-height:0}
+  .obra svg{position:relative;width:100%;height:100%;max-height:78vh}
+  .halo{position:absolute;inset:0;background:radial-gradient(circle at 50% 35%, rgba(243,196,84,.38), transparent 60%);
+    opacity:0;transform:scale(.6);transition:opacity 1.2s, transform 1.8s cubic-bezier(.2,.8,.2,1)}
+  .halo.on{opacity:1;transform:scale(1.1)}
+  .brick{opacity:0;transform:translateY(-26px) rotate(-6deg);transform-box:fill-box;transform-origin:center;
+    transition:opacity .3s ease, transform .6s cubic-bezier(.2,.9,.3,1.35)}
+  .brick.on{opacity:1;transform:none}
+  .sin-trans .brick{transition:none}
+  .plano{fill:rgba(234,223,200,.035);stroke:var(--plano);stroke-width:1.5;stroke-dasharray:6 6}
+  .suelo{stroke:var(--plano);stroke-width:2}
+  .puerta,.ventana{fill:var(--noche);stroke:var(--plano);stroke-width:1.5;stroke-dasharray:6 6;transition:fill 1s}
+  .puerta.on{fill:#5A3420;stroke:#3A2214;stroke-dasharray:none}
+  .ventana.on{fill:var(--oro);stroke:none;filter:url(#brillo)}
+  .cruz{fill:none;stroke:var(--plano);stroke-width:1.5;stroke-dasharray:4 4;transition:fill 1s}
+  .cruz.on{fill:var(--oro);stroke:none;filter:url(#brillo)}
+
+  /* Saldo */
+  .saldo{display:flex;flex-direction:column;justify-content:center;min-width:0}
+  .etq{font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;color:var(--tenue);font-size:clamp(1.2rem,2.4vw,3rem)}
+  .odo{display:flex;align-items:flex-start;font-weight:900;color:var(--oro);line-height:1;
+    font-variant-numeric:tabular-nums;margin:1.5vh 0;white-space:nowrap;transform-origin:left center}
+  .odo .simbolo{margin-right:.12em}
+  .odo .col{display:inline-block;height:1em;overflow:hidden;transition:opacity .4s}
+  .odo .tira{display:flex;flex-direction:column;will-change:transform}
+  .odo .tira span{height:1em;display:block;text-align:center}
+  .odo .sep{transition:opacity .4s}
+  .odo .apagada{opacity:.13}
+  .odo.final{animation:latido 1.4s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes latido{
+    0%{transform:scale(1);text-shadow:none}
+    30%{transform:scale(1.09);text-shadow:0 0 .35em rgba(243,196,84,.7)}
+    100%{transform:scale(1);text-shadow:0 0 .15em rgba(243,196,84,.35)}
+  }
+  .odo.final.quieto{text-shadow:0 0 .15em rgba(243,196,84,.35)}
+  .meta{font-size:clamp(1.1rem,2vw,2.4rem)}
+  .barra{position:relative;height:clamp(14px,2.2vh,28px);border-radius:999px;background:rgba(234,223,200,.1);margin-top:3vh;overflow:hidden}
+  .barra-fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:inherit;
+    background:linear-gradient(90deg,var(--ladrillo),#D9824A 55%,var(--oro))}
+  .barra-fill::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);
+    background-size:200% 100%;animation:brillo 1.6s linear infinite}
+  @keyframes brillo{from{background-position:150% 0}to{background-position:-50% 0}}
+  .pct{margin-top:1.4vh;font-family:"Alegreya",Georgia,serif;font-weight:800;font-size:clamp(1.4rem,3vw,3.8rem);font-variant-numeric:tabular-nums}
+  .gracias{margin-top:3vh;font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1.2rem,2.4vw,3rem);
+    opacity:0;transform:translateY(1.5vh);transition:opacity .9s .3s, transform .9s .3s}
+  .gracias.on{opacity:1;transform:none}
+
+  .pie{grid-column:1/-1;display:flex;gap:2.5vw;align-items:center;font-size:clamp(.75rem,.95vw,1.05rem);color:var(--tenue)}
+  .pie button{font:inherit;color:inherit;background:none;border:1px solid var(--plano);border-radius:999px;padding:.4em 1em;cursor:pointer}
+  .pie button:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+  #estado{margin-left:auto}
+  #estado.error{color:#FF9C8A}
+
+  /* Intro de suspenso */
+  .intro{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:var(--noche);
+    transition:opacity .6s;font-family:"Alegreya",Georgia,serif;font-style:italic;font-size:clamp(2rem,5vw,6rem)}
+  .intro.off{opacity:0;pointer-events:none}
+  .puntos i{display:inline-block;font-style:normal;animation:salto 1s infinite}
+  .puntos i:nth-child(2){animation-delay:.15s}
+  .puntos i:nth-child(3){animation-delay:.3s}
+  @keyframes salto{0%,60%,100%{transform:none}30%{transform:translateY(-.3em)}}
+
+  /* Avisos de metas */
+  .hito{position:fixed;left:50%;top:13vh;z-index:30;pointer-events:none;
+    background:var(--oro);color:var(--noche);font-weight:900;font-size:clamp(1.3rem,3vw,3.6rem);
+    padding:.35em 1em;border-radius:999px;transform:translateX(-50%) scale(0);opacity:0;white-space:nowrap}
+  .hito.on{animation:pop 1.9s cubic-bezier(.2,.9,.3,1.4) forwards}
+  @keyframes pop{
+    0%{transform:translateX(-50%) scale(0) rotate(-8deg);opacity:0}
+    18%{transform:translateX(-50%) scale(1.12) rotate(2deg);opacity:1}
+    28%{transform:translateX(-50%) scale(1) rotate(0)}
+    80%{transform:translateX(-50%) scale(1);opacity:1}
+    100%{transform:translateX(-50%) scale(.9) translateY(-2vh);opacity:0}
+  }
+
+  @media (max-width:820px){
+    body{overflow:auto}
+    .stage{height:auto;grid-template-columns:1fr}
+    .obra svg{max-height:55vh}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .brick,.halo,.gracias{transition:none}
+    .odo.final,.hito.on,.barra-fill::after,.puntos i{animation:none}
+    .hito.on{opacity:1;transform:translateX(-50%)}
+  }
+</style>
+</head>
+<body>
+<main class="stage">
+  <header class="top">
+    <h1 id="titulo">Donatón</h1>
+    <p class="sub">Construyendo juntos la casa de Dios</p>
+  </header>
+
+  <section class="obra" aria-hidden="true">
+    <div id="halo" class="halo"></div>
+    <svg id="iglesia" viewBox="0 0 600 600"></svg>
+  </section>
+
+  <section class="saldo">
+    <p class="etq">Llevamos recaudado</p>
+    <p id="odo" class="odo" role="img" aria-label="Recaudado"></p>
+    <p class="meta">de una meta de <span id="meta">$ 0</span></p>
+    <div class="barra"><div id="barra" class="barra-fill"></div></div>
+    <p class="pct"><span id="pct">0</span>% de la obra</p>
+    <p id="gracias" class="gracias">¡Gracias por sembrar en la casa de Dios!</p>
+  </section>
+
+  <footer class="pie">
+    <button id="actualizar" type="button">Barra espaciadora: actualizar el conteo</button>
+    <span>F: pantalla completa</span>
+    <span id="estado"></span>
+  </footer>
+</main>
+
+<div id="intro" class="intro"><p>Contando las ofrendas<span class="puntos"><i>.</i><i>.</i><i>.</i></span></p></div>
+<div id="hito" class="hito"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDy9nmz3x8h20vSX5OMVEDAV1B5JCg73Hg",
+  authDomain: "donaton-701fc.firebaseapp.com",
+  projectId: "donaton-701fc",
+  storageBucket: "donaton-701fc.firebasestorage.app",
+  messagingSenderId: "445516813987",
+  appId: "1:445516813987:web:fbbd11132a9a726b031116"
+};
+const db = getFirestore(initializeApp(firebaseConfig));
+
+const $ = s => document.querySelector(s);
+const formato = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+const cop = n => formato.format(Math.round(n));
+const reducir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const COLORES = ["#F3C454", "#EADFC8", "#B4502E", "#FFFFFF"];
+let meta = 50000000;
+
+/* ================= Iglesia de ladrillos ================= */
+const NS = "http://www.w3.org/2000/svg";
+const svg = $("#iglesia");
+const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+const POLY = [[140,580],[140,330],[120,330],[255,240],[255,120],[245,120],[300,40],[355,120],[345,120],[345,240],[480,330],[460,330],[460,580]];
+const enSilueta = (x, y) => {
+  let d = false;
+  for (let i = 0, j = POLY.length - 1; i < POLY.length; j = i++) {
+    const [xi, yi] = POLY[i], [xj, yj] = POLY[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) d = !d;
+  }
+  return d;
+};
+const enPuerta = (x, y) => x > 268 && x < 332 && y > 480 && (y >= 512 || Math.hypot(x - 300, y - 512) < 32);
+const enVentana = (x, y) => Math.hypot(x - 300, y - 185) < 22;
+const puntos = POLY.map(p => p.join(",")).join(" ");
+
+const defs = el("defs", {});
+defs.innerHTML = `
+  <filter id="brillo" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <clipPath id="silueta"><polygon points="${puntos}"/></clipPath>`;
+svg.append(defs);
+svg.append(el("line", { x1: 40, y1: 581, x2: 560, y2: 581, class: "suelo" }));
+svg.append(el("polygon", { points: puntos, class: "plano" }));
+const grupo = el("g", { "clip-path": "url(#silueta)" });
+const tonos = ["#B4502E", "#A3472A", "#C25E37", "#9C4227", "#B85A35"];
+const ladrillos = [];
+for (let r = 0; ; r++) {
+  const y = 580 - (r + 1) * 12;
+  if (y < 30) break;
+  for (let x = 100 + (r % 2 ? -12 : 0); x < 500; x += 24) {
+    const cx = x + 12, cy = y + 6;
+    if (enPuerta(cx, cy) || enVentana(cx, cy)) continue;
+    const muestras = [[cx, cy], [x + 2, y + 2], [x + 22, y + 2], [x + 2, y + 10], [x + 22, y + 10]];
+    if (!muestras.some(([a, b]) => enSilueta(a, b))) continue;
+    const b = el("rect", { x: x + 1, y: y + 1, width: 22, height: 10, rx: 1.5, fill: tonos[(Math.random() * tonos.length) | 0], class: "brick" });
+    grupo.append(b); ladrillos.push(b);
+  }
+}
+svg.append(grupo);
+const puerta = el("path", { d: "M268 580 V512 A32 32 0 0 1 332 512 V580 Z", class: "puerta" });
+const ventana = el("circle", { cx: 300, cy: 185, r: 22, class: "ventana" });
+const cruz = el("path", { d: "M296 2 h8 v11 h11 v8 h-11 v19 h-8 v-19 h-11 v-8 h11 z", class: "cruz" });
+svg.append(puerta, ventana, cruz);
+
+let puestos = 0;
+function setObra(p) {
+  p = Math.max(0, Math.min(1, p));
+  const objetivo = Math.round(p * ladrillos.length);
+  for (let i = puestos; i < objetivo; i++) ladrillos[i].classList.add("on");
+  puestos = Math.max(puestos, objetivo);
+  puerta.classList.toggle("on", p >= 0.25);
+  ventana.classList.toggle("on", p >= 0.75);
+  cruz.classList.toggle("on", p >= 1);
+}
+function reiniciarObra() {
+  svg.classList.add("sin-trans");
+  ladrillos.forEach(b => b.classList.remove("on"));
+  [puerta, ventana, cruz].forEach(e => e.classList.remove("on"));
+  puestos = 0;
+  svg.getBoundingClientRect();
+  svg.classList.remove("sin-trans");
+}
+
+/* ================= Odómetro de números ================= */
+let cols = [], seps = [];
+function construirOdometro(maximo) {
+  const dig = Math.max(1, String(Math.floor(maximo)).length);
+  const odo = $("#odo");
+  odo.replaceChildren(); cols = []; seps = [];
+  odo.classList.remove("final", "quieto");
+  const simbolo = document.createElement("span"); simbolo.className = "simbolo"; simbolo.textContent = "$";
+  odo.append(simbolo);
+  for (let p = dig - 1; p >= 0; p--) {
+    const col = document.createElement("span"); col.className = "col";
+    const tira = document.createElement("span"); tira.className = "tira";
+    for (let d = 0; d <= 10; d++) { const c = document.createElement("span"); c.textContent = d % 10; tira.append(c); }
+    col.append(tira); odo.append(col);
+    cols.push({ p, col, tira, prev: 0 });
+    if (p > 0 && p % 3 === 0) {
+      const s = document.createElement("span"); s.className = "sep"; s.textContent = ".";
+      odo.append(s); seps.push({ p, s });
+    }
+  }
+  ajustarTamano(dig);
+  odo.setAttribute("aria-label", "Recaudado " + cop(maximo));
+}
+function ajustarTamano(dig = cols.length) {
+  const ancho = $(".saldo").getBoundingClientRect().width;
+  const chars = dig + Math.floor((dig - 1) / 3) * 0.45 + 1;
+  const px = Math.min(innerWidth * 0.1, innerHeight * 0.2, (ancho * 0.96) / (chars * 0.6));
+  $("#odo").style.fontSize = px + "px";
+}
+addEventListener("resize", () => ajustarTamano());
+
+function ponerValor(v, exacto) {
+  for (const c of cols) {
+    const base = 10 ** c.p;
+    let pos;
+    if (exacto) pos = Math.floor(Math.round(v) / base) % 10;
+    else {
+      const frac = (v % base) / base;
+      pos = Math.floor(v / base) % 10 + (frac > 0.85 ? (frac - 0.85) / 0.15 : 0);
+    }
+    let d = Math.abs(pos - c.prev); if (d > 5) d = 10 - d;
+    c.prev = pos;
+    c.tira.style.transform = `translateY(${-pos}em)`;
+    c.col.style.filter = !reducir && d > 0.15 && !exacto ? `blur(${Math.min(3.5, d * 5)}px)` : "none";
+    c.col.classList.toggle("apagada", c.p > 0 && v < base);
+  }
+  for (const s of seps) s.s.classList.toggle("apagada", v < 10 ** s.p);
+}
+
+/* ================= Sonido (solo al actualizar con la barra espaciadora) ================= */
+let ac = null;
+function activarAudio() {
+  try { if (!ac) ac = new AudioContext(); if (ac.state === "suspended") ac.resume(); } catch {}
+}
+function nota(f, dur, vol = .06, tipo = "triangle", cuando = 0) {
+  if (!ac || ac.state !== "running") return;
+  const t = ac.currentTime + cuando, o = ac.createOscillator(), g = ac.createGain();
+  o.type = tipo; o.frequency.value = f;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + .02);
+}
+const tic = altura => nota(500 + altura * 900, .05);
+function tada() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => nota(f, 1.4, .07, "triangle", i * .09)); }
+function campana() { nota(880, .6, .07, "sine"); nota(1320, .6, .04, "sine", .05); }
+
+/* ================= Metas intermedias ================= */
+const HITOS = [
+  [0.25, "¡Ya pusimos la puerta!"],
+  [0.5, "¡Vamos por la mitad!"],
+  [0.75, "¡Se encendió el vitral!"],
+  [1, "¡Meta cumplida, gloria a Dios!"]
+];
+function mostrarHito(texto) {
+  const h = $("#hito");
+  h.textContent = texto;
+  h.classList.remove("on"); void h.offsetWidth; h.classList.add("on");
+  campana();
+  if (!reducir && window.confetti) confetti({ particleCount: 70, spread: 70, startVelocity: 35, origin: { x: .27, y: .55 }, colors: COLORES });
+}
+
+/* ================= El conteo ================= */
+function contar(objetivo) {
+  return new Promise(res => {
+    const dur = reducir ? 1 : objetivo > 0 ? 8000 : 900;
+    const t0 = performance.now();
+    let hito = 0, ultimoPaso = -1, ultimoTic = 0;
+    const frame = t => {
+      const k = Math.min(1, (t - t0) / dur);
+      const e = 1 - Math.pow(1 - k, 5);            // arranca rápido y frena con suspenso
+      const v = objetivo * e;
+      ponerValor(v, k >= 1);
+      const prog = meta > 0 ? v / meta : 0;
+      setObra(prog);
+      $("#barra").style.width = Math.min(100, prog * 100) + "%";
+      $("#pct").textContent = Math.floor(prog * 100);
+      while (hito < HITOS.length && prog >= HITOS[hito][0]) { mostrarHito(HITOS[hito][1]); hito++; }
+      const paso = Math.floor(e * 80);
+      if (paso !== ultimoPaso && t - ultimoTic > 45) { ultimoPaso = paso; ultimoTic = t; tic(e); }
+      if (k < 1) requestAnimationFrame(frame); else res();
+    };
+    requestAnimationFrame(frame);
+  });
+}
+
+function celebrarFinal(total) {
+  const odo = $("#odo");
+  if (total <= 0) {
+    $("#gracias").textContent = "Esperando las primeras ofrendas";
+    $("#gracias").classList.add("on");
+    return;
+  }
+  $("#gracias").textContent = "¡Gracias por sembrar en la casa de Dios!";
+  odo.classList.add("final");
+  setTimeout(() => odo.classList.add("quieto"), 1400);
+  $("#halo").classList.add("on");
+  $("#gracias").classList.add("on");
+  tada();
+  if (reducir || !window.confetti) return;
+  confetti({ particleCount: 220, spread: 110, startVelocity: 50, origin: { x: .62, y: .5 }, colors: COLORES });
+  const fin = Date.now() + 3000;
+  (function cañones() {
+    confetti({ particleCount: 6, angle: 60, spread: 60, origin: { x: 0, y: .8 }, colors: COLORES });
+    confetti({ particleCount: 6, angle: 120, spread: 60, origin: { x: 1, y: .8 }, colors: COLORES });
+    if (Date.now() < fin) requestAnimationFrame(cañones);
+  })();
+  setTimeout(() => confetti({ particleCount: 120, spread: 360, startVelocity: 30, origin: { x: .5, y: .3 }, colors: COLORES, shapes: ["star"] }), 900);
+}
+
+function estado(txt, error = false) { const e = $("#estado"); e.textContent = txt; e.classList.toggle("error", error); }
+
+async function leerTotal() {
+  const [snap, conf] = await Promise.all([
+    getDocs(collection(db, "donaciones")),
+    getDoc(doc(db, "config", "evento"))
+  ]);
+  const c = conf.data() || {};
+  if (Number(c.meta) > 0) meta = Number(c.meta);
+  if (c.titulo) { $("#titulo").textContent = c.titulo; document.title = c.titulo + " | Pantalla"; }
+  return snap.docs.reduce((s, d) => s + (Number(d.data().monto) || 0), 0);
+}
+
+let corriendo = false;
+async function actualizar() {
+  if (corriendo) return;
+  corriendo = true;
+  $("#intro").classList.remove("off");
+  $("#halo").classList.remove("on");
+  $("#gracias").classList.remove("on");
+  const t0 = Date.now();
+  try {
+    const total = await leerTotal();
+    await esperar(Math.max(0, 1800 - (Date.now() - t0)));   // un poquito de suspenso
+    reiniciarObra();
+    $("#barra").style.width = "0%";
+    $("#pct").textContent = "0";
+    $("#meta").textContent = cop(meta);
+    construirOdometro(total);
+    ponerValor(0, true);
+    $("#intro").classList.add("off");
+    await esperar(700);
+    await contar(total);
+    celebrarFinal(total);
+    estado("Actualizado a las " + new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }));
+  } catch (err) {
+    $("#intro").classList.add("off");
+    estado("No se pudo leer Firebase: " + err.message, true);
+  }
+  corriendo = false;
+}
+
+/* ================= Controles ================= */
+let bloqueo = null;
+async function mantenerEncendida() { try { bloqueo = await navigator.wakeLock?.request("screen"); } catch {} }
+function alternarPantalla() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+  mantenerEncendida();
+}
+addEventListener("keydown", e => {
+  if (e.key === "f" || e.key === "F") alternarPantalla();
+  if (e.code === "Space" || e.key === "r" || e.key === "R") { e.preventDefault(); activarAudio(); mantenerEncendida(); actualizar(); }
+});
+$("#actualizar").addEventListener("click", () => { activarAudio(); actualizar(); });
+addEventListener("dblclick", alternarPantalla);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && bloqueo) mantenerEncendida(); });
+
+actualizar();
+</script>
+</body>
+</html>
