@@ -473,6 +473,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
       <div class="row" style="margin-top:14px;justify-content:center;gap:6px">
         <button class="btn ghost sm" id="lg_help" style="color:#8b94a5">¿Quieres tu acceso?</button>
         <button class="btn ghost sm" id="lg_diag" style="color:#8b94a5">Revisar conexión</button>
+        <button class="btn ghost sm" id="lg_local" style="color:#8b94a5">🔌 Sin internet</button>
       </div>
     </div>
     <div class="pie" id="lgpie">Mr Cheff · software para restaurantes</div>
@@ -689,7 +690,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.14-3';
+const APP_VERSION='2026.10.15-1';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -8465,6 +8466,10 @@ function viewAjustes(vw){
             '<div><b>'+APP_NOMBRE+'</b><div class="tiny muted">'+marca().lema+'</div></div></div>'+
           '<div class="tline"><span>Versión de este equipo</span><span class="v mono">'+esc(APP_VERSION)+'</span></div>'+
           '<div class="tline"><span>Tipo de negocio</span><span class="v">'+(esComercio()?'🏪 Comercio (TuPOSco)':'🍔 Restaurante (Mr Cheff)')+'</span></div>'+
+          ((leerLicencia()||{}).local? '<div class="tline"><span>Licencia</span><span class="v">🔌 sin internet · '+
+              ((leerLicencia().plan==='local-permanente')?'permanente':'vence '+fdate(leerLicencia().vence))+'</span></div>'+
+            '<div class="tline"><span>Código del equipo</span><span class="v mono">'+idEquipo()+'</span></div>'+
+            '<button class="btn sm" id="g_renov" style="margin:6px 0">🔑 Renovar licencia</button>' : '')+
           '<div class="tline"><span>Se abre desde</span><span class="v">'+(enLinea()? '🌐 '+esc(location.host) : '📁 archivo en el PC')+'</span></div>'+
           '<div class="tline"><span>Funciona sin internet</span><span class="v">'+
             ({listo:'✅ sí, guardada en este equipo',guardando:'⏳ guardándose…','sin-archivo':'❌ falta subir sw.js al servidor',
@@ -8653,6 +8658,7 @@ function viewAjustes(vw){
         if(e.target.checked) setTimeout(revisarCocina,400); render(); };
       if($('#g_vercocina')) $('#g_vercocina').onclick=()=>go('cocina');
       if($('#g_upd')) $('#g_upd').onclick=()=>revisarActualizacion(true);
+      if($('#g_renov')) $('#g_renov').onclick=()=>mLicenciaLocal(true);
       if(window.qz) qzListarImpresoras().then(()=>{pintaSel();pintaQz();}).catch(()=>{});
       $('#g_auto').onclick=mImpresionAuto;
       $('#g_prueba').onclick=()=>{
@@ -9332,11 +9338,13 @@ function viewSuper(vw){
   topact('<button class="btn sm" id="s_ref">↻ Actualizar</button>'+
          '<button class="btn sm" id="s_imp">📥 Importar Excel</button>'+
          '<button class="btn sm" id="s_cta">+ Cuenta</button>'+
-         '<button class="btn pri sm" id="s_neg">+ Restaurante</button>');
+         '<button class="btn sm" id="s_lic">🔑 Licencia sin internet</button>'+
+         '<button class="btn pri sm" id="s_neg">+ Negocio</button>');
   vw.innerHTML='<div id="sbody"><div class="empty"><span class="ico">⏳</span>Cargando…</div></div>';
   $('#s_ref').onclick=()=>viewSuper(vw);
   $('#s_neg').onclick=()=>edNegocio(null);
   $('#s_cta').onclick=()=>edCuentaNube(null);
+  $('#s_lic').onclick=mGenerarLicencia;
   $('#s_imp').onclick=mImportar;
   cargarDirectorio().then(()=>{
     const cuentasDe=id=>S.cuentasNube.filter(c=>c.negocioId===id&&c.rol!=='superadmin');
@@ -10030,7 +10038,7 @@ function limpiarEquipo(recargar,autorizado){
    'modoImp','comandaAncho','letra','nombre','simbolo','decimales','respaldoCierre'].forEach(k=>{
      if(S.cfg[k]!==undefined) guardar[k]=S.cfg[k]; });
   const keep={};
-  ['pos_fb','pos_perfil','pos_lic','pos_reloj','pos_neg','pos_dbs','pos_lics','pos_negnombres'].forEach(k=>{
+  ['pos_fb','pos_perfil','pos_lic','pos_reloj','pos_neg','pos_dbs','pos_lics','pos_negnombres','pos_equipo'].forEach(k=>{
     try{ const v=localStorage.getItem(k); if(v!=null) keep[k]=v; }catch(e){} });
   try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf('pos_')===0) localStorage.removeItem(k); }); }catch(e){}
   try{ localStorage.setItem('pos_limpieza',JSON.stringify(guardar)); }catch(e){}
@@ -10233,6 +10241,137 @@ async function ingresar(){
   terminar();
 }
 
+/* ===================== LICENCIA SIN INTERNET =====================
+   Para clientes que compran la licencia "en punto" y NUNCA se conectan a
+   Firebase. El superadmin genera un código firmado para el código de ese
+   equipo; la app lo verifica sin internet con la llave pública (la privada
+   solo la tiene el superadmin), así nadie puede inventarse una licencia
+   ni copiarla a otro computador. Todo queda guardado solo en el equipo. */
+const LIC_PUB={"kty": "EC", "crv": "P-256", "x": "OEltFDM3VeJkKXmsXI0FBQ8E6D4dKkCEHm-tbuNJZME", "y": "vLpzXOgzbCacfJm8C0Fne8aF-quRW8M7hLD8WdFsuoY"};
+function idEquipo(){
+  let id=''; try{ id=localStorage.getItem('pos_equipo')||''; }catch(e){}
+  if(!id){ const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const r=new Uint8Array(8); crypto.getRandomValues(r);
+    id=[...r].map(x=>a[x%a.length]).join(''); id=id.slice(0,4)+'-'+id.slice(4);
+    try{ localStorage.setItem('pos_equipo',id); }catch(e){} }
+  return id;
+}
+const b64u={ de:s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4)),c=>c.charCodeAt(0)),
+  a:b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'') };
+async function verificarLicenciaLocal(codigo){
+  const c=String(codigo||'').replace(/\s+/g,'');
+  const pz=c.split('.'); if(pz.length!==3 || pz[0]!=='MC1') throw new Error('Ese no es un código de licencia válido');
+  const llave=await crypto.subtle.importKey('jwk',LIC_PUB,{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
+  const ok=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},llave,b64u.de(pz[2]),new TextEncoder().encode(pz[0]+'.'+pz[1]));
+  if(!ok) throw new Error('El código no es auténtico o está incompleto');
+  const d=JSON.parse(new TextDecoder().decode(b64u.de(pz[1])));
+  if(d.e!==idEquipo()) throw new Error('Este código es para otro equipo ('+d.e+'). El de este es '+idEquipo());
+  if(d.v && venceMsDe(d.v)<ahoraReal()) throw new Error('Este código ya venció ('+fdate(d.v)+')');
+  return d;
+}
+function esLocal(){ return !nubeDisponible() && !!(leerLicencia()||{}).local; }
+function aplicarLicenciaLocal(d,codigo){
+  const neg='local-'+idEquipo().replace('-','').toLowerCase();
+  S.cfg.fbOn=false; S.cfg.autoSync=false; S.cfg.fbNegocio=neg;
+  if(d.t==='comercio'||d.t==='restaurante'){ S.cfg.tipoNegocio=d.t; S.cfg.tipoFijadoSuper=true; }
+  const vence=d.v||'2099-12-31';
+  escribirLicencia({negocio:neg, nombre:d.n||S.cfg.nombre||'', vence:vence, venceMs:venceMsDe(vence), activo:true,
+    revisadoMs:Date.now(), local:true, plan:d.v?'local':'local-permanente', codigo:codigo, emitida:d.i||''});
+  tocarReloj(); saveCfg();
+}
+/* pantalla para activar este equipo sin internet (y para renovar) */
+function mLicenciaLocal(renovar){
+  const eq=idEquipo();
+  modal({title:renovar?'🔑 Renovar licencia':'🔌 Trabajar sin internet', size:'slim',
+    body:'<div class="hintx" style="margin-bottom:10px">'+(renovar? 'Envíale este código al proveedor y pega aquí el código de renovación que te mande.'
+        : 'Para usar '+APP_NOMBRE+' <b>sin conexión a la nube</b> necesitas una licencia de tu proveedor. Envíale el código de este equipo:')+'</div>'+
+      '<div style="text-align:center;margin-bottom:12px"><div class="tiny muted">CÓDIGO DE ESTE EQUIPO</div>'+
+        '<div class="mono" style="font-size:28px;font-weight:800;letter-spacing:3px">'+eq+'</div>'+
+        '<button class="btn sm" id="ll_cp" style="margin-top:6px">📋 Copiar</button></div>'+
+      '<div class="f"><label>Código de licencia que te envió el proveedor</label>'+
+        '<textarea id="ll_cod" rows="3" style="font-family:monospace;font-size:12px" placeholder="MC1.…"></textarea></div>'+
+      '<div id="ll_paso2" class="hide" style="margin-top:12px"></div>',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ll_ok">Verificar</button>',
+    onOpen:m=>{
+      $('#ll_cp',m).onclick=()=>{ try{ navigator.clipboard.writeText(eq); toast('Código copiado','ok'); }catch(e){} };
+      let lic=null;
+      $('#ll_ok',m).onclick=async()=>{
+        const cod=$('#ll_cod',m).value.trim();
+        if(!lic){
+          try{ lic=await verificarLicenciaLocal(cod); }catch(e){ return toast(e.message,'bad',6000); }
+          if(renovar){ aplicarLicenciaLocal(lic,cod); closeModal(); _bloqueado=false;
+            toast('✅ Licencia renovada'+(lic.v?' hasta el '+fdate(lic.v):' (permanente)'),'ok',5000); render(); return; }
+          if(S.usuarios.length && !esLocal())
+            return toast('Este equipo ya tiene información de la nube. Úsalo en un equipo nuevo o pide que lo limpien.','warn',7000);
+          $('#ll_cod',m).disabled=true;
+          $('#ll_paso2',m).innerHTML='<div class="card" style="background:var(--ok-soft);margin-bottom:10px"><div class="bd tiny"><b>✅ Licencia válida</b> · '+
+              esc(lic.n||'')+' · '+(lic.t==='comercio'?'Comercio':'Restaurante')+' · '+(lic.v?'vence '+fdate(lic.v):'permanente')+'</div></div>'+
+            '<div class="f" style="margin-bottom:8px"><label>Nombre del negocio</label><input id="ll_neg" value="'+esc(lic.n||'')+'"></div>'+
+            '<div class="f" style="margin-bottom:8px"><label>Tu nombre (administrador)</label><input id="ll_nom"></div>'+
+            '<div class="f" style="margin-bottom:8px"><label>Usuario (correo o nombre corto)</label><input id="ll_usr" autocomplete="off"></div>'+
+            '<div class="grid" style="grid-template-columns:1fr 1fr"><div class="f"><label>Clave</label><input id="ll_p1" type="password" autocomplete="new-password"></div>'+
+              '<div class="f"><label>Repite la clave</label><input id="ll_p2" type="password" autocomplete="new-password"></div></div>';
+          $('#ll_paso2',m).classList.remove('hide'); $('#ll_ok',m).textContent='Empezar'; setTimeout(()=>$('#ll_nom',m).focus(),50);
+          return;
+        }
+        const nb=$('#ll_neg',m).value.trim(), nm=$('#ll_nom',m).value.trim(), us=norm($('#ll_usr',m).value), p1=$('#ll_p1',m).value;
+        if(!nb||!nm||!us) return toast('Completa el nombre del negocio, tu nombre y el usuario','warn');
+        if(p1.length<4) return toast('La clave debe tener al menos 4 caracteres','warn');
+        if(p1!==$('#ll_p2',m).value) return toast('Las claves no coinciden','warn');
+        S.cfg.nombre=nb; aplicarLicenciaLocal(lic,cod);
+        if(!S.cuentas.length) put('cuentas',{id:'ct1',nombre:'Caja general',tipo:'caja',medio:'efectivo',saldoInicial:0,activo:true});
+        let u=usuarioPorCorreo(us)||{id:uid('u'),email:us,activo:true};
+        Object.assign(u,{nombre:nm,email:us,rol:'admin',activo:true}); await fijarClave(u,p1); put('usuarios',u);
+        closeModal(); applyCfg(); try{ migrarComercio(); }catch(e){}
+        login(u);
+        toast('✅ Listo: '+APP_NOMBRE+' trabaja en este equipo sin internet. Recuerda descargar respaldos seguido.','ok',7000);
+      };
+    }});
+}
+/* ---- superadmin: generar códigos (con la llave privada que solo tiene él) ---- */
+async function firmarLicencia(payload){
+  const jwk=JSON.parse(localStorage.getItem('pos_lic_priv')||'null'); if(!jwk) throw new Error('Falta la llave privada');
+  const llave=await crypto.subtle.importKey('jwk',jwk,{name:'ECDSA',namedCurve:'P-256'},false,['sign']);
+  const cuerpo='MC1.'+b64u.a(new TextEncoder().encode(JSON.stringify(payload)));
+  const firma=await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},llave,new TextEncoder().encode(cuerpo));
+  return cuerpo+'.'+b64u.a(firma);
+}
+function mGenerarLicencia(){
+  const tiene=!!localStorage.getItem('pos_lic_priv');
+  modal({title:'🔑 Licencia sin internet', size:'slim',
+    body: (tiene? '' : '<div class="card" style="background:var(--warn-soft);margin-bottom:10px"><div class="bd tiny">'+
+          'Carga una sola vez tu <b>llave privada de licencias</b> (el archivo llave-licencias-PRIVADA.json). Queda guardada solo en este navegador. '+
+          '<b>No la compartas con nadie</b>: con ella se pueden crear licencias.</div></div>'+
+          '<div class="f" style="margin-bottom:12px"><label>Llave privada</label><input type="file" id="gl_key" accept=".json,application/json"></div>')+
+      '<div class="f" style="margin-bottom:8px"><label>Código del equipo del cliente</label>'+
+        '<input id="gl_eq" placeholder="ABCD-1234" style="font-family:monospace;font-size:18px;text-transform:uppercase"></div>'+
+      '<div class="f" style="margin-bottom:8px"><label>Nombre del negocio</label><input id="gl_n"></div>'+
+      '<div class="f" style="margin-bottom:8px"><label>Tipo</label><select id="gl_t"><option value="restaurante">🍔 Restaurante · Mr Cheff</option>'+
+        '<option value="comercio">🏪 Comercio · TuPOSco</option></select></div>'+
+      '<div class="grid" style="grid-template-columns:1fr 1fr;align-items:end"><div class="f"><label>Vence</label><input id="gl_v" type="date" value="'+dateAdd(todayISO(),365)+'"></div>'+
+        '<label class="row tiny" style="gap:7px;padding-bottom:10px"><input type="checkbox" id="gl_pe"> Permanente</label></div>'+
+      '<div id="gl_out" class="hide" style="margin-top:12px"></div>',
+    footer:'<button class="btn" data-x>Cerrar</button><button class="btn pri" id="gl_ok">Generar código</button>',
+    onOpen:m=>{
+      if($('#gl_key',m)) $('#gl_key',m).onchange=async e=>{ try{ const t=await e.target.files[0].text(); const j=JSON.parse(t);
+          if(j.kty!=='EC'||!j.d) throw 0; localStorage.setItem('pos_lic_priv',JSON.stringify(j)); toast('Llave cargada en este navegador','ok'); }
+        catch(err){ toast('Ese archivo no es la llave privada','bad'); } };
+      $('#gl_pe',m).onchange=e=>{ $('#gl_v',m).disabled=e.target.checked; };
+      $('#gl_ok',m).onclick=async()=>{
+        const eq=$('#gl_eq',m).value.trim().toUpperCase(), n=$('#gl_n',m).value.trim();
+        if(!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(eq)) return toast('El código del equipo es como ABCD-1234','warn');
+        if(!n) return toast('Escribe el nombre del negocio','warn');
+        try{
+          const cod=await firmarLicencia({e:eq,n:n,t:$('#gl_t',m).value,v:$('#gl_pe',m).checked?'':$('#gl_v',m).value,i:todayISO()});
+          const lista=lsJSON('pos_lic_emitidas',[]); lista.unshift({fecha:now(),equipo:eq,nombre:n,codigo:cod}); lsSet('pos_lic_emitidas',lista.slice(0,200));
+          $('#gl_out',m).innerHTML='<div class="f"><label>Código para el cliente</label><textarea rows="4" readonly style="font-family:monospace;font-size:11.5px">'+esc(cod)+'</textarea></div>'+
+            '<div class="row" style="gap:6px;margin-top:6px"><button class="btn sm" id="gl_cp">📋 Copiar</button>'+
+            '<a class="btn sm" target="_blank" href="https://wa.me/?text='+encodeURIComponent('Tu licencia de '+($('#gl_t',m).value==='comercio'?'TuPOSco':'Mr Cheff')+' para el equipo '+eq+':\n'+cod)+'">💬 WhatsApp</a></div>';
+          $('#gl_out',m).classList.remove('hide');
+          $('#gl_cp',m).onclick=()=>{ try{ navigator.clipboard.writeText(cod); toast('Copiado','ok'); }catch(e){} };
+        }catch(e){ toast(e.message==='Falta la llave privada'? 'Primero carga tu llave privada' : 'No se pudo generar: '+e.message,'bad'); }
+      };
+    }});
+}
 function mBloqueo(ficha,motivo){
   const e=estadoNegocio(ficha||{});
   modal({title:'Acceso suspendido', size:'slim', focus:false, footer:null,
@@ -10243,7 +10382,9 @@ function mBloqueo(ficha,motivo){
          : 'La suscripción venció'+(ficha&&ficha.vence? ' el '+fdate(ficha.vence):'')+'.'))+'<br>'+
       'Comunícate con el proveedor del sistema para reactivarla.</p></div>'+
       (S.ventas.length? '<button class="btn blk" id="bl_bk">⬇️ Descargar un respaldo de mis datos</button>':'')+
+      ((leerLicencia()||{}).local? '<button class="btn pri blk" id="bl_ren" style="margin-top:8px">🔑 Ingresar código de renovación</button>':'')+
       '<button class="btn danger blk" id="bl_out" style="margin-top:8px">Cerrar sesión</button>'});
+  if($('#bl_ren')) $('#bl_ren').onclick=()=>{ closeModal(); mLicenciaLocal(true); };
   if($('#bl_bk')) $('#bl_bk').onclick=()=>{
     const dump={version:1,fecha:now(),cfg:S.cfg,meta:S.meta};
     COLL.forEach(k=>dump[k]=S[k]);
@@ -10404,6 +10545,7 @@ function pedirAcceso(){
   const w=window.open(url,'_blank','noopener');
   if(!w) location.href=url;
 }
+$('#lg_local').onclick=()=>mLicenciaLocal(false);
 $('#lg_help').onclick=()=>{ if(hayLegado()) mRecuperarAcceso(); else pedirAcceso(); };
 $('#lg_in').onclick=ingresar;
 $('#lg_pass').onkeydown=e=>{ if(e.key==='Enter') ingresar(); };
