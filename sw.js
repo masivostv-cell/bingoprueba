@@ -1,11 +1,12 @@
-/* Mr Cheff · service worker
+/* Mr Cheff y TuPOSco · service worker
    Guarda una copia de la app en el equipo para que abra SIN INTERNET.
    - La app: siempre intenta traer la versión más nueva; si no hay internet,
      abre la copia guardada (así las actualizaciones automáticas siguen igual).
    - Íconos y librerías: se guardan y se reutilizan.
    - Firebase y todo lo demás: pasa directo, no se toca (los datos los maneja la app). */
-const CACHE='mrcheff-app-v1';
-const ESTATICOS=['manifest.webmanifest','mrcheff-192.png','mrcheff-512.png','mrcheff.svg','mrcheff.ico'];
+const CACHE='mrcheff-app-v3';
+const ESTATICOS=['manifest.webmanifest','mrcheff-192.png','mrcheff-512.png','mrcheff.svg','mrcheff.ico',
+  'tuposco.webmanifest','tuposco-192.png','tuposco-512.png','tuposco.svg','tuposco.ico'];
 const CDN=['cdnjs.cloudflare.com','cdn.jsdelivr.net'];
 const CLAVE_APP='__mrcheff_rutas__';
 
@@ -44,7 +45,7 @@ function conTiempo(p,ms){ return Promise.race([p,new Promise((_,rej)=>setTimeout
 
 async function navegar(req){
   const url=new URL(req.url), rutas=await rutasApp();
-  const esApp=rutas.indexOf(url.pathname)>=0 || /\/restaurante(\.html?)?\/?$/i.test(url.pathname);
+  const esApp=rutas.indexOf(url.pathname)>=0 || /\/(restaurante|tuposco|tupos)(\.html?)?\/?$/i.test(url.pathname);
   if(!esApp) return fetch(req);                         // el resto del sitio, normal
   const c=await caches.open(CACHE), key=sinQuery(req.url);
   try{

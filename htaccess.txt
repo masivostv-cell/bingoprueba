@@ -1,4 +1,4 @@
-# Mr Cheff: renombrar este archivo a  .htaccess  (con el punto al inicio)
+# Mr Cheff y Tu POS: renombrar este archivo a  .htaccess  (con el punto al inicio)
 AddType application/manifest+json .webmanifest
 AddType image/x-icon .ico
 AddType application/javascript .js
