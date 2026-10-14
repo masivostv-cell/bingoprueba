@@ -690,7 +690,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.15-1';
+const APP_VERSION='2026.10.15-3';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -1880,6 +1880,25 @@ function turnoAbierto(){
   if(S.user){ const m=mios.find(t=>t.usuarioId===S.user.id); if(m) return m; }
   return mios[0];
 }
+/* ============ SIN CAJA ABIERTA NO HAY VENTAS NI COMPRAS ============
+   Vale para todos (cajero, mesero, administrador) y en cualquier equipo:
+   se revisa en vivo si hay una caja abierta en el negocio. */
+function cajaAbiertaAhora(){
+  const t=turnoAbierto();
+  if(!t){ S.turno=null; return false; }
+  if(!S.turno || S.turno.estado!=='abierto' || !byId('turnos',S.turno.id)) S.turno=t;
+  return true;
+}
+function exigirCaja(accion){
+  if(cajaAbiertaAhora()) return true;
+  modal({title:'🔒 La caja está cerrada', size:'slim',
+    body:'<p style="margin:0 0 8px">No se puede <b>'+esc(accion)+'</b> con la caja cerrada.</p>'+
+      '<p class="muted" style="margin:0">'+(can('caja')? 'Ábrela primero en <b>Caja</b> con el dinero con el que arrancas.'
+        : 'Pídele al cajero o al administrador que abra la caja.')+'</p>',
+    footer:'<button class="btn" data-x>Cerrar</button>'+(can('caja')?'<button class="btn pri" id="ec_ab">Ir a abrir la caja</button>':''),
+    onOpen:m=>{ if($('#ec_ab',m)) $('#ec_ab',m).onclick=()=>{ closeModal(); go('caja'); }; }});
+  return false;
+}
 function ventasDeTurno(id){ return S.ventas.filter(v=>v.turnoId===id && v.estado!=='anulada'); }
 /* el arqueo es SOLO de efectivo; lo de bancos queda aparte para cuadrarlo después */
 function detalleTurno(t){
@@ -1954,11 +1973,13 @@ function bloqueaCaja(id){ return !_soporteCaja && cajaCerrada(id); }
 /* Corre fn solo si esa cuenta admite movimiento. Si la caja está cerrada,
    el admin puede hacerlo pero tiene que decir con qué recibo. */
 function conCaja(cuentaId,fn,texto){
+  if(!cajaAbiertaAhora()) return exigirCaja('mover dinero');
   if(!bloqueaCaja(cuentaId)) return fn();
-  if(!puedeEditar()){
-    toast('La caja está cerrada y ya quedó cuadrada. Para mover efectivo pídele al administrador que la abra.','warn',6000);
-    return; }
-  mSoporteCaja(cuentaId,texto,sop=>{ _soporteCaja=sop; try{ fn(); } finally { _soporteCaja=''; } });
+  /* esa caja en particular está cerrada (aunque haya otra abierta): nadie la mueve */
+  modal({title:'🔒 '+nameOf('cuentas',cuentaId)+' está cerrada', size:'slim',
+    body:'<p style="margin:0 0 8px">No se puede mover dinero de una caja cerrada'+(texto?' ('+esc(texto)+')':'')+'.</p>'+
+      '<p class="muted" style="margin:0">Ábrela en <b>Caja</b> o usa una cuenta que esté abierta.</p>',
+    footer:'<button class="btn pri" data-x>Entendido</button>'});
 }
 function mSoporteCaja(cuentaId,texto,cb){
   modal({title:'La caja está cerrada',size:'slim',
@@ -2668,6 +2689,7 @@ function mCantidad(itId,nuevoProd){
       $('#qok',m).onclick=ok; i.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } }; }});
 }
 function cartAdd(pid,cantidad){
+  if(!exigirCaja('vender')) return;
   if(!S.cart) S.cart=newCart();
   const p=byId('productos',pid); if(!p) return;
   if(esComercio()){
@@ -2764,6 +2786,9 @@ function viewPOS(vw){
   vw.innerHTML =
    '<div id="pos">'+
      '<div id="posleft">'+
+       (cajaAbiertaAhora()? '' : '<div id="poscerrada" style="margin:10px 12px 0;padding:10px 14px;border-radius:12px;background:var(--bad-soft);color:var(--bad);'+
+         'display:flex;gap:10px;align-items:center;font-weight:700"><span style="flex:1">🔒 La caja está cerrada: no se puede vender hasta abrirla.</span>'+
+         (can('caja')?'<button class="btn sm" id="pc_ab">Abrir caja</button>':'')+'</div>')+
        '<div id="poscats"></div>'+
        '<div id="possearch"><input id="pq" placeholder="🔍 Buscar producto…" value="'+esc(S.posQ)+'"></div>'+
        '<div id="posgrid"></div>'+
@@ -2776,6 +2801,7 @@ function viewPOS(vw){
    '</div>';
   $('#posbar').onclick=()=>abrirCarrito(true);
   if($('#tabierto')) $('#tabierto').onclick=()=>go('caja');
+  if($('#pc_ab')) $('#pc_ab').onclick=()=>go('caja');
   const q=$('#pq');
   q.oninput=debounce(()=>{ S.posQ=q.value; paintGrid(); },140);
   /* Enter en el buscador: código exacto o un solo resultado → al carrito */
@@ -3021,6 +3047,7 @@ function pedirNombre(accion,seguir){
       $('#pnok',m).onclick=ok; inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } }; }});
 }
 function enviarACocina(){
+  if(!exigirCaja('mandar pedidos a cocina')) return;
   if(faltaNombre()) return pedirNombre('mandar a cocina',enviarACocina);
   const c=S.cart; if(!c) return;
   const d=pendientesComanda(c);
@@ -3073,6 +3100,7 @@ function guardarPedido(prefijo,desdeCocina){
   const c=S.cart;
   if(!c) return;
   if(!c.items.length) return toast('El pedido está vacío','warn');
+  if(!desdeCocina && !exigirCaja('guardar pedidos')) return;
   if(faltaNombre(c)) return pedirNombre('guardar el pedido',()=>guardarPedido(prefijo,desdeCocina));
   if(!c.mesaId){                         // mostrador: se guarda a nombre del cliente
     const crear=n=>{ const ml=nuevoLlevar(n); c.mesaId=ml.id; c.tipo='mostrador'; c.nombrePedido=n; guardarPedido(prefijo,desdeCocina); };
@@ -3299,8 +3327,8 @@ function mDestino(){
 function mCobrar(){
   const c=S.cart, t=cartTot(c);
   if(!t.total) return;
+  if(!exigirCaja('cobrar')) return;
   if(faltaNombre(c)) return pedirNombre('cobrar',mCobrar);
-  if(!S.turno){ toast('La caja está cerrada. Ábrela antes de cobrar.','warn'); go('caja'); return; }
   let pagos=[], medio='efectivo', plazo=30;
   const qa=[1000,2000,5000,10000,20000,50000,100000];
 
@@ -3519,6 +3547,7 @@ function registrarVenta(o){
    se saca la plata de la caja y el documento desaparece del listado.
    Solo el administrador. */
 function borrarVenta(v){
+  if(!exigirCaja('borrar ventas')) return;
   if(!v) return;
   if(!puedeBorrar()) return pedirAlAdmin('borrar ventas');
   if(abonadoDe(v.id)>0.5) return toast('Tiene abonos registrados: bórralos primero en Cartera','warn',5500);
@@ -3614,7 +3643,7 @@ function editarVenta(v){
   if(!puedeEditar()) return pedirAlAdmin('editar ventas');
   if(v.estado==='anulada') return toast('Esa venta está anulada','warn');
   if(abonadoDe(v.id)>0.5) return toast('Tiene abonos registrados: elimínalos primero en Cartera','warn',5000);
-  if(!S.turno) return toast('Abre la caja antes de editar una venta','warn');
+  if(!exigirCaja('corregir ventas')) return;
   confirmar('Se abrirá la venta '+v.no+' en el punto de venta para que la corrijas. '+
             'El inventario y la caja se recalculan cuando la vuelvas a cobrar.',()=>{
     S.cart=newCart({tipo:v.tipo, mesaId:v.mesaId||null, clienteId:v.clienteId||'',
@@ -3635,6 +3664,7 @@ function cancelarEdicion(){
 
 /* ------------------- eliminar un abono de cartera ------------------- */
 function borrarOtroDoc(d){
+  if(!exigirCaja('borrar documentos de cartera')) return;
   if(!puedeBorrar()) return pedirAlAdmin('borrar documentos');
   confirmar('¿Borrar '+d.no+' ('+esc(d.terceroNombre||'')+') por '+money(d.total)+'? Se borran también sus abonos y los movimientos de caja que generó.',()=>{
     S.abonos.filter(a=>a.docId===d.id).forEach(a=>{
@@ -3647,6 +3677,7 @@ function borrarOtroDoc(d){
   },true);
 }
 function borrarAbono(a){
+  if(!exigirCaja('borrar abonos')) return;
   if(!puedeBorrar()) return pedirAlAdmin('eliminar abonos');
   confirmar('¿Eliminar este abono de '+money(a.monto)+'? El saldo del documento vuelve a subir.',()=>{
     const mvA=a.movId? byId('movimientos',a.movId):null;
@@ -3666,6 +3697,7 @@ function borrarAbono(a){
 /* --------------- editar o borrar un movimiento de caja -------------- */
 function esMovManual(m){ return !m.refId || m.categoria==='traslado' || m.categoria==='caja-manual'; }
 function edMovimiento(m){
+  if(!exigirCaja('cambiar movimientos de dinero')) return;
   if(!puedeEditar()) return pedirAlAdmin('editar o eliminar movimientos');
   if(!esMovManual(m)) return toast('Este movimiento lo generó una '+(m.refTipo||'operación')+
     '. Edita ese documento y el movimiento se recalcula.','warn',6000);
@@ -3711,6 +3743,7 @@ function compraConsumida(c){
     .some(cap=>(Number(cap.restante)||0) < (Number(cap.cantidad)||0)-0.000001);
 }
 function borrarCompra(c){
+  if(!exigirCaja('borrar compras')) return;
   if(!c) return;
   if(!puedeBorrar()) return pedirAlAdmin('borrar compras');
   if(abonadoDe(c.id)>0.5) return toast('Tiene pagos registrados: bórralos primero en Cartera','warn',5500);
@@ -4823,6 +4856,7 @@ function edProductoComercio(p){
         if(ed.precio<=0) return toast('Pon el precio de venta','warn');
         put('productos',ed);
         const inv=asegurarInventario(ed);
+        if(!p && toN(($('#sti',m)||{}).value)>0 && !cajaAbiertaAhora()){ return exigirCaja('cargar stock inicial'); }
         if(!p){ const st=toN(($('#sti',m)||{}).value);
           if(st>0) movInv(inv.id,'entrada',st,ed.costoManual,'inicial','','Stock inicial');
           else { inv.costo=ed.costoManual; put('ingredientes',inv); } }
@@ -5071,7 +5105,8 @@ function edIngrediente(g){
         ed.stockMin=toN($('#sm',m).value);
         const nuevo=!g; if(nuevo) ed.stock=0;
         put('ingredientes',ed);
-        if(nuevo){ const si=toN($('#si',m).value); if(si) movInv(ed.id,'entrada',si,ed.costo,'inicial','','Stock inicial'); }
+        if(nuevo){ const si=toN($('#si',m).value); if(si){ if(!cajaAbiertaAhora()) toast('Ingrediente creado sin stock: con la caja cerrada no se carga inventario','warn',6000);
+          else movInv(ed.id,'entrada',si,ed.costo,'inicial','','Stock inicial'); } }
         closeModal(); render(); toast('Ingrediente guardado','ok'); };
       if($('#del',m)) $('#del',m).onclick=()=>{ closeModal();
         confirmar('¿Eliminar ingrediente?',()=>{remove('ingredientes',ed.id);render();},true); };
@@ -5253,6 +5288,7 @@ async function compararConNube(){
   return out;
 }
 async function recalcularTodo(){
+  if(!exigirCaja('recalcular')) return;
   if(!S.user || S.user.rol==='mesero') return toast('Solo caja o administrador','warn');
   const b=$('#btnrecalc'); if(b){ b.disabled=true; b.textContent='⏳ Recalculando…'; }
   try{
@@ -5334,6 +5370,7 @@ function recalcularInventario(){
   return cambios;
 }
 function hacerRecalculo(){
+  if(!exigirCaja('recalcular el inventario')) return;
   if(!puedeEditar()) return pedirAlAdmin('recalcular el inventario');
   confirmar('¿Recalcular el inventario? Cada ingrediente queda con lo que dicen todas las compras, ventas y ajustes registrados. '+
     'Lo que esté en negativo queda en 0. Todo queda registrado.',()=>{
@@ -5412,6 +5449,7 @@ function mAuditoriaInv(){
     }});
 }
 function mAjuste(gid){
+  if(!exigirCaja('ajustar el inventario')) return;
   const gs=S.ingredientes.filter(g=>g.activo!==false);
   if(!gs.length) return toast('No hay ingredientes','warn');
   modal({title:'⚖️ Conteo físico',
@@ -5527,6 +5565,7 @@ function viewCompras(vw){
   paint();
 }
 function edCompra(orig){
+  if(!exigirCaja(orig? 'corregir compras' : 'registrar compras')) return;
   const gs=S.ingredientes.filter(g=>g.activo);
   let items=orig? (orig.items||[]).map(i=>Object.assign({},i)) : [];
   let credito=orig? !!orig.credito : false;
@@ -5615,6 +5654,7 @@ function edCompra(orig){
       $('#plz',m).oninput=()=>{ $('#vinfo',m).textContent='Vence el '+dateAdd($('#fe',m).value,toN($('#plz',m).value)); };
       paintRows(); calc();
       $('#ok',m).onclick=()=>{
+        if(!cajaAbiertaAhora()){ closeModal(); return exigirCaja('registrar compras'); }
         items=items.filter(i=>i.ingredienteId && i.cantidad>0);
         if(!items.length) return toast('Agrega ítems a la compra','warn');
         if(!cbPv.valor()) return toast('Busca o crea el proveedor','warn');
@@ -5828,6 +5868,7 @@ function viewCartera(vw){
 /* préstamos a empleados, anticipos y cualquier deuda que no nace de una
    venta o una compra; entran a cartera como un documento más */
 function edOtroDoc(tipo){
+  if(!exigirCaja('crear documentos de cartera')) return;
   const esC=tipo==='cxc';
   modal({title: esC? 'Nuevo documento por cobrar' : 'Nueva cuenta por pagar', size:'wide',
     body:'<p class="hintx" style="margin-top:0">'+(esC
@@ -5935,6 +5976,7 @@ function abonarDocs(tipo,lista,cuentaId,medio,nota){
   return out;
 }
 function mAbono(tipo,doc){
+  if(!exigirCaja('registrar cobros o pagos')) return;
   if(!doc) return;
   const esC=tipo==='cxc';
   const saldo=saldoDoc(doc);
@@ -6243,6 +6285,7 @@ function edCuenta(c,despues){
       if(typeof despues==='function') despues(); }; }});
 }
 function mMovimiento(){
+  if(!exigirCaja('mover dinero')) return;
   modal({title:'Movimiento de tesorería',
     body:'<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
       '<div class="f"><label>Tipo</label><select id="t"><option value="ingreso">Ingreso (entra plata)</option>'+
