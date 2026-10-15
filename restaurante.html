@@ -690,7 +690,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.15-3';
+const APP_VERSION='2026.10.16-1';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -956,7 +956,11 @@ async function flushOutbox(manual){
       const datos = o.op==='delete'
         ? {id:o.payload.id,_del:true,upd:o.ts}
         : Object.assign({},o.payload,{upd:o.payload.upd||o.ts});
-      return {update:{name:fbDocRoot()+'/'+o.entidad+'/'+o.payload.id, fields:fsFields(datos)}};
+      delete datos._srv;
+      /* _srv = hora del SERVIDOR de Google, igual para todos los equipos aunque
+         el reloj del celular del mesero esté atrasado o adelantado */
+      return {update:{name:fbDocRoot()+'/'+o.entidad+'/'+o.payload.id, fields:fsFields(datos)},
+              updateTransforms:[{fieldPath:'_srv',setToServerValue:'REQUEST_TIME'}]};
     });
     /* el pulso: por colección, la fecha del último cambio de este lote */
     const tope={};
@@ -1004,7 +1008,14 @@ function aplicarRemoto(coll,o){
   if(!S[coll]) return false;
   const i=S[coll].findIndex(x=>x.id===o.id);
   if(o._del){ if(i>=0){ S[coll].splice(i,1); idbDel(coll,o.id); return true; } return false; }
-  if(i>=0 && String(S[coll][i].upd||'')>=String(o.upd||'')) return false;
+  if(i>=0){
+    const loc=S[coll][i];
+    if(o._srv){
+      /* si este equipo tiene cambios de ese documento sin subir, se respetan */
+      if(S.outbox.some(x=>x.entidad===coll && x.payload && x.payload.id===o.id)) return false;
+      if(loc._srv && String(loc._srv)>=String(o._srv)) return false;
+    } else if(String(loc.upd||'')>=String(o.upd||'')) return false;
+  }
   if(i>=0) S[coll][i]=o; else S[coll].push(o);
   idbPut(coll,o); return true;
 }
@@ -1041,9 +1052,18 @@ async function pullCloud(manual){
       }
     } else sinPulso=true;                          // negocio viejo: se barre y se deja el pulso
 
+    S.meta.pullSrv=S.meta.pullSrv||{};
     for(const coll of listas){
-      let cursor=S.meta.pull[coll]||'', completo=false;
-      for(let pag=0; pag<25; pag++){
+      let cursor=S.meta.pull[coll]||'', completo=false, maxSrv='';
+      /* Antes se pedía "lo que tenga upd mayor que lo último visto", pero upd es la
+         hora del reloj de cada equipo: si el celular del mesero estaba atrasado, sus
+         pedidos quedaban "en el pasado" y el PC nunca los bajaba. Ahora se pide por
+         _srv (hora del servidor). La búsqueda vieja solo se usa la primera vez. */
+      const yaSrv=!!S.meta.pullSrv[coll];
+      /* transición: mientras algún equipo siga con la versión vieja (sin _srv),
+         también se pregunta a la manera antigua. Se apaga sola a fin de mes. */
+      const transicion=Date.now()<Date.parse('2026-11-01T00:00:00Z');
+      if(!yaSrv || transicion) for(let pag=0; pag<25; pag++){
         const q={structuredQuery:{ from:[{collectionId:coll}],
           where:{fieldFilter:{field:{fieldPath:'upd'},op:'GREATER_THAN',value:{stringValue:cursor}}},
           orderBy:[{field:{fieldPath:'upd'},direction:'ASCENDING'}], limit:300 }};
@@ -1053,9 +1073,30 @@ async function pullCloud(manual){
         contarLectura(Math.max(1,docs.length));
         docs.forEach(r=>{ const o=fsDoc(r.document.fields);
           if(aplicarRemoto(coll,o)) cambios++;
-          if(String(o.upd||'')>cursor) cursor=o.upd; });
+          if(String(o.upd||'')>cursor) cursor=o.upd;
+          if(o._srv && String(o._srv)>maxSrv) maxSrv=String(o._srv); });
         if(docs.length<300){ completo=true; break; }
       }
+      if(!yaSrv){ S.meta.pullSrv[coll]=maxSrv||'1970-01-01T00:00:00Z'; }
+      else completo=true;
+      /* lo nuevo, por la hora del servidor */
+      let cS=S.meta.pullSrv[coll];
+      for(let pag=0; pag<25; pag++){
+        const q={structuredQuery:{ from:[{collectionId:coll}],
+          where:{fieldFilter:{field:{fieldPath:'_srv'},op:'GREATER_THAN',value:{timestampValue:cS}}},
+          orderBy:[{field:{fieldPath:'_srv'},direction:'ASCENDING'}], limit:300 }};
+        const res=await fbJson(fbUrl('/negocios/'+(S.cfg.fbNegocio||'principal')+':runQuery'),
+          {method:'POST',headers:hdr,body:JSON.stringify(q)});
+        const docs=(res||[]).filter(r=>r&&r.document);
+        contarLectura(Math.max(1,docs.length));
+        docs.forEach(r=>{ const o=fsDoc(r.document.fields);
+          if(aplicarRemoto(coll,o)) cambios++;
+          if(o._srv && String(o._srv)>String(cS)) cS=String(o._srv);
+          if(String(o.upd||'')>cursor) cursor=o.upd; });
+        if(docs.length<300){ break; }
+        if(pag===24) completo=false;
+      }
+      S.meta.pullSrv[coll]=cS;
       S.meta.pull[coll]=cursor;
       S.meta.pullInc=S.meta.pullInc||{}; S.meta.pullInc[coll]=!completo;   // faltó bajar algo: sigue en la próxima vuelta
     }
