@@ -72,12 +72,32 @@ table{border-collapse:separate;border-spacing:0;font-size:14px}
 th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:0}
 thead th{background:var(--head);position:sticky;top:0;z-index:2;font-weight:700;box-shadow:0 2px 0 var(--line)}
 tfoot td{position:sticky;bottom:0;z-index:2;box-shadow:0 -2px 0 var(--line)}
-.c-hora{position:sticky;left:0;z-index:1;background:var(--surface);min-width:86px;max-width:86px;text-align:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
-.c-pac{position:sticky;left:86px;z-index:1;background:var(--surface);min-width:240px;max-width:240px;text-align:left}
-.c-cnt{position:sticky;left:326px;z-index:1;background:var(--surface);min-width:70px;text-align:center;box-shadow:2px 0 0 var(--line)}
-thead .c-hora,thead .c-pac,thead .c-cnt,tfoot .c-hora,tfoot .c-pac,tfoot .c-cnt{z-index:4;background:var(--head)}
-thead .c-hora,thead .c-pac,thead .c-cnt{top:0}
-tfoot .c-hora,tfoot .c-pac,tfoot .c-cnt{bottom:0}
+.c-hora,.c-pac,.c-emp,.c-dia,.c-cnt{position:sticky;z-index:1;background:var(--surface)}
+.c-hora{left:0;min-width:84px;max-width:84px;text-align:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.c-pac{left:84px;min-width:220px;max-width:220px;text-align:left}
+.c-emp{left:304px;min-width:118px;max-width:118px;font-size:12px;padding:0 8px!important}
+.c-dia{left:422px;min-width:72px;max-width:72px;text-align:center;font-size:13px;font-weight:700}
+.c-cnt{left:494px;min-width:66px;text-align:center;box-shadow:2px 0 0 var(--line)}
+td.c-emp{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+thead .c-emp,thead .c-dia{background:var(--blue)}
+.hcell{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:6px 4px 6px 8px;font-size:13px}
+.fbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:5px;width:26px;height:24px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
+.fbtn svg{width:12px;height:12px}
+.fbtn.act{background:var(--mark);border-color:var(--mark);color:var(--mark-ink)}
+.fpop{position:fixed;z-index:40;width:290px;max-width:94vw;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:12px;display:flex;flex-direction:column;gap:8px}
+.fpop[hidden]{display:none}
+.fpop input[type=search]{border:1px solid var(--line);border-radius:7px;padding:7px 10px;background:var(--bg);color:var(--ink)}
+.fp-list{border:1px solid var(--line);border-radius:7px;overflow:auto;max-height:min(300px,45vh);padding:4px 0}
+.fp-list label,.fp-all{display:flex;gap:8px;align-items:center;padding:5px 10px;font-size:14px;cursor:pointer}
+.fp-list label:hover{background:var(--head)}
+.fp-list label small{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.fp-all{font-weight:700;padding-left:10px}
+.fp-act{display:flex;gap:6px;align-items:center}
+.fp-act .btn{padding:6px 10px;font-size:14px}
+thead .c-hora,thead .c-pac,thead .c-emp,thead .c-dia,thead .c-cnt,tfoot .c-hora,tfoot .c-pac,tfoot .c-emp,tfoot .c-dia,tfoot .c-cnt{z-index:4;background:var(--head)}
+thead .c-hora,thead .c-pac,thead .c-emp,thead .c-dia,thead .c-cnt{top:0}
+tfoot .c-hora,tfoot .c-pac,tfoot .c-emp,tfoot .c-dia,tfoot .c-cnt{bottom:0}
+@media (max-width:900px){thead .c-emp,thead .c-dia,thead .c-cnt{position:sticky;left:auto}tfoot .c-emp,tfoot .c-dia,tfoot .c-cnt{position:sticky;left:auto}}
 thead .c-hora,thead .c-cnt{background:var(--olive);color:var(--olive-ink)}
 thead .c-pac{padding:8px 10px;font-size:13px;background:var(--blue)}
 td.c-hora.bad{color:var(--warn);font-size:11px;font-weight:400}
@@ -105,16 +125,11 @@ tfoot td{background:var(--head);font-size:12px;text-align:center;color:var(--mut
 tfoot td.c-pac{padding:6px 10px;text-align:left}
 tfoot td.r{color:var(--red-ink)}
 tfoot td.full{color:var(--warn);font-weight:700}
-tr:hover td.c-pac,tr:hover td.c-cnt,tr:hover td.c-hora{background:var(--head)}
-.filtros{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;padding:0 clamp(14px,3vw,32px) 12px}
-.filtros label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
-.filtros input,.filtros select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--surface);color:var(--ink);font-size:15px;min-width:150px}
-.filtros input{min-width:240px}
-.filtros .on{border-color:var(--mark);border-width:2px}
-.filtros .cuenta{font-size:13px;color:var(--muted);padding-bottom:9px}
-th.d.sel{outline:3px solid var(--mark);outline-offset:-3px}
-td.d.sel{background:color-mix(in srgb,var(--mark) 10%,transparent)}
-@media (max-width:640px){.filtros input,.filtros select{min-width:0;width:100%}.filtros label{flex:1 1 140px}}
+tr:hover td.c-pac,tr:hover td.c-cnt,tr:hover td.c-hora,tr:hover td.c-emp,tr:hover td.c-dia{background:var(--head)}
+.filtros{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:0 clamp(6px,2vw,32px) 10px;padding:8px 12px;border-radius:8px;background:color-mix(in srgb,var(--mark) 12%,var(--surface));font-size:14px}
+.filtros[hidden]{display:none}
+.filtros .btn{padding:5px 12px}
+#btnGuardar.dirty{border-color:var(--warn);color:var(--warn);font-weight:700}
 
 .empty{padding:48px 20px;text-align:center;color:var(--muted)}
 .empty p{max-width:46ch;margin:0 auto 16px}
@@ -151,10 +166,14 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
 
 #toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw}
 #toast.show{opacity:1}
+@media (max-width:900px){
+  .c-emp,.c-dia,.c-cnt{position:static}
+  .c-cnt{box-shadow:none}
+  .c-pac{box-shadow:2px 0 0 var(--line)}
+}
 @media (max-width:640px){
-  .c-hora{min-width:70px;max-width:70px}
-  .c-pac{left:70px;min-width:160px;max-width:160px}
-  .c-cnt{left:230px}
+  .c-hora{min-width:66px;max-width:66px}
+  .c-pac{left:66px;min-width:150px;max-width:150px}
   .grid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
@@ -183,18 +202,13 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
   <input type="file" id="fileTpl" accept=".xlsx" hidden>
   <span class="spacer"></span>
   <span class="sync" id="sync"></span>
+  <button class="btn" id="btnGuardar" title="Guarda ya mismo en este navegador y en línea">Guardar</button>
   <button class="btn primary" id="btnExport">Descargar Excel</button>
 </div>
 <div class="legend" id="legend"></div>
 <div class="legend"><span id="tplName"></span></div>
 <div class="alertbar" id="alertbar"><span id="alertTxt"></span><button class="btn" id="alertBtn">Ver detalle</button></div>
-<div class="filtros" role="search">
-  <label>Buscar por nombre o documento<input id="fNombre" type="search" placeholder="Ej: Amparo, 37241283"></label>
-  <label>Día<select id="fDia"></select></label>
-  <label>Empresa<select id="fEmp"></select></label>
-  <button class="btn" id="fLimpiar" hidden>Quitar filtros</button>
-  <span class="cuenta" id="fCuenta"></span>
-</div>
+<div class="filtros" id="fBar" hidden><span id="fCuenta"></span><button class="btn" id="fLimpiar">Quitar filtros</button></div>
 <div class="wrap" id="wrap"></div>
 
 <dialog id="dlgMes"><div class="dlg">
@@ -222,6 +236,7 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
     <label class="f">Hora agendamiento<select name="hora" id="selHora"></select></label>
     <label class="f">Días de la semana<input name="dias" list="diasOpc" placeholder="L-M-V"></label>
     <label class="f full">Observaciones<input name="obs" list="obsOpc" placeholder="Alertas o novedades del paciente"></label>
+    <div class="full" id="pacOtras" style="font-size:14px"></div>
   </div>
   <datalist id="tiposDoc"><option>CC</option><option>TI</option><option>RC</option><option>CE</option><option>PPT</option></datalist>
   <datalist id="siglas"><option>TF</option><option>TR</option><option>TO</option><option>TL</option></datalist>
@@ -231,6 +246,7 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
   <datalist id="obsOpc"><option>Continuidad del mes anterior</option><option>Se inicia nueva orden - nuevo ingreso</option></datalist>
   <div class="actions">
     <button type="button" class="btn danger left" id="pacDel">Quitar paciente</button>
+    <button type="button" class="btn" id="pacOtraHora" title="Para pacientes con más de una terapia al día">Agregar otra hora</button>
     <button type="button" class="btn" id="pacCancel">Cancelar</button>
     <button type="submit" class="btn primary">Guardar</button>
   </div>
@@ -268,6 +284,13 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
   <div class="actions"><button class="btn" id="confNo">Cancelar</button><button class="btn primary" id="confYes"></button></div>
 </div></dialog>
 
+<div class="fpop" id="fpop" hidden role="dialog" aria-label="Filtro">
+  <b id="fpTit"></b>
+  <input type="search" id="fpBuscar" placeholder="Buscar">
+  <label class="fp-all"><input type="checkbox" id="fpAll"> (Seleccionar todo)</label>
+  <div class="fp-list" id="fpList"></div>
+  <div class="fp-act"><button class="btn" id="fpClear">Borrar filtro</button><span class="spacer"></span><button class="btn" id="fpCancel">Cancelar</button><button class="btn primary" id="fpOk">Aceptar</button></div>
+</div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -340,22 +363,43 @@ function normPac(p){
   const hs=horaSlot(p.hora);if(hs)p.hora=hs;
   return p;
 }
+/* Un paciente con varias horas al día = una fila por hora, enlazadas con "grupo" */
+const COMPARTIDOS=["madrina","aseguradora","tipoDoc","documento","nombre","direccion","barrio","telefono","comuna"];
+function multiHoras(s){const t=[...String(s||"").matchAll(/\d{1,2}[:.]\d{2}\s*[AaPp]?\.?\s*[Mm]?\.?/g)].map(m=>horaSlot(m[0]));return t.length>1&&t.every(Boolean)?t:null}
+function agrupar(pacs){const por={};pacs.forEach(p=>{const k=String(p.documento||"").trim();if(k&&!p.grupo)(por[k]=por[k]||[]).push(p)});
+  Object.values(por).forEach(ps=>{if(ps.length>1){const g=ps.map(p=>p.grupo).find(Boolean)||"g"+ps[0].id;ps.forEach(p=>p.grupo=g)}});return pacs}
+function hermanos(p){return p&&p.grupo?state.pacientes.filter(x=>x.grupo===p.grupo&&x.id!==p.id):[]}
 function normalizar(s){
-  s=s||{};
+  s=s||{};const pacs=[];
+  (Array.isArray(s.pacientes)?s.pacientes:[]).forEach(raw=>{
+    const hs=multiHoras(raw.hora);
+    if(hs){const base=raw.id||uid(),g=raw.grupo||"g"+base,tot=parseInt(raw.terapias,10)||0;
+      hs.forEach((h,i)=>pacs.push(normPac(Object.assign({},raw,{id:i?base+"_h"+i:base,hora:h,grupo:g,terapias:Math.floor(tot/hs.length)+(i<tot%hs.length?1:0)}))))}
+    else pacs.push(normPac(raw));
+  });
   return{terapeuta:s.terapeuta||"",proceso:s.proceso||s.especialidad||"",
-    pacientes:Array.isArray(s.pacientes)?s.pacientes.map(normPac):[],
+    pacientes:agrupar(pacs),
     meses:s.meses&&typeof s.meses==="object"?s.meses:{},ultimoMes:s.ultimoMes||null};
 }
 function lsLoad(){try{const v=localStorage.getItem(LS_KEY);return v?JSON.parse(v):null}catch(e){return null}}
 function lsSave(){try{localStorage.setItem(LS_KEY,JSON.stringify(state))}catch(e){}}
+let sucio=false;
+const horaAhora=()=>new Date().toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-digit"});
+function marcarSucio(v){sucio=v;const b=$("#btnGuardar");b.classList.toggle("dirty",v);b.textContent=v?"Guardar cambios":"Guardar"}
+async function guardarYa(){
+  clearTimeout(saveTimer);lsSave();
+  if(docRef&&canWrite){setSync("Guardando…");await flush()}
+  else{marcarSucio(false);setSync("Guardado en este navegador a las "+horaAhora())}
+  toast("Agenda guardada a las "+horaAhora());
+}
 function guardar(){
-  lsSave();
-  if(!docRef||!canWrite){setSync("Guardado en este navegador");return}
+  lsSave();marcarSucio(true);
+  if(!docRef||!canWrite){marcarSucio(false);setSync("Guardado en este navegador a las "+horaAhora());return}
   setSync("Guardando…");clearTimeout(saveTimer);saveTimer=setTimeout(flush,700);
 }
 async function flush(){
   if(saving){pending=true;return}saving=true;
-  try{await docRef.set(JSON.parse(JSON.stringify(state)));setSync("Cambios guardados")}
+  try{await docRef.set(JSON.parse(JSON.stringify(state)));if(!pending){marcarSucio(false);setSync("Guardado a las "+horaAhora())}}
   catch(e){if(e&&e.code==="invalid_argument"){canWrite=false;setSync("Solo lectura: los cambios quedan en este navegador")}else setSync("No se pudo guardar en línea; quedó en este navegador")}
   saving=false;if(pending){pending=false;flush()}
 }
@@ -375,7 +419,8 @@ function problemas(){
   const out=[],n=diasDelMes(cur.y,cur.m),occ=ocupacion(),marcas=marcasMes();
   if(!state.terapeuta.trim())out.push("Falta el nombre del profesional.");
   if(!state.proceso.trim())out.push("Falta el proceso.");
-  ordenados().forEach(p=>{const f=faltantes(p);if(f.length)out.push(p.nombre+": falta "+f.join(", ")+".");
+  ordenados().forEach(p=>{const f=faltantes(p);if(f.length)out.push(p.nombre+(hermanos(p).length?" ("+(p.hora||"sin hora")+")":"")+": falta "+f.join(", ")+".");
+    if(p.hora&&hermanos(p).some(x=>x.hora===p.hora))out.push(p.nombre+": tiene dos veces la hora "+p.hora+".");
     const c=(marcas[p.id]||[]).filter(d=>d<=n).length;if(c!==(+p.terapias||0))out.push(p.nombre+": tiene "+c+" fechas y "+(+p.terapias||0)+" terapias.")});
   for(let d=1;d<=n;d++){let tot=0;Object.entries(occ[d]).forEach(([h,ps])=>{tot+=ps.length;if(h!=="?"&&ps.length>1)out.push("Día "+d+", "+h+": "+ps.map(p=>p.nombre).join(" y ")+" en la misma hora.")});
     if(tot>CUPO)out.push("Día "+d+": "+tot+" pacientes (máximo "+CUPO+").")}
@@ -398,35 +443,28 @@ function render(){
   if(!state.pacientes.length){wrap.innerHTML='<div class="empty"><p>No hay pacientes en la lista. Agrégalos uno por uno o importa tu Excel con el formato de la agenda.</p><button class="btn primary" data-act="add">Agregar paciente</button> <button class="btn" data-act="imp">Importar Excel</button></div>';return}
   const marcas=marcasMes(),occ=ocupacion(),porDia=new Array(n+1).fill(0);
   for(let d=1;d<=n;d++)porDia[d]=Object.values(occ[d]).reduce((a,ps)=>a+ps.length,0);
-  // filtros
-  const fd=$("#fDia"),fe=$("#fEmp");
-  if(filtro.dia>n)filtro.dia=0;
-  let od='<option value="0">Todos los días</option>';for(let d=1;d<=n;d++)od+='<option value="'+d+'">'+["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][info[d].w]+' '+d+(info[d].festivo?' (festivo)':'')+' – '+porDia[d]+' pac.</option>';
-  fd.innerHTML=od;fd.value=String(filtro.dia);
-  const emps=[...new Set(state.pacientes.map(p=>(p.aseguradora||"").trim()).filter(Boolean))].sort();
-  if(filtro.emp&&!emps.includes(filtro.emp))filtro.emp="";
-  fe.innerHTML='<option value="">Todas las empresas</option>'+emps.map(e=>'<option>'+esc(e)+'</option>').join("");fe.value=filtro.emp;
-  const qn=norm(filtro.q);
-  const visibles=ordenados().filter(p=>(!qn||norm(p.nombre).includes(qn)||String(p.documento).includes(qn))&&(!filtro.emp||(p.aseguradora||"").trim()===filtro.emp)&&(!filtro.dia||(marcas[p.id]||[]).includes(filtro.dia)));
-  const activo=!!(qn||filtro.emp||filtro.dia);
-  $("#fNombre").classList.toggle("on",!!qn);fd.classList.toggle("on",!!filtro.dia);fe.classList.toggle("on",!!filtro.emp);
-  $("#fLimpiar").hidden=!activo;
-  $("#fCuenta").textContent=activo?"Mostrando "+visibles.length+" de "+state.pacientes.length+" pacientes"+(filtro.dia?" agendados el "+fechaLarga(filtro.dia):""):"";
-  let h='<table><thead><tr><th class="c-hora" scope="col">Hora</th><th class="c-pac" scope="col">Paciente ('+(activo?visibles.length+' de ':'')+state.pacientes.length+')</th><th class="c-cnt" scope="col" title="Fechas marcadas / número de terapias">Terapias</th>';
-  for(let d=1;d<=n;d++){const i=info[d];h+='<th class="d'+(i.rojo?' r':'')+(filtro.dia===d?' sel':'')+'" scope="col" data-dia="'+d+'" title="'+esc(fechaLarga(d)+(i.festivo?" – Festivo: "+i.festivo:i.domingo?" – Domingo":"")+". Clic para ver franjas")+'">'+d+'<small>'+INI[i.w]+'</small></th>'}
+  const visibles=filtrar(ordenados());
+  const activos=Object.keys(filtros).filter(k=>filtros[k]);
+  $("#fBar").hidden=!activos.length;
+  $("#fCuenta").textContent=activos.length?"Mostrando "+visibles.length+" de "+state.pacientes.length+" pacientes. Filtro en: "+activos.map(k=>FCOLS[k].titulo+" ("+filtros[k].size+")").join(", "):"";
+  const fb=k=>'<button class="fbtn'+(filtros[k]?' act':'')+'" data-f="'+k+'" aria-label="Filtrar '+FCOLS[k].titulo+'" title="Filtrar '+FCOLS[k].titulo+'"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">'+(filtros[k]?'<path d="M1 1h10L7 6v5L5 10V6z"/>':'<path d="M2 4h8L6 9z"/>')+'</svg></button>';
+  const hc=(cls,k,lab)=>'<th class="'+cls+'" scope="col"><div class="hcell"><span>'+lab+'</span>'+fb(k)+'</div></th>';
+  let h='<table><thead><tr>'+hc("c-hora","hora","Hora")+hc("c-pac","nombre","Paciente ("+(activos.length?visibles.length+" de ":"")+state.pacientes.length+")")+hc("c-emp","emp","Empresa")+hc("c-dia","dias","Días")+'<th class="c-cnt" scope="col" title="Fechas marcadas / número de terapias">Terapias</th>';
+  for(let d=1;d<=n;d++){const i=info[d];h+='<th class="d'+(i.rojo?' r':'')+'" scope="col" data-dia="'+d+'" title="'+esc(fechaLarga(d)+(i.festivo?" – Festivo: "+i.festivo:i.domingo?" – Domingo":"")+". Clic para ver franjas")+'">'+d+'<small>'+INI[i.w]+'</small></th>'}
   h+='</tr></thead><tbody>';
-  if(!visibles.length)h+='<tr><td colspan="'+(n+3)+'" class="empty" style="text-align:left">Ningún paciente coincide con los filtros. <button class="btn" data-act="limpiar">Quitar filtros</button></td></tr>';
+  if(!visibles.length)h+='<tr><td colspan="'+(n+5)+'" class="empty" style="text-align:left">Ningún paciente coincide con los filtros. <button class="btn" data-act="limpiar">Quitar filtros</button></td></tr>';
   visibles.forEach(p=>{
     const set=new Set(marcas[p.id]||[]),c=[...set].filter(d=>d<=n).length,t=+p.terapias||0,cls=t&&c===t?"ok":t&&c>t?"over":"";
     const f=faltantes(p),ok=SLOTS.includes(p.hora);
     h+='<tr><td class="c-hora'+(ok?'':' bad')+'">'+(ok?esc(p.hora):'Fuera de franja')+'</td>';
-    h+='<td class="c-pac"><button class="pac" data-edit="'+p.id+'" title="'+esc(f.length?"Falta: "+f.join(", "):"Editar datos")+'"><span class="n">'+(f.length?'<span class="w">! </span>':'')+esc(p.nombre||"(sin nombre)")+'</span><span class="s">'+esc([p.aseguradora,p.dias,p.obs].filter(Boolean).join("   "))+'</span></button></td>';
+    h+='<td class="c-pac"><button class="pac" data-edit="'+p.id+'" title="'+esc(f.length?"Falta: "+f.join(", "):"Editar datos")+'"><span class="n">'+(f.length?'<span class="w">! </span>':'')+esc(p.nombre||"(sin nombre)")+'</span>'+(()=>{const o=hermanos(p).map(x=>x.hora).filter(Boolean),s=[o.length?"También: "+o.join(", "):"",p.obs].filter(Boolean).join("   ");return s?'<span class="s">'+esc(s)+'</span>':''})()+'</button></td>';
+    h+='<td class="c-emp" title="'+esc(p.aseguradora)+'">'+esc(p.aseguradora)+'</td><td class="c-dia">'+esc(p.dias)+'</td>';
     h+='<td class="c-cnt"><span class="cnt '+cls+'">'+c+'/'+t+(p.sigla?' '+esc(p.sigla):'')+'</span></td>';
     for(let d=1;d<=n;d++){const on=set.has(d);const conf=on&&ok&&(occ[d][p.hora]||[]).length>1;
-      h+='<td class="d'+(info[d].rojo?' r':'')+(filtro.dia===d?' sel':'')+'"><button class="'+(on?'on':'')+(conf?' conf':'')+'" data-p="'+p.id+'" data-d="'+d+'" aria-pressed="'+on+'" aria-label="'+esc(p.nombre)+', '+fechaLarga(d)+'"'+(conf?' title="Otro paciente tiene esta misma hora este día"':'')+'>'+(on?'<span>X</span>':'')+'</button></td>'}
+      h+='<td class="d'+(info[d].rojo?' r':'')+'"><button class="'+(on?'on':'')+(conf?' conf':'')+'" data-p="'+p.id+'" data-d="'+d+'" aria-pressed="'+on+'" aria-label="'+esc(p.nombre)+', '+fechaLarga(d)+'"'+(conf?' title="Otro paciente tiene esta misma hora este día"':'')+'>'+(on?'<span>X</span>':'')+'</button></td>'}
     h+='</tr>';
   });
-  h+='</tbody><tfoot><tr><td class="c-hora"></td><td class="c-pac">Pacientes por día (máx. '+CUPO+')</td><td class="c-cnt">'+porDia.reduce((a,b)=>a+b,0)+'</td>';
+  h+='</tbody><tfoot><tr><td class="c-hora"></td><td class="c-pac">Pacientes por día (máx. '+CUPO+')</td><td class="c-emp"></td><td class="c-dia"></td><td class="c-cnt">'+porDia.reduce((a,b)=>a+b,0)+'</td>';
   for(let d=1;d<=n;d++)h+='<td class="'+(info[d].rojo?'r ':'')+(porDia[d]>CUPO?'full':'')+'">'+(porDia[d]||"")+'</td>';
   wrap.innerHTML=h+'</tr></tfoot></table>';
 }
@@ -434,6 +472,7 @@ let toastT;function toast(t){const el=$("#toast");el.textContent=t;el.classList.
 
 /* Tabla */
 $("#wrap").addEventListener("click",e=>{
+  const fbt=e.target.closest(".fbtn");if(fbt){if(popKey===fbt.dataset.f)return cerrarPop();return abrirPop(fbt.dataset.f,fbt)}
   const th=e.target.closest("th[data-dia]");if(th)return verDia(+th.dataset.dia);
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.act==="add")return abrirPaciente(null);
@@ -470,14 +509,55 @@ function pintarMeses(){$("#yVal").textContent=selY;$("#monthsGrid").innerHTML=ME
 $("#monthsGrid").addEventListener("click",e=>{const b=e.target.closest("button");if(b){selM=+b.dataset.m;pintarMeses()}});
 $("#monthsGrid").addEventListener("dblclick",e=>{if(e.target.closest("button"))$("#mesOk").click()});
 $("#yPrev").onclick=()=>{selY--;pintarMeses()};$("#yNext").onclick=()=>{selY++;pintarMeses()};
-/* Filtros (solo cambian la vista; el Excel sale completo) */
-const filtro={q:"",dia:0,emp:""};
+$("#btnGuardar").onclick=guardarYa;
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();guardarYa()}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"){lsSave();if(sucio&&docRef&&canWrite){clearTimeout(saveTimer);flush()}}});
+addEventListener("beforeunload",e=>{lsSave();if(sucio&&docRef&&canWrite){flush();e.preventDefault();e.returnValue=""}});
+/* Filtros tipo Excel en el encabezado (solo cambian la vista; el Excel sale completo) */
+const FCOLS={
+  hora:{titulo:"Hora",val:p=>SLOTS.includes(p.hora)?p.hora:"(Fuera de franja)",orden:(a,b)=>slotIdx(a)-slotIdx(b)},
+  nombre:{titulo:"Paciente",val:p=>(p.nombre||"").trim()||"(Vacías)"},
+  emp:{titulo:"Empresa",val:p=>(p.aseguradora||"").trim()||"(Vacías)"},
+  dias:{titulo:"Días",val:p=>(p.dias||"").trim()||"(Vacías)"}
+};
+const filtros={};
 function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim()}
-let fT;$("#fNombre").addEventListener("input",e=>{clearTimeout(fT);fT=setTimeout(()=>{filtro.q=e.target.value;render()},150)});
-$("#fDia").addEventListener("change",e=>{filtro.dia=+e.target.value;render()});
-$("#fEmp").addEventListener("change",e=>{filtro.emp=e.target.value;render()});
-function limpiarFiltros(){filtro.q="";filtro.dia=0;filtro.emp="";$("#fNombre").value="";render()}
+function filtrar(lista,salvo){return lista.filter(p=>Object.keys(filtros).every(k=>k===salvo||!filtros[k]||filtros[k].has(FCOLS[k].val(p))))}
+function limpiarFiltros(){Object.keys(filtros).forEach(k=>delete filtros[k]);cerrarPop();render()}
 $("#fLimpiar").onclick=limpiarFiltros;
+let popKey=null;
+function abrirPop(k,btn){
+  popKey=k;const col=FCOLS[k],base=filtrar(state.pacientes,k),cuenta={};
+  base.forEach(p=>{const v=col.val(p);cuenta[v]=(cuenta[v]||0)+1});
+  (filtros[k]||[]).forEach(v=>{if(!(v in cuenta))cuenta[v]=0});
+  const vals=Object.keys(cuenta).sort(col.orden||((a,b)=>a.localeCompare(b,"es")));
+  $("#fpTit").textContent="Filtrar "+col.titulo;$("#fpBuscar").value="";
+  $("#fpList").innerHTML=vals.map(v=>'<label data-v="'+esc(norm(v))+'"><input type="checkbox" value="'+esc(v)+'"'+(!filtros[k]||filtros[k].has(v)?' checked':'')+'><span>'+esc(v)+'</span><small>'+cuenta[v]+'</small></label>').join("")||'<p class="hint" style="padding:8px">No hay valores.</p>';
+  syncAll();
+  const pop=$("#fpop");pop.hidden=false;
+  const r=btn.getBoundingClientRect(),w=pop.offsetWidth,hgt=pop.offsetHeight;
+  pop.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+"px";
+  pop.style.top=(r.bottom+hgt+8>innerHeight?Math.max(8,r.top-hgt-4):r.bottom+4)+"px";
+  $("#fpBuscar").focus();
+}
+function cerrarPop(){$("#fpop").hidden=true;popKey=null}
+const visiblesPop=()=>Array.from($("#fpList").querySelectorAll("label")).filter(l=>!l.hidden).map(l=>l.querySelector("input"));
+function syncAll(){const v=visiblesPop(),c=v.filter(i=>i.checked).length,a=$("#fpAll");a.checked=v.length>0&&c===v.length;a.indeterminate=c>0&&c<v.length}
+$("#fpList").addEventListener("change",syncAll);
+$("#fpAll").addEventListener("change",e=>{visiblesPop().forEach(i=>i.checked=e.target.checked);syncAll()});
+$("#fpBuscar").addEventListener("input",e=>{const q=norm(e.target.value);$("#fpList").querySelectorAll("label").forEach(l=>{l.hidden=!!q&&!l.dataset.v.includes(q);if(q)l.querySelector("input").checked=!l.hidden});syncAll()});
+$("#fpBuscar").addEventListener("keydown",e=>{if(e.key==="Enter")$("#fpOk").click()});
+$("#fpCancel").onclick=cerrarPop;
+$("#fpClear").onclick=()=>{delete filtros[popKey];cerrarPop();render()};
+$("#fpOk").onclick=()=>{
+  const todos=Array.from($("#fpList").querySelectorAll("input")),sel=todos.filter(i=>i.checked&&!i.closest("label").hidden).map(i=>i.value);
+  if(!sel.length){toast("Marca al menos un valor");return}
+  if(sel.length===todos.length&&!$("#fpBuscar").value)delete filtros[popKey];else filtros[popKey]=new Set(sel);
+  cerrarPop();render();
+};
+document.addEventListener("mousedown",e=>{if(popKey&&!e.target.closest("#fpop")&&!e.target.closest(".fbtn"))cerrarPop()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&popKey)cerrarPop()});
+$("#wrap").addEventListener("scroll",()=>{if(popKey)cerrarPop()},{passive:true});
 $("#mesOk").onclick=()=>{cur={y:selY,m:selM};state.ultimoMes=keyMes();$("#dlgMes").close();render();guardar()};
 $("#btnMes").onclick=abrirMes;
 
@@ -487,8 +567,10 @@ const CAMPOS=["nombre","madrina","aseguradora","tipoDoc","documento","direccion"
 function abrirPaciente(id){
   editId=id;const f=$("#formPac");f.reset();
   const p=id?state.pacientes.find(x=>x.id===id):{tipoDoc:"CC",terapias:10,hora:""};
-  const sel=$("#selHora"),ok=SLOTS.includes(p.hora);
-  sel.innerHTML='<option value="">Elegir franja…</option>'+(!ok&&p.hora?'<option value="'+esc(p.hora)+'">'+esc(p.hora)+' (fuera de franja)</option>':'')+SLOTS.map(h=>'<option>'+h+'</option>').join("");
+  const sel=$("#selHora"),ok=SLOTS.includes(p.hora),herm=hermanos(p),usadas=herm.map(x=>x.hora);
+  sel.innerHTML='<option value="">Elegir franja…</option>'+(!ok&&p.hora?'<option value="'+esc(p.hora)+'">'+esc(p.hora)+' (fuera de franja)</option>':'')+SLOTS.map(h=>'<option'+(usadas.includes(h)?' disabled':'')+'>'+h+(usadas.includes(h)?' (ya asignada a este paciente)':'')+'</option>').join("");
+  $("#pacOtras").innerHTML=herm.length?'<b>Este paciente también tiene:</b> '+herm.sort((a,b)=>slotIdx(a.hora)-slotIdx(b.hora)).map(x=>'<button type="button" class="btn" style="padding:3px 10px;margin:2px" data-otra="'+x.id+'">'+esc(x.hora||"sin hora")+' – '+esc(x.dias||"")+' – '+(+x.terapias||0)+' terapias</button>').join("")+'<br><small style="color:var(--muted)">Los datos personales se actualizan en todas sus horas. Hora, días, terapias y observaciones son propios de cada hora.</small>':"";
+  $("#pacDel").textContent=herm.length?"Quitar esta hora":"Quitar paciente";
   CAMPOS.forEach(k=>{f.elements[k].value=p[k]==null?"":p[k]});
   const miss=id?faltantes(p):[];
   f.querySelectorAll("label.f").forEach(l=>{const el=l.querySelector("input,select");if(!el)return;const k=el.name;
@@ -497,20 +579,37 @@ function abrirPaciente(id){
   $("#pacTitle").textContent=id?"Editar paciente":"Agregar paciente";$("#pacDel").style.display=id?"":"none";
   $("#dlgPac").showModal();f.elements.nombre.focus();
 }
-$("#formPac").addEventListener("submit",e=>{
-  e.preventDefault();const f=e.target,data={};
+function guardarForm(){
+  const f=$("#formPac"),data={};
   CAMPOS.forEach(k=>data[k]=f.elements[k].value.trim());
-  if(!data.nombre){f.elements.nombre.focus();toast("Escribe el nombre del paciente");return}
+  if(!data.nombre){f.elements.nombre.focus();toast("Escribe el nombre del paciente");return null}
   data.terapias=parseInt(data.terapias,10)||0;
   ["nombre","madrina","aseguradora","tipoDoc","barrio","comuna","sigla","dias","direccion"].forEach(k=>data[k]=data[k].toUpperCase());
-  if(editId){Object.assign(state.pacientes.find(x=>x.id===editId),data);toast("Datos guardados")}
-  else{state.pacientes.push(normPac(Object.assign({id:uid()},data)));toast("Paciente agregado")}
-  $("#dlgPac").close();render();guardar();
+  let p;
+  if(editId){p=state.pacientes.find(x=>x.id===editId);Object.assign(p,data);hermanos(p).forEach(x=>COMPARTIDOS.forEach(k=>x[k]=p[k]))}
+  else{p=normPac(Object.assign({id:uid()},data));state.pacientes.push(p);editId=p.id}
+  return p;
+}
+$("#formPac").addEventListener("submit",e=>{
+  e.preventDefault();const nuevo=!editId;if(!guardarForm())return;
+  toast(nuevo?"Paciente agregado":"Datos guardados");$("#dlgPac").close();render();guardar();
 });
+$("#pacOtraHora").onclick=()=>{
+  const p=guardarForm();if(!p)return;
+  if(!p.grupo)p.grupo="g"+p.id;
+  const n=normPac({id:uid(),grupo:p.grupo,dias:p.dias,sigla:p.sigla,terapias:"",hora:"",obs:""});COMPARTIDOS.forEach(k=>n[k]=p[k]);
+  state.pacientes.push(n);render();guardar();
+  $("#dlgPac").close();abrirPaciente(n.id);
+  $("#pacTitle").textContent="Otra hora para "+p.nombre;$("#selHora").focus();
+  toast("Elige la otra hora y el número de terapias de esa hora");
+};
+$("#pacOtras").addEventListener("click",e=>{const b=e.target.closest("[data-otra]");if(!b)return;if(!guardarForm())return;render();guardar();$("#dlgPac").close();abrirPaciente(b.dataset.otra)});
 $("#pacCancel").onclick=()=>$("#dlgPac").close();
 $("#pacDel").onclick=async()=>{
   const p=state.pacientes.find(x=>x.id===editId);$("#dlgPac").close();
-  if(await confirmar("Quitar paciente","Se quitará a "+p.nombre+" de la agenda y sus fechas marcadas en todos los meses.","Quitar")){
+  const herm=hermanos(p);
+  if(await confirmar(herm.length?"Quitar esta hora":"Quitar paciente",herm.length?"Se quitará la hora "+(p.hora||"sin hora")+" de "+p.nombre+" y sus fechas marcadas. Sus otras horas se conservan.":"Se quitará a "+p.nombre+" de la agenda y sus fechas marcadas en todos los meses.","Quitar")){
+    if(herm.length===1)delete herm[0].grupo;
     state.pacientes=state.pacientes.filter(x=>x.id!==editId);Object.values(state.meses).forEach(m=>{if(m.marcas)delete m.marcas[editId]});
     render();guardar();toast("Paciente quitado")}
 };
@@ -711,7 +810,7 @@ $("#fileImport").addEventListener("change",async e=>{
     }
     if(!pacs.length){toast("El archivo no tiene pacientes");return}
     if(state.pacientes.length&&!await confirmar("Importar "+pacs.length+" pacientes","Se reemplaza la lista actual por la del archivo. Si el archivo tiene fechas marcadas, se cargan en "+MESES[cur.m]+" "+cur.y+".","Importar"))return;
-    state.pacientes=pacs;
+    state.pacientes=normalizar({pacientes:pacs}).pacientes;
     const tTer=txt(ws.getCell(hr-3,1).value),tPro=txt(ws.getCell(hr-2,1).value);
     if(tTer&&!/^agenda|nombre del profesional/i.test(tTer))state.terapeuta=tTer;
     if(tPro&&!/datos? personales|^proceso$/i.test(tPro))state.proceso=tPro;
