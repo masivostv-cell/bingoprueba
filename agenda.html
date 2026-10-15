@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agenda pacientes PAD mensual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#F5F8F8; --surface:#FFFFFF; --ink:#18323A; --muted:#5D7178; --line:#D7E1E3;
+  --mark:#127A6B; --mark-ink:#FFFFFF; --red:#C2362B; --red-soft:#FBE3E0; --red-ink:#8E2119;
+  --warn:#B46A00; --warn-soft:#FFF1D6; --head:#E9F0F1; --focus:#2C6FD1; --olive:#C9C900; --olive-ink:#2B2B00; --blue:#D9E1F2;
+  color-scheme: light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1A1D; --surface:#16252A; --ink:#E3ECEE; --muted:#9AB0B6; --line:#2A3D43;
+    --mark:#2FAE98; --mark-ink:#06201B; --red:#E0675C; --red-soft:#3A1E1C; --red-ink:#F2A79F;
+    --warn:#E3A33A; --warn-soft:#3A2C12; --head:#1C2F35; --focus:#7FB0FF; --olive:#8F8F1A; --olive-ink:#FFFFE0; --blue:#24324A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1A1D; --surface:#16252A; --ink:#E3ECEE; --muted:#9AB0B6; --line:#2A3D43;
+  --mark:#2FAE98; --mark-ink:#06201B; --red:#E0675C; --red-soft:#3A1E1C; --red-ink:#F2A79F;
+  --warn:#E3A33A; --warn-soft:#3A2C12; --head:#1C2F35; --focus:#7FB0FF; --olive:#8F8F1A; --olive-ink:#FFFFE0; --blue:#24324A;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.4}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+header.top{padding:18px clamp(14px,3vw,32px) 12px;display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between}
+.who{min-width:260px;flex:1;display:grid;gap:4px}
+.who .t{font-size:13px;color:var(--muted)}
+.who label{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--muted)}
+.who label span{min-width:88px}
+.who input{flex:1;border:0;background:transparent;padding:2px 0;border-bottom:1px dashed var(--line)}
+.who input:focus{outline:none;border-bottom-color:var(--mark)}
+.who input.req:placeholder-shown{border-bottom:2px solid var(--warn)}
+#terapeuta{font-size:clamp(18px,2.4vw,26px);font-weight:700}
+#proceso{font-size:16px}
+.month-btn{display:flex;align-items:baseline;gap:10px;background:none;border:0;cursor:pointer;padding:4px 0;text-align:left}
+.month-btn .m{font-size:clamp(28px,4vw,42px);font-weight:700;line-height:1;color:var(--mark)}
+.month-btn .y{font-size:20px;color:var(--muted)}
+.month-btn .c{font-size:13px;color:var(--muted);text-decoration:underline;margin-left:4px}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:0 clamp(14px,3vw,32px) 10px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--mark);border-color:var(--mark);color:var(--mark-ink);font-weight:700}
+.btn.danger{color:var(--red);border-color:var(--red)}
+.spacer{flex:1}
+.sync{font-size:12px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);padding:0 clamp(14px,3vw,32px) 10px}
+.legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+.legend b{color:var(--red-ink)}
+.alertbar{margin:0 clamp(6px,2vw,32px) 10px;padding:10px 14px;border-radius:8px;background:var(--warn-soft);color:var(--ink);font-size:14px;display:none;gap:10px;align-items:center;flex-wrap:wrap}
+.alertbar.show{display:flex}
+.alertbar button{margin-left:auto}
+
+.wrap{margin:0 clamp(6px,2vw,32px) 28px;overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;max-width:100%}
+table{border-collapse:separate;border-spacing:0;font-size:14px}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:0}
+thead th{background:var(--head);position:sticky;top:0;z-index:2;font-weight:700}
+.c-hora{position:sticky;left:0;z-index:1;background:var(--surface);min-width:86px;max-width:86px;text-align:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.c-pac{position:sticky;left:86px;z-index:1;background:var(--surface);min-width:240px;max-width:240px;text-align:left}
+.c-cnt{position:sticky;left:326px;z-index:1;background:var(--surface);min-width:70px;text-align:center;box-shadow:2px 0 0 var(--line)}
+thead .c-hora,thead .c-pac,thead .c-cnt,tfoot .c-hora,tfoot .c-pac,tfoot .c-cnt{z-index:3;background:var(--head)}
+thead .c-hora,thead .c-cnt{background:var(--olive);color:var(--olive-ink)}
+thead .c-pac{padding:8px 10px;font-size:13px;background:var(--blue)}
+td.c-hora.bad{color:var(--warn);font-size:11px;font-weight:400}
+.pac{display:block;width:100%;background:none;border:0;text-align:left;padding:7px 10px;cursor:pointer}
+.pac .n{font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pac .s{font-size:12px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pac .w{color:var(--warn);font-weight:700}
+.pac:hover .n{text-decoration:underline}
+.cnt{font-variant-numeric:tabular-nums;font-size:13px}
+.cnt.ok{color:var(--mark);font-weight:700}
+.cnt.over{color:var(--warn);font-weight:700}
+th.d{min-width:34px;width:34px;text-align:center;padding:4px 0;font-size:13px;cursor:pointer}
+th.d small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+th.d.r{background:var(--red);color:#fff}
+th.d.r small{color:#fff;opacity:.9}
+th.d:hover{text-decoration:underline}
+td.d{text-align:center;height:46px}
+td.d.r{background:var(--red-soft)}
+td.d button{width:100%;height:100%;min-height:44px;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+td.d button:hover{background:color-mix(in srgb,var(--mark) 12%,transparent)}
+td.d button.on span{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--mark);color:var(--mark-ink);font-weight:700;font-size:13px}
+td.d.r button.on span{background:var(--red);color:#fff}
+td.d button.conf span{background:var(--warn)!important;color:#fff!important;outline:3px solid var(--warn-soft)}
+tfoot td{background:var(--head);font-size:12px;text-align:center;color:var(--muted);padding:6px 0;font-variant-numeric:tabular-nums}
+tfoot td.c-pac{padding:6px 10px;text-align:left}
+tfoot td.r{color:var(--red-ink)}
+tfoot td.full{color:var(--warn);font-weight:700}
+tr:hover td.c-pac,tr:hover td.c-cnt,tr:hover td.c-hora{background:var(--head)}
+
+.empty{padding:48px 20px;text-align:center;color:var(--muted)}
+.empty p{max-width:46ch;margin:0 auto 16px}
+
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:0;width:min(600px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(10,25,30,.45)}
+.dlg{padding:22px 22px 18px}
+.dlg h2{margin:0 0 6px;font-size:22px}
+.dlg p.hint{margin:0 0 16px;color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.grid .full{grid-column:1/-1}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+label.f input,label.f select,label.f textarea{border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--bg);color:var(--ink);font-size:15px}
+label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px}
+.two{display:flex;gap:8px}.two>*{flex:1;min-width:0}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.actions .left{margin-right:auto}
+.radio{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:15px}
+.months{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.months button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 4px;cursor:pointer}
+.months button.sel{background:var(--mark);color:var(--mark-ink);border-color:var(--mark);font-weight:700}
+.yr{display:flex;align-items:center;gap:10px;justify-content:center;font-size:20px;font-weight:700}
+.yr button{border:1px solid var(--line);background:var(--bg);border-radius:8px;width:38px;height:38px;cursor:pointer}
+.slots{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.slots li{display:flex;gap:12px;padding:7px 12px;border-bottom:1px solid var(--line);font-size:14px}
+.slots li:last-child{border-bottom:0}
+.slots li b{min-width:76px;font-variant-numeric:tabular-nums}
+.slots li.free{color:var(--muted)}
+.slots li.conf{background:var(--warn-soft)}
+.issues{margin:0;padding-left:20px;max-height:46vh;overflow:auto;font-size:14px}
+.issues li{margin:4px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
+
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw}
+#toast.show{opacity:1}
+@media (max-width:640px){
+  .c-hora{min-width:70px;max-width:70px}
+  .c-pac{left:70px;min-width:160px;max-width:160px}
+  .c-cnt{left:230px}
+  .grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="who">
+    <div class="t">Agenda pacientes PAD mensual</div>
+    <label><span>Profesional</span><input id="terapeuta" class="req" placeholder="Nombre completo del profesional"></label>
+    <label><span>Proceso</span><input id="proceso" class="req" placeholder="Ej: FONOAUDIOLOGIA" list="procesos"></label>
+    <datalist id="procesos"><option>FONOAUDIOLOGIA</option><option>TERAPIA FISICA</option><option>TERAPIA RESPIRATORIA</option><option>TERAPIA OCUPACIONAL</option></datalist>
+  </div>
+  <button class="month-btn" id="btnMes" aria-label="Cambiar mes">
+    <span class="m" id="lblMes">—</span><span class="y" id="lblAnio"></span><span class="c">cambiar mes</span>
+  </button>
+</header>
+
+<div class="toolbar">
+  <button class="btn" id="btnAdd">Agregar paciente</button>
+  <button class="btn" id="btnAuto">Autollenar fechas</button>
+  <button class="btn" id="btnClear">Limpiar mes</button>
+  <button class="btn" id="btnImport">Importar Excel</button>
+  <input type="file" id="fileImport" accept=".xlsx" hidden>
+  <button class="btn" id="btnTpl">Cambiar plantilla</button>
+  <input type="file" id="fileTpl" accept=".xlsx" hidden>
+  <span class="spacer"></span>
+  <span class="sync" id="sync"></span>
+  <button class="btn primary" id="btnExport">Descargar Excel</button>
+</div>
+<div class="legend" id="legend"></div>
+<div class="legend"><span id="tplName"></span></div>
+<div class="alertbar" id="alertbar"><span id="alertTxt"></span><button class="btn" id="alertBtn">Ver detalle</button></div>
+<div class="wrap" id="wrap"></div>
+
+<dialog id="dlgMes"><div class="dlg">
+  <h2>¿En qué mes vas a trabajar?</h2>
+  <p class="hint">Las fechas, los domingos y los festivos de Colombia se acomodan al mes que elijas.</p>
+  <div class="yr"><button id="yPrev" aria-label="Año anterior">‹</button><span id="yVal"></span><button id="yNext" aria-label="Año siguiente">›</button></div>
+  <div class="months" id="monthsGrid"></div>
+  <div class="actions"><button class="btn primary" id="mesOk">Abrir agenda</button></div>
+</div></dialog>
+
+<dialog id="dlgPac"><form class="dlg" id="formPac" method="dialog">
+  <h2 id="pacTitle">Paciente</h2>
+  <p class="hint">Todos los campos son obligatorios, menos sigla y observaciones.</p>
+  <div class="grid">
+    <label class="f full">Nombre y apellido<input name="nombre"></label>
+    <label class="f">Madrina responsable<input name="madrina" list="madrinas"></label>
+    <label class="f">Aseguradora<input name="aseguradora" list="aseguradoras"></label>
+    <label class="f">Tipo de documento<input name="tipoDoc" list="tiposDoc"></label>
+    <label class="f">Número de documento<input name="documento" inputmode="numeric"></label>
+    <label class="f full">Dirección<input name="direccion"></label>
+    <label class="f">Barrio<input name="barrio"></label>
+    <label class="f">Comuna<input name="comuna" placeholder="Ej: COMUNA 9"></label>
+    <label class="f">Teléfono<input name="telefono" inputmode="tel"></label>
+    <div class="f two"><label class="f">Nº terapias<input name="terapias" type="number" min="0" max="99"></label><label class="f">Sigla<input name="sigla" list="siglas" placeholder="TF, TR…"></label></div>
+    <label class="f">Hora agendamiento<select name="hora" id="selHora"></select></label>
+    <label class="f">Días de la semana<input name="dias" list="diasOpc" placeholder="L-M-V"></label>
+    <label class="f full">Observaciones<input name="obs" list="obsOpc" placeholder="Alertas o novedades del paciente"></label>
+  </div>
+  <datalist id="tiposDoc"><option>CC</option><option>TI</option><option>RC</option><option>CE</option><option>PPT</option></datalist>
+  <datalist id="siglas"><option>TF</option><option>TR</option><option>TO</option><option>TL</option></datalist>
+  <datalist id="diasOpc"><option>L-M-V</option><option>M-J-S</option><option>L-V</option><option>L-S</option></datalist>
+  <datalist id="madrinas"></datalist>
+  <datalist id="aseguradoras"><option>SANITAS</option><option>FOMAG</option><option>SANITAS - FOMAG</option><option>COMFAORIENTE</option><option>ALLIANZ</option><option>ECOPETROL</option><option>PREPAGADA</option></datalist>
+  <datalist id="obsOpc"><option>Continuidad del mes anterior</option><option>Se inicia nueva orden - nuevo ingreso</option></datalist>
+  <div class="actions">
+    <button type="button" class="btn danger left" id="pacDel">Quitar paciente</button>
+    <button type="button" class="btn" id="pacCancel">Cancelar</button>
+    <button type="submit" class="btn primary">Guardar</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgAuto"><div class="dlg">
+  <h2>Autollenar fechas</h2>
+  <p class="hint">Marca los días según la columna de días de cada paciente (L-M-V, M-J-S, L-S…) hasta completar su número de terapias. No marca domingos ni festivos, ni una franja de hora que ya esté ocupada ese día.</p>
+  <label class="f" style="max-width:180px">Empezar desde el día<input type="number" id="autoDesde" min="1" max="31" value="1"></label>
+  <div style="margin-top:12px">
+    <label class="radio"><input type="radio" name="alc" value="vacios" checked> Solo pacientes sin fechas marcadas</label>
+    <label class="radio"><input type="radio" name="alc" value="todos"> Todos los pacientes (reemplaza lo marcado)</label>
+  </div>
+  <div class="actions"><button class="btn" id="autoCancel">Cancelar</button><button class="btn primary" id="autoOk">Autollenar</button></div>
+</div></dialog>
+
+<dialog id="dlgDia"><div class="dlg">
+  <h2 id="diaTitle"></h2>
+  <p class="hint" id="diaHint"></p>
+  <ul class="slots" id="diaList"></ul>
+  <div class="actions"><button class="btn" id="diaClose">Cerrar</button></div>
+</div></dialog>
+
+<dialog id="dlgCheck"><div class="dlg">
+  <h2 id="checkTitle">Revisa antes de enviar</h2>
+  <p class="hint">El Excel se llena sobre tu plantilla, sin agregar ni ocultar columnas ni cambiar su formato. El formato pide datos correctos, completos y actualizados.</p>
+  <ul class="issues" id="checkList"></ul>
+  <label class="radio" id="rojoWrap" style="margin-top:14px"><input type="checkbox" id="chkRojo" checked> Pintar domingos y festivos en rojo en el Excel</label>
+  <div class="actions"><button class="btn" id="checkFix">Corregir</button><button class="btn primary" id="checkGo">Descargar de todas formas</button></div>
+</div></dialog>
+
+<dialog id="dlgConf"><div class="dlg">
+  <h2 id="confTitle"></h2>
+  <p class="hint" id="confMsg"></p>
+  <div class="actions"><button class="btn" id="confNo">Cancelar</button><button class="btn primary" id="confYes"></button></div>
+</div></dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+const SEED={"terapeuta": "CLAUDIA STELLA CONTRERAS RAMIREZ", "pacientes": [{"id": "p01", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "37241283", "nombre": "AMPARO GALLARDO DE VILLAMIZAR", "direccion": "QUINTA ORIENTAL", "barrio": "QUINTA ORIENTAL", "telefono": "3156884307", "comuna": "", "terapias": 10, "hora": "08:40 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p02", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "41343382", "nombre": "RUTH RODRIGUEZ DE BENCARDINO", "direccion": "AVENIDA 11 # 15 N - 44", "barrio": "ZULIMA", "telefono": "3134072730", "comuna": "", "terapias": 10, "hora": "10:40 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p03", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "17126510", "nombre": "Leandro Galvis Moreno", "direccion": "Av 6AE 10-67 la Riviera", "barrio": "la Riviera", "telefono": "3006151657", "comuna": "", "terapias": 10, "hora": "09:20 a.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p04", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "27783565", "nombre": "Blanca Mary Pérez corredor", "direccion": "AVENIDA 20# 16-42", "barrio": "POPULAR", "telefono": "3186320778", "comuna": "", "terapias": 10, "hora": "08:00 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p05", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "27637581", "nombre": "Eloina Clavijo", "direccion": "Calle 22AN 407 TASAJERO", "barrio": "TASAJERO", "telefono": "3176349939", "comuna": "", "terapias": 10, "hora": "11:20 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p06", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "4299846", "nombre": "Manuel Contreras", "direccion": "MZ 14E lote 16 ciudad jardín", "barrio": "CIUDAD JARDIN", "telefono": "3123208397", "comuna": "", "terapias": 10, "hora": "09:20 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p07", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "27833553", "nombre": "EVANGELINA LEON DE RAMIREZ", "direccion": "AV 9E 3N23 DIRECCION LOS PINOS", "barrio": "LOS PINOS", "telefono": "3133492511", "comuna": "", "terapias": 10, "hora": "04:00 p.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p08", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "27834186", "nombre": "TERESA VELANDIA DE GUTIERREZ", "direccion": "CLL 22 AN # 458", "barrio": "PRADOS NORTE", "telefono": "3164974804", "comuna": "", "terapias": 10, "hora": "01:20 p.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p09", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "5391052", "nombre": "GUILLERMO SOLANO", "direccion": "AVENIDA 12 E  # 9 BN- 28", "barrio": "GUIMARAL", "telefono": "3173321497", "comuna": "", "terapias": 15, "hora": "12:40 p.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p10", "madrina": "GARDENIA", "aseguradora": "COMFAORIENTE", "tipoDoc": "CC", "documento": "37254184", "nombre": "LUZ IVONNE FLOREZ", "direccion": "AVENIDA 9 E # 7-25 TORRES DE LA RIVIERA APTO 301", "barrio": "LA RIVIERA", "telefono": "3125850822", "comuna": "", "terapias": 15, "hora": "10:00 a.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p11", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "60347922", "nombre": "Maribel Arenas Torrado", "direccion": "CALLE 22 # 7-40 EL SALADO", "barrio": "EL SALADO", "telefono": "3124891104", "comuna": "", "terapias": 10, "hora": "04:00 p.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p12", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "37221169", "nombre": "MARIA NORA HERRERA", "direccion": "CALLE 3 A # 4E-78 LA CEIBA", "barrio": "LA CEIBA", "telefono": "3103433435", "comuna": "", "terapias": 10, "hora": "10:40 a.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p13", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "37242895", "nombre": "ELIZABETH PEÑA PEREZ", "direccion": "AVENIDA 3 # 4AN - 11 COLPET", "barrio": "COLPET", "telefono": "3003218102", "comuna": "", "terapias": 10, "hora": "11:20 a.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p14", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "27584062", "nombre": "ANA JOSEFA SANTIAGO DE FLOREZ", "direccion": "AVENIDA 11 E # 4-110 QUINTA ORIENTAL", "barrio": "QUINTA ORIENTAL", "telefono": "3222526242", "comuna": "", "terapias": 10, "hora": "07:20 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p15", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "5529704", "nombre": "JOSE FRANCISCO CACUA CARVAJAL", "direccion": "CALLE 8 N # 3E -137", "barrio": "CEIBA II", "telefono": "3112224581", "comuna": "", "terapias": 10, "hora": "07:20 a.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p16", "madrina": "GARDENIA", "aseguradora": "COMFAORIENTE", "tipoDoc": "CC", "documento": "1193440127", "nombre": "WILMER ALFONSO ROJAS BECERRA", "direccion": "TRASVERSAL 19 N # 11 BE - 17", "barrio": "ZULIMA", "telefono": "3102514205", "comuna": "", "terapias": 20, "hora": "12:40 p.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p17", "madrina": "GARDENIA", "aseguradora": "COMFAORIENTE", "tipoDoc": "CC", "documento": "119344128", "nombre": "WILSON DANIEL ROJAS BECERRA", "direccion": "TRASVERSAL 19 N # 11 BE - 17", "barrio": "ZULIMA", "telefono": "3102514205", "comuna": "", "terapias": 20, "hora": "06:40 a.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p18", "madrina": "TANIA", "aseguradora": "ALLIANZ", "tipoDoc": "CC", "documento": "60308220", "nombre": "ROSA ELENA LEAL BARRERA", "direccion": "CALLE 6 BN # 2E - 239", "barrio": "CEIBA II", "telefono": "3102739001", "comuna": "", "terapias": 60, "hora": "6:00 A.M - 6:00 PM", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p19", "madrina": "TANIA", "aseguradora": "ALLIANZ", "tipoDoc": "CC", "documento": "13225428", "nombre": "IVAN DARIO PEÑALOZA VARGAS", "direccion": "CALLE 1 # 1E - 76", "barrio": "QUINTA BOSK", "telefono": "3227743407", "comuna": "", "terapias": 30, "hora": "02:40 p.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p20", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "27587365", "nombre": "NEPOMUCENA BETANCOURT", "direccion": "AVENIDA 12 E # 5-32 COLSAG", "barrio": "COLSAG", "telefono": "3174034471", "comuna": "", "terapias": 10, "hora": "12:00 p.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p21", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "T.I", "documento": "1091993925", "nombre": "JESUS DAVID BARRIOS RODRIGUEZ", "direccion": "AVENIDA 18 E #22 N- 23 NIZA", "barrio": "NIZA", "telefono": "3007078844", "comuna": "", "terapias": 20, "hora": "05:20 p.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p22", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "5394432", "nombre": "LUIS ENRIQUE VILLAMIZAR MARTINES", "direccion": "CALLE 7A # 5E-75", "barrio": "POPULAR", "telefono": "3212779484", "comuna": "", "terapias": 10, "hora": "04:40 p.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p23", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "88200117", "nombre": "ARMANDO CELIS CELIS", "direccion": "AVENIDA 0 # 4-50 LLERAS RESTREPO", "barrio": "LLERAS RESTREPO", "telefono": "3172324297", "comuna": "", "terapias": 10, "hora": "03:20 p.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p24", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "13214781", "nombre": "JORGE CASTRO BARON", "direccion": "CALLE 7N # 3 E -22", "barrio": "CEIBA II", "telefono": "3202755457", "comuna": "", "terapias": 15, "hora": "09:20 a.m.", "dias": "L-S", "obs": "", "sigla": ""}], "proceso": "FONOAUDIOLOGIA", "meses": {}, "ultimoMes": null};
+const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const INI=["D","L","M","M","J","V","S"];
+const LS_KEY="agenda-pad-v2";
+const CUPO=21;
+const $=s=>document.querySelector(s);
+
+/* Franjas de hora: 21 de 40 minutos, 06:00 a.m. a 07:20 p.m. */
+const SLOTS=[];for(let i=0;i<CUPO;i++){const m=360+40*i,h=Math.floor(m/60),mi=m%60;SLOTS.push(String(h%12||12).padStart(2,"0")+":"+String(mi).padStart(2,"0")+(h<12?" a.m.":" p.m."))}
+function horaSlot(s){
+  s=String(s||"").trim();if(SLOTS.includes(s))return s;
+  const t=[...s.matchAll(/(\d{1,2})[:.](\d{2})\s*([AaPp])?/g)];
+  if(t.length!==1)return null;
+  let h=+t[0][1],mi=+t[0][2],ap=(t[0][3]||"").toLowerCase();
+  if(ap==="a"&&h===12)ap="p";
+  if(!ap)ap=(h>=6&&h<=11)?"a":"p";
+  const H=(h%12)+(ap==="p"?12:0);
+  const lab=String(H%12||12).padStart(2,"0")+":"+String(mi).padStart(2,"0")+(H<12?" a.m.":" p.m.");
+  return SLOTS.includes(lab)?lab:null;
+}
+const slotIdx=h=>{const i=SLOTS.indexOf(h);return i<0?99:i};
+
+/* Festivos de Colombia */
+function pascua(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);return new Date(y,Math.floor((h+l-7*m+114)/31)-1,((h+l-7*m+114)%31)+1)}
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const lunes=d=>{const w=d.getDay();return w===1?d:addDays(d,(8-w)%7)};
+const festCache={};
+function festivos(y){
+  if(festCache[y])return festCache[y];
+  const L=[],fijo=(m,d,n)=>L.push([new Date(y,m-1,d),n]),movil=(m,d,n)=>L.push([lunes(new Date(y,m-1,d)),n]),p=pascua(y);
+  fijo(1,1,"Año Nuevo");movil(1,6,"Reyes Magos");movil(3,19,"San José");L.push([addDays(p,-3),"Jueves Santo"]);L.push([addDays(p,-2),"Viernes Santo"]);
+  fijo(5,1,"Día del Trabajo");L.push([addDays(p,43),"Ascensión del Señor"]);L.push([addDays(p,64),"Corpus Christi"]);L.push([addDays(p,71),"Sagrado Corazón"]);
+  movil(6,29,"San Pedro y San Pablo");fijo(7,20,"Independencia");fijo(8,7,"Batalla de Boyacá");movil(8,15,"Asunción de la Virgen");movil(10,12,"Día de la Raza");
+  movil(11,1,"Todos los Santos");movil(11,11,"Independencia de Cartagena");fijo(12,8,"Inmaculada Concepción");fijo(12,25,"Navidad");
+  const map={};L.forEach(([d,n])=>{const k=d.getMonth()+"-"+d.getDate();map[k]=map[k]?map[k]+" / "+n:n});return festCache[y]=map;
+}
+function infoDia(y,m,d){const w=new Date(y,m,d).getDay(),f=festivos(y)[m+"-"+d]||"";return{w,domingo:w===0,festivo:f,rojo:w===0||!!f}}
+const diasDelMes=(y,m)=>new Date(y,m+1,0).getDate();
+
+/* Días de la semana: L-M-V, M-J-S, L-V, L-S, o texto largo */
+function diasSemana(txt){
+  const t=String(txt||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+  if(!t)return[];
+  if(/TODOS|DIARIO|^L\s*-?\s*A?\s*-?\s*S$|LUNES A SABADO/.test(t))return[1,2,3,4,5,6];
+  if(/^L\s*-?\s*A?\s*-?\s*V$|LUNES A VIERNES/.test(t))return[1,2,3,4,5];
+  if(/LUNES|MARTES|MIERCOLES|JUEVES|VIERNES|SABADO/.test(t)){const r=[];[["LUNES",1],["MARTES",2],["MIERCOLES",3],["JUEVES",4],["VIERNES",5],["SABADO",6]].forEach(([n,w])=>{if(t.includes(n))r.push(w)});return r}
+  const tok=t.split(/[\s,\-\/]+/).filter(Boolean),r=new Set();
+  tok.forEach((x,i)=>{
+    if(x==="L"||x==="LU")r.add(1);else if(x==="MA")r.add(2);else if(x==="MI"||x==="X")r.add(3);else if(x==="J"||x==="JU")r.add(4);
+    else if(x==="V"||x==="VI")r.add(5);else if(x==="S"||x==="SA")r.add(6);
+    else if(x==="M"){const prev=tok[i-1],next=tok[i+1];r.add(prev==="L"||prev==="LU"||(!prev&&next==="V")?3:2)}
+  });
+  return[...r].sort();
+}
+
+/* Estado */
+let state,cur={y:new Date().getFullYear(),m:new Date().getMonth()};
+let tplRef=null,docRef=null,saveTimer=null,saving=false,pending=false,canWrite=true;
+const keyMes=()=>cur.y+"-"+String(cur.m+1).padStart(2,"0");
+function marcasMes(){const k=keyMes();if(!state.meses[k])state.meses[k]={marcas:{}};return state.meses[k].marcas}
+const uid=()=>"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function normPac(p){
+  p=Object.assign({id:uid(),madrina:"",aseguradora:"",tipoDoc:"",documento:"",nombre:"",direccion:"",barrio:"",telefono:"",comuna:"",terapias:0,sigla:"",hora:"",dias:"",obs:""},p);
+  const m=String(p.terapias).match(/^\s*(\d+)\s*([A-Za-z]*)/);if(m){p.terapias=+m[1];if(m[2]&&!p.sigla)p.sigla=m[2].toUpperCase()}else p.terapias=+p.terapias||0;
+  const hs=horaSlot(p.hora);if(hs)p.hora=hs;
+  return p;
+}
+function normalizar(s){
+  s=s||{};
+  return{terapeuta:s.terapeuta||"",proceso:s.proceso||s.especialidad||"",
+    pacientes:Array.isArray(s.pacientes)?s.pacientes.map(normPac):[],
+    meses:s.meses&&typeof s.meses==="object"?s.meses:{},ultimoMes:s.ultimoMes||null};
+}
+function lsLoad(){try{const v=localStorage.getItem(LS_KEY);return v?JSON.parse(v):null}catch(e){return null}}
+function lsSave(){try{localStorage.setItem(LS_KEY,JSON.stringify(state))}catch(e){}}
+function guardar(){
+  lsSave();
+  if(!docRef||!canWrite){setSync("Guardado en este navegador");return}
+  setSync("Guardando…");clearTimeout(saveTimer);saveTimer=setTimeout(flush,700);
+}
+async function flush(){
+  if(saving){pending=true;return}saving=true;
+  try{await docRef.set(JSON.parse(JSON.stringify(state)));setSync("Cambios guardados")}
+  catch(e){if(e&&e.code==="invalid_argument"){canWrite=false;setSync("Solo lectura: los cambios quedan en este navegador")}else setSync("No se pudo guardar en línea; quedó en este navegador")}
+  saving=false;if(pending){pending=false;flush()}
+}
+const setSync=t=>$("#sync").textContent=t;
+
+/* Validación */
+const OBLIG=[["madrina","madrina"],["aseguradora","aseguradora"],["tipoDoc","tipo de documento"],["documento","número de documento"],["nombre","nombre"],["direccion","dirección"],["barrio","barrio"],["telefono","teléfono"],["comuna","comuna"],["terapias","número de terapias"],["dias","días de la semana"]];
+function faltantes(p){const f=OBLIG.filter(([k])=>!String(p[k]||"").trim()||(k==="terapias"&&!(+p.terapias>0))).map(x=>x[1]);if(!SLOTS.includes(p.hora))f.push("hora válida");return f}
+const ordenados=()=>state.pacientes.slice().sort((a,b)=>slotIdx(a.hora)-slotIdx(b.hora)||a.nombre.localeCompare(b.nombre));
+function ocupacion(){ // dia -> hora -> [pacientes]
+  const n=diasDelMes(cur.y,cur.m),marcas=marcasMes(),occ={};
+  for(let d=1;d<=n;d++)occ[d]={};
+  state.pacientes.forEach(p=>(marcas[p.id]||[]).forEach(d=>{if(d>n)return;const h=SLOTS.includes(p.hora)?p.hora:"?";(occ[d][h]=occ[d][h]||[]).push(p)}));
+  return occ;
+}
+function problemas(){
+  const out=[],n=diasDelMes(cur.y,cur.m),occ=ocupacion(),marcas=marcasMes();
+  if(!state.terapeuta.trim())out.push("Falta el nombre del profesional.");
+  if(!state.proceso.trim())out.push("Falta el proceso.");
+  ordenados().forEach(p=>{const f=faltantes(p);if(f.length)out.push(p.nombre+": falta "+f.join(", ")+".");
+    const c=(marcas[p.id]||[]).filter(d=>d<=n).length;if(c!==(+p.terapias||0))out.push(p.nombre+": tiene "+c+" fechas y "+(+p.terapias||0)+" terapias.")});
+  for(let d=1;d<=n;d++){let tot=0;Object.entries(occ[d]).forEach(([h,ps])=>{tot+=ps.length;if(h!=="?"&&ps.length>1)out.push("Día "+d+", "+h+": "+ps.map(p=>p.nombre).join(" y ")+" en la misma hora.")});
+    if(tot>CUPO)out.push("Día "+d+": "+tot+" pacientes (máximo "+CUPO+").")}
+  return out;
+}
+
+/* Render */
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function fechaLarga(d){return["domingo","lunes","martes","miércoles","jueves","viernes","sábado"][new Date(cur.y,cur.m,d).getDay()]+" "+d+" de "+MESES[cur.m].toLowerCase()}
+function render(){
+  $("#terapeuta").value=state.terapeuta;$("#proceso").value=state.proceso;
+  $("#lblMes").textContent=MESES[cur.m];$("#lblAnio").textContent=cur.y;document.title="Agenda PAD "+MESES[cur.m]+" "+cur.y;
+  $("#madrinas").innerHTML=[...new Set(["SEDE PAMI"].concat(state.pacientes.map(p=>p.madrina).filter(Boolean)))].map(m=>"<option>"+esc(m)+"</option>").join("");
+  const n=diasDelMes(cur.y,cur.m),info=[];for(let d=1;d<=n;d++)info[d]=infoDia(cur.y,cur.m,d);
+  const fest=[],doms=[];for(let d=1;d<=n;d++){if(info[d].festivo)fest.push(d+": "+info[d].festivo);if(info[d].domingo)doms.push(d)}
+  $("#legend").innerHTML='<span><span class="sw" style="background:var(--red)"></span>Domingos: '+doms.join(", ")+'</span><span><span class="sw" style="background:var(--red)"></span>Festivos: '+(fest.length?'<b>'+esc(fest.join("  |  "))+'</b>':'ninguno este mes')+'</span><span><span class="sw" style="background:var(--warn)"></span>Dos pacientes en la misma hora</span><span>Clic en un día para ver sus 21 franjas</span>';
+  const probs=problemas();
+  $("#alertbar").classList.toggle("show",probs.length>0);$("#alertTxt").textContent=probs.length+" punto(s) por revisar antes de enviar la agenda.";
+  const wrap=$("#wrap");
+  if(!state.pacientes.length){wrap.innerHTML='<div class="empty"><p>No hay pacientes en la lista. Agrégalos uno por uno o importa tu Excel con el formato de la agenda.</p><button class="btn primary" data-act="add">Agregar paciente</button> <button class="btn" data-act="imp">Importar Excel</button></div>';return}
+  const marcas=marcasMes(),occ=ocupacion(),porDia=new Array(n+1).fill(0);
+  let h='<table><thead><tr><th class="c-hora" scope="col">Hora</th><th class="c-pac" scope="col">Paciente ('+state.pacientes.length+')</th><th class="c-cnt" scope="col" title="Fechas marcadas / número de terapias">Terapias</th>';
+  for(let d=1;d<=n;d++){const i=info[d];h+='<th class="d'+(i.rojo?' r':'')+'" scope="col" data-dia="'+d+'" title="'+esc(fechaLarga(d)+(i.festivo?" – Festivo: "+i.festivo:i.domingo?" – Domingo":"")+". Clic para ver franjas")+'">'+d+'<small>'+INI[i.w]+'</small></th>'}
+  h+='</tr></thead><tbody>';
+  ordenados().forEach(p=>{
+    const set=new Set(marcas[p.id]||[]),c=[...set].filter(d=>d<=n).length,t=+p.terapias||0,cls=t&&c===t?"ok":t&&c>t?"over":"";
+    const f=faltantes(p),ok=SLOTS.includes(p.hora);
+    h+='<tr><td class="c-hora'+(ok?'':' bad')+'">'+(ok?esc(p.hora):'Fuera de franja')+'</td>';
+    h+='<td class="c-pac"><button class="pac" data-edit="'+p.id+'" title="'+esc(f.length?"Falta: "+f.join(", "):"Editar datos")+'"><span class="n">'+(f.length?'<span class="w">! </span>':'')+esc(p.nombre||"(sin nombre)")+'</span><span class="s">'+esc([p.aseguradora,p.dias,p.obs].filter(Boolean).join("   "))+'</span></button></td>';
+    h+='<td class="c-cnt"><span class="cnt '+cls+'">'+c+'/'+t+(p.sigla?' '+esc(p.sigla):'')+'</span></td>';
+    for(let d=1;d<=n;d++){const on=set.has(d);if(on)porDia[d]++;const conf=on&&ok&&(occ[d][p.hora]||[]).length>1;
+      h+='<td class="d'+(info[d].rojo?' r':'')+'"><button class="'+(on?'on':'')+(conf?' conf':'')+'" data-p="'+p.id+'" data-d="'+d+'" aria-pressed="'+on+'" aria-label="'+esc(p.nombre)+', '+fechaLarga(d)+'"'+(conf?' title="Otro paciente tiene esta misma hora este día"':'')+'>'+(on?'<span>X</span>':'')+'</button></td>'}
+    h+='</tr>';
+  });
+  h+='</tbody><tfoot><tr><td class="c-hora"></td><td class="c-pac">Pacientes por día (máx. '+CUPO+')</td><td class="c-cnt">'+porDia.reduce((a,b)=>a+b,0)+'</td>';
+  for(let d=1;d<=n;d++)h+='<td class="'+(info[d].rojo?'r ':'')+(porDia[d]>CUPO?'full':'')+'">'+(porDia[d]||"")+'</td>';
+  wrap.innerHTML=h+'</tr></tfoot></table>';
+}
+let toastT;function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2800)}
+
+/* Tabla */
+$("#wrap").addEventListener("click",e=>{
+  const th=e.target.closest("th[data-dia]");if(th)return verDia(+th.dataset.dia);
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.act==="add")return abrirPaciente(null);
+  if(b.dataset.act==="imp")return $("#fileImport").click();
+  if(b.dataset.edit)return abrirPaciente(b.dataset.edit);
+  if(b.dataset.p){
+    const marcas=marcasMes(),pid=b.dataset.p,d=+b.dataset.d,arr=new Set(marcas[pid]||[]);
+    if(arr.has(d))arr.delete(d);else arr.add(d);
+    marcas[pid]=[...arr].sort((a,b)=>a-b);
+    if(arr.has(d)){const i=infoDia(cur.y,cur.m,d),p=state.pacientes.find(x=>x.id===pid),otros=(ocupacion()[d][p.hora]||[]).filter(x=>x.id!==pid);
+      if(i.rojo)toast("Ojo: el "+d+" es "+(i.festivo?"festivo ("+i.festivo+")":"domingo"));
+      else if(otros.length&&SLOTS.includes(p.hora))toast("Ojo: a las "+p.hora+" del día "+d+" ya está "+otros[0].nombre)}
+    render();guardar();
+  }
+});
+function verDia(d){
+  const occ=ocupacion()[d],i=infoDia(cur.y,cur.m,d);let tot=0;
+  $("#diaTitle").textContent=fechaLarga(d).replace(/^./,c=>c.toUpperCase());
+  $("#diaList").innerHTML=SLOTS.map(h=>{const ps=occ[h]||[];tot+=ps.length;return'<li class="'+(ps.length?ps.length>1?'conf':'':'free')+'"><b>'+h+'</b><span>'+(ps.length?esc(ps.map(p=>p.nombre).join(" / ")):"Libre")+'</span></li>'}).join("")+
+    ((occ["?"]||[]).length?'<li class="conf"><b>Sin franja</b><span>'+esc(occ["?"].map(p=>p.nombre).join(" / "))+'</span></li>':'');
+  tot+=(occ["?"]||[]).length;
+  $("#diaHint").textContent=tot+" de "+CUPO+" pacientes."+(i.festivo?" Festivo: "+i.festivo+".":i.domingo?" Es domingo.":"");
+  $("#dlgDia").showModal();
+}
+$("#diaClose").onclick=()=>$("#dlgDia").close();
+$("#terapeuta").addEventListener("change",e=>{state.terapeuta=e.target.value.trim().toUpperCase();render();guardar()});
+$("#proceso").addEventListener("change",e=>{state.proceso=e.target.value.trim().toUpperCase();render();guardar()});
+
+/* Mes */
+let selY,selM;
+function abrirMes(){selY=cur.y;selM=cur.m;pintarMeses();$("#dlgMes").showModal()}
+function pintarMeses(){$("#yVal").textContent=selY;$("#monthsGrid").innerHTML=MESES.map((n,i)=>'<button data-m="'+i+'" class="'+(i===selM?'sel':'')+'">'+n+'</button>').join("")}
+$("#monthsGrid").addEventListener("click",e=>{const b=e.target.closest("button");if(b){selM=+b.dataset.m;pintarMeses()}});
+$("#monthsGrid").addEventListener("dblclick",e=>{if(e.target.closest("button"))$("#mesOk").click()});
+$("#yPrev").onclick=()=>{selY--;pintarMeses()};$("#yNext").onclick=()=>{selY++;pintarMeses()};
+$("#mesOk").onclick=()=>{cur={y:selY,m:selM};state.ultimoMes=keyMes();$("#dlgMes").close();render();guardar()};
+$("#btnMes").onclick=abrirMes;
+
+/* Pacientes */
+let editId=null;
+const CAMPOS=["nombre","madrina","aseguradora","tipoDoc","documento","direccion","barrio","comuna","telefono","terapias","sigla","hora","dias","obs"];
+function abrirPaciente(id){
+  editId=id;const f=$("#formPac");f.reset();
+  const p=id?state.pacientes.find(x=>x.id===id):{tipoDoc:"CC",terapias:10,hora:""};
+  const sel=$("#selHora"),ok=SLOTS.includes(p.hora);
+  sel.innerHTML='<option value="">Elegir franja…</option>'+(!ok&&p.hora?'<option value="'+esc(p.hora)+'">'+esc(p.hora)+' (fuera de franja)</option>':'')+SLOTS.map(h=>'<option>'+h+'</option>').join("");
+  CAMPOS.forEach(k=>{f.elements[k].value=p[k]==null?"":p[k]});
+  const miss=id?faltantes(p):[];
+  f.querySelectorAll("label.f").forEach(l=>{const el=l.querySelector("input,select");if(!el)return;const k=el.name;
+    const lab={madrina:"madrina",aseguradora:"aseguradora",tipoDoc:"tipo de documento",documento:"número de documento",nombre:"nombre",direccion:"dirección",barrio:"barrio",telefono:"teléfono",comuna:"comuna",terapias:"número de terapias",dias:"días de la semana",hora:"hora válida"}[k];
+    l.classList.toggle("miss",!!lab&&miss.includes(lab))});
+  $("#pacTitle").textContent=id?"Editar paciente":"Agregar paciente";$("#pacDel").style.display=id?"":"none";
+  $("#dlgPac").showModal();f.elements.nombre.focus();
+}
+$("#formPac").addEventListener("submit",e=>{
+  e.preventDefault();const f=e.target,data={};
+  CAMPOS.forEach(k=>data[k]=f.elements[k].value.trim());
+  if(!data.nombre){f.elements.nombre.focus();toast("Escribe el nombre del paciente");return}
+  data.terapias=parseInt(data.terapias,10)||0;
+  ["nombre","madrina","aseguradora","tipoDoc","barrio","comuna","sigla","dias","direccion"].forEach(k=>data[k]=data[k].toUpperCase());
+  if(editId){Object.assign(state.pacientes.find(x=>x.id===editId),data);toast("Datos guardados")}
+  else{state.pacientes.push(normPac(Object.assign({id:uid()},data)));toast("Paciente agregado")}
+  $("#dlgPac").close();render();guardar();
+});
+$("#pacCancel").onclick=()=>$("#dlgPac").close();
+$("#pacDel").onclick=async()=>{
+  const p=state.pacientes.find(x=>x.id===editId);$("#dlgPac").close();
+  if(await confirmar("Quitar paciente","Se quitará a "+p.nombre+" de la agenda y sus fechas marcadas en todos los meses.","Quitar")){
+    state.pacientes=state.pacientes.filter(x=>x.id!==editId);Object.values(state.meses).forEach(m=>{if(m.marcas)delete m.marcas[editId]});
+    render();guardar();toast("Paciente quitado")}
+};
+$("#btnAdd").onclick=()=>abrirPaciente(null);
+function confirmar(t,msg,ok){return new Promise(res=>{
+  $("#confTitle").textContent=t;$("#confMsg").textContent=msg;$("#confYes").textContent=ok;const dlg=$("#dlgConf");
+  const fin=v=>{dlg.close();$("#confYes").onclick=$("#confNo").onclick=null;res(v)};
+  $("#confYes").onclick=()=>fin(true);$("#confNo").onclick=()=>fin(false);dlg.oncancel=()=>fin(false);dlg.showModal()})}
+
+/* Autollenar / limpiar */
+$("#btnAuto").onclick=()=>{$("#autoDesde").max=diasDelMes(cur.y,cur.m);$("#dlgAuto").showModal()};
+$("#autoCancel").onclick=()=>$("#dlgAuto").close();
+$("#autoOk").onclick=()=>{
+  const n=diasDelMes(cur.y,cur.m),desde=Math.min(Math.max(parseInt($("#autoDesde").value,10)||1,1),n);
+  const todos=document.querySelector('input[name="alc"]:checked').value==="todos",marcas=marcasMes();
+  let hechos=0,sinDias=0,incomp=0;
+  const lista=ordenados(),aLlenar=lista.filter(p=>todos||!(marcas[p.id]||[]).length);
+  aLlenar.forEach(p=>marcas[p.id]=[]);
+  const occ={},tot={};for(let d=1;d<=n;d++){occ[d]=new Set();tot[d]=0}
+  lista.forEach(p=>(marcas[p.id]||[]).forEach(d=>{if(d<=n){occ[d].add(p.hora);tot[d]++}}));
+  aLlenar.forEach(p=>{
+    const ws=diasSemana(p.dias),t=+p.terapias||0;if(!ws.length){sinDias++;return}
+    const ok=SLOTS.includes(p.hora),out=[];
+    for(let d=desde;d<=n&&out.length<t;d++){const i=infoDia(cur.y,cur.m,d);
+      if(i.rojo||!ws.includes(i.w)||tot[d]>=CUPO||(ok&&occ[d].has(p.hora)))continue;
+      out.push(d);tot[d]++;if(ok)occ[d].add(p.hora)}
+    marcas[p.id]=out;hechos++;if(out.length<t)incomp++;
+  });
+  $("#dlgAuto").close();render();guardar();
+  toast(hechos+" paciente(s) autollenados"+(incomp?". "+incomp+" no alcanzan sus terapias en el mes":"")+(sinDias?". "+sinDias+" sin días definidos":""));
+};
+$("#btnClear").onclick=async()=>{if(await confirmar("Limpiar "+MESES[cur.m],"Se quitarán todas las fechas marcadas de "+MESES[cur.m]+" "+cur.y+". La lista de pacientes no cambia.","Limpiar")){state.meses[keyMes()]={marcas:{}};render();guardar();toast("Mes limpio")}};
+
+/* Revisión y exportación */
+function mostrarProblemas(conDescarga){
+  const p=problemas();
+  $("#checkList").innerHTML=p.length?p.map(x=>"<li>"+esc(x)+"</li>").join(""):"<li>Todo está completo.</li>";
+  $("#checkGo").style.display=conDescarga?"":"none";$("#rojoWrap").style.display=conDescarga?"":"none";
+  $("#checkGo").textContent=p.length?"Descargar de todas formas":"Descargar Excel";$("#dlgCheck").showModal();
+}
+$("#alertBtn").onclick=()=>mostrarProblemas(false);
+$("#checkFix").onclick=()=>$("#dlgCheck").close();
+$("#checkGo").onclick=()=>{$("#dlgCheck").close();exportarPlantilla($("#chkRojo").checked)};
+$("#btnExport").onclick=()=>{
+  if(!state.terapeuta.trim()||!state.proceso.trim()){toast("Completa el nombre del profesional y el proceso");($("#terapeuta").value?$("#proceso"):$("#terapeuta")).focus();return}
+  mostrarProblemas(true);
+};
+/* ===== Descarga sobre la plantilla original (no cambia el formato) ===== */
+const NS="http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+const DEFAULT_TPL={nombre:"FORMATO_AGENDA_MENSUAL_TERAPEUTAS_OCTUBRE_2026.xlsx",b64:"UEsDBBQABgAIAAAAIQB7ksghegEAAIEFAAATAAgCW0NvbnRlbnRfVHlwZXNdLnhtbCCiBAIooAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACslMtuwjAQRfeV+g+RtxUxdFFVFYFFH8sWCfoBJp4kFolteQYKf9+JeaiqeCiCTaLYnnvuTGY8HK+bOllBQONsJgZpXyRgc6eNLTPxPfvoPYsESVmtamchExtAMR7d3w1nGw+YcLTFTFRE/kVKzCtoFKbOg+WdwoVGEX+GUnqVL1QJ8rHff5K5swSWetRqiNHwDQq1rCl5X/Py1sncWJG8bs+1qEwo72uTK2KjcmX1P0jPFYXJQbt82bB0ij6A0lgBUFOnPhgmhikQcWIo5FFmgBq7QXdZpRwZjWFlPD5w6icI7c7prHZxX/w7gtGQTFSgT9Vw7nJdyx8XFnPnFul5ka6liSVKG2Xs3vcZfjyMMr4GNzbS5heFL/gg7jGQ8Xm9hShzAYi0qQFvXfYoeolcqQB6Sty95c0N/NU+54NHahKcR57aAN2rsB+RNrrnWQgCGTgMybFmOxB55K8uO7R3igbdlZ0vkVxzNX4rcwQu4wU6+gUAAP//AwBQSwMEFAAGAAgAAAAhABNevmUCAQAA3wIAAAsACAJfcmVscy8ucmVscyCiBAIooAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACskk1LAzEQhu+C/yHMvTvbKiLSbC9F6E1k/QExmf1gN5mQpLr990ZBdKG2Hnqcr3eeeZn1ZrKjeKMQe3YSlkUJgpxm07tWwkv9uLgHEZNyRo3sSMKBImyq66v1M40q5aHY9T6KrOKihC4l/4AYdUdWxYI9uVxpOFiVchha9EoPqiVcleUdht8aUM00xc5ICDtzA6I++Lz5vDY3Ta9py3pvyaUjK5CmRM6QWfiQ2ULq8zWiVqGlJMGwfsrpiMr7ImMDHida/Z/o72vRUlJGJYWaA53m+ew4BbS8pEVzE3/cmUZ85zC8Mg+nWG4vyaL3MbE9Y85XzzcSzt6y+gAAAP//AwBQSwMEFAAGAAgAAAAhAIE+lJfzAAAAugIAABoACAF4bC9fcmVscy93b3JrYm9vay54bWwucmVscyCiBAEooAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKxSTUvEMBC9C/6HMHebdhUR2XQvIuxV6w8IybQp2yYhM3703xsqul1Y1ksvA2+Gee/Nx3b3NQ7iAxP1wSuoihIEehNs7zsFb83zzQMIYu2tHoJHBRMS7Orrq+0LDppzE7k+ksgsnhQ45vgoJRmHo6YiRPS50oY0as4wdTJqc9Adyk1Z3su05ID6hFPsrYK0t7cgmilm5f+5Q9v2Bp+CeR/R8xkJSTwNeQDR6NQhK/jBRfYI8rz8Zk15zmvBo/oM5RyrSx6qNT18hnQgh8hHH38pknPlopm7Ve/hdEL7yim/2/Isy/TvZuTJx9XfAAAA//8DAFBLAwQUAAYACAAAACEAjAMyxiQCAABCBAAADwAAAHhsL3dvcmtib29rLnhtbKSTXW/aMBSG7yftP3gWUq9KPgpojUiqDOiGtCHUjfYGqTLJCbHwR2abhf77nSRlpeOm025iH1t5zjnvezy+OUhBfoGxXKuYBn2fElCZzrnaxnT14/byIyXWMZUzoRXE9AksvUnevxvX2uw2Wu8IApSNaelcFXmezUqQzPZ1BQpvCm0kcxiarWcrAyy3JYCTwgt9f+RJxhXtCJF5C0MXBc9gqrO9BOU6iAHBHJZvS17ZI01mb8FJZnb76jLTskLEhgvunlooJTKL5lulDdsIbPsQDI9k3J6hJc+MtrpwfUR5XZFn/Qa+FwRdy8m44ALuO9kJq6oFk00WQYlg1s1y7iCP6QhDXcPLARZh9tWnPRd4GwwGoU+95I8VS4MB1p0KB0YxBxOtHMr0LPD/StKyJ6VGA8gd/NxzA+h7o0wyxi/LIraxS+ZKsjcippNovbLY4Tqdfpsv1lNdK6HR//WJkOzcpX+QkmVN9x523FXV7f/uPhk3Y3rPobYvUjUhOTxwles6pjj0Tyf7uj1+4LkrYxpe+QO8786+AN+WLqbXwXXY5j5Bt4ONKdqVqNbQ9PNsMU0Jfmd36Vd8Sc3wz9G7EI2MOG7MPA9a0vH3HAquIG8GAmEn0TPy8SCU7D/e8sbkKXNswyw0c5Ix8f2Ix4JLnufQPGmaXLwu4+JDL+2Nol666l35Y+8kBQr4Oj0ys6UhzdJUHQzDYdCVe3z+yW8AAAD//wMAUEsDBBQABgAIAAAAIQBOsCqVrAUAAEIPAAAUAAAAeGwvc2hhcmVkU3RyaW5ncy54bWyMV0ty4zYQ3acqd+jSrGWR+li2y9ZUi4Q1UEhAA5JKlXe0hPFwiiIVUnLFuUWOMYtcIFtfLA35UxOC8nhjS/g1+vV7r6HLj39ucrjXVZ2VxVXHPXE6oItVuc6Ku6tOEl93zzpQ79JineZloa86D7rufJz8+stlXe+A9hb1Vefrbre96PXq1Ve9SeuTcqsLmvlSVpt0R1+ru169rXS6rr9qvdvkvb7jnPY2aVZ0YFXui91Vp++4HdgX2R977T2NuM6oM7mss8nlbuJjLGHBVCQFBiy67O0mlz0z9TzNMQKPZoSPisvmdJiuq6xIQel6WxZ1epvrxhKTx0W9TVeUH1201tW97kyw1nf7Kl2XVQrv2hBn2xLWGvxytd/oYlc2t03E478bXR0WrV8X0Q7uvyuAKDe3lYYHwK3O82xtBWhPxM8qvVpRfa37TNOqqrKyiVis88fvX8rCmvDKzb5Im8sFZfuU1E5X6TZL6+aKTwZDvNPEok1mkGkukNOIqSV6XAoIZAS+KanPIECIWIgC34VPeWtKl5pUdW0l63nNqBEKHmOTT0fYsGSC+wh95wO4p91h3zo/0KQSwmGW5vdZDWFZaRtBvIdTZOA63dMx5ETK7D4j0Jo3Oz4zzdNilUKYVg+wePxe6b9IQ1WliabNQxZykQSomsMsL40cvDy9z77ZJU7zXEO/jwKGzhgIHpwzZYnq2HiYFnudg1cWu4ryspgQ3oA7ZJCXO00wwirbr9M1fEur9eM/RfOmHk989GGOyueiORkkgkXdkDPlSTKF7pI+0YjFZekTn144ZXkDqpj2zhO2pH8RTpFWNxc5ZxeOA3gSWkguUcxYwAVCwIi5RFiFIVfsxros3WHBhX12zBSLEJYsQEGkN0fMkphSsQ9p56UXBFQtoHJ9gOHozGLlQpmUQEhK1MI3wMQEjWIWkNI8KWLFFCnvSBbXUkizQwZyxpuSnATJDfClFILBdSBbQIhJbtYufNbVOTDKYNztjyCWlP2L/BU3hUXABfWAgeNayCI8L7Gyk+E1SsWZsDPHcIFKwgwpb+VLA/uS0+eQ39iC+ZxwESM8HYVBMw4u4ZzBQPQHZFuKea8m1lpwEm52SwpBcoe0hpi0Sy2mceaRUtNtmSm2wWnoAAsgwoDKaxX9dcai8tBQeWFTOaTOiYYlCJ8M+ZRVKGqwFH0AaIjGuuMzY84e41ObCEfGSSk3OGXxJ+rlj3+j6ei2Ul74MDBhiNVdcF1iZrBgsV3gtlFqFjCXEbsmXqOIOc4O5W2n5LUMcWYX9MnqKbDh5LDrug78hAQmIlwrFB6PPEmvES8hFJB62txizFvVPQMj5AGDrjsY2y3MwA2cN2/8Ow9CpgADUmgkQck5iXjKPKqkVZ2YBL6ktxQG4J4folGeUwoI7rh57k0S8NA6QUlyLEbPLWN7dMwU3yDMKUxNRn0ToD84b0Y4fbZWmj18XFgmS7TjKCxH5eS9cHjvPbEpkDdko6hm7+znT3R26Wquudr41AL7ueJTGf3Wgje9RSm84CS1N+Em6kY2xeYsSsjhcMn9A3ycLFpJX/FZYksiPrEK/qIS98xQlCxBGHRBkMCad20bUwmJ8DWecb8pE8RWarPNTv/2a4ioQwCOiEZdGA4tCMcX/dbGSR2V/KulozrnzztOmmm4zpEmTBPtZ7nukeiCLWSYeIa/5EYkWZkoy1xeEe4fTGDUHfSNDbXU0u0f8VTnYLbGba1snMPd2maeeDk2Ljsilx1Z5qToOUyW75Gb0q8e8/eYfzkH8xo5QMZ96Oosov6+sN5yP5tOKBATin9OfuySQC0j5i0vrrlUM0beR8GkIbdsPt3e8r/xwf4I8i6RupnYjBhK1mxRfJZQ72YqlBBJekdZCf6vlgTKOXkS6eXMOj8ht1MtHX5mflqC9OJkqn54RfXoN/DkPwAAAP//AwBQSwMEFAAGAAgAAAAhADttMkvBAAAAQgEAACMAAAB4bC93b3Jrc2hlZXRzL19yZWxzL3NoZWV0MS54bWwucmVsc4SPwYrCMBRF9wP+Q3h7k9aFDENTNyK4VecDYvraBtuXkPcU/XuzHGXA5eVwz+U2m/s8qRtmDpEs1LoCheRjF2iw8HvaLb9BsTjq3BQJLTyQYdMuvpoDTk5KiceQWBULsYVRJP0Yw37E2bGOCamQPubZSYl5MMn5ixvQrKpqbfJfB7QvTrXvLOR9V4M6PVJZ/uyOfR88bqO/zkjyz4RJOZBgPqJIOchF7fKAYkHrd/aea30OBKZtzMvz9gkAAP//AwBQSwMEFAAGAAgAAAAhANkevufVBQAAPhkAABMAAAB4bC90aGVtZS90aGVtZTEueG1s7FlPjxs1FL8j8R1Gc6dJdvOnWTVb7eZPF7rbVt20qEdnxplx4xmPbGe3uaH2iISEKIgLEjcOCKjUSlzKp1kogiL1K/DsmczYG4dty1YqqMkl4/m95+f3nn/Pz7l0+V5CvSPMBWFpz29cqPseTgMWkjTq+bfGow8u+p6QKA0RZSnu+Qss/Mvb7793CW3JGCfYA/lUbKGeH0uZbdVqIoBhJC6wDKfwbsp4giQ88qgWcnQMehNa26jX27UEkdT3UpSA2jHIeCH2rk+nJMD+9lL9kMIcqRRqIKD8UCnHhYyBDWcNhRAL0afcO0K058NMITse43vS9ygSEl70/Lr++LXtSzW0VQhRuUbWkBvpTyFXCISzDT0njyblpM1mq9neKfVrAJWruGFn2B62S30agIIAVprbYups7XZ3B60Ca4Dynw7dg85gs2HhDf2bKzbvtNTXwmtQrr+5gh+N+uBFC69BOb7l8Elno9+08BqU49sr+E59Z9DsWHgNiilJZyvoequ92V+utoRMGd1zwrut5qizUSivUJANZXapKaYsletyLUF3GR8BQAEpkiT15CLDUxRAHvcRJRNOvH0SxVJNg7YwMt7nQ4FYGVIzeiLgJJM9/6MMwc6otL54+sOLp4+9F08fndx/cnL/55MHD07u/5TrsgT3UBqZgs+/+/yvbz7x/nz87fOHX7rxwsT/9uOnv/7yhRsI+6iy6NlXj35/8ujZ15/98f1DB3yHo4kJH5MEC+8aPvZusgTWph1jW44n/NUkxjEilgSKQbdD9VDGFvDaAlEXbhfbzrvNgUJcwCvzu5athzGfS+KY+WqcWMADxugu404HXFVzGR4ez9PIPTmfm7ibCB255u6j1ArtcJ4BdxKXyn6MLTNvUJRKFOEUS0+9YzOMHau7Q4jl1wMScCbYVHp3iLeLiNMlYzKxEqkS2iMJxGXhMhBCbfnm4La3y6hr1QN8ZCNhQyDqMH6MqeXGK2guUeJSOUYJNR2+j2TsMvJwwQMTNxQSIh1hyrxhiIVwyVznsF4j6FeBPtxhP6CLxEZySWYunfuIMRM5YLN+jJLMaTNJYxP7oZhBiiLvBpMu+AGzd4h6hjigdG24bxNshftsIrgFzGmaVCWIejPnjlhewczejws6RVizDBC7xdcJSc8k73e0vaxmO5w4N8/eKbJeh/sPUvQAzdMbGHbFaol6x9DvGNr/3zP0ur18/rxcUTGwdHXi1ufvZO3xe0ooPZQLiveFPoELKEDhCAZ1a6D7w7Idy2L4WRz2LVzEkZbxOJMfExkfxiiD03tDN56RKFRHwsuYgK5RD+vGFp/SrXuAeXLAwrzrbDRUh5mTh0CyGq+3ynHoGGSObneqTqpUr3vTSHe8SwOU7KsYYUxmG7HpMKKzHIQo/JMRemXnYkXXYcVFpX4ZqmUUS1eAaWVU4ITkwbmq57eaeTcPbROiOFRxyhv7ZXRVcM410uucSc0MqMPlRpEBVaS7yta1y1Ory1PtJSJtGWGkm22EkYYxgosVfSdShDD30nnGuluF1DJPuWK5GyozOhffRKwViZziBpqaTEFT77jntzdbcMcVoKznT6F7h59JBrkj1MkW0QguwQLJ8w3/OsyScSEHSMS5wzXp5GyQEIm5R0nS89Xyy2ygqeYQbVtjAwjhrTWuC7TythkHQbeDjKdTHEgz7MaIvo7RAGD4fBc432rx1wcrSTaHcB/G4bE3oXN+E0GKtToN5cCQCLjiaeTeDAncSpZEVuXfqcJU0K55LahzKB9HNItRUVFMMs/hmkRLc/RTvmhd5cCBlgvs56IQTiJVYP911T27VCvPGaRZ1UyLVVTVdJPpmyvyhlVVEbWsyqlbtw2i4rrukusgUZ1V4oyq+xIFwTCtmswyTVm8SsOKs4tR27RzPBAYnmiv8VtZI5yeeN3KD3Kns1YViOW5Um8D/QeG+Q8Dm9wF8hjAXe6cSpHf3t6DWxw49OW3wSVtaNHtvwEAAP//AwBQSwMEFAAGAAgAAAAhAKPcwgPdBAAAdSUAAA0AAAB4bC9zdHlsZXMueG1s7Frdj9o4EH8/6f6HKO9sPiAcIEK17G6kSr2q0u5JfTWJA1adOHLMHvR0/3vHTkLcW7IEyqd0vBA79vg3H56ZeDz+sEqo8Yp5Tljqm86dbRo4DVlE0rlv/vUSdAamkQuURoiyFPvmGufmh8nvv41zsab4eYGxMIBEmvvmQohsZFl5uMAJyu9YhlN4EzOeIAFNPrfyjGMU5XJSQi3XtvtWgkhqFhRGSdiGSIL4t2XWCVmSIUFmhBKxVrRMIwlHH+cp42hGAerK6aHQWDl97lYrqK43iyQk5CxnsbgDohaLYxLit1iH1tBCYU0JyB5GyfEs2y0Yn4xjlorcCNkyFb7ZN4uOyTj/brwiCgpxTGsyDhll3BAgV2BL9aQowcWIB0TJjBM1bIF4DvooZnZ7sk9poxyaEJCN7LTkqtuX2ko4Rgmh64Ku20xAvSqw8vnMN4PAVj85o6Z7zwmismt/qtslcBDBvfHMpDArrWicHohJqSAHIRBKN/rvSv1Dx2QMpi0wTwNoGOXzyzoD7aewCwsNqHE7Rs85Wjuu135CziiJJIr5g25ztqQwK/tIGuEVjsBclYVZGlZpWgqX+gP2ZoxH4FwqA/eAdNE1GVMcC6DKyXwh/wXL5BpMCNiDk3FE0JyliEprrWboM8Epgf/xTbEA/1HtELQUrNwgliR/Fuo7kSgOFYM7h4IQKhnsHFuI6riS2oOXUynrROJsMKnStsBSQ0zps7Spr/HGXF2wrFVspMskSMRHsHiIjtJ1Vo9g6uVjYZpFA5ZqmuTA/MZJlg6hAKRh6Q4OAmOs4p2oug2oZNgsZxsoy+g6AN7l/ipbwEndmqqdXrfvKZmnCS4mTMYQpYqmsWCcfAdCMryF8B5zUyYggoRaj9z2q7hZkABtqyAvCNn4m6PsBa+UhLbil9ovrae1yD8vkxnmgUqiNNH/r4jDbUeTPZhLvXNvw9yvBfJuc9ecpbZdr1rk2g7t1R7mfchH3qGFb/3CmcChKD7KwPHv7z6zDQWDsvCbzNdUFveuW23N9MGR4Pzsbfe6Z9Xp0cPfFbqw3f7A1RxCawauPf5dXBO7MiVtS4P8byLaNckUWDlPPrpLphcHuH/C3GQGZ5Pp/pCbcuRrg+zAEemWvP62I4zXNv25bCbw36hzUNZzI7yCV2rPnpb1tGbvGjPZoyj4Cg849vp8aoo3ENDbB8TTHsicHeIeMfqnvOdkMjsU0NmOHQ4FeNm06wai6/bDvhZZwRvJnvdrZ5dBaIHjRJ8ORzkNOGkOAHH0Or45mqL4xfxZE6CzSWyvEHp28R0FHUTVI1nfRY8VL5YcqJIaFNG08t5Pxb1Nxc2Q9wF887Oss1BN6LMloYKkmxLa9gnGJoaryxl1IQ8WjlZ1PVEdwAp5O0VVGjdQYA9HOEZLKl42L32zfv4TR2SZwCLlqC/klQlFwjfr50+yku70ZakeqlCfcih/w7+x5MQ3/3ma/jF8fArczsCeDjq9LvY6Q2/62PF6D9PHx2Bou/bDv9o1mV+4JKOu9EDpzumNcgpXaXjJbAn+ue7zTa1RwFdXFQC2jn3o9u17z7E7Qdd2Or0+GnQG/a7XCTzHfez3pk9e4GnYvQOv5diW41TXclaONxIkwZSkla4qDem9oCRovsOEVWnCqu9LTX4AAAD//wMAUEsDBBQABgAIAAAAIQDoC+zJUxgAAAmDAAAYAAAAeGwvd29ya3NoZWV0cy9zaGVldDEueG1srJ1Zc9s6k4bvp2r+g8v3xxYXbakkX8HaZe27dKc4SqI6tuWRleSc+fUDkGgs/cKynRpfxM7DRhNEoxsg0CQ//uefh/uLX7vj8/7w+OkyuipcXuwe7w5f94/fP13OZ82/KpcXz6ft49ft/eFx9+ny393z5X8+//d/ffx9OP79/GO3O11IDY/Pny5/nE5PH66vn+9+7B62z1eHp92jPPLtcHzYnuR/j9+vn5+Ou+3XrNDD/XVcKJSuH7b7x8tcw4fjW3Qcvn3b3+3qh7ufD7vHU67kuLvfnmT9n3/sn55J28PdW9Q9bI9//3z66+7w8CRVfNnf70//ZkovLx7uPnS+Px6O2y/38rr/idLtHenO/gPqH/Z3x8Pz4dvpSqq7ziuK11y9rl5LTZ8/Zu0wOn7+eNp+qR3uD8eL4/cvny6bzULhptAsXF5//nhtZL7u5eUqG10cd98+XYr4g5gnkZLJRBb73e9n5+8LqXO6u9/dnXZfpVUvL06Hp97u26m2u7//dNmR4H8Ph4fp3fZ+N1AGkjAqSNMro345HP5W+jqyZEHVM9OjTr29O+1/7XId0yiWHeN/stqov01tVVGquVutZtYRRseLL9vnnbze5f7r6Yc67eXF19237c/7k4XVqziqlIvmyOTwu73bf/9xkvJFdaq7w728XPnvxcNedVtpre0/2e/fudokuiqXy0maKC3Pp3+VCeP08uLu5/Pp8EDn1qpyJfJ6MiXyt1YSF6+KxbSU1cTR8WX3fGruVV3O6ku0Pvlb64sKV2kapYVS/OZKySpnlZK/SUklWKkzFyZPlumQv7WONKUGpsuSx85oKGkN8jdpiN6noaw1yN/UuEmgMc5XQ4ai7ELkb6tE95S3XUhVa5C/qTlljd5WVvXUvJcpR9G9Nw50s/MXEZnOKv+wNsXe+ooa6q7KD6nTh2oje84bO2xEPVb9QXZ+n5kj6q/STU2tAk0kO9KZ7hZRf1N/mIqg67zSQtTnIttfkvebi7pMbK0e0nL+imIyuvrjpaZ9RYWJT9Y6RW6dV1SQdVQkpD7zbuuo4JUHSiegvLMiZODYxoM/aFSKB7E1cBoIKq80ijGwDQophtjzShKKDeqPMz32FS3US+TI/uf2SaijJGfc+JWKUEdJbEdJ391REuoo6g/dKM7A90oVqIsk52PAK1ooBiS2o73TaRLqZeqPP3aahHpZ6hoFZhfnryY1swFrlnLx3XZJyS5RKalYTWbSZYdDNanLp1rZLLO+PW0/fzwefl/Iqbqa/j1t1cQ/+pDK1s0nZ1clOWO8U8eFEvh0qXqjnCo9S/zrc1RIP17/Ukq10I0WSrKZmCpWA1IH0gDSBNIC0gbSAdIFcgukB6QPZABkCGQEZAxkAmQKZAZkDmQBZAlkBWQNZANEkJ2tCQVaVaBZBdpVoGEFWlagaQXaVqBxBVpXoHkF2leggQVaWKCJBdpYeEa+ls5kPEpGhvMepQSYRyUV5lBaxnEoIHUgDSBNIC0gbSAdIF0gt0B6QPpABkCGQEZAxkAmQKZAZkDmQBZAlkBWQNZANkCEQHSDqIYI7SrQsAItK9C0Am0r0LgCrSvQvALtK9DAAi0s0MQCbSw8I3sOJce28w6lBKRDyV9miEqqzKG0TL7skI1QQOpAGkCaQFpA2kA6QLpAboH0gPSBDIAMgYyAjIFMgEyBzIDMgSyALIGsgKyBbIAIgegGUQ0R2lWgYQVaVqBpBdpWoHEFWlegeQXaV6CBBVpYoIkF2lh4RvYcSs3ez875lIB0KDmNNQ5VYP5kRNQyXuZPQOpAGkCaQFpA2kA6QLpAboH0gPQ1kfNeO7n1L3RgROhCh0BGQMZAJkCmQGZA5kAWQJZAVkDWQDZAhEB0g6iGiAxdNtN/QZZ2EJnaQWRrB5GxHUTWdhCZ20FkbweRwR1kLU7mFGhhgSYWaGPhGdlzMOk4noNJZ5Ktli+V5Qvo2aqzutcqyvs1c8ysjpu7L6VJ3qTJ5QjTQWPmiVpE7Q7QDVrii9QCWtgdXF2LyBsDo6Xoa2nkImpRw4iUfJFmoC5lX6QVEGGT33agumw47wS0RCxEdQNqosivzW1IhjVwLyTDWrifyxTz22MWQfJjUXaM6R66x5jOkauTmWvsHmN2mrjHmIGm7vmYZWbuMWaSuXuM2WLhHuNGWHoHWeuvvIOsadbeQdY2G+8gaxwhvKOsecSNd5Q1kNC+klsrYk0ktJvoo6yRhPYQfZQ1k9DOofsB66xC+4U+yhpKaJfQR1lLCe0N+ihrKqH9QB/lbaU9QB/lbaX7vj7K20r3en2Ut9XA6/e8rbyeH/O20n0/15zwttK9Xx/lbaX7vxumInvVXpxWm0buROhMnJYrwrQipkplAd2EwZTV4SYXUVtNdl7BWq8WkmHtXzcyatktKcdpFFeYfRtaRs57bX2Ynmagyqw6rVxE2sxqYSLtXKScBbIkKpYqlTQpMLN3dXW0EzDT3eqj7jDDL6hnNDhjHusgAy1jJhxDDqYczDiYc7DgYMnBioM1BxsOhABCvcPOlqgvWEKWd2ZUoEdbNUsfyNdqtREdom3mkA7oIZPZc5GZLCGjWNIHPWAUAVYRIyg1BjLJSZwtfnn+qpJY3u+vqtQr/pqLeP5aZF2uFpCJuL/mMpXMQ9JI5i0kFRasG1qN664V5iXNXEbuNRhfrLAI06IzOXMx7q6kJYsdsjKFclzmsbSrq/OCu2LTVdhZekbBGW/VMtZbOZhyMONgzsGCgyUHKw7WHGw4EALIDRDqCY63ggyZ2cpoo7reCqXaQDpAyGKOt4IMGcXxVpAZABkCGQEZA5nkJOCtsv++2Vvjs3dBStMrHpyLnB9xQzLcg41MttFVjuJSkc9pG1rGdeGIzW+aWOWIBZRWoDoxiwRtUpP5sMy0i4pRqciHXK3oBR/WR70hl80Ce0aDcw/JIs5Ay1gn5mDEwZSDGQdzDhYcLDlYcbDmYMOBEEBugNSA1IGQ5R2vBhkyq5XRRnTHYCjVBXILhKzkeDXIgJXEEGTATmIMMpOcBLxaudgfDMJZsVd8WMucd+KgEPdiK6QcJy6XK0mxxNczSMj145j1+mag3vyusKVl3LlzzIb9tpHJR+NKKYkLslr+UkGXqvSCK9Nh15cTvlxhdZwZkUnIejOQKZAZkDmQBZAlkBWQNZANECEQ3SCqIaojaiAiU7sjNEqRIV1vRiljSGeURqkeoj6iAaIhohGiMaKJRiG/ljfM/0/DtcqNfG281jKqPi/fIgeFwNfzs0lNua+XZLIwny43SJPn6+xOuhmod8xGypaW8Xyd1ahtZHJfL5eStFrlO5JdqtJLvq4vyz1ThY38PavjnK9rTY6vczIlRUZmBmQOZAFkCWQFZA1kA0T6Oq+iuEFUQ1RHZIzvDNsoRZZ1b55RqoPIGNL1dai9MZUzeqOuAaIhohGiMaKJRiFfV/k/b72RPj81z54feG1cz9ONXvH1kBD4uhFSrpXG1WolZTekDV0jlcNs90z4RkWg2jHfqSBF3uYL36swinJfj+WwXkmqfIZOql7ydX1ZZ+foVsc5X9eaHF/nJH/kQ21A0RbYjFQbMgeyALIEsgKyBrIBIn2dV1H6OqAaojoiY33X10FXCwu2EXUQdRHdIuoh6iMaIBoiGiEaI5poFPJ1lWHk+DqtYqunA14dpFEm4svYAT2wLGZk8hG6kiTFIl/G1jKe2yYwQgcqDW6LMgkbxdtehZIokQN0XOSbgx0jRY7S9crxdYHbQFNU2f1Ejy7T265lQn048YCKOX6dX6b14hHIjEHPBMgUSs2AzIEsgCyBrICsgWyAyGjAL0xGA0A1RHVEDURNRC1E1EG8WT5UgrqDI0V9wEHG5O7ID7rQwmKI9UIbCzKyc0aych4N8q0BY2ebASeMpR1mbJ0xb/VdueYbZg0mwOSZWDK54eV9skylP3vAAIN6MMCQDAWYNOIL1Q19Lj/A8I2yQIUSvlMWkmFBqG1k8mlBKa2W0wpPm+96UhhO8MKrcLOfy6ipns3+4Ct3dOVO8NDFDBmBzBTIDMgcyALIEsgKyBrIBogMDLzSMjAAqiGqIzKdwZ0mgK4WFiTDeoEBCpJhvcAAUj2tXj49ZZKR+njKAaIhIjSgjAxwygmdEvfW1KN+7/HuPA3svHejDHp3QAZm/SSjnKmYVKNCke+qZbWXc1p30h8VYDEvcLICU9XSqtwriwpsItI2QvoWP0niSPo4X85zK86D1i3VuZovXKgHgNyfUuMv8PZcn+/tbMtgQGodb9fFHG/nZAqlZkDmQBZAlkBWQNZANkCkt/MqSm8HVENUR9RA1EREhvcWAOCMHSzYRWRsaz27h1J9RGg9OQ3IK+GGiRGWHCOaUMmAt6vkHLYCoKYbwRxFJ/dFPcrL7hrkGwdYRmJAKGUz8FpIEfh9frIkTzgpx0U5qjM9Da3Hc/yU76drIff2OgW3p5M50xXw+lwm1RkwcbFSLFT4Un/XXFq2hcgu6jZw4RUm06OL8kZ1dlF9o4gGjwEVczyfcrBIZgQyY9AzATKFUjMgcyALIEsgKyBrIBsgMjrwC5PRARB1Msej6yhlupA7FwBdLSzYRtRBRN3BmwuAemNydyoAUmhhGR1AimzsBgyyssvIzjnzp/oqBceEBz2NeEt4yFN3zs8KUAZnBQEZiA65TB4dSoUkLVe5KzYinVzkTgtSvlWvhbzowPfqtYxsApsezffqtYyJDmmlGsGjsl0tpVOFeX6cOeqcB5YQ9EW50YFnUPaNIhsdeKLVkFrHmRdQu1OpMeiZAJmCnhmQOZAFkCWQFZA1kA0QGR0w5w5RDVEdkelCbnQA9S0s2EbUQUTdwYsOoL6HBcnATsEBSqGJxQilyMh+cNBZeNnNiR8cVMbPG4KDWQjIM4TOBwWUwaAQkIGgkMuYKUMcRSXmyw31IhH1vLsbFPgNRVMLuUGBL1m2tIwXFGClMT8ZBQUZpuRiY8Kq3dWaXgoKeOGQhkcXdX5dkRTZoMDzuYakyAkKXGZsqkt6JkCmoGcGZA5kAWQJZAVkDWQDRAYFSF27QVRDVEdkupAbFEA99Q/vhgKkOqieuoMXFKBgDwv2EQ0QoYllUNBZfM5SBFnZjwqunB8VVMaQExWM9+vcIi+znOfLRwEh9P+QEAQAI0Qp83GlCpk/WkiGODucw1Jg4HRFWAsMCcFioF+nQkEuFlQivvDQoUawq7Fdi7J7CZgtBM6OOQJa6HxkyIXsqQd0audmgmeJjUBmrInVMwEyhVIzIHMgCyBLICsgayAbIDIyQPrbDaIaojqiBqImohaiNiLTIWyUMR3Colss2EPUR4QWljcT0BLGxhV7SrKyfGGTerWM+/IL9aTin9w4ZOVeSSMIyECSfkAGNguMTL5ZUKyoV/mxZx21jHqxlY0Q/MZBC6l1E/tEJPPRVkiI5yy0rVAWteI4LsalmK9RdH0x2DCgw/mCYuEqKRS9H76cSPJnbyRMa5k5AxWzkQHICEqNgUyATEHPDMgcyALIEsgKyBrIBoh8KY7qzm6qhHwpDqAaojqiBqImItNdrLeZzmFRBwuavuFEBpTqIeojGiAaIiIbO7MUMrI3ZdAlA6sM6i1677mRyORfCxKYe4hBAmUwSJBMtudQjKtlvnvX0NXxYkSJbzloIT9G8LXHwIWV+Nqjkcl3HCIZI1LIc+za0wUnDKHa8CeUeiR0dsJgqmPDAqQZkiJ7KwFkDHomQKZQagZkDmQBZAlkBWQNZANEhgVMTkRUQ1RHRL3I8aImSrUQtRF1EJkO4YYFTE7Egn1EA0RDRCONvNXHACM7h+KCl5748uqjeUVdnuDl79jxTYkYhWBTIiCDgYH0ZA4WVZM0LUQ8d7ChNfmxga0NNLWQHxvYbUgrKMQf9TMVz4NDQSYzpXGBrzJYVdnMh99N0GGaPhTlcxPuD1tH6QVaiz9eOLDtYF6fgmiKaIZojmiBaIlohWiNaINIOnpubLcv3wRYLcDqAeZ0C7PjT73APQcZ3WXtgL5OgHUD7DbAyHzuOfoBuYAJ5SvysF1GATYOsInH/JsHL1XxDX4fSE+EzUiZBAV5jnwzMiCDfk96rN/Lh/H5bUMu5Ll9GdxeJ395tw3g9iEhcHu3TolcUQi7vVEVdnt9mNyeeX0Z3B4bFN3etIN1e0BT3exOD5whmiNaIFoiWiFaI9ogkm4PdZXzfmS1AKsHWCPAmgHWCrB2gHUCrBtgtwHWC7B+gA0CbBhgowAbB9jEY77bK09/x36Ceu31a5nLAZkyG+9qARn0ejqXch25yai2+5mehtbjj/VsDbCphfyxnoWPVlAIbgRMYKTBvpxUCzzXqWt15VVnLz4KngpcHVsaXT2XcZx4aBuEvH+KaIZojmiBaIlohWiNaINIujpUX7o6Muos7mhZD8g5ncEZ4VEfmdof4VGuEzgHmdYtexuQ6wVYP8AGARawoXwLLtZvHGATj/murlKZ3uPqmLAH79rJvsLhrwqgqwcS//jOgdGTDfCJXIJLcXw3qVh2xa8Mt/w6acwd38twyx8SAlc3QnpZsFxO1Xs8WJqhrrmMLZkYzOu1FhrgS5H3w28TeoEGRa+HnLShLub0yimiGaI5ogWiJaIVojWiDSLp9ZhSdxNgtQCrB1gjwJoB1gqwdoB1AqwbYLcBRubz5/V4vYNA2YANpddj2XGATTzme72XbPiGeT0mGaLXowyu8wWSFcHrSYY2A8oJvCggzmW8Ab4CmwE6D8v1+gpPI9KavFlAmVWpbYXyAb6cyqyBlIeZri+GmwG60nJHx2xOVFlo6Gkd7soJzyQa2Ku3c3nTICav0GgymUNAJkCmdA1mdWoGZA5kAWQJZAVkDWQDRAYGzCtEVENUR9RA1ETUQmQ6gLvgD/Uy9ndX9jCvENX3EZGNnUXIoZZyw8gowMYBRobOy/qh4I2JhWZp7w0JhcoveU4yf0oxIFNmw2jdyORL59VIPbQf89wBLeW7MH+8OCgEs32d5+XNE1jEaFtN+dheKBfK8r17bE2h64vxW5RbfTimKUBZ7h64PzzFMNBcOAVwE8Syh8yGdBqbRTJFNEM0R7RAtES0QrRGtEEkPR2qLyf+yGoBRj1FHjKT/EZArhlgrQAjI7v6OgE5srIrZ0zrvvc4ULYfYIMAC9hQTgGwXcYBNvGY7/cqbyiQHaS++fTqvTzK4FCPMngvTzLKk+RjRGnK353T0NXxnJs/1dMMCrGpeyskBC8FskL5/F7uI5SrKX/GoWPFqLt1/ZI4+Os0LTPllxfr/PBMxh6pO7/lp1PQ7EdJBrqc0yGHiEZY/7Gxu8kgBDKlYs7kgCfBzUFmAWQJZAVkDWQDRIYMzCBEVENUR2R6mo0gpl9ZZHqRmw2AGYSo3vQPd3KAGYRYsI+IjOxNDjBdkKzsBicyc878gPBCuqAcorKMi7PpgiEhSBcMCsH030vNq1Tk12wj/n6vBmlyp8lVWNXXmjwhWNUPCcGqvhHS83/5UhH5qhM2XenYWtmo4JXEqJAfzh7n+vW5cCW/G+b+8DTJXqgFE/6uAqzGQCPZlewdA+QOUjkjM9bEyR0EMoVSMyBzIAsgSyArIGsgGyAyJmDuIKIaojoi08/cmADqW1iwjcj0Dquri1K3iMjojvHkd7PyWrgsYGS5LYhyowAjS+f6vLCgPrz4ngXCTP6VlKCADASLkAyPFUZGLxBGaRneM6Zl/AkEXyoICvGlgpAQJAVZoXwCUYjL8mOE8IJQXwweRNaHpaWUFpk36IUFvojRC7QVvznoGxmTHkR1sDEByAjIGPRMgEyh1AzIHMgCyBLICsgayAaI/PIXZg0iqiGqI2ogaiJqIWoj6iDqIrpFRBZ3ZgBkYPfxIyw4REQ29qYJWsxlZOfA1EF9geRdMYJS+agv3mQaVNQgUgNSB9IDMtDEnf4imiKaIVKfgc8+9WLv4xaIlohWiNaINohkP4VTCmoa1xTUOC6j5nFZI6CvGWCtAGsHWCfAugF2G2BkLLd+/YBcwITye3XYLqMAGwfYxGP50HbtfHV1+/N0aO7vT7vjxXH3TX5etfRBqOAkO+LD7vh9V9vd3z9f3B1+PspFW/URVkO1fPxBfXrSFdcHEnkguzPjJVJ5IA2VKH6QX1ZCTd3iB/nhJOT9olSUvxXIVvXzx6ft911/e/y+f3y+uN99k9UuXJXlJPi4/66+b5T/53R4yr549OVwOh0e8o8f7bZfd/JLsYUrKfztcJBNkv9HnlnpnO5OP58uDsf97vG0Pe0Pj58unw7H03G7P0nlH/ZfP10eO1+z+HP9+3D8O2vkz/8nAAAAAP//AwBQSwMEFAAGAAgAAAAhAByMcK2TAQAADQMAABAACAFkb2NQcm9wcy9hcHAueG1sIKIEASigAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnJLBTuMwEIbvSLyD5Tt1CiuEKseoooUeWLaihbvXmbTede3InkYtb8Oz7IsxSURJgdNeovH8k9+ff1te7zaO1RCTDT7nw0HGGXgTCutXOX9a3p5dcZZQ+0K74CHne0j8Wp2eyHkMFUS0kBhZ+JTzNWI1EiKZNWx0GpDsSSlD3GikZVyJUJbWwCSY7QY8ivMsuxSwQ/AFFGfVwZB3jqMa/9e0CKbhS8/LfUXASo6rylmjkU6pfloTQwolsunOgJOiL0qiW4DZRot7lUnRX8qF0Q5uyFiV2iWQ4qMhZ6Cb0ObaxqRkjaMaDIbIkn2h2M45+60TNDg5r3W02iNhNWPdoq1dlTCqWfijEyuAmX+vzmxdkILmOq0t+7/0a/tDDdsBKo4HG4OOh4Rj0qVFB+lXOdcRvwEf9sFbhg67wxnfTR8mY0bf6eP4/gtnmwDt+GmPe+v/pqdqGSYa4T3K46ZcrHWEgtI/RH1oyBmlGF1jcrPWfgXF+8xXobn45+51q+HlILvI6E57PSk+3rF6AwAA//8DAFBLAwQUAAYACAAAACEAjauhRmMBAACNAgAAEQAIAWRvY1Byb3BzL2NvcmUueG1sIKIEASigAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfJJfT8IwFMXfTfwOS99L2w1QmjGiEqKJGBJnNL417QUWt65pq8C3txsw8U98vDnn/nrOTdPJtiqjD7CuqPUYsR5FEWhZq0Kvxugpn+FLFDkvtBJlrWGMduDQJDs/S6XhsrawsLUB6wtwUSBpx6UZo7X3hhPi5Boq4XrBoYO4rG0lfBjtihgh38QKSEzpkFTghRJekAaITUdEB6SSHdK827IFKEmghAq0d4T1GPnyerCV+3OhVU6cVeF3JnQ6xD1lK7kXO/fWFZ1xs9n0NkkbI+Rn5GV+/9hWxYVubiUBZamSXFoQvrbZrUnJydicrhTOz8OVlwWo6112NZ3fPaTkt3D0LmyhPagspvEA0wTHF3nMOBvxQfza7R1N4e226j4AqCiE5/uqR+U5uZnmM9Tw+piOMI3zAKMDTmng/dhvyuyB1SHy/8QhZhSzQU4ZTxLO+ifEIyBrQ3//QNknAAAA//8DAFBLAwQUAAYACAAAACEAvqSJ3JcAAAA4BAAAJwAAAHhsL3ByaW50ZXJTZXR0aW5ncy9wcmludGVyU2V0dGluZ3MxLmJpbgpgcGFwYzBiMGEgDzCyMLPdYYhhDn7fwMjIwMgwi9uEIwVI8zNEMDEBaQjpSLb52FzFCBUE0UxADOOjqw0I8gx7ZECmx/BokwDLCaiDIAMDCENABjAccGlDSAgwBJgwM2h0sCApxfSBvLTIHJAeNgY+hv/U98KoiUMkBHClbVzOzwBKBPuGeIHkBRgiaOZLAAAAAP//AwBQSwMEFAAGAAgAAAAhACo5xM4sAQAAEQIAABMACAFkb2NQcm9wcy9jdXN0b20ueG1sIKIEASigAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApJFda4MwGIXvB/sPkvuYD2sbi1o0Whi72GBdb4dobAVNJIndyth/X0rXFQa72S5fzuHhObzx6m3ovYPQplMyAcTHwBOyVk0ndwl43qwhA56xlWyqXkmRgKMwYJXe3sSPWo1C204YzyGkScDe2nGJkKn3YqiM72LpklbpobLu1Duk2rarRaHqaRDSIorxHNWTsWqA4zcOnHnLg/0rslH1yc5sN8fR6abxF/zotYPtmgS8FyEvihCHkJYRhwSTHEZBtICYYUxzytdRVn4AbzyVKfBkNbjpd3zrWAe77MdXY3Ua4CKflY7DFnxWsCzKi/ms5GHIs4wsguCFBDG61mN00finUHARun96cDubqbb51PXNVugffoxCQn3qY58wyn61Qddfpp8AAAD//wMAUEsBAi0AFAAGAAgAAAAhAHuSyCF6AQAAgQUAABMAAAAAAAAAAAAAAAAAAAAAAFtDb250ZW50X1R5cGVzXS54bWxQSwECLQAUAAYACAAAACEAE16+ZQIBAADfAgAACwAAAAAAAAAAAAAAAACzAwAAX3JlbHMvLnJlbHNQSwECLQAUAAYACAAAACEAgT6Ul/MAAAC6AgAAGgAAAAAAAAAAAAAAAADmBgAAeGwvX3JlbHMvd29ya2Jvb2sueG1sLnJlbHNQSwECLQAUAAYACAAAACEAjAMyxiQCAABCBAAADwAAAAAAAAAAAAAAAAAZCQAAeGwvd29ya2Jvb2sueG1sUEsBAi0AFAAGAAgAAAAhAE6wKpWsBQAAQg8AABQAAAAAAAAAAAAAAAAAagsAAHhsL3NoYXJlZFN0cmluZ3MueG1sUEsBAi0AFAAGAAgAAAAhADttMkvBAAAAQgEAACMAAAAAAAAAAAAAAAAASBEAAHhsL3dvcmtzaGVldHMvX3JlbHMvc2hlZXQxLnhtbC5yZWxzUEsBAi0AFAAGAAgAAAAhANkevufVBQAAPhkAABMAAAAAAAAAAAAAAAAAShIAAHhsL3RoZW1lL3RoZW1lMS54bWxQSwECLQAUAAYACAAAACEAo9zCA90EAAB1JQAADQAAAAAAAAAAAAAAAABQGAAAeGwvc3R5bGVzLnhtbFBLAQItABQABgAIAAAAIQDoC+zJUxgAAAmDAAAYAAAAAAAAAAAAAAAAAFgdAAB4bC93b3Jrc2hlZXRzL3NoZWV0MS54bWxQSwECLQAUAAYACAAAACEAHIxwrZMBAAANAwAAEAAAAAAAAAAAAAAAAADhNQAAZG9jUHJvcHMvYXBwLnhtbFBLAQItABQABgAIAAAAIQCNq6FGYwEAAI0CAAARAAAAAAAAAAAAAAAAAKo4AABkb2NQcm9wcy9jb3JlLnhtbFBLAQItABQABgAIAAAAIQC+pInclwAAADgEAAAnAAAAAAAAAAAAAAAAAEQ7AAB4bC9wcmludGVyU2V0dGluZ3MvcHJpbnRlclNldHRpbmdzMS5iaW5QSwECLQAUAAYACAAAACEAKjnEziwBAAARAgAAEwAAAAAAAAAAAAAAAAAgPAAAZG9jUHJvcHMvY3VzdG9tLnhtbFBLBQYAAAAADQANAGcDAACFPgAAAAA="};
+let plantilla=null;
+function b64ToBuf(b){const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer}
+function bufToB64(buf){const u=new Uint8Array(buf);let s="";for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)}
+function tplActual(){return plantilla||DEFAULT_TPL}
+function pintarPlantilla(){$("#tplName").textContent="Plantilla: "+tplActual().nombre}
+const colNum=ref=>{let n=0;for(const ch of ref.replace(/\d+/g,""))n=n*26+ch.charCodeAt(0)-64;return n};
+const colLet=n=>{let s="";while(n>0){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26)}return s};
+const parseX=t=>new DOMParser().parseFromString(t,"application/xml");
+const serX=d=>{let s=new XMLSerializer().serializeToString(d);if(!/^<\?xml/.test(s))s='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n'+s;return s};
+const kids=(el,name)=>Array.from(el.childNodes).filter(n=>n.nodeType===1&&n.localName===name);
+
+async function exportarPlantilla(pintarRojo){
+  if(!window.JSZip){toast("No cargó la librería para Excel. Revisa tu conexión y recarga.");return}
+  const tpl=tplActual(),zip=await JSZip.loadAsync(b64ToBuf(tpl.b64));
+  // ubicar la primera hoja
+  const wbx=parseX(await zip.file("xl/workbook.xml").async("string"));
+  const rels=parseX(await zip.file("xl/_rels/workbook.xml.rels").async("string"));
+  const sheetEl=wbx.getElementsByTagNameNS(NS,"sheet")[0];
+  const rid=sheetEl.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","id");
+  let target=Array.from(rels.getElementsByTagName("Relationship")).find(r=>r.getAttribute("Id")===rid).getAttribute("Target");
+  const sheetPath=target.startsWith("/")?target.slice(1):"xl/"+target.replace(/^\.\//,"");
+  const doc=parseX(await zip.file(sheetPath).async("string"));
+  const ssFile=zip.file("xl/sharedStrings.xml");
+  const ss=ssFile?Array.from(parseX(await ssFile.async("string")).getElementsByTagNameNS(NS,"si")).map(si=>Array.from(si.getElementsByTagNameNS(NS,"t")).map(t=>t.textContent).join("")):[];
+  const sheetData=doc.getElementsByTagNameNS(NS,"sheetData")[0];
+  const rowMap={};kids(sheetData,"row").forEach(r=>rowMap[+r.getAttribute("r")]=r);
+  const colStyle={};kids(doc.getElementsByTagNameNS(NS,"cols")[0]||doc.createElementNS(NS,"cols"),"col").forEach(c=>{const s=c.getAttribute("style");if(s)for(let i=+c.getAttribute("min");i<=+c.getAttribute("max");i++)colStyle[i]=s});
+  const valor=c=>{if(!c)return"";const t=c.getAttribute("t"),v=kids(c,"v")[0];
+    if(t==="s"&&v)return ss[+v.textContent]||"";if(t==="inlineStr")return Array.from(c.getElementsByTagNameNS(NS,"t")).map(x=>x.textContent).join("");return v?v.textContent:""};
+  const celda=(r,c,crear)=>{const row=rowMap[r];if(!row)return null;const ref=colLet(c)+r;
+    let el=kids(row,"c").find(x=>x.getAttribute("r")===ref);if(el||!crear)return el||null;
+    el=doc.createElementNS(NS,"c");el.setAttribute("r",ref);const s=row.getAttribute("s")||colStyle[c];if(s)el.setAttribute("s",s);
+    const sig=kids(row,"c").find(x=>colNum(x.getAttribute("r"))>c);row.insertBefore(el,sig||null);return el};
+  const escribir=(r,c,v)=>{const el=celda(r,c,v!==null&&v!==""&&v!==undefined);if(!el)return;
+    kids(el,"v").concat(kids(el,"f"),kids(el,"is")).forEach(n=>el.removeChild(n));el.removeAttribute("t");
+    if(v===null||v===undefined||v==="")return;
+    if(typeof v==="number"){const x=doc.createElementNS(NS,"v");x.textContent=String(v);el.appendChild(x)}
+    else{el.setAttribute("t","inlineStr");const is=doc.createElementNS(NS,"is"),t=doc.createElementNS(NS,"t");t.setAttribute("xml:space","preserve");t.textContent=String(v);is.appendChild(t);el.appendChild(is)}};
+
+  // encabezados
+  let hr=0;Object.keys(rowMap).map(Number).sort((a,b)=>a-b).some(r=>kids(rowMap[r],"c").some(c=>/nombre\s*y\s*apellido/i.test(valor(c)))&&(hr=r));
+  if(!hr){toast("La plantilla no tiene la fila de encabezados (Nombre y Apellido)");return}
+  const mapa=[["madrina",/madrina/i],["aseguradora",/asegura/i],["tipoDoc",/tipo/i],["documento",/n[úu]mero de doc|documento de id/i],["nombre",/nombre/i],["direccion",/direcc/i],["barrio",/barr/i],["telefono",/tel[ée]f/i],["comuna",/comuna/i],["terapias",/terapias/i],["hora",/hora/i],["dias",/d[íi]as de la semana|observacion los/i],["obs",/^\s*observaciones?\s*$/i]];
+  const cols={},dayCols={};
+  kids(rowMap[hr],"c").forEach(c=>{const ci=colNum(c.getAttribute("r")),t=valor(c).trim();
+    if(/^\d{1,2}$/.test(t)&&ci>8){dayCols[+t]=ci;return}for(const[k,re]of mapa){if(!cols[k]&&re.test(t)){cols[k]=ci;break}}});
+  const filasTpl=Object.keys(rowMap).map(Number).filter(r=>r>hr).sort((a,b)=>a-b);
+  let ultima=filasTpl.length?filasTpl[filasTpl.length-1]:hr;
+  const lista=ordenados(),n=diasDelMes(cur.y,cur.m),marcas=marcasMes();
+
+  // si hay más pacientes que filas, se copian filas iguales a la última (mismo formato)
+  const faltan=lista.length-(ultima-hr);
+  if(faltan>0){
+    const base=rowMap[ultima];
+    Object.keys(rowMap).map(Number).filter(r=>r>ultima).sort((a,b)=>b-a).forEach(r=>{const row=rowMap[r],nr=r+faltan;row.setAttribute("r",nr);kids(row,"c").forEach(c=>c.setAttribute("r",c.getAttribute("r").replace(/\d+$/,nr)));delete rowMap[r];rowMap[nr]=row});
+    let ref=base.nextSibling;
+    for(let k=1;k<=faltan;k++){const nr=ultima+k,cl=base.cloneNode(true);cl.setAttribute("r",nr);kids(cl,"c").forEach(c=>c.setAttribute("r",c.getAttribute("r").replace(/\d+$/,nr)));sheetData.insertBefore(cl,ref);rowMap[nr]=cl}
+    const ajustar=s=>s.replace(/([A-Z]+)(\d+)/g,(m,c,r)=>c+(+r>ultima?+r+faltan:+r)).replace(/^([A-Z]+\d+:[A-Z]+)(\d+)$/,(m,a,r)=>+r>=hr+1&&+r<=ultima+faltan&&+r>=ultima-1?a+(ultima+faltan):m);
+    const dim=doc.getElementsByTagNameNS(NS,"dimension")[0];if(dim)dim.setAttribute("ref",dim.getAttribute("ref").replace(/(\d+)$/,r=>Math.max(+r,ultima+faltan)));
+    const af=doc.getElementsByTagNameNS(NS,"autoFilter")[0];if(af)af.setAttribute("ref",ajustar(af.getAttribute("ref")));
+    Array.from(doc.getElementsByTagNameNS(NS,"mergeCell")).forEach(m=>m.setAttribute("ref",m.getAttribute("ref").replace(/([A-Z]+)(\d+)/g,(x,c,r)=>c+(+r>ultima?+r+faltan:+r))));
+    Array.from(wbx.getElementsByTagNameNS(NS,"definedName")).forEach(d=>{if(/_FilterDatabase/.test(d.getAttribute("name")))d.textContent=d.textContent.replace(/\$(\d+)$/,(m,r)=>"$"+Math.max(+r,ultima+faltan))});
+    ultima+=faltan;
+  }
+
+  // títulos: mes, profesional, proceso (filas encima de "DATO PERSONALES")
+  const MES=MESES[cur.m].toUpperCase(),reMes=new RegExp(MESES.map(m=>m.toUpperCase()).join("|"),"i");
+  const tit=rowMap[hr-4]?valor(celda(hr-4,1)):"";
+  if(tit&&reMes.test(tit))escribir(hr-4,1,tit.replace(reMes,MES).replace(/\b20\d\d\b/,String(cur.y)));
+  if(rowMap[hr-3])escribir(hr-3,1,state.terapeuta.toUpperCase());
+  if(rowMap[hr-2])escribir(hr-2,1,state.proceso.toUpperCase());
+  // días que no existen en el mes quedan sin número (la columna se conserva)
+  Object.entries(dayCols).forEach(([d,ci])=>{const el=celda(hr,ci,false);if(el&&+d>n)escribir(hr,ci,null);else if(el&&+d<=n&&!valor(el))escribir(hr,ci,+d)});
+
+  // datos
+  const num=v=>/^\d{1,15}$/.test(String(v||"").trim())?Number(v):(v||null);
+  for(let r=hr+1,i=0;r<=ultima;r++,i++){
+    const p=lista[i]||null,set=new Set(p?(marcas[p.id]||[]):[]);
+    const vals=p?{madrina:p.madrina,aseguradora:p.aseguradora,tipoDoc:p.tipoDoc,documento:num(p.documento),nombre:p.nombre,direccion:p.direccion,barrio:p.barrio,telefono:num(p.telefono),comuna:p.comuna,
+      terapias:p.sigla?(+p.terapias||"")+" "+p.sigla:(+p.terapias||null),hora:p.hora,dias:p.dias,obs:p.obs}:{};
+    Object.keys(cols).forEach(k=>escribir(r,cols[k],p?vals[k]:null));
+    Object.entries(dayCols).forEach(([d,ci])=>escribir(r,ci,set.has(+d)&&+d<=n?"X":null));
+  }
+
+  // opcional: domingos y festivos en rojo
+  if(pintarRojo){
+    const st=parseX(await zip.file("xl/styles.xml").async("string"));
+    const fills=st.getElementsByTagNameNS(NS,"fills")[0],xfs=st.getElementsByTagNameNS(NS,"cellXfs")[0];
+    const nuevoFill=argb=>{const f=st.createElementNS(NS,"fill"),pf=st.createElementNS(NS,"patternFill"),fg=st.createElementNS(NS,"fgColor"),bg=st.createElementNS(NS,"bgColor");
+      pf.setAttribute("patternType","solid");fg.setAttribute("rgb",argb);bg.setAttribute("indexed","64");pf.appendChild(fg);pf.appendChild(bg);f.appendChild(pf);fills.appendChild(f);
+      const id=kids(fills,"fill").length-1;fills.setAttribute("count",id+1);return id};
+    const fHead=nuevoFill("FFFF5B5B"),fBody=nuevoFill("FFFFC7CE"),cache={};
+    const estilo=(s,fid)=>{const k=s+"|"+fid;if(cache[k]!=null)return cache[k];const xs=kids(xfs,"xf"),x=(xs[+s||0]).cloneNode(true);
+      x.setAttribute("fillId",fid);x.setAttribute("applyFill","1");xfs.appendChild(x);const id=kids(xfs,"xf").length-1;xfs.setAttribute("count",id+1);return cache[k]=id};
+    for(let d=1;d<=n;d++){const ci=dayCols[d];if(!ci||!infoDia(cur.y,cur.m,d).rojo)continue;
+      for(let r=hr;r<=ultima;r++){const el=celda(r,ci,true);if(el)el.setAttribute("s",estilo(el.getAttribute("s")||"0",r===hr?fHead:fBody))}}
+    zip.file("xl/styles.xml",serX(st));
+  }
+  zip.file(sheetPath,serX(doc));zip.file("xl/workbook.xml",serX(wbx));
+  const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  let nombre=tpl.nombre.replace(/\.xlsx$/i,"");
+  nombre=reMes.test(nombre)?nombre.replace(reMes,MES).replace(/20\d\d/,String(cur.y)):nombre+"_"+MES+"_"+cur.y;
+  nombre+=".xlsx";
+  let dl=null;try{dl=window.claude&&window.claude.use?await window.claude.use("downloads"):null}catch(e){dl=null}
+  if(dl){try{await dl.save({filename:nombre,data:blob});toast("Excel descargado: "+nombre)}
+    catch(e){toast(e&&e.code==="declined"?"Descarga cancelada":e&&e.code==="rate_limited"?"Espera un momento e intenta de nuevo":"No se pudo descargar aquí ("+(e&&e.code||"error")+")")}}
+  else{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=nombre;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast("Excel generado: "+nombre)}
+}
+async function guardarPlantilla(file,buf){
+  plantilla={nombre:file.name,b64:bufToB64(buf)};pintarPlantilla();
+  try{localStorage.setItem(LS_KEY+"-tpl",JSON.stringify(plantilla))}catch(e){}
+  if(docRef&&canWrite){
+    if(plantilla.b64.length>240000){toast("Plantilla guardada solo en este navegador (archivo muy grande para guardarla en línea)");return}
+    try{await tplRef.set(plantilla)}catch(e){}
+  }
+}
+
+/* Plantilla */
+$("#btnTpl").onclick=()=>$("#fileTpl").click();
+$("#fileTpl").addEventListener("change",async e=>{
+  const file=e.target.files[0];e.target.value="";if(!file)return;
+  try{const buf=await file.arrayBuffer();const z=await JSZip.loadAsync(buf.slice(0));if(!z.file("xl/workbook.xml"))throw 0;
+    await guardarPlantilla(file,buf);toast("Plantilla cambiada: "+file.name+". Los pacientes no cambian")}
+  catch(err){toast("Ese archivo no es un Excel .xlsx válido")}
+});
+/* Importar */
+$("#btnImport").onclick=()=>$("#fileImport").click();
+$("#fileImport").addEventListener("change",async e=>{
+  const file=e.target.files[0];e.target.value="";if(!file)return;
+  if(!window.ExcelJS){toast("No cargó la librería de Excel");return}
+  try{
+    const buf=await file.arrayBuffer();const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf.slice(0));const ws=wb.worksheets[0];
+    const hhmm=(H,M)=>String(H%12||12).padStart(2,"0")+":"+String(M).padStart(2,"0")+(H<12?" a.m.":" p.m.");
+    const txt=v=>{if(v==null)return"";if(v instanceof Date)return hhmm(v.getUTCHours(),v.getUTCMinutes());if(typeof v==="object"){if(v.richText)return v.richText.map(t=>t.text).join("");if(v.result!=null)return String(v.result);if(v.text)return v.text}return String(v).trim()};
+    let hr=0;ws.eachRow((row,ri)=>{if(!hr)row.eachCell(c=>{if(/nombre\s*y\s*apellido/i.test(txt(c.value)))hr=ri})});
+    if(!hr){toast("No encontré la fila de encabezados (Nombre y Apellido)");return}
+    const mapa=[["madrina",/madrina/i],["aseguradora",/asegura/i],["tipoDoc",/tipo/i],["documento",/n[úu]mero de doc|documento de id/i],["nombre",/nombre/i],["direccion",/direcc/i],["barrio",/barr/i],["telefono",/tel[ée]f/i],["comuna",/comuna/i],["terapias",/terapias/i],["hora",/hora/i],["dias",/d[íi]as de la semana|observacion los/i],["obs",/^observaciones?\s*$/i]];
+    const cols={},dayCols={};
+    ws.getRow(hr).eachCell((c,ci)=>{const t=txt(c.value);if(/^\d{1,2}(\s|$)/.test(t)&&ci>8){const d=parseInt(t,10);if(d>=1&&d<=31)dayCols[d]=ci;return}for(const[k,re]of mapa){if(!cols[k]&&re.test(t)){cols[k]=ci;break}}});
+    const pacs=[],marcas={};
+    for(let r=hr+1;r<=ws.rowCount;r++){
+      const row=ws.getRow(r),g=k=>cols[k]?txt(row.getCell(cols[k]).value):"";
+      if(!g("nombre"))continue;
+      const p={};mapa.forEach(([k])=>p[k]=g(k));
+      const hv=cols.hora?row.getCell(cols.hora).value:null;if(typeof hv==="number"){const m=Math.round(hv*1440)%1440;p.hora=hhmm(Math.floor(m/60),m%60)}
+      const np=normPac(p),ds=[];Object.entries(dayCols).forEach(([d,ci])=>{if(txt(row.getCell(ci).value))ds.push(+d)});
+      if(ds.length)marcas[np.id]=ds.sort((a,b)=>a-b);pacs.push(np);
+    }
+    if(!pacs.length){toast("El archivo no tiene pacientes");return}
+    if(state.pacientes.length&&!await confirmar("Importar "+pacs.length+" pacientes","Se reemplaza la lista actual por la del archivo. Si el archivo tiene fechas marcadas, se cargan en "+MESES[cur.m]+" "+cur.y+".","Importar"))return;
+    state.pacientes=pacs;
+    const tTer=txt(ws.getCell(hr-3,1).value),tPro=txt(ws.getCell(hr-2,1).value);
+    if(tTer&&!/^agenda|nombre del profesional/i.test(tTer))state.terapeuta=tTer;
+    if(tPro&&!/datos? personales|^proceso$/i.test(tPro))state.proceso=tPro;
+    state.meses[keyMes()]={marcas};render();guardar();await guardarPlantilla(file,buf);toast(pacs.length+" pacientes importados. Este archivo queda como plantilla");
+  }catch(err){console.error(err);toast("No se pudo leer el archivo. Verifica que sea .xlsx")}
+});
+
+/* Arranque: datos guardados, o los pacientes precargados del Excel */
+function aplicar(s){state=normalizar(s);if(state.ultimoMes){const[y,m]=state.ultimoMes.split("-").map(Number);if(y&&m)cur={y,m:m-1}}}
+const local=lsLoad();
+try{const t=localStorage.getItem(LS_KEY+"-tpl");if(t)plantilla=JSON.parse(t)}catch(e){}
+pintarPlantilla();
+aplicar(local||SEED);
+render();setSync(local?"Datos de este navegador":"Pacientes precargados del Excel");
+abrirMes();
+(async()=>{
+  try{
+    if(!window.claude||!window.claude.use)return;
+    const db=await window.claude.use("db");if(!db){setSync("Guardado en este navegador");return}
+    docRef=db.doc("agenda/estado");tplRef=db.doc("agenda/plantilla");
+    tplRef.get().then(t=>{if(t.exists&&t.data().b64){plantilla=t.data();pintarPlantilla();try{localStorage.setItem(LS_KEY+"-tpl",JSON.stringify(plantilla))}catch(e){}}}).catch(()=>{});
+    const snap=await docRef.get();
+    if(snap.exists&&Array.isArray(snap.data().pacientes)&&snap.data().pacientes.length){
+      const abierto=$("#dlgMes").open,keep={...cur};aplicar(snap.data());if(abierto)cur=keep;
+      lsSave();render();setSync("Datos sincronizados");
+    }else guardar();
+  }catch(e){setSync("Guardado en este navegador")}
+})();
+})();
+</script>
+</body>
+</html>
