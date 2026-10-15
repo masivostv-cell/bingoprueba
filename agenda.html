@@ -67,14 +67,17 @@ header.top{padding:18px clamp(14px,3vw,32px) 12px;display:flex;flex-wrap:wrap;ga
 .alertbar.show{display:flex}
 .alertbar button{margin-left:auto}
 
-.wrap{margin:0 clamp(6px,2vw,32px) 28px;overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;max-width:100%}
+.wrap{margin:0 clamp(6px,2vw,32px) 28px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;max-width:100%;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overscroll-behavior:contain}
 table{border-collapse:separate;border-spacing:0;font-size:14px}
 th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:0}
-thead th{background:var(--head);position:sticky;top:0;z-index:2;font-weight:700}
+thead th{background:var(--head);position:sticky;top:0;z-index:2;font-weight:700;box-shadow:0 2px 0 var(--line)}
+tfoot td{position:sticky;bottom:0;z-index:2;box-shadow:0 -2px 0 var(--line)}
 .c-hora{position:sticky;left:0;z-index:1;background:var(--surface);min-width:86px;max-width:86px;text-align:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 .c-pac{position:sticky;left:86px;z-index:1;background:var(--surface);min-width:240px;max-width:240px;text-align:left}
 .c-cnt{position:sticky;left:326px;z-index:1;background:var(--surface);min-width:70px;text-align:center;box-shadow:2px 0 0 var(--line)}
-thead .c-hora,thead .c-pac,thead .c-cnt,tfoot .c-hora,tfoot .c-pac,tfoot .c-cnt{z-index:3;background:var(--head)}
+thead .c-hora,thead .c-pac,thead .c-cnt,tfoot .c-hora,tfoot .c-pac,tfoot .c-cnt{z-index:4;background:var(--head)}
+thead .c-hora,thead .c-pac,thead .c-cnt{top:0}
+tfoot .c-hora,tfoot .c-pac,tfoot .c-cnt{bottom:0}
 thead .c-hora,thead .c-cnt{background:var(--olive);color:var(--olive-ink)}
 thead .c-pac{padding:8px 10px;font-size:13px;background:var(--blue)}
 td.c-hora.bad{color:var(--warn);font-size:11px;font-weight:400}
@@ -103,6 +106,15 @@ tfoot td.c-pac{padding:6px 10px;text-align:left}
 tfoot td.r{color:var(--red-ink)}
 tfoot td.full{color:var(--warn);font-weight:700}
 tr:hover td.c-pac,tr:hover td.c-cnt,tr:hover td.c-hora{background:var(--head)}
+.filtros{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;padding:0 clamp(14px,3vw,32px) 12px}
+.filtros label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.filtros input,.filtros select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--surface);color:var(--ink);font-size:15px;min-width:150px}
+.filtros input{min-width:240px}
+.filtros .on{border-color:var(--mark);border-width:2px}
+.filtros .cuenta{font-size:13px;color:var(--muted);padding-bottom:9px}
+th.d.sel{outline:3px solid var(--mark);outline-offset:-3px}
+td.d.sel{background:color-mix(in srgb,var(--mark) 10%,transparent)}
+@media (max-width:640px){.filtros input,.filtros select{min-width:0;width:100%}.filtros label{flex:1 1 140px}}
 
 .empty{padding:48px 20px;text-align:center;color:var(--muted)}
 .empty p{max-width:46ch;margin:0 auto 16px}
@@ -176,6 +188,13 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
 <div class="legend" id="legend"></div>
 <div class="legend"><span id="tplName"></span></div>
 <div class="alertbar" id="alertbar"><span id="alertTxt"></span><button class="btn" id="alertBtn">Ver detalle</button></div>
+<div class="filtros" role="search">
+  <label>Buscar por nombre o documento<input id="fNombre" type="search" placeholder="Ej: Amparo, 37241283"></label>
+  <label>Día<select id="fDia"></select></label>
+  <label>Empresa<select id="fEmp"></select></label>
+  <button class="btn" id="fLimpiar" hidden>Quitar filtros</button>
+  <span class="cuenta" id="fCuenta"></span>
+</div>
 <div class="wrap" id="wrap"></div>
 
 <dialog id="dlgMes"><div class="dlg">
@@ -378,17 +397,33 @@ function render(){
   const wrap=$("#wrap");
   if(!state.pacientes.length){wrap.innerHTML='<div class="empty"><p>No hay pacientes en la lista. Agrégalos uno por uno o importa tu Excel con el formato de la agenda.</p><button class="btn primary" data-act="add">Agregar paciente</button> <button class="btn" data-act="imp">Importar Excel</button></div>';return}
   const marcas=marcasMes(),occ=ocupacion(),porDia=new Array(n+1).fill(0);
-  let h='<table><thead><tr><th class="c-hora" scope="col">Hora</th><th class="c-pac" scope="col">Paciente ('+state.pacientes.length+')</th><th class="c-cnt" scope="col" title="Fechas marcadas / número de terapias">Terapias</th>';
-  for(let d=1;d<=n;d++){const i=info[d];h+='<th class="d'+(i.rojo?' r':'')+'" scope="col" data-dia="'+d+'" title="'+esc(fechaLarga(d)+(i.festivo?" – Festivo: "+i.festivo:i.domingo?" – Domingo":"")+". Clic para ver franjas")+'">'+d+'<small>'+INI[i.w]+'</small></th>'}
+  for(let d=1;d<=n;d++)porDia[d]=Object.values(occ[d]).reduce((a,ps)=>a+ps.length,0);
+  // filtros
+  const fd=$("#fDia"),fe=$("#fEmp");
+  if(filtro.dia>n)filtro.dia=0;
+  let od='<option value="0">Todos los días</option>';for(let d=1;d<=n;d++)od+='<option value="'+d+'">'+["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][info[d].w]+' '+d+(info[d].festivo?' (festivo)':'')+' – '+porDia[d]+' pac.</option>';
+  fd.innerHTML=od;fd.value=String(filtro.dia);
+  const emps=[...new Set(state.pacientes.map(p=>(p.aseguradora||"").trim()).filter(Boolean))].sort();
+  if(filtro.emp&&!emps.includes(filtro.emp))filtro.emp="";
+  fe.innerHTML='<option value="">Todas las empresas</option>'+emps.map(e=>'<option>'+esc(e)+'</option>').join("");fe.value=filtro.emp;
+  const qn=norm(filtro.q);
+  const visibles=ordenados().filter(p=>(!qn||norm(p.nombre).includes(qn)||String(p.documento).includes(qn))&&(!filtro.emp||(p.aseguradora||"").trim()===filtro.emp)&&(!filtro.dia||(marcas[p.id]||[]).includes(filtro.dia)));
+  const activo=!!(qn||filtro.emp||filtro.dia);
+  $("#fNombre").classList.toggle("on",!!qn);fd.classList.toggle("on",!!filtro.dia);fe.classList.toggle("on",!!filtro.emp);
+  $("#fLimpiar").hidden=!activo;
+  $("#fCuenta").textContent=activo?"Mostrando "+visibles.length+" de "+state.pacientes.length+" pacientes"+(filtro.dia?" agendados el "+fechaLarga(filtro.dia):""):"";
+  let h='<table><thead><tr><th class="c-hora" scope="col">Hora</th><th class="c-pac" scope="col">Paciente ('+(activo?visibles.length+' de ':'')+state.pacientes.length+')</th><th class="c-cnt" scope="col" title="Fechas marcadas / número de terapias">Terapias</th>';
+  for(let d=1;d<=n;d++){const i=info[d];h+='<th class="d'+(i.rojo?' r':'')+(filtro.dia===d?' sel':'')+'" scope="col" data-dia="'+d+'" title="'+esc(fechaLarga(d)+(i.festivo?" – Festivo: "+i.festivo:i.domingo?" – Domingo":"")+". Clic para ver franjas")+'">'+d+'<small>'+INI[i.w]+'</small></th>'}
   h+='</tr></thead><tbody>';
-  ordenados().forEach(p=>{
+  if(!visibles.length)h+='<tr><td colspan="'+(n+3)+'" class="empty" style="text-align:left">Ningún paciente coincide con los filtros. <button class="btn" data-act="limpiar">Quitar filtros</button></td></tr>';
+  visibles.forEach(p=>{
     const set=new Set(marcas[p.id]||[]),c=[...set].filter(d=>d<=n).length,t=+p.terapias||0,cls=t&&c===t?"ok":t&&c>t?"over":"";
     const f=faltantes(p),ok=SLOTS.includes(p.hora);
     h+='<tr><td class="c-hora'+(ok?'':' bad')+'">'+(ok?esc(p.hora):'Fuera de franja')+'</td>';
     h+='<td class="c-pac"><button class="pac" data-edit="'+p.id+'" title="'+esc(f.length?"Falta: "+f.join(", "):"Editar datos")+'"><span class="n">'+(f.length?'<span class="w">! </span>':'')+esc(p.nombre||"(sin nombre)")+'</span><span class="s">'+esc([p.aseguradora,p.dias,p.obs].filter(Boolean).join("   "))+'</span></button></td>';
     h+='<td class="c-cnt"><span class="cnt '+cls+'">'+c+'/'+t+(p.sigla?' '+esc(p.sigla):'')+'</span></td>';
-    for(let d=1;d<=n;d++){const on=set.has(d);if(on)porDia[d]++;const conf=on&&ok&&(occ[d][p.hora]||[]).length>1;
-      h+='<td class="d'+(info[d].rojo?' r':'')+'"><button class="'+(on?'on':'')+(conf?' conf':'')+'" data-p="'+p.id+'" data-d="'+d+'" aria-pressed="'+on+'" aria-label="'+esc(p.nombre)+', '+fechaLarga(d)+'"'+(conf?' title="Otro paciente tiene esta misma hora este día"':'')+'>'+(on?'<span>X</span>':'')+'</button></td>'}
+    for(let d=1;d<=n;d++){const on=set.has(d);const conf=on&&ok&&(occ[d][p.hora]||[]).length>1;
+      h+='<td class="d'+(info[d].rojo?' r':'')+(filtro.dia===d?' sel':'')+'"><button class="'+(on?'on':'')+(conf?' conf':'')+'" data-p="'+p.id+'" data-d="'+d+'" aria-pressed="'+on+'" aria-label="'+esc(p.nombre)+', '+fechaLarga(d)+'"'+(conf?' title="Otro paciente tiene esta misma hora este día"':'')+'>'+(on?'<span>X</span>':'')+'</button></td>'}
     h+='</tr>';
   });
   h+='</tbody><tfoot><tr><td class="c-hora"></td><td class="c-pac">Pacientes por día (máx. '+CUPO+')</td><td class="c-cnt">'+porDia.reduce((a,b)=>a+b,0)+'</td>';
@@ -403,6 +438,7 @@ $("#wrap").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.act==="add")return abrirPaciente(null);
   if(b.dataset.act==="imp")return $("#fileImport").click();
+  if(b.dataset.act==="limpiar")return limpiarFiltros();
   if(b.dataset.edit)return abrirPaciente(b.dataset.edit);
   if(b.dataset.p){
     const marcas=marcasMes(),pid=b.dataset.p,d=+b.dataset.d,arr=new Set(marcas[pid]||[]);
@@ -434,6 +470,14 @@ function pintarMeses(){$("#yVal").textContent=selY;$("#monthsGrid").innerHTML=ME
 $("#monthsGrid").addEventListener("click",e=>{const b=e.target.closest("button");if(b){selM=+b.dataset.m;pintarMeses()}});
 $("#monthsGrid").addEventListener("dblclick",e=>{if(e.target.closest("button"))$("#mesOk").click()});
 $("#yPrev").onclick=()=>{selY--;pintarMeses()};$("#yNext").onclick=()=>{selY++;pintarMeses()};
+/* Filtros (solo cambian la vista; el Excel sale completo) */
+const filtro={q:"",dia:0,emp:""};
+function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim()}
+let fT;$("#fNombre").addEventListener("input",e=>{clearTimeout(fT);fT=setTimeout(()=>{filtro.q=e.target.value;render()},150)});
+$("#fDia").addEventListener("change",e=>{filtro.dia=+e.target.value;render()});
+$("#fEmp").addEventListener("change",e=>{filtro.emp=e.target.value;render()});
+function limpiarFiltros(){filtro.q="";filtro.dia=0;filtro.emp="";$("#fNombre").value="";render()}
+$("#fLimpiar").onclick=limpiarFiltros;
 $("#mesOk").onclick=()=>{cur={y:selY,m:selM};state.ultimoMes=keyMes();$("#dlgMes").close();render();guardar()};
 $("#btnMes").onclick=abrirMes;
 
