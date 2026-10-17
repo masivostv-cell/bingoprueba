@@ -1003,7 +1003,7 @@ function aplicarRemoto(coll,o){
     if(String(S.cfg.upd||'')>=String(o.upd||'')) return false;
     const local={}; CFG_LOCAL.forEach(k=> local[k]=S.cfg[k]);
     S.cfg=Object.assign({},S.cfg,o,local); S.cfg.id='cfg';
-    idbPut('config',S.cfg); applyCfg(); return true;
+    idbPut('config',S.cfg); applyCfg(); repararNombreNegocio(); return true;
   }
   if(!S[coll]) return false;
   const i=S[coll].findIndex(x=>x.id===o.id);
@@ -1120,7 +1120,7 @@ async function pullCloud(manual){
 async function traerDeLaNube(){
   COLL.forEach(k=>{ S[k].forEach(o=>idbDel(k,o.id)); S[k]=[]; });
   S.outbox.forEach(o=>idbDel('outbox',o.id)); S.outbox=[];
-  S.meta.pull={}; S.meta.cons={}; saveMeta();
+  S.meta.pull={}; S.meta.cons={}; S.meta.pullSrv={}; S.meta.pulso={}; S.meta.pullInc={}; saveMeta();
   S.cart=null; S.turno=null;
   toast('Descargando los datos del negocio…');
   await pullCloud(true);
@@ -2052,7 +2052,8 @@ function movsFueraDeTurno(cuentaId){
 
 /* ---- permisos ---- */
 const PERMS={ admin:'*',
-  cajero:['pos','mesas','cocina','entregas','ventas','compras','cartera','tesoreria','turnos','caja','clientes','inventario','reportes'],
+  /* Reportes y Contabilidad: solo el administrador */
+  cajero:['pos','mesas','cocina','entregas','ventas','compras','cartera','tesoreria','turnos','caja','clientes','inventario'],
   mesero:['pos','mesas','entregas'] };
 function can(v){
   if(v==='super') return !!(S.user && S.user._super && esSuper());
@@ -2149,15 +2150,14 @@ const VIEWS=[
   {k:'caja',      n:'Caja',       i:'💵'},
   {g:'Gestión'},
   {k:'clientes', n:'Clientes y proveedores', i:'👥'},
-  {k:'contabilidad', n:'Contabilidad', i:'🧮'},
-  {k:'reportes', n:'Reportes',  i:'📊'},
+  {k:'reportes', n:'Reportes y utilidad',  i:'📊'},
   {k:'ajustes',  n:'Ajustes',   i:'⚙️'},
   {g:'Superadmin', req:'super'},
   {k:'super', n:'Negocios', i:'🏢'}
 ];
 const TITLES={pos:'Punto de venta',mesas:'Mesas y comandas',ventas:'Ventas',compras:'Compras',
   inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',cocina:'Cocina · pedidos que llegan',entregas:'Entregas · tiempo de los pedidos',
-  caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes',ajustes:'Ajustes'};
+  caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes y utilidad',ajustes:'Ajustes'};
 
 /* el nombre de arriba: para cualquier administrador abre la lista de sus
    restaurantes (si tiene uno solo, le dice cómo agregar más) */
@@ -2206,6 +2206,9 @@ function go(v){
   S.view=v; render();
 }
 function render(){
+  /* si alguien quedó parado en una sección que ya no le corresponde, se saca */
+  if(S.view==='contabilidad'){ S.view='reportes'; _repTab='utilidad'; }   // la contabilidad ahora vive dentro de Reportes
+  if(S.user && S.view && !can(S.view)) S.view = can('pos')? 'pos' : 'mesas';
   const vw=$('#view'); vw.className = S.view==='pos'?'nopad':'';
   if(esComercio() && ['mesas','cocina','entregas'].indexOf(S.view)>=0) S.view='pos';
   $('#ttl').textContent=(esComercio()&&S.view==='productos')? 'Productos' : (TITLES[S.view]||'');
@@ -6904,7 +6907,8 @@ function mAbrirCaja(){
         }
         const t={id:uid('t'),apertura:now(),cierre:'',usuarioId:S.user?S.user.id:'',cuentaId:cta,
           base:round(saldo,2), saldoApertura:round(saldo,2), estado:'abierto',
-          esperado:0,contado:0,diferencia:0,nota:''};
+          esperado:0,contado:0,diferencia:0,nota:'',
+          negocioId:S.cfg.fbNegocio||'', negocio:nombreDelNegocio()};
         put('turnos',t); S.turno=t; closeModal(); render();
         toast('Caja abierta con '+money(saldo)+' · '+nameOf('cuentas',cta),'ok',4000);
       };
@@ -6986,6 +6990,7 @@ function mCerrarCaja(){
           movTes(t.cuentaId, t.diferencia>0?'ingreso':'egreso', Math.abs(t.diferencia),
             (t.diferencia>0?'Sobrante':'Faltante')+' en el cierre de caja','ajuste de caja','cierre',t.id);
         t.cierre=now(); t.estado='cerrado'; t.nota=$('#n',m).value;
+        if(!t.negocio){ t.negocioId=S.cfg.fbNegocio||''; t.negocio=nombreDelNegocio(); }
         t.ventas=D.totalVentas; t.ventaEfectivo=D.ventaEfe; t.salidas=D.salidas;
         t.trasIn=D.trasIn; t.trasOut=D.trasOut;
         t.otrosMedios=D.porMedio; t.bancos=D.bancos; t.saldoCierre=t.contado;
@@ -7071,7 +7076,8 @@ function textoCierre(t,D,contado,comoCierre){
   const otras=ms.filter(m=>m.tipo==='ingreso' && m.refTipo!=='venta' && m.categoria!=='traslado');
 
   const medios=D.porMedio||{};
-  let x='*'+String(S.cfg.nombre||'POS').toUpperCase()+'*\n';
+  const negT = (t.negocio && (!t.negocioId || t.negocioId===S.cfg.fbNegocio))? t.negocio : nombreDelNegocio();
+  let x='*'+String(negT||'POS').toUpperCase()+'*\n';
   x+= enCurso? '*RELACIÓN DEL TURNO (caja abierta)*\n' : '*CIERRE DE CAJA*\n';
   x+='Abrió: '+fdate(ini,true)+'\n';
   x+=(enCurso? 'Corte: ':'Cerró: ')+fdate(fin,true)+'\n';
@@ -7777,7 +7783,7 @@ function textoResumen(d1,d2){
   const r=resumenVentas(d1,d2);
   const mismoDia=d1===d2;
   const li=(a,b)=>a+': '+b;
-  let t='*'+(S.cfg.nombre||'POS').toUpperCase()+'*\n';
+  let t='*'+(nombreDelNegocio()||'POS').toUpperCase()+'*\n';
   t+='Resumen de ventas · '+(mismoDia? fdate(d1) : fdate(d1)+' al '+fdate(d2))+'\n\n';
   t+='*VENTAS: '+money(r.total)+'*  (facturado)\n';
   t+=li('Facturas',r.vs.length)+'\n';
@@ -8033,6 +8039,7 @@ function calcConta(d1,d2){
 
 function viewContabilidad(vw){
   let d1=todayISO().slice(0,8)+'01', d2=todayISO();
+  if(_repF){ d1=_repF.d1; d2=_repF.d2; }
   vw.innerHTML='<div id="cfil"></div><div id="cbody"></div>';
   $('#cfil').innerHTML='<div class="card" style="margin-bottom:14px"><div class="bd"><div class="row wrap">'+
     '<div class="f"><label>Desde</label><input type="date" id="k1" value="'+d1+'"></div>'+
@@ -8044,7 +8051,7 @@ function viewContabilidad(vw){
     '<div class="spacer"></div>'+
     '<div class="f"><label>&nbsp;</label><div class="row">'+
       '<button class="btn sm" id="k_csv">⬇️ CSV</button>'+
-      '<button class="btn sm" data-ver title="Ver sin imprimir">👁️ Ver</button>'+'<button class="btn pri sm" id="k_imp">🖨️ Informe</button></div></div>'+
+      '<button class="btn sm" data-ver title="Ver sin imprimir">👁️ Ver</button>'+'<button class="btn sm" id="k_imp">🖨️ Estado de resultados</button></div></div>'+
     '</div></div></div>';
   const set=(a,b)=>{ d1=a; d2=b; $('#k1').value=a; $('#k2').value=b; paint(); };
   $('#cbody').onclick=e=>{ if(e.target.closest && e.target.closest('#k_fijos')) mGastosFijos(); };
@@ -8070,6 +8077,7 @@ function viewContabilidad(vw){
       '<span class="spacer"></span><span class="mono" style="'+(o.color?'color:'+o.color+';':'')+'">'+v+'</span></div>';
   }
   function paint(){
+    _repF={d1:d1,d2:d2};
     const r=calcConta(d1,d2);
     const mrg=r.ventasNetas? round(r.bruta/r.ventasNetas*100,1):0;
     const mrgN=r.ventasNetas? round(r.neta/r.ventasNetas*100,1):0;
@@ -8332,14 +8340,488 @@ function bars(data,fmt){
       '<div style="height:100%;width:'+(d.v/max*100)+'%;background:'+(d.c||'var(--brand)')+';border-radius:6px"></div></div>'+
     '<div style="width:110px;text-align:right;font-size:12.5px" class="b mono">'+(fmt?fmt(d.v):money(d.v))+'</div></div>').join('')+'</div>';
 }
+/* ===================== INFORME GERENCIAL (para reuniones) =====================
+   Todo lo que hace falta para decidir: estado de resultados, punto de
+   equilibrio, qué días conviene abrir, a qué horas se vende, qué productos
+   dejan plata, gastos, compras, cartera, inventario y recomendaciones.
+   Se ve/imprime en hoja carta (o se guarda en PDF) y se exporta a Excel. */
+const DIAS_SEM=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const ORDEN_SEM=[1,2,3,4,5,6,0];                  // la semana arranca el lunes
+function diaSemDe(iso){ return aFecha(iso).getDay(); }
+function ventaNetaDe(v){ return (Number(v.total)||0)-(Number(v.propina)||0)-(Number(v.impuesto)||0); }
+function canalDe(v){ return (v.esDom||v.tipo==='domicilio')? 'Domicilio' : (v.tipo==='mesa'? 'Mesa' : 'Mostrador / llevar'); }
+function pctTxt(a,b,d){ return b? num(a/b*100,d==null?1:d)+'%' : '—'; }
+function varTxt(a,b){ if(!b) return a? 'nuevo' : '—'; const p=(a-b)/Math.abs(b)*100; return (p>=0?'▲ +':'▼ ')+num(p,1)+'%'; }
+
+function totalesInforme(d1,d2){
+  const enR=f=>{ const d=dISO(f); return d>=d1 && d<=d2; };
+  const vs=S.ventas.filter(v=>v.estado!=='anulada' && enR(v.fecha));
+  const anuladasId={}; S.ventas.forEach(v=>{ if(v.estado==='anulada') anuladasId[v.id]=1; });
+  const ms=S.movimientos.filter(m=>enR(m.fecha) && !(m.refTipo==='venta' && anuladasId[m.refId]));
+  const F=calcFijos(d1,d2);
+  const gastos=ms.filter(esGasto);
+  const gVar=gastos.filter(m=>!esPagoDeFijo(m,F.cats));
+  const T={ vs, ms, F, gastos, gVar, fact:vs.length,
+    neta:round(sum(vs,ventaNetaDe),2), total:round(sum(vs,v=>v.total||0),2),
+    desc:round(sum(vs,v=>v.descuento||0),2), prop:round(sum(vs,v=>v.propina||0),2), imp:round(sum(vs,v=>v.impuesto||0),2),
+    costo:round(sum(vs,v=>v.costo||0),2), uds:sum(vs,v=>sum(v.items||[],i=>Number(i.cant)||0)),
+    gastoVar:round(sum(gVar,m=>m.monto),2), fijos:F.total, fiado:round(sum(vs,v=>fiadoDe(v)),2) };
+  T.bruta=round(T.neta+T.desc,2);
+  T.ub=round(T.neta-T.costo,2);
+  T.contrib=round(T.ub-T.gastoVar,2);
+  T.un=round(T.contrib-T.fijos,2);
+  T.ticket=T.fact? T.neta/T.fact : 0;
+  const diasSet={}; vs.forEach(v=>{ diasSet[dISO(v.fecha)]=1; });
+  T.diasAbiertos=Object.keys(diasSet).length;
+  T.dias=diasEntre(d1,d2);
+  return T;
+}
+
+function datosInforme(d1,d2){
+  const T=totalesInforme(d1,d2), vs=T.vs;
+  const nd=T.dias;
+  const p2=dateAdd(d1,-1), p1=dateAdd(d1,-nd);
+  const P=totalesInforme(p1,p2);                       // período anterior del mismo largo
+  const anul=S.ventas.filter(v=>v.estado==='anulada' && dISO(v.fecha)>=d1 && dISO(v.fecha)<=d2);
+
+  /* ---- día a día ---- */
+  const diario=[]; const porFecha={};
+  for(let d=d1; d<=d2; d=dateAdd(d,1)){
+    const o={fecha:d, ds:diaSemDe(d), fact:0, neta:0, costo:0, gVar:0, uds:0,
+      fijo:round(sum(T.F.items.filter(x=>!x.g.desde || x.g.desde<=d),x=>x.diario),2)};
+    porFecha[d]=o; diario.push(o);
+    if(diario.length>400) break;
+  }
+  vs.forEach(v=>{ const o=porFecha[dISO(v.fecha)]; if(!o) return;
+    o.fact++; o.neta+=ventaNetaDe(v); o.costo+=Number(v.costo)||0; o.uds+=sum(v.items||[],i=>Number(i.cant)||0); });
+  T.gVar.forEach(m=>{ const o=porFecha[dISO(m.fecha)]; if(o) o.gVar+=Number(m.monto)||0; });
+  diario.forEach(o=>{ o.abierto=o.fact>0; o.contrib=round(o.neta-o.costo-o.gVar,2); o.res=round(o.contrib-o.fijo,2); });
+  const abiertos=diario.filter(o=>o.abierto);
+  const promDia=abiertos.length? sum(abiertos,o=>o.neta)/abiertos.length : 0;
+  const fijoDia=T.F.diarioTotal;
+
+  /* ---- por día de la semana ---- */
+  const sem=ORDEN_SEM.map(ds=>{
+    const ds_=diario.filter(o=>o.ds===ds), ab=ds_.filter(o=>o.abierto);
+    const r={ds, nombre:DIAS_SEM[ds], cal:ds_.length, ab:ab.length,
+      neta:sum(ab,o=>o.neta), fact:sum(ab,o=>o.fact), costo:sum(ab,o=>o.costo), gVar:sum(ab,o=>o.gVar), uds:sum(ab,o=>o.uds)};
+    r.prom=r.ab? r.neta/r.ab : 0;
+    r.factProm=r.ab? r.fact/r.ab : 0;
+    r.ticket=r.fact? r.neta/r.fact : 0;
+    r.contribProm=r.ab? (r.neta-r.costo-r.gVar)/r.ab : 0;
+    r.mejor=ab.length? ab.reduce((a,b)=>b.neta>a.neta?b:a) : null;
+    r.peor=ab.length? ab.reduce((a,b)=>b.neta<a.neta?b:a) : null;
+    r.indice=promDia? r.prom/promDia : 0;
+    r.share=T.neta? r.neta/T.neta : 0;
+    if(!r.ab){ r.sem='⚪'; r.rec= r.cal? 'No se abrió en el período' : 'No hubo este día en el período'; }
+    else if(r.contribProm<=0){ r.sem='🔴'; r.rec='Pierde plata incluso sin contar los fijos: evaluar cerrar'; }
+    else if(fijoDia && r.contribProm<fijoDia){ r.sem='🟠'; r.rec='No alcanza a cubrir los fijos del día: abrir con menos personal u horario corto'; }
+    else if(r.indice>=1.15){ r.sem='🟢'; r.rec='Día fuerte: reforzar personal e inventario'; }
+    else if(r.indice<0.75){ r.sem='🟡'; r.rec='Día flojo: buen día para promociones o descanso del personal'; }
+    else { r.sem='🟢'; r.rec='Día normal y rentable'; }
+    if(r.ab && r.ab<2) r.rec+=' (pocos datos: solo '+r.ab+' día)';
+    return r;
+  });
+
+  /* ---- por hora y día×hora ---- */
+  const horas=[]; for(let h=0;h<24;h++) horas.push({h, neta:0, fact:0, dias:{}});
+  const mapa={}; ORDEN_SEM.forEach(ds=>{ mapa[ds]=new Array(24).fill(0); });
+  vs.forEach(v=>{ const f=aFecha(v.fecha); if(isNaN(f.getTime())) return;
+    const h=f.getHours(), ds=f.getDay(), n=ventaNetaDe(v);
+    horas[h].neta+=n; horas[h].fact++; horas[h].dias[dISO(v.fecha)]=1; mapa[ds][h]+=n; });
+  horas.forEach(x=>{ x.share=T.neta? x.neta/T.neta : 0; x.prom=abiertos.length? x.neta/abiertos.length : 0;
+    x.ticket=x.fact? x.neta/x.fact : 0; x.nd=Object.keys(x.dias).length; });
+  const abPorDs={}; sem.forEach(r=>{ abPorDs[r.ds]=r.ab; });
+  ORDEN_SEM.forEach(ds=>{ mapa[ds]=mapa[ds].map(v=>abPorDs[ds]? v/abPorDs[ds] : 0); });
+  const conVenta=horas.filter(x=>x.fact>0);
+  const hFuertes=horas.filter(x=>x.share>=0.02);
+  const hIni=hFuertes.length? hFuertes[0].h : null, hFin=hFuertes.length? hFuertes[hFuertes.length-1].h : null;
+  const pico=conVenta.slice().sort((a,b)=>b.neta-a.neta).slice(0,3);
+  const muertas=(hIni!=null)? horas.filter(x=>x.h>=hIni && x.h<=hFin && x.share<0.02) : [];
+  const fuera=horas.filter(x=>x.fact>0 && (hIni==null || x.h<hIni || x.h>hFin));
+  const mejorHoraDia=ORDEN_SEM.map(ds=>{ const a=mapa[ds]; let mx=0,hh=null; a.forEach((v,h)=>{ if(v>mx){mx=v;hh=h;} }); return {ds,h:hh,v:mx}; });
+
+  /* ---- productos ---- */
+  const prods={};
+  vs.forEach(v=>(v.items||[]).forEach(i=>{ const k=i.productoId||i.nombre;
+    const o=prods[k]=prods[k]||{id:i.productoId, n:i.nombre, q:0, v:0, c:0, fact:0};
+    o.q+=Number(i.cant)||0; o.v+=(Number(i.precio)||0)*(Number(i.cant)||0);
+    o.c+=(i.costoTotal!=null&&i.costoTotal!==0)? Number(i.costoTotal)||0 : (Number(i.costo)||0)*(Number(i.cant)||0); o.fact++; }));
+  const top=Object.values(prods).sort((a,b)=>b.v-a.v);
+  const totProd=sum(top,p=>p.v);
+  let acum=0;
+  top.forEach(p=>{ acum+=p.v; p.share=totProd? p.v/totProd : 0; p.acum=totProd? acum/totProd : 0;
+    p.abc= p.acum<=0.8 || p===top[0] ? 'A' : (p.acum<=0.95? 'B' : 'C');
+    p.m=p.v-p.c; p.mp=p.v? p.m/p.v : 0; p.cat=(()=>{ const pr=byId('productos',p.id); return pr? nameOf('categorias',pr.categoriaId) : 'Otros'; })(); });
+  const hayCostos=top.some(p=>p.c>0);
+  const masMargen=top.filter(p=>p.c>0).slice().sort((a,b)=>b.m-a.m).slice(0,10);
+  const bajoMargen=top.filter(p=>p.c>0 && p.mp<0.35 && p.share>=0.01).sort((a,b)=>a.mp-b.mp).slice(0,10);
+  const menos=top.slice().sort((a,b)=>a.q-b.q).slice(0,10);
+  const vendidos={}; top.forEach(p=>{ if(p.id) vendidos[p.id]=1; });
+  const sinVenta=S.productos.filter(p=>p.activo!==false && !vendidos[p.id]).map(p=>p.nombre).sort();
+
+  /* ---- categorías, canales, personal, medios ---- */
+  const cats={};
+  top.forEach(p=>{ const o=cats[p.cat]=cats[p.cat]||{n:p.cat,v:0,c:0,q:0}; o.v+=p.v; o.c+=p.c; o.q+=p.q; });
+  const porCat=Object.values(cats).sort((a,b)=>b.v-a.v);
+  const can={};
+  vs.forEach(v=>{ const k=canalDe(v); const o=can[k]=can[k]||{n:k,fact:0,neta:0}; o.fact++; o.neta+=ventaNetaDe(v); });
+  const canales=Object.values(can).sort((a,b)=>b.neta-a.neta);
+  const usr={};
+  vs.forEach(v=>{ const k=nameOf('usuarios',v.usuarioId)||'—'; const o=usr[k]=usr[k]||{n:k,fact:0,neta:0,prop:0,desc:0};
+    o.fact++; o.neta+=ventaNetaDe(v); o.prop+=Number(v.propina)||0; o.desc+=Number(v.descuento)||0; });
+  const personal=Object.values(usr).sort((a,b)=>b.neta-a.neta);
+  const medios={}; vs.forEach(v=>{ const f=fiadoDe(v); if(f) medios.credito=(medios.credito||0)+f;
+    (v.pagos||[]).forEach(p=>{ medios[p.medio]=(medios[p.medio]||0)+(Number(p.monto)||0); }); });
+  const totMed=sum(Object.values(medios));
+
+  /* ---- gastos ---- */
+  const gc={}; T.gVar.forEach(m=>{ const k=m.categoria||'otros'; gc[k]=(gc[k]||0)+(Number(m.monto)||0); });
+  const gastosCat=Object.keys(gc).map(k=>({n:k,v:gc[k]})).sort((a,b)=>b.v-a.v);
+
+  /* ---- anulaciones de productos ya enviados a cocina ---- */
+  const anuItems=[];
+  S.ventas.forEach(v=>(v.anulados||[]).forEach(a=>{ const d=dISO(a.fecha); if(d>=d1&&d<=d2) anuItems.push(a); }));
+  const anuPorU={}; anuItems.forEach(a=>{ const k=a.usuarioNombre||'—'; anuPorU[k]=(anuPorU[k]||0)+(Number(a.precio)||0)*(Number(a.cant)||0); });
+
+  /* ---- compras, cartera, inventario, cuentas ---- */
+  const cs=S.compras.filter(c=>c.estado!=='anulada' && dISO(c.fecha)>=d1 && dISO(c.fecha)<=d2);
+  const prov={}; cs.forEach(c=>{ const k=c.proveedorNombre||nameOf('proveedores',c.proveedorId)||'Sin proveedor';
+    const o=prov[k]=prov[k]||{n:k,fact:0,v:0}; o.fact++; o.v+=Number(c.total)||0; });
+  const compras={total:round(sum(cs,c=>c.total||0),2), n:cs.length, credito:round(sum(cs.filter(c=>c.credito),c=>c.total||0),2),
+    prov:Object.values(prov).sort((a,b)=>b.v-a.v)};
+  const CXC=cxc(), CXP=cxp();
+  const hoy=todayISO();
+  const cartera={cxc:round(sum(CXC,saldoDoc),2), nCxc:CXC.length, vencCxc:round(sum(CXC.filter(d=>d.vence&&d.vence<hoy),saldoDoc),2),
+    cxp:round(sum(CXP,saldoDoc),2), nCxp:CXP.length, vencCxp:round(sum(CXP.filter(d=>d.vence&&d.vence<hoy),saldoDoc),2)};
+  const ing=S.ingredientes.filter(g=>g.activo!==false);
+  const inv={valor:round(sum(ing,g=>Math.max(0,Number(g.stock)||0)*(costoProm(g.id)||Number(g.costo)||0)),2),
+    bajo:ing.filter(g=>(Number(g.stock)||0)<=(Number(g.stockMin)||0)).map(g=>g.nombre)};
+  const consumo={};
+  S.movinv.filter(m=>m.tipo==='salida' && dISO(m.fecha)>=d1 && dISO(m.fecha)<=d2).forEach(m=>{
+    consumo[m.ingredienteId]=(consumo[m.ingredienteId]||0)+(m.costoTotal!=null? Math.abs(m.costoTotal) : Math.abs(m.cantidad)*(m.costoUnit||0)); });
+  const consumoTop=Object.keys(consumo).map(k=>({n:nameOf('ingredientes',k),v:consumo[k]})).sort((a,b)=>b.v-a.v).slice(0,12);
+  const cuentas=S.cuentas.filter(c=>c.activo!==false).map(c=>({n:c.nombre,tipo:c.tipo,saldo:saldoCuenta(c.id)}));
+
+  /* ---- indicadores ---- */
+  const K={};
+  K.foodCost=T.neta? T.costo/T.neta : 0;
+  K.gastoPct=T.neta? (T.gastoVar+T.fijos)/T.neta : 0;
+  K.mc=T.neta? T.contrib/T.neta : 0;                       // margen de contribución
+  K.pe=K.mc>0? T.fijos/K.mc : null;                         // ventas para no perder en el período
+  K.peDia=K.mc>0? fijoDia/K.mc : null;
+  K.promDia=promDia;
+  K.margenNeto=T.neta? T.un/T.neta : 0;
+  K.udsFact=T.fact? T.uds/T.fact : 0;
+  K.descPct=T.bruta? T.desc/T.bruta : 0;
+  K.creditoPct=T.total? T.fiado/T.total : 0;
+
+  /* ---- recomendaciones ---- */
+  const R=[];
+  const semAb=sem.filter(r=>r.ab);
+  if(semAb.length){
+    const best=semAb.slice().sort((a,b)=>b.prom-a.prom), w=best[best.length-1];
+    R.push('📅 El mejor día es el <b>'+best[0].nombre+'</b> (promedio '+money(best[0].prom)+' por día'+(best[1]?', seguido del '+best[1].nombre:'')+
+      '). El más flojo es el <b>'+w.nombre+'</b> ('+money(w.prom)+', '+num(w.indice*100,0)+'% de un día normal).');
+    const malos=semAb.filter(r=>r.sem==='🔴'||r.sem==='🟠');
+    if(malos.length) R.push('🚪 Días para evaluar cerrar o abrir con horario corto: <b>'+malos.map(r=>r.nombre).join(', ')+'</b>. '+
+      (fijoDia? 'Con sus ventas no alcanzan a cubrir los gastos fijos de un día ('+money(fijoDia)+').' : 'Dejan muy poca ganancia.'));
+    else if(fijoDia) R.push('✅ Todos los días que se abrió cubren los gastos fijos diarios ('+money(fijoDia)+'): conviene seguir abriendo.');
+    const noAb=sem.filter(r=>r.cal && !r.ab);
+    if(noAb.length) R.push('ℹ️ No hubo ventas los días: '+noAb.map(r=>r.nombre).join(', ')+'.');
+  }
+  if(hIni!=null) R.push('🕐 El horario que de verdad vende va de <b>'+hh(hIni)+'</b> a <b>'+hh(hFin+1)+'</b>. Hora pico: <b>'+
+    pico.map(x=>hh(x.h)).join(', ')+'</b>: ahí debe estar todo el personal y la cocina lista.');
+  if(muertas.length) R.push('😴 Horas flojas dentro del horario: '+muertas.map(x=>hh(x.h)).join(', ')+'. Sirven para preparar, hacer inventario o dar descansos.');
+  if(fuera.length) R.push('🌙 Ventas sueltas fuera del horario fuerte ('+fuera.map(x=>hh(x.h)).join(', ')+', '+pctTxt(sum(fuera,x=>x.neta),T.neta)+' del total): mirar si vale la pena tener abierto a esas horas.');
+  if(hayCostos){
+    if(K.foodCost>0.38) R.push('🥩 El costo de lo vendido es el <b>'+pctTxt(T.costo,T.neta)+'</b> de las ventas (alto; lo sano en restaurantes es 28–35%). Revisar precios, porciones y desperdicio.');
+    else R.push('🥩 El costo de lo vendido es el '+pctTxt(T.costo,T.neta)+' de las ventas: está en un rango sano.');
+    if(bajoMargen.length) R.push('💸 Productos que se venden pero dejan poco margen: <b>'+bajoMargen.slice(0,5).map(p=>p.n+' ('+pctTxt(p.m,p.v,0)+')').join(', ')+'</b>. Subir precio o ajustar receta.');
+    if(masMargen.length) R.push('⭐ Los que más ganancia dejan: <b>'+masMargen.slice(0,5).map(p=>p.n).join(', ')+'</b>. Conviene recomendarlos y destacarlos en la carta.');
+  } else R.push('⚠️ Los productos no tienen costos (recetas) cargados: sin eso no se puede saber cuáles dejan ganancia. Vale la pena completarlos.');
+  const nA=top.filter(p=>p.abc==='A').length;
+  if(top.length) R.push('📦 '+nA+' de '+top.length+' productos hacen el 80% de las ventas. Nunca deben faltar en inventario.');
+  if(sinVenta.length) R.push('🗑️ '+sinVenta.length+' productos activos no se vendieron ni una vez en el período: evaluar sacarlos de la carta.');
+  if(K.pe!=null && T.fijos) R.push('⚖️ Punto de equilibrio: hay que vender <b>'+money(K.peDia)+' por día</b> para no perder. '+
+    (promDia>=K.peDia? 'Hoy se vende en promedio '+money(promDia)+' por día abierto: se está por encima ✅.' : 'Hoy se vende en promedio '+money(promDia)+' por día abierto: se está por debajo 🔴.'));
+  else if(!T.fijos) R.push('⚙️ No hay gastos fijos configurados (arriendo, servicios, nómina fija). Configúrelos en Reportes para que el informe calcule la utilidad real y el punto de equilibrio.');
+  if(P.neta) R.push((T.neta>=P.neta?'📈':'📉')+' Frente al período anterior ('+fdate(p1)+' – '+fdate(p2)+') las ventas van '+varTxt(T.neta,P.neta)+
+    ' y el ticket promedio '+varTxt(T.ticket,P.ticket)+'.');
+  if(cartera.cxc>0.5) R.push('🧾 Hay '+money(cartera.cxc)+' por cobrar'+(cartera.vencCxc>0.5? ' ('+money(cartera.vencCxc)+' ya vencidos)':'')+'. Programar cobro.');
+  if(cartera.cxp>0.5) R.push('🏦 Se deben '+money(cartera.cxp)+' a proveedores'+(cartera.vencCxp>0.5? ' ('+money(cartera.vencCxp)+' vencidos)':'')+'.');
+  if(K.descPct>0.05) R.push('🏷️ Los descuentos se llevan el '+pctTxt(T.desc,T.bruta)+' de las ventas. Revisar quién los da y por qué.');
+  const anuTot=sum(Object.values(anuPorU));
+  if(anuTot>0.5) R.push('❌ Se anularon productos ya enviados a cocina por '+money(anuTot)+'. Revisar con el personal.');
+  if(inv.bajo.length) R.push('📉 '+inv.bajo.length+' ingredientes están en el mínimo o por debajo: '+inv.bajo.slice(0,6).join(', ')+(inv.bajo.length>6?'…':'')+'.');
+
+  return {d1,d2,p1,p2,T,P,K,diario,abiertos,sem,horas,mapa,hIni,hFin,pico,muertas,mejorHoraDia,top,hayCostos,masMargen,bajoMargen,menos,
+    sinVenta,porCat,canales,personal,medios,totMed,gastosCat,anul,anuPorU,compras,cartera,inv,consumoTop,cuentas,R,fijoDia};
+}
+function hh(h){ return String(h%24).padStart(2,'0')+':00'; }
+
+function htmlInforme(I){
+  const T=I.T, P=I.P, K=I.K, c=S.cfg, nom=nombreDelNegocio();
+  const tr=(cells,cls,izq)=>'<tr'+(cls?' class="'+cls+'"':'')+'>'+cells.map((x,i)=>'<td'+(i>=(izq||1)?' class="r"':'')+'>'+x+'</td>').join('')+'</tr>';
+  const th=(cells,izq)=>'<tr>'+cells.map((x,i)=>'<th'+(i>=(izq||1)?' class="r"':'')+'>'+x+'</th>').join('')+'</tr>';
+  const tabla=(head,rows,izq)=>'<table>'+th(head,izq)+rows.join('')+'</table>';
+  const barra=(v,max,col)=>'<div class="bar"><i style="width:'+(max>0?Math.max(1,Math.round(v/max*100)):0)+'%;background:'+(col||'#2563eb')+'"></i></div>';
+  const kp=(t,v,s,col)=>'<div class="kp"><div class="kt">'+t+'</div><div class="kv" style="color:'+(col||'#111')+'">'+v+'</div><div class="ks">'+(s||'')+'</div></div>';
+  const neg=n=>n<0?'#b91c1c':'#047857';
+  const menos=x=>(Math.abs(Number(x)||0)>=0.5? '-' : '')+money(Math.abs(Number(x)||0));
+  let h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Informe gerencial · '+esc(nom)+'</title><style>'+
+    '@page{size:letter;margin:11mm}'+
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+    'body{font:10.5px/1.4 Arial,Helvetica,sans-serif;color:#111;margin:0}'+
+    'h1{font-size:20px;margin:0}h2{font-size:13.5px;margin:16px 0 6px;padding:4px 8px;background:#1e293b;color:#fff;border-radius:4px;page-break-after:avoid}'+
+    'h3{font-size:11.5px;margin:10px 0 4px;page-break-after:avoid}'+
+    '.sub{color:#555;font-size:11px}.muted{color:#666}.r{text-align:right;white-space:nowrap}'+
+    'table{width:100%;border-collapse:collapse;margin:2px 0 6px;page-break-inside:auto;font-size:10px}tr{page-break-inside:avoid}'+
+    'th{background:#f1f5f9;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.02em;padding:4px 5px;border-bottom:1.5px solid #94a3b8}'+
+    'td{padding:3px 5px;border-bottom:1px solid #e2e8f0;vertical-align:top}'+
+    'tr.tot td{font-weight:bold;border-top:1.5px solid #475569;background:#f8fafc}tr.sec td{font-weight:bold;color:#1e293b}'+
+    '.kps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}'+
+    '.kp{border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px}.kt{font-size:9px;color:#555;text-transform:uppercase}'+
+    '.kv{font-size:15px;font-weight:bold;margin:1px 0}.ks{font-size:9px;color:#666}'+
+    '.bar{background:#eef2f7;height:9px;border-radius:3px;min-width:60px}.bar i{display:block;height:9px;border-radius:3px}'+
+    '.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}'+
+    '.hm td{padding:2px 0;text-align:center;font-size:8.5px;border:1px solid #fff}.hm th{font-size:8px;padding:2px 1px;text-align:center}'+
+    '.rec{margin:0;padding-left:0;list-style:none}.rec li{padding:5px 8px;margin:4px 0;border-left:3px solid #2563eb;background:#f8fafc}'+
+    '.nota{font-size:9.5px;color:#555;margin:2px 0 6px}.salto{page-break-before:always}'+
+    '.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1e293b;padding-bottom:6px;margin-bottom:8px}'+
+    '</style></head><body>';
+  h+='<div class="hd"><div>'+(imgDe('logo')?'<img src="'+imgDe('logo').datos+'" style="max-height:42px;max-width:150px;display:block;margin-bottom:3px">':'')+
+    '<h1>'+esc(nom)+'</h1><div class="sub">Informe gerencial y financiero</div></div>'+
+    '<div class="r sub"><b>'+fdate(I.d1)+' — '+fdate(I.d2)+'</b><br>'+T.dias+' días · '+T.diasAbiertos+' con ventas<br>Generado '+fdate(now(),true)+
+    (c.nit?'<br>NIT '+esc(c.nit):'')+'</div></div>';
+
+  /* 1. resumen */
+  h+='<h2>1. Resumen ejecutivo</h2><div class="kps">'+
+    kp('Ventas netas',money(T.neta),varTxt(T.neta,P.neta)+' vs. período anterior')+
+    kp('Facturas',num(T.fact,0),varTxt(T.fact,P.fact)+' · '+num(T.fact/Math.max(1,T.diasAbiertos),1)+' por día')+
+    kp('Ticket promedio',money(T.ticket),varTxt(T.ticket,P.ticket))+
+    kp('Venta promedio por día',money(K.promDia),'días con ventas')+
+    kp('Costo de lo vendido',money(T.costo),pctTxt(T.costo,T.neta)+' de las ventas')+
+    kp('Utilidad bruta',money(T.ub),pctTxt(T.ub,T.neta)+' de margen',neg(T.ub))+
+    kp('Gastos (variables + fijos)',money(T.gastoVar+T.fijos),pctTxt(T.gastoVar+T.fijos,T.neta)+' de las ventas')+
+    kp('Utilidad neta',money(T.un),pctTxt(T.un,T.neta)+' de margen',neg(T.un))+
+    '</div>';
+  h+='<h3>Recomendaciones para la reunión</h3><ul class="rec">'+I.R.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+
+  /* 2. estado de resultados */
+  const er=[
+    tr(['Ventas brutas (antes de descuentos)',money(T.bruta),pctTxt(T.bruta,T.neta),money(P.bruta)]),
+    tr(['(−) Descuentos',menos(T.desc),pctTxt(T.desc,T.neta),menos(P.desc)]),
+    tr(['<b>Ventas netas</b>','<b>'+money(T.neta)+'</b>','100%','<b>'+money(P.neta)+'</b>'],'sec'),
+    tr(['(−) Costo de lo vendido (insumos)',menos(T.costo),pctTxt(T.costo,T.neta),menos(P.costo)]),
+    tr(['<b>Utilidad bruta</b>','<b>'+money(T.ub)+'</b>',pctTxt(T.ub,T.neta),'<b>'+money(P.ub)+'</b>'],'sec')];
+  I.gastosCat.forEach(g=>er.push(tr(['&nbsp;&nbsp;(−) Gasto: '+esc(g.n),menos(g.v),pctTxt(g.v,T.neta),''])));
+  er.push(tr(['(−) Total gastos variables',menos(T.gastoVar),pctTxt(T.gastoVar,T.neta),menos(P.gastoVar)]));
+  er.push(tr(['<b>Margen de contribución</b>','<b>'+money(T.contrib)+'</b>',pctTxt(T.contrib,T.neta),'<b>'+money(P.contrib)+'</b>'],'sec'));
+  T.F.items.forEach(x=>er.push(tr(['&nbsp;&nbsp;(−) Fijo: '+esc(x.nombre)+' <span class="muted">('+money(x.diario)+'/día × '+x.dias+')</span>',menos(x.valor),pctTxt(x.valor,T.neta),''])));
+  er.push(tr(['(−) Total gastos fijos',menos(T.fijos),pctTxt(T.fijos,T.neta),menos(P.fijos)]));
+  er.push(tr(['UTILIDAD NETA DEL PERÍODO',money(T.un),pctTxt(T.un,T.neta),money(P.un)],'tot'));
+  h+='<h2>2. Estado de resultados</h2>'+tabla(['Concepto','Este período','% ventas','Período anterior'],er)+
+    '<div class="nota">Período anterior: '+fdate(I.p1)+' – '+fdate(I.p2)+'. Las propinas ('+money(T.prop)+') y los impuestos cobrados ('+money(T.imp)+
+    ') no son ingreso del negocio: se recaudan para el personal y la DIAN, por eso no están en las ventas netas.'+
+    (T.F.items.length?' Los pagos en Tesorería con categoría de gasto fijo no se restan dos veces.':'')+'</div>';
+
+  /* indicadores */
+  const ind=[
+    tr(['Costo de insumos sobre ventas (food cost)',pctTxt(T.costo,T.neta),'Sano: 28–35%']),
+    tr(['Gastos totales sobre ventas',pctTxt(T.gastoVar+T.fijos,T.neta),'']),
+    tr(['Margen de contribución',num(K.mc*100,1)+'%','Lo que queda de cada $100 vendidos para pagar fijos']),
+    tr(['Margen neto',num(K.margenNeto*100,1)+'%','']),
+    tr(['Punto de equilibrio del período',K.pe!=null&&T.fijos? money(K.pe) : '—','Ventas mínimas para no perder']),
+    tr(['Punto de equilibrio por día',K.peDia!=null&&T.fijos? money(K.peDia) : '—','Venta promedio actual: '+money(K.promDia)]),
+    tr(['Gastos fijos por día',money(I.fijoDia),'Se pagan se abra o no']),
+    tr(['Productos por factura',num(K.udsFact,1),'']),
+    tr(['Descuentos sobre ventas brutas',pctTxt(T.desc,T.bruta),'']),
+    tr(['Vendido a crédito',money(T.fiado),pctTxt(T.fiado,T.total)+' de lo facturado'])];
+  h+='<h3>Indicadores clave</h3>'+tabla(['Indicador','Valor','Referencia'],ind);
+
+  /* 3. días de la semana */
+  const mxS=Math.max(0,...I.sem.map(r=>r.prom));
+  h+='<h2 class="salto">3. ¿Qué días conviene abrir?</h2>'+
+    '<div class="nota">Promedios calculados solo sobre los días que se abrió. <b>Aporte por día</b> = ventas − costo de insumos − gastos variables de ese día. '+
+    (I.fijoDia? 'Si el aporte no alcanza los gastos fijos diarios ('+money(I.fijoDia)+'), ese día no se paga solo.' : 'Configure los gastos fijos para comparar contra ellos.')+'</div>'+
+    tabla(['Día','Abiertos','Venta prom./día','','Facturas/día','Ticket','Aporte prom./día','% del total','Índice'],
+      I.sem.map(r=>tr(['<b>'+r.sem+' '+r.nombre+'</b>',r.ab+' de '+r.cal,money(r.prom),barra(r.prom,mxS,r.sem==='🔴'?'#dc2626':(r.sem==='🟠'?'#f59e0b':'#2563eb')),
+        num(r.factProm,1),money(r.ticket),'<span style="color:'+neg(r.contribProm-(I.fijoDia||0))+'">'+money(r.contribProm)+'</span>',
+        num(r.share*100,1)+'%',r.ab? num(r.indice*100,0) : '—'])));
+  h+=tabla(['Día','Recomendación','Mejor día','Peor día','Hora más fuerte'],I.sem.map(r=>{ const mh=I.mejorHoraDia.find(x=>x.ds===r.ds);
+    return tr(['<b>'+r.nombre+'</b>',r.rec,r.mejor? fdate(r.mejor.fecha)+'<br>'+money(r.mejor.neta):'—',r.peor? fdate(r.peor.fecha)+'<br>'+money(r.peor.neta):'—',
+      mh&&mh.h!=null? hh(mh.h)+'<br>'+money(mh.v)+' prom.':'—'],'',2); }),2);
+  h+='<div class="nota">Índice: 100 = un día promedio. Más de 115 es un día fuerte; menos de 75, un día flojo.</div>';
+
+  /* 4. horas */
+  const hv=I.horas.filter(x=>x.fact>0), mxH=Math.max(0,...hv.map(x=>x.neta));
+  h+='<h2>4. ¿A qué horas se vende?</h2>'+
+    (I.hIni!=null? '<div class="nota">Horario fuerte (horas con 2% o más de las ventas): <b>'+hh(I.hIni)+' a '+hh(I.hFin+1)+'</b> · Hora pico: <b>'+I.pico.map(x=>hh(x.h)).join(', ')+'</b></div>':'')+
+    tabla(['Hora','Ventas','','% del total','Facturas','Ticket','Prom. por día abierto'],
+      hv.map(x=>tr(['<b>'+hh(x.h)+' – '+hh(x.h+1)+'</b>',money(x.neta),barra(x.neta,mxH,I.pico.indexOf(x)>=0?'#047857':(x.share<0.02?'#94a3b8':'#2563eb')),
+        num(x.share*100,1)+'%',num(x.fact,0),money(x.ticket),money(x.prom)])));
+  /* mapa de calor */
+  const hs=[]; const hMin=hv.length? hv[0].h:0, hMax=hv.length? hv[hv.length-1].h:23; for(let x=hMin;x<=hMax;x++) hs.push(x);
+  const mxM=Math.max(0,...ORDEN_SEM.map(ds=>Math.max(...I.mapa[ds])));
+  h+='<h3>Mapa de calor: venta promedio por día y hora</h3><div class="nota">Más oscuro = se vende más. Sirve para armar los turnos del personal.</div>'+
+    '<table class="hm"><tr><th></th>'+hs.map(x=>'<th>'+String(x).padStart(2,'0')+'</th>').join('')+'</tr>'+
+    ORDEN_SEM.map(ds=>'<tr><th style="text-align:left">'+DIAS_SEM[ds].slice(0,3)+'</th>'+hs.map(x=>{ const v=I.mapa[ds][x], a=mxM? v/mxM:0;
+      return '<td style="background:rgba(37,99,235,'+(v? (0.08+a*0.85).toFixed(2):0)+');color:'+(a>0.55?'#fff':'#111')+'">'+(v? num(v/1000,0)+'k':'')+'</td>'; }).join('')+'</tr>').join('')+
+    '</table><div class="nota">Valores en miles (k) de venta promedio en esa hora.</div>';
+
+  /* 5. productos */
+  const fila=(p,i)=>tr([(i+1)+'. '+esc(p.n)+' <span class="muted">('+esc(p.cat)+')</span>',num(p.q,0),money(p.v),num(p.share*100,1)+'%',
+    I.hayCostos? money(p.c):'—',I.hayCostos? money(p.m):'—',I.hayCostos&&p.c? num(p.mp*100,0)+'%':'—',p.abc]);
+  h+='<h2 class="salto">5. Productos</h2>'+tabla(['Producto','Unid.','Ventas','% ventas','Costo','Ganancia','Margen','ABC'],I.top.slice(0,40).map(fila))+
+    (I.top.length>40? '<div class="nota">… y '+(I.top.length-40)+' productos más (ver Excel).</div>':'')+
+    '<div class="nota">ABC: A = el grupo que hace el 80% de las ventas (nunca debe faltar), B = el siguiente 15%, C = el último 5%.</div>';
+  h+='<div class="cols"><div>';
+  if(I.masMargen.length) h+='<h3>⭐ Los que más ganancia dejan</h3>'+tabla(['Producto','Ganancia','Margen'],I.masMargen.map(p=>tr([esc(p.n),money(p.m),num(p.mp*100,0)+'%'])));
+  h+='<h3>🐢 Los que menos se venden</h3>'+tabla(['Producto','Unid.','Ventas'],I.menos.map(p=>tr([esc(p.n),num(p.q,0),money(p.v)])));
+  h+='</div><div>';
+  if(I.bajoMargen.length) h+='<h3>💸 Margen bajo (menos de 35%)</h3>'+tabla(['Producto','Ventas','Margen'],I.bajoMargen.map(p=>tr([esc(p.n),money(p.v),num(p.mp*100,0)+'%'])));
+  if(I.sinVenta.length) h+='<h3>🗑️ Sin ninguna venta ('+I.sinVenta.length+')</h3><div class="nota">'+I.sinVenta.slice(0,60).map(esc).join(', ')+(I.sinVenta.length>60?'…':'')+'</div>';
+  h+='</div></div>';
+
+  /* 6. categorías, canales, personal, medios */
+  const mxC=Math.max(0,...I.porCat.map(x=>x.v));
+  h+='<h2>6. Categorías, canales, personal y medios de pago</h2>'+
+    tabla(['Categoría','Ventas','','% ventas','Costo','Margen'],I.porCat.map(x=>tr(['<b>'+esc(x.n)+'</b>',money(x.v),barra(x.v,mxC),pctTxt(x.v,T.neta),
+      I.hayCostos? money(x.c):'—',I.hayCostos&&x.c? pctTxt(x.v-x.c,x.v,0):'—'])));
+  h+='<div class="cols"><div><h3>Por canal</h3>'+tabla(['Canal','Facturas','Ventas','Ticket'],I.canales.map(x=>tr([esc(x.n),num(x.fact,0),money(x.neta)+' <span class="muted">('+pctTxt(x.neta,T.neta,0)+')</span>',money(x.fact?x.neta/x.fact:0)])))+
+    '</div><div><h3>Cómo pagaron</h3>'+tabla(['Medio','Valor','%'],MEDIOS.filter(m=>I.medios[m.k]).map(m=>tr([m.e+' '+m.n,money(I.medios[m.k]),pctTxt(I.medios[m.k],I.totMed)]))
+      .concat(Object.keys(I.medios).filter(k=>!MEDIOS.some(m=>m.k===k)).map(k=>tr([esc(k),money(I.medios[k]),pctTxt(I.medios[k],I.totMed)]))))+'</div></div>';
+  h+='<h3>Por cajero / mesero</h3>'+tabla(['Persona','Facturas','Ventas','Ticket','Descuentos dados','Propinas'],
+    I.personal.map(x=>tr([esc(x.n),num(x.fact,0),money(x.neta),money(x.fact?x.neta/x.fact:0),money(x.desc),money(x.prop)])));
+  const anuK=Object.keys(I.anuPorU);
+  if(anuK.length||I.anul.length) h+='<div class="nota">Facturas anuladas: '+I.anul.length+' por '+money(sum(I.anul,v=>v.total||0))+
+    (anuK.length? ' · Productos anulados después de ir a cocina: '+anuK.map(k=>esc(k)+' '+money(I.anuPorU[k])).join(', ') : '')+'</div>';
+
+  /* 7. dinero */
+  h+='<h2 class="salto">7. Compras, cartera, inventario y dinero disponible</h2><div class="kps">'+
+    kp('Compras del período',money(I.compras.total),I.compras.n+' facturas · '+money(I.compras.credito)+' a crédito')+
+    kp('Por cobrar (clientes)',money(I.cartera.cxc),I.cartera.nCxc+' documentos'+(I.cartera.vencCxc>0.5?' · '+money(I.cartera.vencCxc)+' vencido':''),I.cartera.vencCxc>0.5?'#b91c1c':'')+
+    kp('Por pagar (proveedores)',money(I.cartera.cxp),I.cartera.nCxp+' documentos'+(I.cartera.vencCxp>0.5?' · '+money(I.cartera.vencCxp)+' vencido':''),I.cartera.vencCxp>0.5?'#b91c1c':'')+
+    kp('Inventario valorizado',money(I.inv.valor),I.inv.bajo.length+' insumos en el mínimo')+'</div>';
+  h+='<div class="cols"><div><h3>Saldos de cajas y bancos (hoy)</h3>'+tabla(['Cuenta','Saldo'],I.cuentas.map(x=>tr([esc(x.n)+' <span class="muted">('+esc(x.tipo||'')+')</span>',money(x.saldo)]))
+    .concat([tr(['TOTAL DISPONIBLE',money(sum(I.cuentas,x=>x.saldo))],'tot')]))+
+    '<h3>Compras por proveedor</h3>'+tabla(['Proveedor','Facturas','Valor'],I.compras.prov.slice(0,15).map(x=>tr([esc(x.n),num(x.fact,0),money(x.v)])))+'</div>'+
+    '<div><h3>Insumos que más se consumieron</h3>'+tabla(['Insumo','Costo consumido'],I.consumoTop.map(x=>tr([esc(x.n),money(x.v)])))+
+    (I.inv.bajo.length? '<h3>Insumos en el mínimo</h3><div class="nota">'+I.inv.bajo.map(esc).join(', ')+'</div>':'')+'</div></div>';
+  const posicion=sum(I.cuentas,x=>x.saldo)+I.cartera.cxc+I.inv.valor-I.cartera.cxp;
+  h+='<div class="nota"><b>Posición del negocio hoy:</b> dinero disponible + por cobrar + inventario − por pagar = <b>'+money(posicion)+'</b></div>';
+
+  /* 8. diario */
+  h+='<h2 class="salto">8. Detalle día por día</h2>'+tabla(['Fecha','Día','Facturas','Ventas','Costo','Gastos var.','Aporte','Fijo del día','Resultado'],
+    I.diario.map(o=>tr([fdate(o.fecha),DIAS_SEM[o.ds].slice(0,3),o.abierto? num(o.fact,0):'<span class="muted">cerrado</span>',money(o.neta),money(o.costo),
+      money(o.gVar),money(o.contrib),money(o.fijo),'<b style="color:'+neg(o.res)+'">'+money(o.res)+'</b>'],o.abierto?'':'muted'))
+    .concat([tr(['TOTAL','',num(T.fact,0),money(T.neta),money(T.costo),money(T.gastoVar),money(T.contrib),money(T.fijos),money(T.un)],'tot')]));
+  h+='<div class="nota" style="margin-top:12px;text-align:center">'+esc(nom)+' · Informe del '+fdate(I.d1)+' al '+fdate(I.d2)+' · '+APP_NOMBRE+'</div>';
+  return h+'</body></html>';
+}
+
+function excelInforme(I){
+  const T=I.T, P=I.P, K=I.K, b=x=>({v:x,b:1}), t=x=>[{v:x,t:'titulo'}];
+  const n=x=>({v:round(Number(x)||0,2)}), pc=x=>({v:round((Number(x)||0)*100,1)});
+  const resumen=[t('Informe gerencial · '+nombreDelNegocio()),['Período',fdate(I.d1)+' al '+fdate(I.d2)],['Días',T.dias],['Días con ventas',T.diasAbiertos],[],
+    ['Indicador','Este período','Período anterior'].map(b),
+    ['Ventas netas',n(T.neta),n(P.neta)],['Facturas',n(T.fact),n(P.fact)],['Ticket promedio',n(T.ticket),n(P.ticket)],
+    ['Venta promedio por día',n(K.promDia),''],['Costo de lo vendido',n(T.costo),n(P.costo)],['Utilidad bruta',n(T.ub),n(P.ub)],
+    ['Gastos variables',n(T.gastoVar),n(P.gastoVar)],['Gastos fijos',n(T.fijos),n(P.fijos)],['Utilidad neta',n(T.un),n(P.un)],
+    ['Food cost %',pc(K.foodCost),''],['Margen de contribución %',pc(K.mc),''],['Margen neto %',pc(K.margenNeto),''],
+    ['Punto de equilibrio período',K.pe!=null?n(K.pe):'',''],['Punto de equilibrio por día',K.peDia!=null?n(K.peDia):'',''],
+    ['Propinas recaudadas',n(T.prop),''],['Impuestos recaudados',n(T.imp),''],['Descuentos',n(T.desc),''],['Vendido a crédito',n(T.fiado),''],[],
+    [b('Recomendaciones')]].concat(I.R.map(r=>[String(r).replace(/<[^>]+>/g,'')]));
+  const er=[t('Estado de resultados'),['Concepto','Valor','% ventas'].map(b),['Ventas brutas',n(T.bruta),pc(T.bruta/(T.neta||1))],['Descuentos',n(-T.desc),''],
+    [b('Ventas netas'),n(T.neta),{v:100}],['Costo de lo vendido',n(-T.costo),pc(T.costo/(T.neta||1))],[b('Utilidad bruta'),n(T.ub),pc(T.ub/(T.neta||1))]]
+    .concat(I.gastosCat.map(g=>['Gasto: '+g.n,n(-g.v),pc(g.v/(T.neta||1))]))
+    .concat([[b('Margen de contribución'),n(T.contrib),pc(T.contrib/(T.neta||1))]])
+    .concat(T.F.items.map(x=>['Fijo: '+x.nombre,n(-x.valor),pc(x.valor/(T.neta||1))]))
+    .concat([[b('Utilidad neta'),n(T.un),pc(T.un/(T.neta||1))]]);
+  const sem=[t('Por día de la semana'),['Día','Días abiertos','Días calendario','Ventas','Venta prom./día','Facturas/día','Ticket','Aporte prom./día','% del total','Índice','Recomendación'].map(b)]
+    .concat(I.sem.map(r=>[r.nombre,r.ab,r.cal,n(r.neta),n(r.prom),n(r.factProm),n(r.ticket),n(r.contribProm),pc(r.share),n(r.indice*100),r.rec]));
+  const hor=[t('Por hora'),['Hora','Ventas','% del total','Facturas','Ticket','Prom. por día abierto'].map(b)]
+    .concat(I.horas.filter(x=>x.fact).map(x=>[hh(x.h)+' - '+hh(x.h+1),n(x.neta),pc(x.share),n(x.fact),n(x.ticket),n(x.prom)]));
+  const hm=[t('Venta promedio por día y hora'),[b('Día')].concat(Array.from({length:24},(_,i)=>b(hh(i))))]
+    .concat(ORDEN_SEM.map(ds=>[DIAS_SEM[ds]].concat(I.mapa[ds].map(v=>n(v)))));
+  const dia=[t('Día por día'),['Fecha','Día','Facturas','Ventas','Costo','Gastos variables','Aporte','Fijo del día','Resultado'].map(b)]
+    .concat(I.diario.map(o=>[o.fecha,DIAS_SEM[o.ds],o.fact,n(o.neta),n(o.costo),n(o.gVar),n(o.contrib),n(o.fijo),n(o.res)]));
+  const pro=[t('Productos'),['Producto','Categoría','Unidades','Ventas','% ventas','Costo','Ganancia','Margen %','ABC'].map(b)]
+    .concat(I.top.map(p=>[p.n,p.cat,n(p.q),n(p.v),pc(p.share),n(p.c),n(p.m),p.c?pc(p.mp):'',p.abc]))
+    .concat([[],[b('Sin ventas')]]).concat(I.sinVenta.map(x=>[x]));
+  const otros=[t('Categorías'),['Categoría','Ventas','Costo'].map(b)].concat(I.porCat.map(x=>[x.n,n(x.v),n(x.c)]))
+    .concat([[],t('Canales'),['Canal','Facturas','Ventas'].map(b)]).concat(I.canales.map(x=>[x.n,x.fact,n(x.neta)]))
+    .concat([[],t('Personal'),['Persona','Facturas','Ventas','Descuentos','Propinas'].map(b)]).concat(I.personal.map(x=>[x.n,x.fact,n(x.neta),n(x.desc),n(x.prop)]))
+    .concat([[],t('Medios de pago'),['Medio','Valor'].map(b)]).concat(Object.keys(I.medios).map(k=>[k,n(I.medios[k])]))
+    .concat([[],t('Compras por proveedor'),['Proveedor','Facturas','Valor'].map(b)]).concat(I.compras.prov.map(x=>[x.n,x.fact,n(x.v)]))
+    .concat([[],t('Cuentas'),['Cuenta','Saldo'].map(b)]).concat(I.cuentas.map(x=>[x.n,n(x.saldo)]))
+    .concat([[],['Por cobrar',n(I.cartera.cxc)],['Por pagar',n(I.cartera.cxp)],['Inventario valorizado',n(I.inv.valor)]]);
+  const nomArch=normTxt(nombreDelNegocio()).replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  exportarExcel('informe_gerencial_'+(nomArch||'pos')+'_'+I.d1+'_a_'+I.d2,[
+    {nombre:'Resumen',filas:resumen,anchos:[38,18,18]},{nombre:'Estado de resultados',filas:er,anchos:[40,16,12]},
+    {nombre:'Días de la semana',filas:sem,anchos:[12,10,10,15,15,12,13,15,10,8,60]},{nombre:'Horas',filas:hor,anchos:[16,15,10,10,13,16]},
+    {nombre:'Día x hora',filas:hm,anchos:[12].concat(new Array(24).fill(9))},{nombre:'Día por día',filas:dia,anchos:[12,11,9,14,14,14,14,14,14]},
+    {nombre:'Productos',filas:pro,anchos:[34,18,10,14,9,14,14,9,5]},{nombre:'Otros',filas:otros,anchos:[30,14,14,14,14]}]);
+}
+
+function textoInforme(I){
+  const T=I.T,P=I.P,K=I.K;
+  let x='*'+nombreDelNegocio().toUpperCase()+'*\n*INFORME GERENCIAL* '+fdate(I.d1)+' al '+fdate(I.d2)+'\n\n';
+  x+='Ventas netas: '+money(T.neta)+' ('+varTxt(T.neta,P.neta)+')\nFacturas: '+T.fact+' · Ticket: '+money(T.ticket)+'\n';
+  x+='Costo insumos: '+money(T.costo)+' ('+pctTxt(T.costo,T.neta)+')\nGastos: '+money(T.gastoVar+T.fijos)+'\n*Utilidad neta: '+money(T.un)+'* ('+pctTxt(T.un,T.neta)+')\n';
+  if(K.peDia!=null&&T.fijos) x+='Punto de equilibrio: '+money(K.peDia)+' por día · Promedio real: '+money(K.promDia)+'\n';
+  x+='\n*DÍAS*\n'; I.sem.filter(r=>r.ab).forEach(r=>{ x+=r.sem+' '+r.nombre+': '+money(r.prom)+'/día\n'; });
+  if(I.hIni!=null) x+='\n*HORARIO FUERTE:* '+hh(I.hIni)+' a '+hh(I.hFin+1)+' · Pico: '+I.pico.map(p=>hh(p.h)).join(', ')+'\n';
+  x+='\n*CONCLUSIONES*\n'+I.R.map(r=>'• '+String(r).replace(/<b>|<\/b>/g,'*').replace(/<[^>]+>/g,'')).join('\n');
+  return x;
+}
+
+function mInformeGerencial(d1,d2){
+  if(!verCostos()) return toast('El informe gerencial es solo para administradores','warn');
+  if(diasEntre(d1,d2)>400) return toast('Escoja un período de máximo 400 días','warn');
+  let I=null;
+  try{ I=datosInforme(d1,d2); }catch(e){ console.error(e); return toast('No se pudo armar el informe: '+e.message,'bad'); }
+  const T=I.T;
+  modal({title:'📑 Informe gerencial · '+fdate(d1)+' al '+fdate(d2),size:'slim',
+    body:'<div class="hintx" style="margin-bottom:10px">Estado de resultados, punto de equilibrio, qué días conviene abrir, horas fuertes, '+
+      'productos, gastos, cartera, inventario y recomendaciones. Para PDF: <b>Ver / imprimir</b> y escoger «Guardar como PDF».</div>'+
+      '<div class="kpis">'+kpi('Ventas netas',money(T.neta),T.fact+' facturas','brand')+
+      kpi('Utilidad neta',money(T.un),pctTxt(T.un,T.neta)+' margen',T.un>=0?'ok':'bad')+'</div>'+
+      (!gastosFijos().length? '<div class="tiny" style="color:var(--warn);margin-top:8px">⚠️ No hay gastos fijos configurados: la utilidad neta y el punto de equilibrio no los incluyen.</div>':''),
+    footer:'<button class="btn" id="ig_wa">📋 Resumen WhatsApp</button><button class="btn" id="ig_xl">⬇️ Excel</button>'+
+      '<button class="btn pri" id="ig_ver">👁️ Ver / imprimir</button>',
+    onOpen:m=>{
+      $('#ig_ver',m).onclick=()=>{ closeModal(); verDocumento(htmlInforme(I),'informe',''); };
+      $('#ig_xl',m).onclick=()=>{ excelInforme(I); };
+      $('#ig_wa',m).onclick=()=>copiarTexto(textoInforme(I),'Resumen copiado · pégalo en WhatsApp');
+    }});
+}
+
+/* Reportes y Contabilidad quedaron en un solo menú con dos pestañas */
+let _repTab='utilidad', _repF=null;
 function viewReportes(vw){
+  vw.innerHTML='<div class="row wrap" style="gap:8px;margin-bottom:12px;align-items:center">'+
+    '<button class="btn '+(_repTab==='utilidad'?'pri':'')+'" data-rt="utilidad">💰 Utilidad y estado de resultados</button>'+
+    '<button class="btn '+(_repTab==='ventas'?'pri':'')+'" data-rt="ventas">📈 Ventas y análisis</button>'+
+    '<div class="spacer"></div>'+
+    '<button class="btn" id="rt_inf" title="Informe completo para reuniones: días, horas, finanzas y recomendaciones">📑 Informe gerencial</button></div>'+
+    '<div id="rt_body"></div>';
+  $$('[data-rt]',vw).forEach(b=>b.onclick=()=>{ _repTab=b.dataset.rt; viewReportes(vw); });
+  $('#rt_inf',vw).onclick=()=>{ const f=_repF||{d1:todayISO().slice(0,8)+'01',d2:todayISO()}; mInformeGerencial(f.d1,f.d2); };
+  const body=$('#rt_body',vw);
+  if(_repTab==='ventas') viewReportesVentas(body); else viewContabilidad(body);
+}
+function viewReportesVentas(vw){
   let d1=dateAdd(todayISO(),-29), d2=todayISO();
+  if(_repF){ d1=_repF.d1; d2=_repF.d2; }
   vw.innerHTML='<div class="card" style="margin-bottom:14px"><div class="bd"><div class="row wrap">'+
     '<div class="f"><label>Desde</label><input type="date" id="r1" value="'+d1+'"></div>'+
     '<div class="f"><label>Hasta</label><input type="date" id="r2" value="'+d2+'"></div>'+
     '<div class="f"><label>&nbsp;</label><div class="row"><button class="btn sm" id="p7">7 días</button>'+
       '<button class="btn sm" id="p30">30 días</button><button class="btn sm" id="pm">Este mes</button>'+
-      '<button class="btn sm" id="csv">⬇️ CSV</button></div></div>'+
+      '<button class="btn sm" id="csv">⬇️ CSV</button>'+
+      '</div></div>'+
     '</div></div></div><div id="rbody"></div>';
   function set(a,b){ d1=a;d2=b;$('#r1').value=a;$('#r2').value=b;paint(); }
   $('#r1').onchange=e=>{d1=e.target.value;paint();};
@@ -8349,6 +8831,7 @@ function viewReportes(vw){
   $('#pm').onclick=()=>set(todayISO().slice(0,8)+'01',todayISO());
   $('#csv').onclick=()=>exportCSV(d1,d2);
   function paint(){
+    _repF={d1:d1,d2:d2};
     const vs=S.ventas.filter(v=>v.estado!=='anulada'&&dISO(v.fecha)>=d1&&dISO(v.fecha)<=d2);
     const cs=S.compras.filter(c=>c.estado!=='anulada'&&c.fecha>=d1&&c.fecha<=d2);
     const tot=sum(vs,v=>v.total), cst=sum(vs,v=>v.costo||0), prop=sum(vs,v=>v.propina||0);
@@ -9285,11 +9768,31 @@ async function resolverPerfil(){
 
 /* cambia el restaurante activo de este equipo: borra lo local y baja el del negocio */
 async function entrarANegocio(id,nombre){
+  const viejo=S.cfg.fbNegocio||'';
+  const esOtro = !!(viejo && viejo!==id);
+  /* lo pendiente del restaurante actual se sube ANTES de borrar: si no, se perdía */
+  if(S.outbox.length && navigator.onLine && S.cfg.fbOn){ try{ await flushOutbox(true); }catch(e){} }
+  if(esOtro && S.outbox.length){
+    toast('Hay '+S.outbox.length+' cambios de '+(S.cfg.nombre||'este restaurante')+
+      ' sin subir. Conéctate a internet para subirlos antes de cambiar de restaurante.','bad',8000);
+    return false;
+  }
+  /* esta base deja de ser del restaurante anterior y pasa a ser la del nuevo,
+     para que al volver al anterior no abra los datos de este (se cruzaban) */
+  try{
+    const dbs=lsJSON('pos_dbs',{});
+    Object.keys(dbs).forEach(k=>{ if(dbs[k]===DBNAME && k!==id) delete dbs[k]; });
+    if(esOtro && nombreBaseDe(viejo)===DBNAME) dbs[viejo]='pos_restaurante_'+String(viejo).replace(/[^\w-]/g,'_')+'_'+Date.now();
+    dbs[id]=DBNAME; lsSet('pos_dbs',dbs);
+    localStorage.setItem('pos_neg',id);
+  }catch(e){}
   COLL.forEach(k=>{ S[k].forEach(o=>idbDel(k,o.id)); S[k]=[]; });
   S.outbox.forEach(o=>idbDel('outbox',o.id)); S.outbox=[];
-  S.meta.pull={}; S.meta.cons={}; saveMeta();
+  S.meta.pull={}; S.meta.cons={}; S.meta.pullSrv={}; S.meta.pulso={}; S.meta.pullInc={}; saveMeta();
   S.cart=null; S.turno=null;
   S.cfg.fbNegocio=id;
+  /* nunca se deja el nombre del restaurante anterior puesto en este */
+  if(esOtro) S.cfg.nombre = nombre || lsJSON('pos_negnombres',{})[id] || 'Mi Restaurante';
   saveCfg();
   toast('Cargando '+(nombre||id)+'…');
   await pullCloud(true);
@@ -9308,7 +9811,9 @@ async function entrarANegocio(id,nombre){
   migrarAPeps();
   S.turno=turnoAbierto();
   if(S.user && !byId('usuarios',S.user.id) && !S.user._super) S.user=null;
+  repararNombreNegocio();
   render();
+  return true;
 }
 
 /* ======================= CAMBIAR DE RESTAURANTE =======================
@@ -9319,10 +9824,30 @@ const CFG_EQUIPO=['fbApiKey','fbProjectId','fbOn','autoSync','pullSeg','tema','t
   'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp','letra'];
 function nombreNegocio(id){ const nn=lsJSON('pos_negnombres',{});
   return nn[id] || (id===S.cfg.fbNegocio? S.cfg.nombre : '') || id; }
+/* El nombre del restaurante en el que está este equipo. Si el nombre
+   guardado en la configuración es el de OTRO restaurante (pasaba al cambiar
+   de restaurante), se usa el de la ficha del restaurante actual. */
+function nombreDelNegocio(){
+  const id=S.cfg.fbNegocio, nom=S.cfg.nombre||'';
+  if(!id) return nom||'POS';
+  const nn=lsJSON('pos_negnombres',{});
+  const esDeOtro = nom && Object.keys(nn).some(k=>k!==id && normTxt(nn[k]||'')===normTxt(nom));
+  if((esDeOtro || !nom || nom==='Mi Restaurante') && nn[id]) return nn[id];
+  return nom||nn[id]||'POS';
+}
+function repararNombreNegocio(){
+  try{ const bueno=nombreDelNegocio();
+    if(S.cfg.fbNegocio && bueno && bueno!=='POS' && bueno!==S.cfg.nombre){
+      console.warn('Nombre corregido:',S.cfg.nombre,'→',bueno);
+      S.cfg.nombre=bueno; saveCfg(); } }catch(e){}
+}
 function puedeCambiarNegocio(){ return !!(S.user && S.perfil && negociosDe(S.perfil).length>1); }
 function esAdminNube(){ return !!(S.user && (S.user._super || S.user.rol==='admin')); }
-async function refrescarNombresNegocios(){
+async function refrescarNombresNegocios(forzar){
   if(!navigator.onLine || !S.cfg.fbOn) return;
+  { let ult=0; try{ ult=Number(localStorage.getItem('pos_negnombres_ts')||0)||0; }catch(e){}
+    if(!forzar && Date.now()-ult<6*3600000) return;
+    try{ localStorage.setItem('pos_negnombres_ts',String(Date.now())); }catch(e){} }
   const nn=lsJSON('pos_negnombres',{});
   if(S.perfil && S.perfil.rol==='superadmin'){
     try{ (await fbLista('negocios')).forEach(n=>{ if(n&&n.id) nn[n.id]=n.nombre||n.id; }); }catch(e){}
@@ -9334,7 +9859,7 @@ async function mCambiarNegocio(){
   if(!S.user) return;
   /* el perfil puede haber cambiado en la nube: se revisa si hay internet */
   if(navigator.onLine && S.cfg.fbOn){ try{ if(FB.listo()||await fbRestaurarSesion()) await resolverPerfil(); }catch(e){} }
-  try{ await refrescarNombresNegocios(); }catch(e){}
+  try{ await refrescarNombresNegocios(true); }catch(e){}
   const ids=negociosDe(S.perfil), dbs=lsJSON('pos_dbs',{}), lics=lsJSON('pos_lics',{});
   pintarSelectorNegocio();
   if(ids.length<=1) return modal({title:'🏪 Tus restaurantes', size:'slim',
@@ -9378,6 +9903,29 @@ async function cambiarNegocio(id){
   toast('Abriendo '+nombreNegocio(id)+'…','ok',2000);
   setTimeout(()=>location.reload(),400);
 }
+/* el que entra con su correo es de otro restaurante: se pasa a la base de
+   ese restaurante (la que ya tiene en el equipo) y entra con su usuario */
+async function abrirNegocioDeUsuario(negLog,em,pw,pf){
+  if(S.outbox.length && navigator.onLine && S.cfg.fbOn){ try{ await flushOutbox(true); }catch(e){} }
+  const dbs=lsJSON('pos_dbs',{});
+  /* la base abierta es la del restaurante actual; ninguna otra apunta a ella */
+  Object.keys(dbs).forEach(k=>{ if(dbs[k]===DBNAME && k!==S.cfg.fbNegocio) delete dbs[k]; });
+  dbs[S.cfg.fbNegocio]=DBNAME;
+  if(nombreBaseDe(negLog)===DBNAME || dbs[negLog]===DBNAME)
+    dbs[negLog]='pos_restaurante_'+String(negLog).replace(/[^\w-]/g,'_')+'_'+Date.now();
+  lsSet('pos_dbs',dbs);
+  const lleva={fbNegocio:negLog}; CFG_EQUIPO.forEach(k=>{ if(S.cfg[k]!==undefined) lleva[k]=S.cfg[k]; });
+  lsSet('pos_limpieza',lleva);
+  const tmp={}; await fijarClave(tmp,pw);
+  const rol=['admin','cajero','mesero'].indexOf(pf.rol)>=0? pf.rol : 'cajero';
+  lsSet('pos_cambio_neg',{neg:negLog, email:em, nombre:pf.nombre||em, rol:rol,
+    sal:tmp.sal, clave:tmp.clave, uidNube:pf.uid||pf.id||''});
+  try{ localStorage.setItem('pos_neg',negLog); }catch(e){}
+  if(S.outbox.length) toast('Quedan '+S.outbox.length+' cambios de '+(S.cfg.nombre||'este restaurante')+
+    ' sin subir: se suben cuando alguien de ese restaurante vuelva a entrar con internet.','warn',6000);
+  if($('#lgsub')) $('#lgsub').textContent='Abriendo '+nombreNegocio(negLog)+'…';
+  setTimeout(()=>location.reload(),400);
+}
 /* al arrancar en el restaurante nuevo: entra con el mismo usuario y, si es
    la primera vez, descarga todo */
 async function terminarCambioNegocio(){
@@ -9398,12 +9946,13 @@ async function terminarCambioNegocio(){
   }
   /* el mismo usuario, con su misma clave para entrar sin internet */
   let u=usuarioPorCorreo(h.email);
-  const rol=['admin','cajero','mesero'].indexOf(h.rol)>=0? h.rol : 'admin';
+  const rol=['admin','cajero','mesero'].indexOf(h.rol)>=0? h.rol : 'cajero';
   if(!u){ u={id:uid('u'),nombre:h.nombre||h.email,email:h.email,rol:rol,activo:true}; }
-  u.rol=rol; u.activo=true; if(h.clave && !u.clave){ u.sal=h.sal; u.clave=h.clave; }
+  u.rol=rol; u.activo=true; if(h.clave){ u.sal=h.sal; u.clave=h.clave; }
   if(h.uidNube) u.uidNube=h.uidNube;
   put('usuarios',u);
   S.turno=turnoAbierto();
+  repararNombreNegocio();
   login(u);
   toast('🏪 Estás en '+(S.cfg.nombre||nombreNegocio(h.neg)),'ok',4000);
   if(!primera && navigator.onLine && S.cfg.fbOn) setTimeout(()=>{ pullCloud(); scheduleSync(500); },800);
@@ -9576,7 +10125,7 @@ function relojAtrasado(){ return marcaReloj()-Date.now() > 6*3600000; }
 function guardarLicencia(ficha,negocioId){
   if(!ficha) return;
   escribirLicencia({ negocio:negocioId||ficha.id||S.cfg.fbNegocio||'',
-    nombre:ficha.nombre||S.cfg.nombre||'', vence:ficha.vence||'',
+    nombre:ficha.nombre||lsJSON('pos_negnombres',{})[negocioId||ficha.id||S.cfg.fbNegocio||'']||'', vence:ficha.vence||'',
     activo:ficha.activo!==false, plan:ficha.plan||'',
     venceMs:venceMsDe(ficha.vence), revisadoMs:Date.now() });
   tocarReloj();
@@ -10122,7 +10671,7 @@ function limpiarEquipo(recargar,autorizado){
    'modoImp','comandaAncho','letra','nombre','simbolo','decimales','respaldoCierre'].forEach(k=>{
      if(S.cfg[k]!==undefined) guardar[k]=S.cfg[k]; });
   const keep={};
-  ['pos_fb','pos_perfil','pos_lic','pos_reloj','pos_neg','pos_dbs','pos_lics','pos_negnombres','pos_equipo'].forEach(k=>{
+  ['pos_fb','pos_perfil','pos_lic','pos_reloj','pos_neg','pos_dbs','pos_lics','pos_negnombres','pos_negnombres_ts','pos_equipo'].forEach(k=>{
     try{ const v=localStorage.getItem(k); if(v!=null) keep[k]=v; }catch(e){} });
   try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf('pos_')===0) localStorage.removeItem(k); }); }catch(e){}
   try{ localStorage.setItem('pos_limpieza',JSON.stringify(guardar)); }catch(e){}
@@ -10290,7 +10839,17 @@ async function ingresar(){
           return terminar(); }
         if(ficha && !vigente(ficha)){ paintLogin(); mBloqueo(ficha); return terminar(); }
         const cambio = negLog && S.cfg.fbNegocio!==negLog;
-        if(cambio || !S.meta.pull || !Object.keys(S.meta.pull).length) await entrarANegocio(negLog,null);
+        /* Usuario de OTRO restaurante: antes se borraba todo y se bajaba completo
+           de la nube en cada cambio (miles de lecturas). Ahora cada restaurante
+           tiene su propia base en el equipo: se abre la suya y solo baja lo nuevo. */
+        if(cambio && S.cfg.fbNegocio){
+          await abrirNegocioDeUsuario(negLog,em,pw,pf);
+          return;
+        }
+        if(cambio || !S.meta.pull || !Object.keys(S.meta.pull).length){
+          if((await entrarANegocio(negLog,null))===false){ fbSalir();
+            lgError('Este equipo tiene ventas de otro restaurante sin subir. Conéctate a internet y vuelve a intentar.');
+            return terminar(); } }
         else await pullCloud();
         /* deja su acceso guardado en el local para que después entre sin internet.
            OJO: el rol es el que diga la nube (mesero, cajero o admin), nunca
@@ -10826,6 +11385,7 @@ async function boot(){
   await Promise.all(COLL.concat(['outbox']).map(async k=>{ S[k]=await idbAll(k); }));
   S.turno=turnoAbierto();
   cargarPerfilLocal();
+  repararNombreNegocio();
   if(!S.suscripcion){ const fl=fichaLocal(); if(fl) S.suscripcion=fl; }
   tocarReloj();
   migrarAPeps();
@@ -10835,8 +11395,10 @@ async function boot(){
 
   let last=null; try{ last=localStorage.getItem('pos_user'); }catch(e){}
   const u=last? byId('usuarios',last):null;
-  if(lsJSON('pos_cambio_neg',null)){ if(await terminarCambioNegocio()) last='__ok__'; }
+  let huboCambio=false;
+  if(lsJSON('pos_cambio_neg',null)){ huboCambio=true; if(await terminarCambioNegocio()) last='__ok__'; }
   if(last==='__ok__'){ /* ya entró en el restaurante nuevo */ }
+  else if(huboCambio){ /* no se pudo terminar: que entre con su clave, no con el usuario del otro restaurante */ }
   else if(u && u.activo) login(u);
   else if(hayLegado()) setTimeout(mRecuperarAcceso,500);
 
