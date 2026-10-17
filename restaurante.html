@@ -1003,7 +1003,7 @@ function aplicarRemoto(coll,o){
     if(String(S.cfg.upd||'')>=String(o.upd||'')) return false;
     const local={}; CFG_LOCAL.forEach(k=> local[k]=S.cfg[k]);
     S.cfg=Object.assign({},S.cfg,o,local); S.cfg.id='cfg';
-    idbPut('config',S.cfg); applyCfg(); return true;
+    idbPut('config',S.cfg); applyCfg(); repararNombreNegocio(); return true;
   }
   if(!S[coll]) return false;
   const i=S[coll].findIndex(x=>x.id===o.id);
@@ -6904,7 +6904,8 @@ function mAbrirCaja(){
         }
         const t={id:uid('t'),apertura:now(),cierre:'',usuarioId:S.user?S.user.id:'',cuentaId:cta,
           base:round(saldo,2), saldoApertura:round(saldo,2), estado:'abierto',
-          esperado:0,contado:0,diferencia:0,nota:''};
+          esperado:0,contado:0,diferencia:0,nota:'',
+          negocioId:S.cfg.fbNegocio||'', negocio:nombreDelNegocio()};
         put('turnos',t); S.turno=t; closeModal(); render();
         toast('Caja abierta con '+money(saldo)+' · '+nameOf('cuentas',cta),'ok',4000);
       };
@@ -6986,6 +6987,7 @@ function mCerrarCaja(){
           movTes(t.cuentaId, t.diferencia>0?'ingreso':'egreso', Math.abs(t.diferencia),
             (t.diferencia>0?'Sobrante':'Faltante')+' en el cierre de caja','ajuste de caja','cierre',t.id);
         t.cierre=now(); t.estado='cerrado'; t.nota=$('#n',m).value;
+        if(!t.negocio){ t.negocioId=S.cfg.fbNegocio||''; t.negocio=nombreDelNegocio(); }
         t.ventas=D.totalVentas; t.ventaEfectivo=D.ventaEfe; t.salidas=D.salidas;
         t.trasIn=D.trasIn; t.trasOut=D.trasOut;
         t.otrosMedios=D.porMedio; t.bancos=D.bancos; t.saldoCierre=t.contado;
@@ -7071,7 +7073,8 @@ function textoCierre(t,D,contado,comoCierre){
   const otras=ms.filter(m=>m.tipo==='ingreso' && m.refTipo!=='venta' && m.categoria!=='traslado');
 
   const medios=D.porMedio||{};
-  let x='*'+String(S.cfg.nombre||'POS').toUpperCase()+'*\n';
+  const negT = (t.negocio && (!t.negocioId || t.negocioId===S.cfg.fbNegocio))? t.negocio : nombreDelNegocio();
+  let x='*'+String(negT||'POS').toUpperCase()+'*\n';
   x+= enCurso? '*RELACIÓN DEL TURNO (caja abierta)*\n' : '*CIERRE DE CAJA*\n';
   x+='Abrió: '+fdate(ini,true)+'\n';
   x+=(enCurso? 'Corte: ':'Cerró: ')+fdate(fin,true)+'\n';
@@ -7777,7 +7780,7 @@ function textoResumen(d1,d2){
   const r=resumenVentas(d1,d2);
   const mismoDia=d1===d2;
   const li=(a,b)=>a+': '+b;
-  let t='*'+(S.cfg.nombre||'POS').toUpperCase()+'*\n';
+  let t='*'+(nombreDelNegocio()||'POS').toUpperCase()+'*\n';
   t+='Resumen de ventas · '+(mismoDia? fdate(d1) : fdate(d1)+' al '+fdate(d2))+'\n\n';
   t+='*VENTAS: '+money(r.total)+'*  (facturado)\n';
   t+=li('Facturas',r.vs.length)+'\n';
@@ -9285,11 +9288,31 @@ async function resolverPerfil(){
 
 /* cambia el restaurante activo de este equipo: borra lo local y baja el del negocio */
 async function entrarANegocio(id,nombre){
+  const viejo=S.cfg.fbNegocio||'';
+  const esOtro = !!(viejo && viejo!==id);
+  /* lo pendiente del restaurante actual se sube ANTES de borrar: si no, se perdía */
+  if(S.outbox.length && navigator.onLine && S.cfg.fbOn){ try{ await flushOutbox(true); }catch(e){} }
+  if(esOtro && S.outbox.length){
+    toast('Hay '+S.outbox.length+' cambios de '+(S.cfg.nombre||'este restaurante')+
+      ' sin subir. Conéctate a internet para subirlos antes de cambiar de restaurante.','bad',8000);
+    return false;
+  }
+  /* esta base deja de ser del restaurante anterior y pasa a ser la del nuevo,
+     para que al volver al anterior no abra los datos de este (se cruzaban) */
+  try{
+    const dbs=lsJSON('pos_dbs',{});
+    Object.keys(dbs).forEach(k=>{ if(dbs[k]===DBNAME && k!==id) delete dbs[k]; });
+    if(esOtro && nombreBaseDe(viejo)===DBNAME) dbs[viejo]='pos_restaurante_'+String(viejo).replace(/[^\w-]/g,'_')+'_'+Date.now();
+    dbs[id]=DBNAME; lsSet('pos_dbs',dbs);
+    localStorage.setItem('pos_neg',id);
+  }catch(e){}
   COLL.forEach(k=>{ S[k].forEach(o=>idbDel(k,o.id)); S[k]=[]; });
   S.outbox.forEach(o=>idbDel('outbox',o.id)); S.outbox=[];
   S.meta.pull={}; S.meta.cons={}; saveMeta();
   S.cart=null; S.turno=null;
   S.cfg.fbNegocio=id;
+  /* nunca se deja el nombre del restaurante anterior puesto en este */
+  if(esOtro) S.cfg.nombre = nombre || lsJSON('pos_negnombres',{})[id] || 'Mi Restaurante';
   saveCfg();
   toast('Cargando '+(nombre||id)+'…');
   await pullCloud(true);
@@ -9308,7 +9331,9 @@ async function entrarANegocio(id,nombre){
   migrarAPeps();
   S.turno=turnoAbierto();
   if(S.user && !byId('usuarios',S.user.id) && !S.user._super) S.user=null;
+  repararNombreNegocio();
   render();
+  return true;
 }
 
 /* ======================= CAMBIAR DE RESTAURANTE =======================
@@ -9319,6 +9344,23 @@ const CFG_EQUIPO=['fbApiKey','fbProjectId','fbOn','autoSync','pullSeg','tema','t
   'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp','letra'];
 function nombreNegocio(id){ const nn=lsJSON('pos_negnombres',{});
   return nn[id] || (id===S.cfg.fbNegocio? S.cfg.nombre : '') || id; }
+/* El nombre del restaurante en el que está este equipo. Si el nombre
+   guardado en la configuración es el de OTRO restaurante (pasaba al cambiar
+   de restaurante), se usa el de la ficha del restaurante actual. */
+function nombreDelNegocio(){
+  const id=S.cfg.fbNegocio, nom=S.cfg.nombre||'';
+  if(!id) return nom||'POS';
+  const nn=lsJSON('pos_negnombres',{});
+  const esDeOtro = nom && Object.keys(nn).some(k=>k!==id && normTxt(nn[k]||'')===normTxt(nom));
+  if((esDeOtro || !nom || nom==='Mi Restaurante') && nn[id]) return nn[id];
+  return nom||nn[id]||'POS';
+}
+function repararNombreNegocio(){
+  try{ const bueno=nombreDelNegocio();
+    if(S.cfg.fbNegocio && bueno && bueno!=='POS' && bueno!==S.cfg.nombre){
+      console.warn('Nombre corregido:',S.cfg.nombre,'→',bueno);
+      S.cfg.nombre=bueno; saveCfg(); } }catch(e){}
+}
 function puedeCambiarNegocio(){ return !!(S.user && S.perfil && negociosDe(S.perfil).length>1); }
 function esAdminNube(){ return !!(S.user && (S.user._super || S.user.rol==='admin')); }
 async function refrescarNombresNegocios(){
@@ -9404,6 +9446,7 @@ async function terminarCambioNegocio(){
   if(h.uidNube) u.uidNube=h.uidNube;
   put('usuarios',u);
   S.turno=turnoAbierto();
+  repararNombreNegocio();
   login(u);
   toast('🏪 Estás en '+(S.cfg.nombre||nombreNegocio(h.neg)),'ok',4000);
   if(!primera && navigator.onLine && S.cfg.fbOn) setTimeout(()=>{ pullCloud(); scheduleSync(500); },800);
@@ -9576,7 +9619,7 @@ function relojAtrasado(){ return marcaReloj()-Date.now() > 6*3600000; }
 function guardarLicencia(ficha,negocioId){
   if(!ficha) return;
   escribirLicencia({ negocio:negocioId||ficha.id||S.cfg.fbNegocio||'',
-    nombre:ficha.nombre||S.cfg.nombre||'', vence:ficha.vence||'',
+    nombre:ficha.nombre||lsJSON('pos_negnombres',{})[negocioId||ficha.id||S.cfg.fbNegocio||'']||'', vence:ficha.vence||'',
     activo:ficha.activo!==false, plan:ficha.plan||'',
     venceMs:venceMsDe(ficha.vence), revisadoMs:Date.now() });
   tocarReloj();
@@ -10290,7 +10333,10 @@ async function ingresar(){
           return terminar(); }
         if(ficha && !vigente(ficha)){ paintLogin(); mBloqueo(ficha); return terminar(); }
         const cambio = negLog && S.cfg.fbNegocio!==negLog;
-        if(cambio || !S.meta.pull || !Object.keys(S.meta.pull).length) await entrarANegocio(negLog,null);
+        if(cambio || !S.meta.pull || !Object.keys(S.meta.pull).length){
+          if((await entrarANegocio(negLog,null))===false){ fbSalir();
+            lgError('Este equipo tiene ventas de otro restaurante sin subir. Conéctate a internet y vuelve a intentar.');
+            return terminar(); } }
         else await pullCloud();
         /* deja su acceso guardado en el local para que después entre sin internet.
            OJO: el rol es el que diga la nube (mesero, cajero o admin), nunca
@@ -10826,6 +10872,7 @@ async function boot(){
   await Promise.all(COLL.concat(['outbox']).map(async k=>{ S[k]=await idbAll(k); }));
   S.turno=turnoAbierto();
   cargarPerfilLocal();
+  repararNombreNegocio();
   if(!S.suscripcion){ const fl=fichaLocal(); if(fl) S.suscripcion=fl; }
   tocarReloj();
   migrarAPeps();
