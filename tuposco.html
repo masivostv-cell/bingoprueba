@@ -1667,12 +1667,65 @@ function migrarAPeps(){
 }
 
 /* ---- terceros: a quién se le pagó o de quién se recibió ---- */
+/* Un solo listado de personas: si alguien es cliente y proveedor (o empleado)
+   con el mismo nombre, sale UNA vez y se le ven todas sus deudas. También
+   salen los que tienen deudas aunque su ficha esté apagada o se haya perdido
+   (antes no aparecían y no se podía cobrarles ni pagarles). */
 function listaTerceros(){
-  const l=[];
-  S.proveedores.filter(x=>x.activo!==false).forEach(x=>l.push({id:'proveedor:'+x.id,nombre:x.nombre,tipo:'Proveedor'}));
-  S.clientes.filter(x=>x.activo!==false).forEach(x=>l.push({id:'cliente:'+x.id,nombre:x.nombre,tipo:'Cliente'}));
-  S.usuarios.filter(x=>x.activo!==false).forEach(x=>l.push({id:'empleado:'+x.id,nombre:x.nombre,tipo:'Empleado'}));
-  return l;
+  const map={}, out=[];
+  const meter=(tid,nombre,tipo)=>{
+    nombre=String(nombre||'').trim(); if(!nombre) return;
+    const k=normTxt(nombre).replace(/\s+/g,' ');
+    let e=map[k];
+    if(!e){ e=map[k]={id:tid,nombre:nombre,tipos:[],ids:[]}; out.push(e); }
+    if(e.ids.indexOf(tid)<0) e.ids.push(tid);
+    if(e.tipos.indexOf(tipo)<0) e.tipos.push(tipo);
+    /* el id principal: proveedor > cliente > empleado (compatibilidad con lo guardado) */
+    const rango=x=>x.indexOf('proveedor:')===0?0 : x.indexOf('cliente:')===0?1 : 2;
+    if(rango(tid)<rango(e.id)) e.id=tid;
+  };
+  S.proveedores.filter(x=>x.activo!==false).forEach(x=>meter('proveedor:'+x.id,x.nombre,'Proveedor'));
+  S.clientes.filter(x=>x.activo!==false).forEach(x=>meter('cliente:'+x.id,x.nombre,'Cliente'));
+  S.usuarios.filter(x=>x.activo!==false).forEach(x=>meter('empleado:'+x.id,x.nombre,'Empleado'));
+  /* los que deben o a quienes se les debe, tengan o no ficha activa */
+  try{
+    cxc().forEach(d=>{ if(d.esOtro){ if(d.terceroId) meter(d.terceroId,d.terceroNombre||nombreTercero(d),'Cliente'); }
+      else if(d.clienteId) meter('cliente:'+d.clienteId, nameOf('clientes',d.clienteId)!=='—'&&nameOf('clientes',d.clienteId) || d.clienteNombre || pistaNombre(d),'Cliente'); });
+    cxp().forEach(d=>{ if(d.esOtro){ if(d.terceroId) meter(d.terceroId,d.terceroNombre||nombreTercero(d),'Proveedor'); }
+      else if(d.proveedorId) meter('proveedor:'+d.proveedorId, nameOf('proveedores',d.proveedorId)!=='—'&&nameOf('proveedores',d.proveedorId) || d.proveedorNombre || pistaNombre(d),'Proveedor'); });
+  }catch(e){}
+  let DC=[], DP=[]; try{ DC=cxc(); DP=cxp(); }catch(err){}
+  const deuda=(e,docs,esC)=>{ const cli=[],prov=[]; e.ids.forEach(x=>{ const p=String(x).split(':');
+      if(p[0]==='cliente') cli.push(p.slice(1).join(':')); if(p[0]==='proveedor') prov.push(p.slice(1).join(':')); });
+    return round(sum(docs.filter(d=> d.esOtro? e.ids.indexOf(d.terceroId)>=0 : (esC? cli.indexOf(d.clienteId)>=0 : prov.indexOf(d.proveedorId)>=0)),saldoDoc),2); };
+  out.forEach(e=>{
+    let deC=0, deP=0;
+    try{ deC=deuda(e,DC,true); deP=deuda(e,DP,false); }catch(err){}
+    e.tipo=e.tipos.join(' y ')+(deC>0.5? ' · te debe '+money(deC):'')+(deP>0.5? ' · le debes '+money(deP):'');
+    e.deC=deC; e.deP=deP;
+  });
+  return out.sort((a,b)=>(b.deC+b.deP>0.5)-(a.deC+a.deP>0.5) || a.nombre.localeCompare(b.nombre,'es'));
+}
+/* todos los ids (cliente, proveedor, empleado) de la misma persona */
+function idsDeTercero(tid){
+  if(!tid) return [];
+  try{ const e=listaTercerosBase().find(x=>x.id===tid || x.ids.indexOf(tid)>=0); if(e) return e.ids; }catch(err){}
+  return [tid];
+}
+let _ltCache=null, _ltCacheT=0;
+function listaTercerosBase(){
+  /* versión liviana sin calcular deudas (la usa docsDeTercero) */
+  if(_ltCache && Date.now()-_ltCacheT<1500) return _ltCache;
+  const map={}, out=[];
+  const meter=(tid,nombre)=>{ nombre=String(nombre||'').trim(); if(!nombre) return;
+    const k=normTxt(nombre).replace(/\s+/g,' '); let e=map[k];
+    if(!e){ e=map[k]={id:tid,ids:[]}; out.push(e); } if(e.ids.indexOf(tid)<0) e.ids.push(tid);
+    const rango=x=>x.indexOf('proveedor:')===0?0 : x.indexOf('cliente:')===0?1 : 2; if(rango(tid)<rango(e.id)) e.id=tid; };
+  S.proveedores.forEach(x=>meter('proveedor:'+x.id,x.nombre));
+  S.clientes.forEach(x=>meter('cliente:'+x.id,x.nombre));
+  S.usuarios.forEach(x=>meter('empleado:'+x.id,x.nombre));
+  S.otrosdocs.forEach(d=>{ if(d.terceroId) meter(d.terceroId,d.terceroNombre); });
+  _ltCache=out; _ltCacheT=Date.now(); return out;
 }
 function nombreTercero(m){
   if(!m) return '';
@@ -3432,7 +3485,9 @@ function mCobrar(){
           ((S.cfg.impComanda!==false||S.cfg.impTicket!==false)?'checked':'')+'> Imprimir '+
           [S.cfg.impComanda!==false?'comanda':'',S.cfg.impTicket!==false?'ticket':''].filter(Boolean).join(' y ')+'</label>'+
       '</div></div></div>',
-    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri lg" id="ok">Confirmar venta</button>'});
+    footer:'<button class="btn" id="cemp" title="No se cobra: baja del inventario y queda como gasto">🍽️ Comida de empleados</button>'+
+      '<div class="spacer"></div><button class="btn" data-x>Cancelar</button><button class="btn pri lg" id="ok">Confirmar venta</button>'});
+  $('#cemp',m).onclick=()=>{ closeModal(); mComidaEmpleados(); };
 
   function refresh(){
     $('#spag',m).textContent=money(pagado());
@@ -3586,6 +3641,96 @@ function registrarVenta(o){
     (v.nroTurno? ' · Turno '+fmtTurno(v.nroTurno):''),'ok',4500);
   if(o.imprimir!==false) imprimirVenta(v,undefined,pend);
   if(S.view==='pos'){ paintCart(); paintGrid(); buildNav(); } else render();
+}
+
+/* ===================== COMIDA DE EMPLEADOS =====================
+   Lo que se le da de comer al personal no es una venta: no entra plata.
+   Se descuenta del inventario (receta por receta, a su costo real) y el
+   costo queda como GASTO "comida empleados" en la utilidad. Queda guardado
+   en otrosdocs con tipo 'consumo' (no aparece en cartera ni en ventas). */
+function comidasEmpleados(d1,d2){
+  return S.otrosdocs.filter(d=>d.tipo==='consumo' && d.estado!=='anulado' &&
+    (!d1 || dISO(d.fecha)>=d1) && (!d2 || dISO(d.fecha)<=d2));
+}
+/* las comidas como si fueran gastos, para la utilidad y los informes */
+function gastosACredito(d1,d2){
+  return S.otrosdocs.filter(d=>d.gastoCredito && d.tipo==='cxp' && d.estado!=='anulado' &&
+    (!d1 || dISO(d.fecha)>=d1) && (!d2 || dISO(d.fecha)<=d2)).map(d=>({id:d.id, fecha:d.fechaReg||d.fecha, tipo:'egreso', virtual:true,
+    monto:round(Number(d.total)||0,2), categoria:d.categoria||'otros',
+    concepto:(d.concepto||'Gasto a crédito')+' · '+(d.terceroNombre||'')+' ('+d.no+', a crédito)', terceroId:d.terceroId, terceroNombre:d.terceroNombre||''}));
+}
+function gastosComidaEmpleados(d1,d2){
+  return gastosACredito(d1,d2).concat(comidasEmpleados(d1,d2).filter(d=>(Number(d.costo)||0)>0).map(d=>({id:d.id, fecha:d.fecha, tipo:'egreso', virtual:true,
+    monto:round(Number(d.costo)||0,2), categoria:'comida empleados',
+    concepto:'Comida de empleados · '+(d.empleado||'')+' ('+d.no+')', terceroNombre:d.empleado||''})));
+}
+function mComidaEmpleados(){
+  const c=S.cart; if(!c || !(c.items||[]).length) return toast('Agrega primero lo que se van a comer','warn');
+  const pend=pendientesComanda(c);
+  if(pend.nuevos.length || pend.cambios.length)
+    return toast('Primero mándalo a la cocina con el botón «Cocina» y después lo registras como comida de empleados','warn',6500);
+  const emps=S.usuarios.filter(u=>u.activo!==false);
+  const costoEst=round(sum(c.items,i=>{ const p=byId('productos',i.productoId); return (p? costoProducto(p):0)*i.cant; }),2);
+  modal({title:'🍽️ Comida de empleados',size:'slim',
+    body:'<div class="hintx" style="margin-bottom:10px">No se cobra. Los ingredientes <b>bajan del inventario</b> y el costo '+
+      (verCostos()? '(<b>'+money(costoEst)+'</b> aprox.) ':'')+'queda como <b>gasto de comida de empleados</b>.</div>'+
+      '<div class="f" style="margin-bottom:10px"><label>¿Para quién es?</label><select id="ce_u">'+
+        '<option value="">— Escoge —</option>'+emps.map(u=>'<option value="'+u.id+'">'+esc(u.nombre)+'</option>').join('')+
+        '<option value="otro">Otra persona…</option></select></div>'+
+      '<div class="f hide" id="ce_ob" style="margin-bottom:10px"><label>Nombre</label><input id="ce_o" placeholder="Nombre del empleado"></div>'+
+      '<div class="f"><label>Nota (opcional)</label><input id="ce_n" placeholder="Ej: almuerzo, turno de la noche"></div>'+
+      '<div class="tiny muted" style="margin-top:10px">'+c.items.map(i=>esc(i.cant+' × '+i.nombre)).join(' · ')+'</div>',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ce_ok">Registrar comida</button>',
+    onOpen:m=>{
+      $('#ce_u',m).onchange=()=>$('#ce_ob',m).classList.toggle('hide',$('#ce_u',m).value!=='otro');
+      $('#ce_ok',m).onclick=()=>{
+        const sel=$('#ce_u',m).value;
+        const nombre= sel==='otro'? $('#ce_o',m).value.trim() : (sel? nameOf('usuarios',sel) : '');
+        if(!nombre) return toast('Escoge para quién es la comida','warn');
+        registrarComidaEmpleados(nombre, sel && sel!=='otro'? sel : '', $('#ce_n',m).value.trim());
+        closeModal();
+      };
+    }});
+}
+function registrarComidaEmpleados(nombre,usuarioEmp,nota){
+  const c=S.cart; const id=uid('ce');
+  const items=c.items.map(i=>({productoId:i.productoId,nombre:i.nombre,precio:i.precio,cant:i.cant,nota:i.nota,costo:0,costoTotal:0}));
+  const cons=consumirItems(items,'consumo',id);
+  const d={id:id, no:nextNo('consumo','CE-'), tipo:'consumo', esOtro:true, fecha:now(),
+    empleado:nombre, empleadoId:usuarioEmp||'', items:items, consumo:cons.consumo, costo:cons.total,
+    valorCarta:round(sum(items,i=>i.precio*i.cant),2), nota:nota||'', estado:'registrado',
+    mesaId:c.mesaId||'', turnoId:S.turno?S.turno.id:'', usuarioId:S.user?S.user.id:''};
+  put('otrosdocs',d);
+  if(c.comandaId){ const cm=byId('comandas',c.comandaId); if(cm){ cm.estado='cerrada'; cm.consumoId=d.id; put('comandas',cm); } }
+  if(c.mesaId) limpiarDomicilio(c.mesaId);
+  S.cart=newCart(); abrirCarrito(false);
+  toast('🍽️ Comida de '+nombre+' registrada'+(verCostos()? ' · costo '+money(d.costo):'')+' · bajó del inventario','ok',5000);
+  if(S.view==='pos'){ paintCart(); paintGrid(); buildNav(); } else render();
+}
+function borrarComidaEmpleados(d){
+  if(!puedeBorrar()) return pedirAlAdmin('borrar comidas de empleados');
+  confirmar('¿Borrar la comida '+d.no+' de '+d.empleado+'? Los ingredientes vuelven al inventario.',()=>{
+    devolverConsumo(d,'borrado'); borrarDerivados('',d.id); remove('otrosdocs',d.id);
+    toast('Comida '+d.no+' borrada','ok'); render(); mListaComidas();
+  },true);
+}
+function mListaComidas(){
+  const f=_repF||{d1:todayISO().slice(0,8)+'01',d2:todayISO()};
+  const l=comidasEmpleados(f.d1,f.d2).sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+  const porPers={}; l.forEach(d=>{ porPers[d.empleado]=(porPers[d.empleado]||0)+(Number(d.costo)||0); });
+  modal({title:'🍽️ Comidas de empleados · '+fdate(f.d1)+' al '+fdate(f.d2),size:'wide',
+    body:'<div class="kpis" style="margin-bottom:10px">'+kpi('Comidas',num(l.length,0),'','')+
+        kpi('Costo total (gasto)',money(sum(l,d=>d.costo||0)),'','bad')+
+        kpi('Valor en carta',money(sum(l,d=>d.valorCarta||0)),'lo que costaría vendido','')+'</div>'+
+      (Object.keys(porPers).length? '<div class="tiny" style="margin-bottom:10px"><b>Por persona:</b> '+
+        Object.keys(porPers).sort((a,b)=>porPers[b]-porPers[a]).map(k=>esc(k)+' '+money(porPers[k])).join(' · ')+'</div>':'')+
+      tbl([{t:'Fecha',f:d=>fdate(d.fecha,true)},{t:'No.',f:d=>esc(d.no)},{t:'Empleado',f:d=>'<b>'+esc(d.empleado)+'</b>'},
+        {t:'Qué comió',f:d=>esc((d.items||[]).map(i=>i.cant+' '+i.nombre).join(', '))+(d.nota?' <span class="muted">· '+esc(d.nota)+'</span>':'')},
+        {t:'Costo',num:1,f:d=>money(d.costo||0)},
+        puedeBorrar()? {t:'',f:d=>'<button class="btn ghost sm" data-bce="'+d.id+'" title="Borrar">🗑️</button>'} : null],
+        l,{empty:'No hay comidas de empleados en estas fechas',icon:'🍽️'}),
+    footer:'<button class="btn" data-x>Cerrar</button>',
+    onOpen:m=>{ $$('[data-bce]',m).forEach(b=>b.onclick=()=>{ const d=byId('otrosdocs',b.dataset.bce); closeModal(); borrarComidaEmpleados(d); }); }});
 }
 
 /* Borrar la venta, no dejarla anulada estorbando: se devuelve el inventario,
@@ -4665,7 +4810,8 @@ function verTicket(v){
 function viewMesas(vw){
   const abiertas=S.comandas.filter(c=>c.estado==='abierta');
   sub(abiertas.length+' cuenta(s) abierta(s)');
-  topact('<button class="btn pri sm" id="nd">🛵 Domicilio</button><button class="btn sm" id="nm">+ Mesa</button>');
+  topact('<button class="btn pri sm" id="nd">🛵 Domicilio</button><button class="btn sm" id="nm">+ Mesa</button>'+
+    (puedeEditar()? '<button class="btn sm" id="edm">✏️ Editar mesas</button>':''));
   const zonas={};
   S.mesas.filter(m=>m.activo).forEach(m=>{ (zonas[m.zona||'General']=zonas[m.zona||'General']||[]).push(m); });
   const peso=z=> z===ZONA_DOM?0 : z===ZONA_LLEVAR?1 : 2;
@@ -4696,6 +4842,27 @@ function viewMesas(vw){
   $$('.mesa',vw).forEach(b=> b.onclick=()=>abrirMesa(b.dataset.m));
   $('#nm').onclick=()=>edMesa(null);
   $('#nd').onclick=()=>mNuevoDomicilio();
+  if($('#edm')) $('#edm').onclick=mEditarMesas;
+}
+/* lista de mesas para cambiarles el nombre, la zona o los puestos (solo admin) */
+function mEditarMesas(){
+  if(!puedeEditar()) return pedirAlAdmin('editar las mesas');
+  const fijas=S.mesas.filter(m=>!m.temporal && !esDomicilio(m) && !esLlevar(m))
+    .sort((a,b)=>String(a.zona||'').localeCompare(String(b.zona||'')) || String(a.nombre).localeCompare(String(b.nombre),'es',{numeric:true}));
+  modal({title:'✏️ Editar mesas',size:'slim',
+    body:'<div class="hintx" style="margin-bottom:8px">Toca una mesa para cambiarle el nombre, la zona o los puestos. '+
+      'Los pedidos abiertos siguen en su mesa aunque le cambies el nombre.</div>'+
+      (fijas.length? fijas.map(m=>{ const ab=S.comandas.some(c=>c.estado==='abierta'&&c.mesaId===m.id);
+        return '<div class="row" style="gap:10px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center;'+(m.activo===false?'opacity:.55':'')+'">'+
+          '<div style="flex:1"><b>'+esc(m.nombre)+'</b> <span class="tiny muted">'+esc(m.zona||'General')+' · '+(m.capacidad||0)+' puestos'+
+          (m.activo===false?' · oculta':'')+'</span>'+(ab?' <span class="pill ok">con pedido</span>':'')+'</div>'+
+          '<button class="btn sm" data-em="'+m.id+'">✎ Editar</button></div>'; }).join('')
+        : '<div class="empty">No hay mesas creadas</div>'),
+    footer:'<button class="btn" data-x>Cerrar</button><button class="btn pri" id="emn">+ Nueva mesa</button>',
+    onOpen:mo=>{
+      $$('[data-em]',mo).forEach(b=>b.onclick=()=>{ closeModal(); edMesa(byId('mesas',b.dataset.em),mEditarMesas); });
+      $('#emn',mo).onclick=()=>{ closeModal(); edMesa(null,mEditarMesas); };
+    }});
 }
 function mNuevoDomicilio(){
   modal({title:'Nuevo domicilio',size:'slim',
@@ -4727,7 +4894,7 @@ function abrirMesa(mesaId){
   go('pos');
   if(esMovil() && cm) setTimeout(()=>abrirCarrito(true),120);
 }
-function edMesa(m){
+function edMesa(m,despues){
   const ed=m||{id:uid('m'),nombre:'',zona:'Salón',capacidad:4,activo:true};
   modal({title:m?'Editar mesa':'Nueva mesa',size:'slim',
     body:'<div class="f" style="margin-bottom:10px"><label>Nombre</label><input id="n" value="'+esc(ed.nombre)+'"></div>'+
@@ -4738,7 +4905,8 @@ function edMesa(m){
       '<div class="spacer"></div><button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
     onOpen:mo=>{
       $('#ok',mo).onclick=()=>{ ed.nombre=$('#n',mo).value.trim()||'Mesa'; ed.zona=$('#z',mo).value.trim()||'General';
-        ed.capacidad=toN($('#c',mo).value)||4; put('mesas',ed); closeModal(); render(); toast('Mesa guardada','ok'); };
+        ed.capacidad=toN($('#c',mo).value)||4; put('mesas',ed); closeModal(); render(); toast('Mesa guardada','ok');
+        if(typeof despues==='function') despues(); };
       if($('#del',mo)) $('#del',mo).onclick=()=>{ closeModal(); confirmar('¿Eliminar mesa?',()=>{remove('mesas',ed.id);render();},true); };
     }});
 }
@@ -5430,7 +5598,7 @@ function arreglarCartera(){
     if(d.estado!==st){ d.estado=st; put(coleccionDoc(d),d); out.push(d.no+' quedó como '+st); }
   });
   S.otrosdocs.forEach(d=>{
-    if(d.estado==='anulado') return;
+    if(d.estado==='anulado' || d.tipo==='consumo') return;
     const st= saldoDoc(d)<=0.5? 'pagado':'pendiente';
     if(d.estado!==st){ d.estado=st; put('otrosdocs',d); out.push(d.no+' quedó como '+st); }
   });
@@ -6147,11 +6315,14 @@ function comprobanteOtro(d,copia){
 /* cuentas por cobrar (ingreso) o por pagar (egreso) de un tercero del combo */
 function docsDeTercero(tid,t){
   if(!tid || (t!=='ingreso' && t!=='egreso')) return [];
-  const p=String(tid).split(':'), tp=p[0], id=p.slice(1).join(':');
   const esC=t==='ingreso';
+  /* la misma persona puede estar como cliente, proveedor y empleado */
+  const ids=idsDeTercero(tid);
+  const cli=[], prov=[];
+  ids.forEach(x=>{ const p=String(x).split(':'); if(p[0]==='cliente') cli.push(p.slice(1).join(':')); if(p[0]==='proveedor') prov.push(p.slice(1).join(':')); });
   return (esC? cxc():cxp()).filter(d=>{
-    if(d.esOtro) return d.terceroId===tid;
-    return esC? (tp==='cliente' && d.clienteId===id) : (tp==='proveedor' && d.proveedorId===id);
+    if(d.esOtro) return ids.indexOf(d.terceroId)>=0;
+    return esC? cli.indexOf(d.clienteId)>=0 : prov.indexOf(d.proveedorId)>=0;
   }).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
 }
 /* registra un abono por cada documento, igual que el cobro desde Cartera */
@@ -6460,6 +6631,7 @@ function mCuentas(){
     }});
 }
 function edCuenta(c,despues){
+  if(c && !puedeEditar()) return pedirAlAdmin('cambiar el nombre o el tipo de una caja o banco');
   const ed=c||{id:uid('ct'),nombre:'',tipo:'banco',medio:'transferencia',saldoInicial:0,activo:true};
   modal({title:c?'Editar cuenta':'Nueva caja o banco',size:'slim',
     body:'<div class="f" style="margin-bottom:10px"><label>Nombre</label><input id="n" value="'+esc(ed.nombre)+'"></div>'+
@@ -6475,7 +6647,16 @@ function edCuenta(c,despues){
       'El <i>medio asociado</i> es el que se propone al cobrar o al pagar; si hay varias con el mismo medio, '+
       'la app te deja escoger en el momento.</div>',
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
-    onOpen:m=>{ $('#ok',m).onclick=()=>{ ed.nombre=$('#n',m).value.trim()||'Cuenta'; ed.tipo=$('#t',m).value;
+    onOpen:m=>{
+      /* al pasar de caja a banco (o al revés) se propone el medio que corresponde */
+      $('#t',m).onchange=()=>{ const t=$('#t',m).value, me=$('#m',m);
+        if(t==='banco' && me.value==='efectivo') me.value='transferencia';
+        if(t==='caja') me.value='efectivo'; };
+      $('#ok',m).onclick=()=>{
+      const tipoNuevo=$('#t',m).value;
+      if(c && c.tipo==='caja' && tipoNuevo!=='caja' && S.turnos.some(t=>t.estado==='abierto' && t.cuentaId===c.id))
+        return toast('Esta caja tiene un turno abierto. Ciérrala primero y luego cámbiala a banco.','warn',6500);
+      ed.nombre=$('#n',m).value.trim()||'Cuenta'; ed.tipo=tipoNuevo;
       ed.medio=$('#m',m).value; ed.saldoInicial=toN($('#s',m).value);
       if($('#a',m)){ const quiere=$('#a',m).checked;
         if(c && c.activo!==false && !quiere){ const pq=porQueNoDeshabilitar(c); if(pq) return toast(pq,'warn',7000); }
@@ -6491,8 +6672,15 @@ function mMovimiento(){
         '<option value="egreso">Egreso (sale plata)</option>'+
         '<option value="traslado">Traslado entre cuentas</option></select></div>'+
       '<div class="f"><label>Monto</label><input id="mt" type="number" step="any"></div></div>'+
-      '<div class="f" style="margin-bottom:10px"><label>Cuenta</label><select id="c1">'+
-        selOpts(S.cuentas.filter(c=>c.activo!==false),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
+      '<div class="f" style="margin-bottom:10px"><label id="c1l">Cuenta</label><select id="c1">'+
+        selOpts(S.cuentas.filter(c=>c.activo!==false),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+
+        '<option value="__credito" id="optcred" hidden disabled>📕 A crédito · no sale plata, queda por pagar</option></select></div>'+
+      '<div id="crbox" class="card hide" style="background:var(--panel2);margin-bottom:10px"><div class="bd">'+
+        '<b>📕 Gasto a crédito</b><div class="tiny" style="margin-top:4px">No sale plata de ninguna caja ni banco. El gasto se registra hoy '+
+        '(cuenta en la utilidad) y queda en <b>Cartera ▸ por pagar</b> a nombre del tercero. Cuando lo pagues, lo buscas en una '+
+        '<b>salida</b> y marcas la factura.</div>'+
+        '<div class="f" style="margin-top:8px"><label>¿A cuántos días lo vas a pagar?</label>'+
+        '<input id="crplz" type="number" value="30" style="max-width:110px"></div></div></div>'+
       '<div class="f hide" id="c2b" style="margin-bottom:10px"><label>Cuenta destino</label><select id="c2">'+
         selOpts(S.cuentas.filter(c=>c.activo!==false),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
       '<div id="nocuenta">'+
@@ -6519,13 +6707,26 @@ function mMovimiento(){
         const t=$('#t',m).value, box=$('#docsbox',m);
         docs=docsDeTercero(cbT.valor(),t);
         Object.keys(sel).forEach(k=>{ if(!docs.some(d=>d.id===k)) delete sel[k]; });
-        if(!docs.length){ box.classList.add('hide'); sel={}; actualizar(); return; }
+        if(!docs.length){
+          /* no tiene deudas de este lado: si las tiene del otro, se avisa y se ofrece cambiar */
+          const otro = t==='ingreso'? 'egreso' : (t==='egreso'? 'ingreso' : '');
+          const dOtro = otro? docsDeTercero(cbT.valor(),otro) : [];
+          if(dOtro.length){
+            $('#docsin',m).innerHTML='<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">'+
+              '<span>'+(otro==='egreso'? '📕 A esta persona <b>le debes</b> '+money(sum(dOtro,saldoDoc))+' ('+dOtro.length+' factura/s). Para pagarle es una <b>salida</b>.'
+                                     : '📗 Esta persona <b>te debe</b> '+money(sum(dOtro,saldoDoc))+' ('+dOtro.length+' factura/s). Para cobrarle es una <b>entrada</b>.')+'</span>'+
+              '<button class="btn sm pri" id="dcambia">'+(otro==='egreso'?'Cambiar a salida (pagar)':'Cambiar a entrada (cobrar)')+'</button></div>';
+            box.classList.remove('hide');
+            $('#dcambia',m).onclick=()=>{ $('#t',m).value=otro; $('#t',m).onchange({target:$('#t',m)}); };
+            sel={}; actualizar(); return;
+          }
+          box.classList.add('hide'); sel={}; actualizar(); return; }
         const esC=t==='ingreso', hoy=todayISO();
         const saldoT=round(sum(docs,saldoDoc),2);
         const todas=docs.every(d=>sel[d.id]!==undefined);
         $('#docsin',m).innerHTML=
           '<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+
-            '<b>'+(esC?'📗 Tiene facturas por cobrar':'📕 Le debe estas facturas')+' · '+docs.length+'</b>'+
+            '<b>'+(esC?'📗 Te debe estas facturas':'📕 Le debes estas facturas')+' · '+docs.length+'</b>'+
             '<span class="tiny">Saldo total <b>'+money(saldoT)+'</b></span></div>'+
           '<label class="row tiny" style="gap:7px;margin-bottom:6px;cursor:pointer">'+
             '<input type="checkbox" id="dtodas"'+(todas?' checked':'')+'> Marcar todas</label>'+
@@ -6538,7 +6739,7 @@ function mMovimiento(){
                 '<div><b>'+esc(d.no)+'</b> <span class="tiny">'+fdate(d.fecha)+'</span>'+
                   (venc?' <span class="pill" style="background:var(--bad-soft);color:var(--bad)">vencida</span>':'')+'</div>'+
                 '<div class="tiny" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
-                  esc(d.concepto||('Venta a crédito'))+' · saldo '+money(sd)+'</div></div>'+
+                  esc(d.concepto||(d.proveedorId!==undefined?'Compra a crédito':'Venta a crédito'))+' · saldo '+money(sd)+'</div></div>'+
               '<input type="number" step="any" data-dm="'+d.id+'" value="'+(on?sel[d.id]:sd)+'"'+
                 (on?'':' disabled')+' style="width:110px;flex:0 0 auto;text-align:right" title="Cuánto abona a esta factura">'+
             '</div>';
@@ -6583,6 +6784,15 @@ function mMovimiento(){
           ? 'La plata sale de la cuenta y queda anotada en Cartera como un documento por cobrarle a esa persona.'
           : 'La plata entra a la cuenta y queda anotada en Cartera como un documento que usted debe devolver.';
       }
+      /* "A crédito" solo existe en una salida */
+      const pintaCred=()=>{ const eg=$('#t',m).value==='egreso', oc=$('#optcred',m);
+        oc.hidden=!eg; oc.disabled=!eg;
+        if(!eg && $('#c1',m).value==='__credito') $('#c1',m).selectedIndex=0;
+        const cr=$('#c1',m).value==='__credito';
+        $('#crbox',m).classList.toggle('hide',!cr);
+        if(cr){ sel={}; $('#docsbox',m).classList.add('hide'); $('#avcart',m).classList.add('hide'); actualizar(); } };
+      $('#c1',m).addEventListener('change',()=>{ pintaCred(); if($('#c1',m).value!=='__credito') pintarDocs(); });
+      $('#t',m).addEventListener('change',pintaCred);
       $('#t',m).onchange=e=>{ const tr=e.target.value==='traslado';
         $('#c2b',m).classList.toggle('hide',!tr);
         $('#nocuenta',m).classList.toggle('hide',tr);
@@ -6593,6 +6803,26 @@ function mMovimiento(){
         const c2 = t==='traslado'? $('#c2',m).value : '';
         if(t==='traslado' && c1===c2) return toast('Las cuentas deben ser distintas','warn');
         const tid=cbT.valor();
+        if(c1==='__credito'){
+          /* gasto a crédito: no mueve plata, crea la cuenta por pagar */
+          if(t!=='egreso') return toast('El crédito solo aplica para salidas','warn');
+          if(!tid) return toast('Dime a quién se le debe: escoge o crea el proveedor','warn',4500);
+          const catC=cbC.valor()||'otros';
+          if(esCategoriaCartera(catC)) return toast('Un anticipo o préstamo no puede quedar a crédito: escoge la categoría del gasto','warn',5500);
+          const terC={id:tid, nombre:(listaTerceros().find(x=>x.id===tid)||{}).nombre||''};
+          const fecha=todayISO();
+          const d={id:uid('od'), no:nextNo('cxp','GC-'), tipo:'cxp', esOtro:true, gastoCredito:true,
+            fecha:fecha, fechaReg:now(), terceroId:tid, terceroNombre:terC.nombre,
+            concepto: co || ('Gasto a crédito · '+catC), total:round(v,2),
+            vence:dateAdd(fecha,Math.max(0,toN($('#crplz',m).value)||30)),
+            estado:'pendiente', categoria:catC, cuentaId:'', medioPago:'credito', nota:'',
+            usuarioId:S.user?S.user.id:'', turnoId:S.turno?S.turno.id:''};
+          put('otrosdocs',d);
+          closeModal(); render();
+          toast('📕 Gasto a crédito '+d.no+' · '+terC.nombre+' · '+money(v)+' queda por pagar','ok',5000);
+          if(S.cfg.impTicket!==false) comprobanteOtro(d);
+          return;
+        }
         const marcadas=t!=='traslado'? docs.filter(d=>sel[d.id]!==undefined) : [];
         if(marcadas.length){
           for(const d of marcadas){
@@ -8162,7 +8392,7 @@ function calcConta(d1,d2){
   const bruta=round(ventasNetas-costo,2);
   const fijos=calcFijos(d1,d2);
   const pagosFijos=ms.filter(m=>esGasto(m) && esPagoDeFijo(m,fijos.cats));   // ya van en el valor diario
-  const gastos=ms.filter(m=>esGasto(m) && !esPagoDeFijo(m,fijos.cats));
+  const gastos=ms.filter(m=>esGasto(m) && !esPagoDeFijo(m,fijos.cats)).concat(gastosComidaEmpleados(d1,d2));
   const totalGastos=sum(gastos,m=>m.monto);
   const neta=round(bruta-fijos.total-totalGastos,2);
 
@@ -8548,8 +8778,8 @@ function totalesInforme(d1,d2){
   const anuladasId={}; S.ventas.forEach(v=>{ if(v.estado==='anulada') anuladasId[v.id]=1; });
   const ms=S.movimientos.filter(m=>enR(m.fecha) && !(m.refTipo==='venta' && anuladasId[m.refId]));
   const F=calcFijos(d1,d2);
-  const gastos=ms.filter(esGasto);
-  const gVar=gastos.filter(m=>!esPagoDeFijo(m,F.cats));
+  const gastos=ms.filter(esGasto).concat(gastosComidaEmpleados(d1,d2));
+  const gVar=gastos.filter(m=>m.virtual || !esPagoDeFijo(m,F.cats));
   const T={ vs, ms, F, gastos, gVar, fact:vs.length,
     neta:round(sum(vs,ventaNetaDe),2), total:round(sum(vs,v=>v.total||0),2),
     desc:round(sum(vs,v=>v.descuento||0),2), prop:round(sum(vs,v=>v.propina||0),2), imp:round(sum(vs,v=>v.impuesto||0),2),
@@ -8994,9 +9224,11 @@ function viewReportes(vw){
     '<button class="btn '+(_repTab==='utilidad'?'pri':'')+'" data-rt="utilidad">💰 Utilidad y estado de resultados</button>'+
     '<button class="btn '+(_repTab==='ventas'?'pri':'')+'" data-rt="ventas">📈 Ventas y análisis</button>'+
     '<div class="spacer"></div>'+
+    '<button class="btn" id="rt_ce" title="Lo que se le dio de comer al personal">🍽️ Comidas de empleados</button>'+
     '<button class="btn" id="rt_inf" title="Informe completo para reuniones: días, horas, finanzas y recomendaciones">📑 Informe gerencial</button></div>'+
     '<div id="rt_body"></div>';
   $$('[data-rt]',vw).forEach(b=>b.onclick=()=>{ _repTab=b.dataset.rt; viewReportes(vw); });
+  $('#rt_ce',vw).onclick=mListaComidas;
   $('#rt_inf',vw).onclick=()=>{ const f=_repF||{d1:todayISO().slice(0,8)+'01',d2:todayISO()}; mInformeGerencial(f.d1,f.d2); };
   const body=$('#rt_body',vw);
   if(_repTab==='ventas') viewReportesVentas(body); else viewContabilidad(body);
