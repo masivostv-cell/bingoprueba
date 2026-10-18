@@ -740,7 +740,7 @@ const DEFCFG={ id:'cfg', nombre:'Mi Restaurante', nit:'', direccion:'', telefono
   /* impresión */
   impComanda:true, impTicket:true, ordenImp:'comanda', pausaImp:1800,
   estacion:false, estacionAuto:true, estacionSonido:true, respaldoCierre:true,
-  comandaAncho:80, comandaPrecios:false, modoImp:'silencioso', letra:1.15,
+  comandaAncho:80, comandaPrecios:false, comandaCorta:true, comandaLetra:1, modoImp:'silencioso', letra:1.15,
   impresoraComanda:'', impresoraTicket:'', waSoporte:'573204491926',
   /* nube */
   fbApiKey:'AIzaSyAxCG0jyAb3NJUNjoV0bLTxiZfkm1_bN2o',
@@ -4327,7 +4327,56 @@ function opcionesPapel(actual){
 function leerPapel(v){ return v==='carta'? 'carta' : (Number(v)||80); }
 
 /* ------------------------- comanda de cocina ------------------------ */
+/* Comanda AHORRADORA: lo mínimo para que la cocina prepare. Sin títulos
+   grandes, sin cajas, sin líneas de pie, sin márgenes; el encabezado va en
+   una o dos líneas y los productos iguales se juntan en una sola línea.
+   Gasta más o menos la mitad (o menos) de papel que la comanda normal. */
+function comandaCortaHTML(v,copia){
+  const c=S.cfg, P=papel(c.comandaAncho), w=P.w;
+  /* tamaño propio de la comanda (no afecta la factura) */
+  const kL=(k=>(k>=0.7&&k<=1.5)? k : 1)(Number(c.comandaLetra)), px=b=>round(b*kL,1)+'px';
+  const mesa=v.mesaId? byId('mesas',v.mesaId):null;
+  const destino = mesa? (esDomicilio(mesa)? ('DOMICILIO '+String(mesa.nombre).toUpperCase())
+                       : esLlevar(mesa)? 'MOSTRADOR' : ('MESA '+String(mesa.nombre).toUpperCase()))
+                 : v.tipo==='domicilio'? 'DOMICILIO'+(v.destNombre? ' '+String(v.destNombre).toUpperCase():'') : 'LLEVAR';
+  /* junta los iguales (mismo producto y misma nota) en una línea */
+  const juntar=l=>{ const m={}, out=[];
+    (l||[]).forEach(i=>{ const k=String(i.nombre).toUpperCase()+'|'+String(i.nota||'').toUpperCase();
+      if(m[k]){ m[k].cant+=Number(i.cant)||0; return; }
+      m[k]={nombre:i.nombre, nota:i.nota, cant:Number(i.cant)||0, precio:i.precio}; out.push(m[k]); });
+    return out; };
+  const linea=(i,cls)=>'<tr><td class="q">'+esc(i.cant)+'</td><td class="n'+(cls?' '+cls:'')+'">'+esc(String(i.nombre).toUpperCase())+
+    (i.nota? ' <i>*'+esc(String(i.nota).toUpperCase())+'</i>':'')+'</td>'+
+    (c.comandaPrecios&&!cls? '<td class="p">'+money(i.precio*i.cant)+'</td>':'')+'</tr>';
+  const filas=juntar(v.items).map(i=>linea(i)).join('');
+  const cambios=juntar(v.cambios).map(i=>linea(i)).join('');
+  const bajas=juntar(v.bajas).map(i=>linea(i,'baja')).join('');
+  const soloBaja=!filas && !cambios && !!bajas;
+  const nm=nombreDePedido(v);
+  const marca= soloBaja? 'ANULA ' : (v.adicional? '+AGREGA ' : '');
+  const quien=(nameOf('usuarios',v.usuarioId)||'').split(' ')[0];
+  const sub=[ v.nroTurno? 'TURNO '+Number(v.nroTurno) : '',
+    nm && !destino.includes(String(nm).toUpperCase())? String(nm).toUpperCase() : '',
+    ftime(v.fecha), quien!=='—'? quien : '', copia? 'COPIA':'' ].filter(Boolean).join(' · ');
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+
+    '@page{size:'+w+'mm auto;margin:0 1mm}'+
+    'body{font:'+px(12)+'/1.12 Arial,Helvetica,sans-serif;color:#000;margin:0;width:'+(w-3)+'mm;font-weight:bold}'+
+    '.d{font-size:'+px(15)+';line-height:1.1}.s{font-size:'+px(9.5)+';font-weight:normal;border-bottom:1.5px solid #000;padding-bottom:1px;margin-bottom:1px}'+
+    'table{width:100%;border-collapse:collapse}td{padding:0;vertical-align:top}'+
+    '.q{width:1.5em;font-size:'+px(13)+'}.n{font-size:'+px(12.5)+'}.n i{font-style:normal;font-size:'+px(11)+';text-decoration:underline}'+
+    '.p{text-align:right;font-size:'+px(10.5)+';white-space:nowrap}.baja{text-decoration:line-through}'+
+    '.t{font-size:'+px(10)+';border-top:1px solid #000;margin-top:1px}'+
+    '</style></head><body>'+
+    '<div class="d">'+esc(marca+destino)+'</div>'+
+    '<div class="s">'+esc(sub)+'</div>'+
+    (filas? '<table>'+filas+'</table>':'')+
+    (cambios? '<div class="t">CAMBIO:</div><table>'+cambios+'</table>':'')+
+    (bajas? '<div class="t">NO PREPARAR:</div><table>'+bajas+'</table>':'')+
+    (v.nota? '<div class="t">NOTA: '+esc(String(v.nota).toUpperCase())+'</div>':'')+
+    '</body></html>';
+}
 function comandaHTML(v,copia){
+  if(S.cfg.comandaCorta!==false && !papel(S.cfg.comandaAncho).carta) return comandaCortaHTML(v,copia);
   const c=S.cfg, P=papel(c.comandaAncho), w=P.w;
   const mesa=v.mesaId? byId('mesas',v.mesaId):null;
   const destino = mesa? (esDomicilio(mesa)? ('🛵 DOMICILIO · '+String(mesa.nombre).toUpperCase())
@@ -9120,6 +9169,12 @@ function viewAjustes(vw){
               opcionesPapel(c.comandaAncho)+'</select></div></div>'+
           '<label class="row tiny" style="gap:7px;margin:10px 0"><input type="checkbox" id="g_comandaPrecios" '+
             (c.comandaPrecios?'checked':'')+'> Mostrar precios en la comanda de cocina</label>'+
+          '<label class="row tiny" style="gap:7px;margin:10px 0"><input type="checkbox" id="g_comandaCorta" '+
+            (c.comandaCorta!==false?'checked':'')+'> 🌱 Comanda ahorradora: imprime lo mínimo para gastar menos papel</label>'+
+          '<div class="f" style="max-width:260px"><label>Letra de la comanda ahorradora</label><select id="g_comandaLetra">'+
+            [[0.85,'Muy pequeña'],[1,'Pequeña (recomendada)'],[1.15,'Mediana'],[1.3,'Grande']].map(x=>
+              '<option value="'+x[0]+'"'+(Math.abs((Number(c.comandaLetra)||1)-x[0])<0.01?' selected':'')+'>'+x[1]+'</option>').join('')+
+            '</select></div>'+
           '<div class="f"><label>Mensaje al pie del ticket</label><input id="g_ticketPie" value="'+esc(c.ticketPie||'')+'"></div>'+
           '</div>'+
         '</div></div></div>'+
@@ -9246,6 +9301,8 @@ function viewAjustes(vw){
         c.letra=Number($('#g_letra').value)||1.15;
         c.impComanda=$('#g_impComanda').checked; c.impTicket=$('#g_impTicket').checked;
         c.comandaPrecios=$('#g_comandaPrecios').checked;
+        c.comandaCorta=$('#g_comandaCorta').checked;
+        c.comandaLetra=Number($('#g_comandaLetra').value)||1;
         c.decimales=Number($('#g_decimales').value);
         c.impuesto=toN($('#g_impuesto').value); c.propina=toN($('#g_propina').value);
         c.ticketAncho=leerPapel($('#g_ticketAncho').value);
