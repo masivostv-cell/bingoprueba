@@ -1235,7 +1235,7 @@ function esEstacion(){ return !!S.cfg.estacion; }
 /* Solo cuenta lo que alguien MANDÓ a cocina (botón Cocina). Un pedido que se
    está tomando o que solo se guardó no se imprime hasta que lo envíen. */
 function comandasPendientes(){
-  return S.comandas.filter(cm=>(cm.estado==='abierta'||cm.estado==='anulada') && cm.cocinaMs && pendientesComanda(cm).uds>0)
+  return S.comandas.filter(cm=>(cm.estado==='abierta'||cm.estado==='anulada'||cm.estado==='consumo') && cm.cocinaMs && pendientesComanda(cm).uds>0)
     .sort((a,b)=>String(a.cocinaMs||a.apertura||'').localeCompare(String(b.cocinaMs||b.apertura||'')));
 }
 function unidadesPendientes(){ return sum(comandasPendientes(),cm=>pendientesComanda(cm).uds); }
@@ -3666,9 +3666,7 @@ function gastosComidaEmpleados(d1,d2){
 }
 function mComidaEmpleados(){
   const c=S.cart; if(!c || !(c.items||[]).length) return toast('Agrega primero lo que se van a comer','warn');
-  const pend=pendientesComanda(c);
-  if(pend.nuevos.length || pend.cambios.length)
-    return toast('Primero mándalo a la cocina con el botón «Cocina» y después lo registras como comida de empleados','warn',6500);
+  /* ya no se bloquea: si la cocina no lo ha recibido, se le manda al registrar */
   const emps=S.usuarios.filter(u=>u.activo!==false);
   const costoEst=round(sum(c.items,i=>{ const p=byId('productos',i.productoId); return (p? costoProducto(p):0)*i.cant; }),2);
   modal({title:'🍽️ Comida de empleados',size:'slim',
@@ -3694,6 +3692,29 @@ function mComidaEmpleados(){
 }
 function registrarComidaEmpleados(nombre,usuarioEmp,nota){
   const c=S.cart; const id=uid('ce');
+  /* lo que la cocina todavía no ha impreso (porque no se mandó, o porque se mandó
+     desde un teléfono y el PC aún no lo saca) se le manda ahora como comida de empleados */
+  const pend=pendientesComanda(c);
+  let dejarAEstacion=false;
+  if(pend.uds>0 && S.cfg.impComanda!==false){
+    const imprimeAqui = esEstacion() || !S.cfg.fbOn || (S.cfg.modoImp==='rawbt' && esAndroid());
+    const notaCoc='COMIDA EMPLEADOS · '+nombre+(nota?' · '+nota:'');
+    if(imprimeAqui){
+      encolarImp(comandaHTML({no:'EMPLEADOS', fecha:now(), tipo:c.tipo, mesaId:c.mesaId||'', usuarioId:S.user?S.user.id:'',
+        items:pend.nuevos, cambios:pend.cambios, bajas:pend.bajas, adicional:pend.yaEnviado, nota:notaCoc,
+        nroTurno:c.nroTurno||0, nombrePedido:'EMPLEADOS · '+nombre}),'comanda',S.cfg.impresoraComanda);
+      marcarEnviado(c);
+    } else {
+      /* la saca el PC de la cocina: queda una comanda marcada como consumo de empleados */
+      const prev=c.comandaId? byId('comandas',c.comandaId) : null;
+      const cmK=Object.assign(prev||{id:uid('cm'), apertura:now()}, {mesaId:c.mesaId||'', tipo:c.tipo||'mostrador',
+        items:c.items.map(i=>Object.assign({},i)), bajas:(c.bajas||[]).slice(), nota:notaCoc,
+        nombrePedido:'EMPLEADOS · '+nombre, cocinaMs:Date.now(), estado:'consumo', consumoId:id,
+        meseroId:S.user?S.user.id:'', cierre:now()});
+      put('comandas',cmK); c.comandaId=cmK.id; dejarAEstacion=true;
+      if(S.cfg.autoSync) scheduleSync(200);
+    }
+  }
   const items=c.items.map(i=>({productoId:i.productoId,nombre:i.nombre,precio:i.precio,cant:i.cant,nota:i.nota,costo:0,costoTotal:0}));
   const cons=consumirItems(items,'consumo',id);
   const d={id:id, no:nextNo('consumo','CE-'), tipo:'consumo', esOtro:true, fecha:now(),
@@ -3701,10 +3722,10 @@ function registrarComidaEmpleados(nombre,usuarioEmp,nota){
     valorCarta:round(sum(items,i=>i.precio*i.cant),2), nota:nota||'', estado:'registrado',
     mesaId:c.mesaId||'', turnoId:S.turno?S.turno.id:'', usuarioId:S.user?S.user.id:''};
   put('otrosdocs',d);
-  if(c.comandaId){ const cm=byId('comandas',c.comandaId); if(cm){ cm.estado='cerrada'; cm.consumoId=d.id; put('comandas',cm); } }
+  if(c.comandaId && !dejarAEstacion){ const cm=byId('comandas',c.comandaId); if(cm){ cm.estado='cerrada'; cm.consumoId=d.id; put('comandas',cm); } }
   if(c.mesaId) limpiarDomicilio(c.mesaId);
   S.cart=newCart(); abrirCarrito(false);
-  toast('🍽️ Comida de '+nombre+' registrada'+(verCostos()? ' · costo '+money(d.costo):'')+' · bajó del inventario','ok',5000);
+  toast('🍽️ Comida de '+nombre+' registrada'+(dejarAEstacion?' · enviada a cocina':'')+(verCostos()? ' · costo '+money(d.costo):'')+' · bajó del inventario','ok',5000);
   if(S.view==='pos'){ paintCart(); paintGrid(); buildNav(); } else render();
 }
 function borrarComidaEmpleados(d){
