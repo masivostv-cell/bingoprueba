@@ -245,6 +245,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 .tline{display:flex;justify-content:space-between;font-size:13px;padding:2.5px 0;color:var(--ink2)}
 .tline.big{font-size:20px;font-weight:750;color:var(--ink);padding-top:8px;margin-top:6px;border-top:1px dashed var(--line)}
 .tline .v{font-variant-numeric:tabular-nums;font-weight:650}
+.tline.tot{font-weight:750;color:var(--ink);border-top:1px solid var(--line);margin-top:4px;padding-top:6px}
 
 /* ---------- mesas ---------- */
 .mesas{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
@@ -3101,7 +3102,7 @@ function enviarACocina(){
   const dest=mesa? mesa.nombre : 'MOSTRADOR';
   /* Si este equipo NO es el que tiene la impresora, no se imprime aquí:
      el pedido queda marcado y el PC de la cocina lo saca solo. */
-  if(!esEstacion() && S.cfg.fbOn){
+  if(!esEstacion() && S.cfg.fbOn && !(S.cfg.modoImp==='rawbt' && esAndroid())){
     c.cocinaMs=Date.now();
     if(c.mesaId){ persistComanda(true);
       guardarPedido('📨 Pedido enviado a cocina · guardado en ',true); }
@@ -4185,8 +4186,113 @@ document.addEventListener('click',e=>{
   if(!imp || typeof imp.onclick!=='function') return toast('No hay nada que mostrar','warn');
   verSinImprimir(()=>imp.onclick({target:imp,currentTarget:imp,preventDefault(){},stopPropagation(){}}));
 },true);
+/* ==================== IMPRESIÓN DIRECTA DESDE ANDROID (RawBT) ====================
+   El teléfono convierte la comanda o la factura en comandos ESC/POS (el
+   idioma de las impresoras térmicas como Jaltech) y se los entrega a la app
+   RawBT, que los manda a la impresora por WiFi/red (LAN) o Bluetooth.
+   No hace falta el PC y no pregunta en cuál impresora: la que se configuró
+   una vez en RawBT. Solo funciona en Android (en iPhone no existe RawBT). */
+function esAndroid(){ return /Android/i.test(navigator.userAgent||''); }
+const CP850={'á':0xA0,'é':0x82,'í':0xA1,'ó':0xA2,'ú':0xA3,'Á':0xB5,'É':0x90,'Í':0xD6,'Ó':0xE0,'Ú':0xE9,
+  'ñ':0xA4,'Ñ':0xA5,'ü':0x81,'Ü':0x9A,'¿':0xA8,'¡':0xAD,'°':0xF8,'º':0xA7,'ª':0xA6,'·':0xFA,'€':0xD5};
+function bytesTexto(s){
+  const out=[];
+  for(const ch of String(s)){
+    const c=ch.charCodeAt(0);
+    if(c>=32 && c<127){ out.push(c); continue; }
+    if(CP850[ch]!==undefined){ out.push(CP850[ch]); continue; }
+    if(ch==='—'||ch==='–'||ch==='−') { out.push(45); continue; }
+    if(ch==='→') { out.push(62); continue; }
+    const base=ch.normalize('NFD').replace(/[\u0300-\u036f]/g,'');     // otras letras: sin tilde
+    if(base && base.charCodeAt(0)>=32 && base.charCodeAt(0)<127) out.push(base.charCodeAt(0));
+    /* emojis y símbolos raros: se omiten (la impresora no los tiene) */
+  }
+  return out;
+}
+function partirTexto(s,w){
+  const pal=String(s).replace(/\s+/g,' ').trim().split(' '); const l=[]; let a='';
+  pal.forEach(p=>{ while(p.length>w){ if(a){ l.push(a); a=''; } l.push(p.slice(0,w)); p=p.slice(w); }
+    if(!a) a=p; else if((a+' '+p).length<=w) a+=' '+p; else { l.push(a); a=p; } });
+  if(a) l.push(a); return l.length? l : [''];
+}
+/* convierte el HTML de la comanda o de la factura en ESC/POS */
+function htmlAEscPos(html,anchoMm){
+  const COLS = Number(anchoMm)===58? 32 : 48;
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  doc.querySelectorAll('style,script,img,title').forEach(e=>e.remove());
+  const B=[]; const add=a=>{ for(const x of a) B.push(x); };
+  const ESC=0x1B, GS=0x1D;
+  add([ESC,0x40, ESC,0x74,0x02, ESC,0x45,0x01]);                 // iniciar · página 850 · negrilla
+  const txt=n=>String(n.textContent||'').replace(/\s+/g,' ').trim();
+  const clases=n=>' '+String(n.className||'')+' ';
+  const GRANDE=/ (d|dest|nomb|big|agr) /, CENTRO=/ (c|cab|pie|dest|nomb|turno|agr|copia|re) /;
+  function linea(t,o){
+    o=o||{}; if(!t) return;
+    const ancho = o.big? Math.floor(COLS/2) : COLS;
+    add([ESC,0x61,o.center?1:0, GS,0x21,o.big?0x11:0x00]);
+    partirTexto(t,ancho).forEach(l=>{ add(bytesTexto(l)); B.push(0x0A); });
+    add([GS,0x21,0x00, ESC,0x61,0]);
+  }
+  function fila(celdas){
+    celdas=celdas.filter(x=>x!=='');
+    if(!celdas.length) return;
+    add([ESC,0x61,0, GS,0x21,0x00]);
+    if(celdas.length===1){ partirTexto(celdas[0],COLS).forEach(l=>{ add(bytesTexto(l)); B.push(0x0A); }); return; }
+    const der = celdas.length>=3? celdas[celdas.length-1] : '';
+    const q = celdas.length>=2 && /^\d+([.,]\d+)?$/.test(celdas[0])? celdas[0] : '';
+    const nom = q? celdas.slice(1, der? -1 : undefined).join(' ') : celdas.slice(0, -1).join(' ');
+    const derecha = q? der : celdas[celdas.length-1];
+    const pre = q? (q+' ').padEnd(4,' ') : '';
+    const anchoNom = COLS - pre.length - (derecha? derecha.length+1 : 0);
+    const ls=partirTexto(nom, Math.max(8,anchoNom));
+    ls.forEach((l,i)=>{
+      let s=(i? ' '.repeat(pre.length) : pre)+l;
+      if(i===0 && derecha) s=s.padEnd(COLS-derecha.length,' ')+derecha;
+      add(bytesTexto(s)); B.push(0x0A);
+    });
+  }
+  function recorrer(el){
+    for(const n of el.children){
+      const tag=n.tagName, cl=clases(n);
+      if(tag==='HR'){ add(bytesTexto('-'.repeat(COLS))); B.push(0x0A); continue; }
+      if(tag==='TABLE'||tag==='TBODY'||tag==='THEAD'){ recorrer(n); continue; }
+      if(tag==='TR'){ fila([...n.children].map(txt)); continue; }
+      const hijos=[...n.children];
+      /* una línea "concepto ........ valor" de la factura */
+      if(hijos.length===2 && hijos.every(h=>h.tagName==='SPAN')){ fila([txt(hijos[0]),txt(hijos[1])]); continue; }
+      if(hijos.some(h=>/^(DIV|TABLE|H1|H2|H3|P|HR)$/.test(h.tagName))){ recorrer(n); continue; }
+      const t=txt(n);
+      if(tag==='H1') linea(t,{big:true,center:true});
+      else if(tag==='H2'||tag==='H3') { linea(t,{}); add(bytesTexto('-'.repeat(COLS))); B.push(0x0A); }
+      else linea(t,{big:GRANDE.test(cl), center:CENTRO.test(cl)});
+    }
+  }
+  recorrer(doc.body);
+  add([ESC,0x64,0x03, GS,0x56,0x42,0x00]);                       // avanza lo justo y corta
+  return B;
+}
+function rawbtImprimir(html,tipo){
+  if(!esAndroid()){
+    toast('La impresión directa con RawBT solo funciona en teléfonos o tablets Android','warn',6000);
+    return false;
+  }
+  const P=papel(tipo==='comanda'? (S.cfg.comandaAncho||80) : (S.cfg.ticketAncho||80));
+  const bytes=htmlAEscPos(html, P.w);
+  let bin=''; for(let i=0;i<bytes.length;i+=4096) bin+=String.fromCharCode.apply(null,bytes.slice(i,i+4096));
+  const url='intent:base64,'+btoa(bin)+'#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+  try{ window.location.href=url; return true; }
+  catch(e){ toast('No se pudo abrir RawBT: '+e.message,'bad'); return false; }
+}
+function pruebaRawbt(){
+  rawbtImprimir('<html><body><h1>PRUEBA</h1><div class="c">'+esc(nombreDelNegocio())+'</div><hr>'+
+    '<table><tr><td>2</td><td>HAMBURGUESA ÑAME Y PIÑA</td></tr><tr><td>1</td><td>JUGO DE MARACUYÁ *SIN AZÚCAR</td></tr></table>'+
+    '<hr><div class="c">Si se leen bien las tildes y la Ñ, quedó listo · '+ftime(now())+'</div></body></html>','comanda');
+}
+
 function abrirImpresion(html,tipo,impresora){
   if(_soloVer){ _soloVer=0; return verDocumento(html,tipo,impresora); }
+  /* Android + RawBT: directo a la impresora térmica, sin diálogo (las hojas carta no) */
+  if(S.cfg.modoImp==='rawbt' && html.indexOf('size:letter')<0 && esAndroid()){ rawbtImprimir(html,tipo); return; }
   if(S.cfg.modoImp==='qz'){
     if(window.qz || _qzCarga) return qzImprimir(html,impresora,tipo);
     cargarQZ().then(ok=>{ if(ok) qzImprimir(html,impresora,tipo); });
@@ -6618,23 +6724,61 @@ function viewCaja(vw){
     const tras=sum(mh.filter(m=>m.tipo==='egreso' && m.categoria==='traslado'),m=>m.monto);
     let h='';
     if(t){
+      /* TODO lo de esta tarjeta es SOLO del turno abierto (desde que se abrió
+         la caja), aunque el turno venga de ayer. Nada de "hoy" ni saldos de
+         siempre, que confundían. Todo en positivo y como una cuenta sencilla. */
       const D=detalleTurno(t);
+      const movsT=S.movimientos.filter(m=>m.turnoId===t.id && (()=>{ const c=byId('cuentas',m.cuentaId);
+        return c && c.tipo==='caja' && (!t.cuentaId || m.cuentaId===t.cuentaId); })());
+      const salidasL=movsT.filter(m=>m.tipo==='egreso').sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+      const entradasL=movsT.filter(m=>m.tipo==='ingreso' && m.refTipo!=='venta').sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+      const salTot=round(D.salidas+(D.trasOut||0),2);
+      const desdeTxt= dISO(t.apertura)===hoy? 'Desde hoy '+ftime(t.apertura) : 'Desde '+fdate(t.apertura,true);
+      const lin=(txt,val,signo,cls,ayuda)=>'<div class="tline'+(cls?' '+cls:'')+'"><span>'+txt+
+        (ayuda?'<div class="tiny muted" style="font-weight:400">'+ayuda+'</div>':'')+'</span><span class="v">'+(signo||'')+money(val)+'</span></div>';
+      const conc=m=>esc(m.concepto||m.categoria||'Movimiento')+(m.categoria==='traslado'?' <span class="pill" style="font-size:10px">traslado</span>':'');
+      const medios=MEDIOS.filter(m=>D.porMedio[m.k]).map(m=>[m.e+' '+m.n,D.porMedio[m.k]])
+        .concat(Object.keys(D.porMedio).filter(k=>k!=='credito' && !MEDIOS.some(m=>m.k===k)).map(k=>[k,D.porMedio[k]]))
+        .concat(D.porMedio.credito? [['🧾 A crédito',D.porMedio.credito]] : []);
       h+='<div class="card" style="margin-bottom:14px"><div class="hd"><h3>Caja abierta</h3>'+
-        '<span class="pill ok">Desde '+ftime(t.apertura)+'</span>'+
+        '<span class="pill ok">'+esc(desdeTxt)+'</span>'+
         (t.cuentaId? '<span class="pill">💵 '+esc(nameOf('cuentas',t.cuentaId))+'</span>':'')+
         '<span class="pill">'+esc(nameOf('usuarios',t.usuarioId))+'</span>'+
         '<div class="spacer"></div>'+
         '<button class="btn sm" id="rrel" title="Ventas de este turno para WhatsApp">📋 Relación del turno</button>'+
         '<button class="btn sm" id="rmov">+ Entrada/salida</button>'+
         '<button class="btn danger sm" id="rcerrar">Cerrar caja</button></div><div class="bd">'+
+        '<div class="hintx" style="margin-bottom:10px">Todo lo de aquí es <b>solo de este turno</b>: desde que se abrió la caja hasta ahora.</div>'+
         '<div class="kpis">'+
-          kpi('Abrió con',money(t.base),'saldo del cierre anterior','')+
-          kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas'+
-            (round(sum(D.vs,v=>fiadoDe(v)),2)>0.5? ' · '+money(round(sum(D.vs,v=>fiadoDe(v)),2))+' a crédito':''),'brand')+
-          kpi('Efectivo que debe haber',money(D.esperado),'esto es lo único que se cuenta','ok')+
-          kpi('Movido en el turno',money(D.ventaEfe+D.otrosIng-D.salidas),
-            'entradas menos salidas'+((D.trasIn||D.trasOut)? ' · traslados '+money(round((D.trasIn||0)-(D.trasOut||0),2)):''),'')+
-        '</div></div></div>';
+          kpi('Abrió con',money(t.base),'lo que dejó el cierre anterior','')+
+          kpi('Ventas del turno',money(D.totalVentas),D.vs.length+' facturas · '+money(D.ventaEfe)+' en efectivo','brand')+
+          kpi('Salidas del turno',money(salTot),salidasL.length+' movimiento(s)','bad')+
+          kpi('Efectivo que debe haber',money(D.esperado),'esto es lo que se cuenta al cerrar','ok')+
+        '</div>'+
+        '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px">'+
+          '<div><b style="font-size:13px">🧮 Cómo se llega a lo que debe haber</b><div style="margin-top:6px">'+
+            lin('Abrió con',t.base,'','')+
+            lin('Ventas pagadas en efectivo',D.ventaEfe,'+ ','')+
+            (D.otrosIng? lin('Otras entradas de efectivo',D.otrosIng,'+ ','') : '')+
+            (D.trasIn? lin('Plata pasada a esta caja (traslados)',D.trasIn,'+ ','','viene de otra caja o banco') : '')+
+            (D.salidas? lin('Salidas (gastos, pagos, compras)',D.salidas,'− ','') : '')+
+            (D.trasOut? lin('Plata sacada de esta caja (traslados)',D.trasOut,'− ','','pasó a otra caja o banco') : '')+
+            lin('<b>= Efectivo que debe haber</b>',D.esperado,'','tot')+
+          '</div></div>'+
+          '<div><b style="font-size:13px">💳 Ventas del turno por medio de pago</b><div style="margin-top:6px">'+
+            (medios.length? medios.map(x=>lin(esc(x[0]),x[1],'','')).join('')+lin('<b>Total vendido</b>',D.totalVentas,'','tot')
+              : '<div class="muted tiny">Todavía no hay ventas en este turno</div>')+
+          '</div></div>'+
+        '</div>'+
+        ((salidasL.length||entradasL.length)? '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px">'+
+          (salidasL.length? '<div><b style="font-size:13px">⬇️ Salidas de la caja en este turno</b><div style="margin-top:6px">'+
+            salidasL.slice(0,10).map(m=>lin(conc(m),m.monto,'− ','',fdate(m.fecha,true))).join('')+
+            (salidasL.length>10? '<div class="tiny muted">… y '+(salidasL.length-10)+' más (ver el recorrido de la caja)</div>':'')+'</div></div>' : '')+
+          (entradasL.length? '<div><b style="font-size:13px">⬆️ Entradas que no son ventas</b><div style="margin-top:6px">'+
+            entradasL.slice(0,10).map(m=>lin(conc(m),m.monto,'+ ','',fdate(m.fecha,true))).join('')+
+            (entradasL.length>10? '<div class="tiny muted">… y '+(entradasL.length-10)+' más</div>':'')+'</div></div>' : '')+
+        '</div>' : '')+
+        '</div></div>';
     } else {
       h+='<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><div class="bd" style="text-align:center;padding:26px">'+
         '<div style="font-size:38px">🔒</div><h3 style="margin:8px 0">La caja está cerrada</h3>'+
@@ -6642,12 +6786,8 @@ function viewCaja(vw){
         'Ábrela para poder vender y mover efectivo.</p>'+
         (can('caja')? '<button class="btn pri lg" id="rabrir">Abrir caja</button>':'')+'</div></div>';
     }
-    h+='<div class="kpis" style="margin-bottom:14px">'+
-        kpi('Efectivo en cajas',money(sum(cajas,c=>saldoCuenta(c.id))),cajas.length+' caja(s)','ok')+
-        kpi('En bancos y otros',money(sum(bancos,c=>saldoCuenta(c.id))),bancos.length+' cuenta(s)','brand')+
-        kpi('Entradas de hoy',money(ing),'','ok')+
-        kpi('Salidas de hoy',money(egr),tras? 'sin contar '+money(tras)+' en traslados':'','bad')+
-      '</div>';
+    /* los saldos de las cuentas son de siempre, no del turno: se dejan abajo y rotulados */
+    h+='<div class="hintx" style="margin:4px 0 8px"><b>Saldo actual de cada caja y banco</b> (acumulado de siempre, no es solo del turno). Toca una para ver su recorrido.</div>';
     h+='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(235px,1fr))">'+
       cts.map(c=>{
         const ab=c.tipo==='caja'? turnoDeCaja(c.id):null;
@@ -9120,9 +9260,17 @@ function viewAjustes(vw){
           '<div class="f" style="margin-bottom:10px"><label>Cómo imprime este equipo</label><select id="g_modoImp">'+
             [['dialogo','Diálogo del navegador (eliges impresora cada vez)'],
              ['silencioso','Silencioso a la impresora predeterminada (Chrome en modo kiosco)'],
-             ['qz','Dos impresoras con QZ Tray (requiere instalarlo)']].map(x=>
+             ['qz','Dos impresoras con QZ Tray (requiere instalarlo)'],
+             ['rawbt','📱 Directo desde Android con la app RawBT (sin PC y sin preguntar)']].map(x=>
               '<option value="'+x[0]+'"'+(c.modoImp===x[0]?' selected':'')+'>'+esc(x[1])+'</option>').join('')+
             '</select></div>'+
+          '<div id="g_rawbt" class="card" style="background:var(--panel2);margin-bottom:12px;'+(c.modoImp==='rawbt'?'':'display:none')+'"><div class="bd">'+
+            '<b style="font-size:12.5px">📱 Imprimir desde el teléfono sin PC</b>'+
+            '<div class="hintx" style="margin:4px 0 8px">1) Instala <b>RawBT</b> desde Play Store. 2) En RawBT escoge la impresora: '+
+            '<b>Red/WiFi</b> con la IP de la Jaltech y puerto 9100, o <b>Bluetooth</b> si tu modelo lo tiene. 3) Pon el ancho de papel. '+
+            '4) Prueba aquí abajo. Las comandas y facturas que salgan de este teléfono van directo, sin preguntar impresora. '+
+            'El teléfono debe estar en el WiFi del restaurante (o cerca, si es Bluetooth).</div>'+
+            '<button class="btn sm" id="g_rawbtprueba">🖨️ Imprimir prueba</button></div></div>'+
           '<div class="card" style="background:var(--panel2);margin-bottom:12px"><div class="bd">'+
             '<b style="font-size:12.5px">👨‍🍳 Qué va a la comanda de cocina</b>'+
             '<div class="hintx" style="margin:4px 0 9px">Destilde las categorías que no necesitan comanda '+
@@ -9273,7 +9421,9 @@ function viewAjustes(vw){
         else box.innerHTML='Cada impresión abre el diálogo de Chrome y tú eliges la impresora. '+
             'Lo de arriba solo sirve de recordatorio.';
       };
-      $('#g_modoImp').onchange=pintaQz; pintaQz();
+      $('#g_modoImp').onchange=()=>{ pintaQz(); const rb=$('#g_rawbt'); if(rb) rb.style.display=$('#g_modoImp').value==='rawbt'?'':'none'; };
+      pintaQz();
+      if($('#g_rawbtprueba')) $('#g_rawbtprueba').onclick=()=>pruebaRawbt();
       if($('#g_estacion')) $('#g_estacion').onchange=e=>{ S.cfg.estacion=e.target.checked; saveCfg();
         toast(e.target.checked? 'Listo: este equipo imprime lo que manden los meseros'
                               : 'Este equipo ya no imprime los pedidos','ok',4000);
