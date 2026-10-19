@@ -25,7 +25,7 @@
     height:100vh;display:grid;
     grid-template-columns:minmax(0,.95fr) minmax(0,1.15fr) minmax(0,.8fr);
     gap:2vh 3vw;
-    grid-template-rows:auto minmax(0,1fr) auto;
+    grid-template-rows:auto minmax(0,1fr) auto auto;
     gap:2vh 4vw;padding:4vh 4vw 2.5vh;
   }
   .top{grid-column:1/-1;display:flex;align-items:center;gap:1.6vw}
@@ -100,6 +100,19 @@
   .don .t{color:var(--tenue);font-size:clamp(.8rem,1.05vw,1.3rem)}
   .muro-vacio{color:var(--tenue);font-style:italic;font-size:clamp(1rem,1.3vw,1.6rem)}
 
+  /* Patrocinadores */
+  .patrocinios{grid-column:1/-1;display:flex;align-items:center;gap:2vw;min-width:0}
+  .pat-titulo{flex:none;font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;color:var(--tenue);font-size:clamp(1rem,1.6vw,1.9rem)}
+  .pat-ventana{flex:1;min-width:0;overflow:hidden;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+  .pat-pista{display:flex;gap:1.6vw;width:max-content;will-change:transform}
+  .pat-pista.anda{animation:lado var(--dur,40s) linear infinite}
+  @keyframes lado{to{transform:translateX(calc(-50% - .8vw))}}
+  .logo{flex:none;height:10vh;padding:1.1vh 1.4vw;background:#FBF6EE;border-radius:1vw;display:grid;place-items:center;
+    box-shadow:0 0 0 2px rgba(221,184,110,.45)}
+  .logo img{height:100%;width:auto;max-width:16vw;object-fit:contain}
+
   .pie{grid-column:1/-1;display:flex;gap:2.5vw;align-items:center;font-size:clamp(.75rem,.95vw,1.05rem);color:var(--tenue)}
   .pie button{font:inherit;color:inherit;background:none;border:1px solid var(--plano);border-radius:999px;padding:.4em 1em;cursor:pointer}
   .pie button:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
@@ -142,7 +155,7 @@
   }
   @media (prefers-reduced-motion:reduce){
     .brick,.halo,.gracias{transition:none}
-    .insignia-intro,.muro-pista.anda,.odo.final,.hito.on,.barra-fill::after,.puntos i{animation:none}
+    .insignia-intro,.muro-pista.anda,.pat-pista.anda,.odo.final,.hito.on,.barra-fill::after,.puntos i{animation:none}
     .hito.on{opacity:1;transform:translateX(-50%)}
   }
 </style>
@@ -176,6 +189,11 @@
     <div class="muro-ventana"><div id="muro-pista" class="muro-pista"></div></div>
   </section>
 
+  <section id="patrocinios" class="patrocinios" hidden aria-label="Patrocinadores">
+    <p class="pat-titulo">Con el apoyo de</p>
+    <div class="pat-ventana"><div id="pat-pista" class="pat-pista"></div></div>
+  </section>
+
   <footer class="pie">
     <button id="actualizar" type="button">Barra espaciadora: actualizar el conteo</button>
     <span>F: pantalla completa</span>
@@ -188,7 +206,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDy9nmz3x8h20vSX5OMVEDAV1B5JCg73Hg",
@@ -404,32 +422,101 @@ function celebrarFinal(total) {
 
 function estado(txt, error = false) { const e = $("#estado"); e.textContent = txt; e.classList.toggle("error", error); }
 
+/* ================= Lectura de datos: 1 sola lectura + caché ================= */
+// Todo lo de la pantalla vive en un único documento: publico/pantalla (1 lectura por actualización).
+// La imagen y los logos solo se descargan cuando el banco los cambia (se comparan versiones)
+// y se guardan en la memoria del navegador para no volver a leerlos.
+const cache = {
+  leer(k) { try { return JSON.parse(localStorage.getItem("donaton:" + k)); } catch { return null; } },
+  guardar(k, v) { try { localStorage.setItem("donaton:" + k, JSON.stringify(v)); } catch {} }
+};
+let lecturas = 0, sinConexion = false;
+
+function aplicarTextos(p) {
+  if (Number(p.meta) > 0) meta = Number(p.meta);
+  $("#meta").textContent = cop(meta);
+  if (p.titulo) { $("#titulo").textContent = p.titulo; document.title = p.titulo + " | Pantalla"; }
+  if (p.subtitulo) $("#subtitulo").textContent = p.subtitulo;
+}
+
 async function leerTotal() {
-  // Solo lee el total aprobado y la lista pública de donantes (sin valores)
-  const [res, conf, muro, imagen] = await Promise.all([
-    getDoc(doc(db, "resumen", "total")),
-    getDoc(doc(db, "config", "evento")),
-    getDocs(collection(db, "muro")),
-    getDoc(doc(db, "config", "imagen")).catch(() => null)
-  ]);
-  if (imagen) ponerImagen(imagen.data()?.dataUrl || "", true);
-  const c = conf.data() || {};
-  if (Number(c.meta) > 0) meta = Number(c.meta);
-  if (c.titulo) { $("#titulo").textContent = c.titulo; document.title = c.titulo + " | Pantalla"; }
-  if (c.subtitulo) $("#subtitulo").textContent = c.subtitulo;
-  donantes = muro.docs.map(d => d.data())
-    .sort((x, y) => (y.orden?.toMillis?.() ?? 0) - (x.orden?.toMillis?.() ?? 0));
-  return Math.max(0, Number(res.data()?.total) || 0);
+  let p;
+  sinConexion = false;
+  try {
+    const s = await getDoc(doc(db, "publico", "pantalla"));
+    lecturas++;
+    p = s.data() || {};
+    cache.guardar("ultimo", p);
+  } catch (err) {
+    p = cache.leer("ultimo");
+    if (!p) throw err;
+    sinConexion = true;
+  }
+  aplicarTextos(p);
+  donantes = (p.donantes || []).map(d => ({ nombre: d.n, talonario: d.t }));
+  if (!sinConexion) await Promise.all([sincronizarImagen(Number(p.imagenVersion) || 0), sincronizarPatrocinadores(Number(p.patrocinadoresVersion) || 0)]);
+  return Math.max(0, Number(p.total) || 0);
+}
+
+async function sincronizarImagen(v) {
+  const c = cache.leer("img");
+  if (c && c.v === v) { ponerImagen(c.url); return; }
+  if (!v) { cache.guardar("img", { v: 0, url: "" }); ponerImagen(""); return; }
+  try {
+    const s = await getDoc(doc(db, "config", "imagen")); lecturas++;
+    const url = s.data()?.dataUrl || "";
+    cache.guardar("img", { v, url }); ponerImagen(url);
+  } catch { if (c) ponerImagen(c.url); }
+}
+
+async function sincronizarPatrocinadores(v) {
+  const c = cache.leer("pat");
+  if (c && c.v === v) { await pintarPatrocinadores(c.lista); return; }
+  if (!v) { cache.guardar("pat", { v: 0, lista: [] }); await pintarPatrocinadores([]); return; }
+  try {
+    const s = await getDoc(doc(db, "config", "patrocinadores")); lecturas++;
+    const lista = (s.data()?.lista || []).map(x => ({ nombre: x.nombre || "", logo: x.logo }));
+    cache.guardar("pat", { v, lista }); await pintarPatrocinadores(lista);
+  } catch { if (c) await pintarPatrocinadores(c.lista); }
 }
 
 /* ================= Imagen de la parroquia ================= */
-function ponerImagen(url, guardar) {
+function ponerImagen(url) {
   for (const img of [$("#insignia"), $("#insignia-intro")]) {
     if (url) { if (img.src !== url) img.src = url; img.hidden = false; } else { img.hidden = true; img.removeAttribute("src"); }
   }
-  if (guardar) { try { url ? localStorage.setItem("donaton-imagen", url) : localStorage.removeItem("donaton-imagen"); } catch {} }
 }
-try { const guardada = localStorage.getItem("donaton-imagen"); if (guardada) ponerImagen(guardada, false); } catch {}
+
+/* ================= Patrocinadores que pasan de lado a lado ================= */
+let patrocinadores = [];
+async function pintarPatrocinadores(lista) {
+  patrocinadores = lista || [];
+  const zona = $("#patrocinios"), pista = $("#pat-pista");
+  pista.classList.remove("anda"); pista.replaceChildren();
+  zona.hidden = !patrocinadores.length;
+  if (!patrocinadores.length) return;
+  const tarjeta = x => {
+    const t = document.createElement("div"); t.className = "logo";
+    const img = document.createElement("img"); img.src = x.logo; img.alt = x.nombre || "Patrocinador";
+    t.append(img); return t;
+  };
+  patrocinadores.forEach(x => pista.append(tarjeta(x)));
+  await Promise.all([...pista.querySelectorAll("img")].map(i => i.decode().catch(() => {})));
+  const ancho = $(".pat-ventana").clientWidth;
+  let vueltas = 1;
+  while (pista.scrollWidth < ancho && vueltas < 30) { patrocinadores.forEach(x => pista.append(tarjeta(x))); vueltas++; }
+  await Promise.all([...pista.querySelectorAll("img")].map(i => i.decode().catch(() => {})));
+  [...pista.children].forEach(e => { const c = e.cloneNode(true); c.setAttribute("aria-hidden", "true"); pista.append(c); });
+  pista.style.setProperty("--dur", Math.max(18, patrocinadores.length * vueltas * 4.5) + "s");
+  if (!reducir) pista.classList.add("anda");
+}
+
+// Al abrir, muestra de una vez lo que quedó guardado (sin gastar lecturas)
+(function desdeCache() {
+  const u = cache.leer("ultimo"); if (u) aplicarTextos(u);
+  const i = cache.leer("img"); if (i?.url) ponerImagen(i.url);
+  const pt = cache.leer("pat"); if (pt?.lista?.length) pintarPatrocinadores(pt.lista);
+})();
 
 /* ================= Muro de donantes que sube sin fin ================= */
 let donantes = [];
@@ -465,7 +552,7 @@ function pintarMuro() {
   if (!reducir) pista.classList.add("anda");
 }
 let tMuro;
-addEventListener("resize", () => { clearTimeout(tMuro); tMuro = setTimeout(pintarMuro, 300); });
+addEventListener("resize", () => { clearTimeout(tMuro); tMuro = setTimeout(() => { pintarMuro(); pintarPatrocinadores(patrocinadores); }, 300); });
 
 let corriendo = false;
 async function actualizar() {
@@ -489,7 +576,10 @@ async function actualizar() {
     await esperar(700);
     await contar(total);
     celebrarFinal(total);
-    estado("Actualizado a las " + new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }));
+    const hora = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    if (sinConexion) estado("Sin conexión: mostrando el último conteo guardado", true);
+    else estado(`Actualizado a las ${hora} · ${lecturas} ${lecturas === 1 ? "lectura" : "lecturas"} a Firebase`);
+    lecturas = 0;
   } catch (err) {
     $("#intro").classList.add("off");
     estado("No se pudo leer Firebase: " + err.message, true);
