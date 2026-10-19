@@ -10,8 +10,8 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <style>
   :root{
-    --noche:#1B1F3B; --noche2:#2E3466; --crema:#EADFC8; --oro:#F3C454; --ladrillo:#B4502E;
-    --tenue:#A3A9D1; --plano:rgba(234,223,200,.3);
+    --noche:#140E0D; --noche2:#4A1A1C; --crema:#F3E6D0; --oro:#DDB86E; --ladrillo:#8E2A2A; --durazno:#E3B892; --cielo:#B5B9B4;
+    --tenue:#CDB898; --plano:rgba(243,230,208,.3);
     color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0}
@@ -23,25 +23,28 @@
   }
   .stage{
     height:100vh;display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);
+    grid-template-columns:minmax(0,.95fr) minmax(0,1.15fr) minmax(0,.8fr);
+    gap:2vh 3vw;
     grid-template-rows:auto minmax(0,1fr) auto;
     gap:2vh 4vw;padding:4vh 4vw 2.5vh;
   }
-  .top{grid-column:1/-1;display:flex;align-items:baseline;gap:1.6vw;flex-wrap:wrap}
+  .top{grid-column:1/-1;display:flex;align-items:center;gap:1.6vw}
+  .insignia{height:15vh;width:auto;flex:none;filter:drop-shadow(0 0 1.6vh rgba(221,184,110,.35))}
+  .titulos{display:flex;align-items:baseline;gap:.4vh 1.6vw;flex-wrap:wrap}
   h1{font-family:"Alegreya",Georgia,serif;font-weight:800;font-size:clamp(2rem,4.4vw,5.4rem);line-height:1}
   .sub{font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1rem,2vw,2.3rem);color:var(--tenue)}
 
   /* Iglesia */
   .obra{position:relative;display:flex;align-items:flex-end;justify-content:center;min-height:0}
   .obra svg{position:relative;width:100%;height:100%;max-height:78vh}
-  .halo{position:absolute;inset:0;background:radial-gradient(circle at 50% 35%, rgba(243,196,84,.38), transparent 60%);
+  .halo{position:absolute;inset:0;background:radial-gradient(closest-side at 50% 40%, rgba(221,184,110,.38), transparent);
     opacity:0;transform:scale(.6);transition:opacity 1.2s, transform 1.8s cubic-bezier(.2,.8,.2,1)}
   .halo.on{opacity:1;transform:scale(1.1)}
   .brick{opacity:0;transform:translateY(-26px) rotate(-6deg);transform-box:fill-box;transform-origin:center;
     transition:opacity .3s ease, transform .6s cubic-bezier(.2,.9,.3,1.35)}
   .brick.on{opacity:1;transform:none}
   .sin-trans .brick{transition:none}
-  .plano{fill:rgba(234,223,200,.035);stroke:var(--plano);stroke-width:1.5;stroke-dasharray:6 6}
+  .plano{fill:rgba(243,230,208,.035);stroke:var(--plano);stroke-width:1.5;stroke-dasharray:6 6}
   .suelo{stroke:var(--plano);stroke-width:2}
   .puerta,.ventana{fill:var(--noche);stroke:var(--plano);stroke-width:1.5;stroke-dasharray:6 6;transition:fill 1s}
   .puerta.on{fill:#5A3420;stroke:#3A2214;stroke-dasharray:none}
@@ -63,14 +66,14 @@
   .odo.final{animation:latido 1.4s cubic-bezier(.2,.9,.3,1.2)}
   @keyframes latido{
     0%{transform:scale(1);text-shadow:none}
-    30%{transform:scale(1.09);text-shadow:0 0 .35em rgba(243,196,84,.7)}
-    100%{transform:scale(1);text-shadow:0 0 .15em rgba(243,196,84,.35)}
+    30%{transform:scale(1.09);text-shadow:0 0 .35em rgba(221,184,110,.7)}
+    100%{transform:scale(1);text-shadow:0 0 .15em rgba(221,184,110,.35)}
   }
-  .odo.final.quieto{text-shadow:0 0 .15em rgba(243,196,84,.35)}
+  .odo.final.quieto{text-shadow:0 0 .15em rgba(221,184,110,.35)}
   .meta{font-size:clamp(1.1rem,2vw,2.4rem)}
-  .barra{position:relative;height:clamp(14px,2.2vh,28px);border-radius:999px;background:rgba(234,223,200,.1);margin-top:3vh;overflow:hidden}
+  .barra{position:relative;height:clamp(14px,2.2vh,28px);border-radius:999px;background:rgba(243,230,208,.1);margin-top:3vh;overflow:hidden}
   .barra-fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:inherit;
-    background:linear-gradient(90deg,var(--ladrillo),#D9824A 55%,var(--oro))}
+    background:linear-gradient(90deg,var(--ladrillo),#B5654A 50%,var(--oro))}
   .barra-fill::after{content:"";position:absolute;inset:0;
     background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);
     background-size:200% 100%;animation:brillo 1.6s linear infinite}
@@ -79,6 +82,23 @@
   .gracias{margin-top:3vh;font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1.2rem,2.4vw,3rem);
     opacity:0;transform:translateY(1.5vh);transition:opacity .9s .3s, transform .9s .3s}
   .gracias.on{opacity:1;transform:none}
+
+  /* Muro de donantes */
+  .muro{display:flex;flex-direction:column;min-height:0;gap:1.5vh}
+  .muro-ventana{position:relative;flex:1;min-height:0;overflow:hidden;
+    -webkit-mask-image:linear-gradient(transparent, #000 10%, #000 88%, transparent);
+    mask-image:linear-gradient(transparent, #000 10%, #000 88%, transparent)}
+  .muro-pista{display:flex;flex-direction:column;gap:1.4vh;will-change:transform}
+  .muro-pista.anda{animation:subir var(--dur,60s) linear infinite}
+  @keyframes subir{from{transform:translateY(0)}to{transform:translateY(calc(-50% - .7vh))}}
+  .don{display:flex;align-items:center;gap:1vw;padding:1.4vh 1.1vw;
+    background:rgba(243,230,208,.07);border:1px solid rgba(243,230,208,.14);
+    border-radius:1.1vw 1.1vw 1.1vw .25vw}
+  .avatar{flex:none;width:clamp(34px,3.2vw,64px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+    font-weight:800;font-size:clamp(.9rem,1.25vw,1.6rem);color:var(--noche)}
+  .don .n{font-weight:700;font-size:clamp(1rem,1.55vw,2rem);line-height:1.15;overflow-wrap:anywhere}
+  .don .t{color:var(--tenue);font-size:clamp(.8rem,1.05vw,1.3rem)}
+  .muro-vacio{color:var(--tenue);font-style:italic;font-size:clamp(1rem,1.3vw,1.6rem)}
 
   .pie{grid-column:1/-1;display:flex;gap:2.5vw;align-items:center;font-size:clamp(.75rem,.95vw,1.05rem);color:var(--tenue)}
   .pie button{font:inherit;color:inherit;background:none;border:1px solid var(--plano);border-radius:999px;padding:.4em 1em;cursor:pointer}
@@ -90,6 +110,12 @@
   .intro{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:var(--noche);
     transition:opacity .6s;font-family:"Alegreya",Georgia,serif;font-style:italic;font-size:clamp(2rem,5vw,6rem)}
   .intro.off{opacity:0;pointer-events:none}
+  .intro-caja{display:flex;flex-direction:column;align-items:center;gap:3vh;text-align:center}
+  .insignia-intro{height:52vh;width:auto;animation:respira 2.4s ease-in-out infinite}
+  @keyframes respira{
+    0%,100%{transform:scale(1);filter:drop-shadow(0 0 2vh rgba(221,184,110,.3))}
+    50%{transform:scale(1.03);filter:drop-shadow(0 0 5vh rgba(221,184,110,.65))}
+  }
   .puntos i{display:inline-block;font-style:normal;animation:salto 1s infinite}
   .puntos i:nth-child(2){animation-delay:.15s}
   .puntos i:nth-child(3){animation-delay:.3s}
@@ -111,11 +137,12 @@
   @media (max-width:820px){
     body{overflow:auto}
     .stage{height:auto;grid-template-columns:1fr}
+    .muro-ventana{height:50vh;flex:none}
     .obra svg{max-height:55vh}
   }
   @media (prefers-reduced-motion:reduce){
     .brick,.halo,.gracias{transition:none}
-    .odo.final,.hito.on,.barra-fill::after,.puntos i{animation:none}
+    .insignia-intro,.muro-pista.anda,.odo.final,.hito.on,.barra-fill::after,.puntos i{animation:none}
     .hito.on{opacity:1;transform:translateX(-50%)}
   }
 </style>
@@ -123,8 +150,11 @@
 <body>
 <main class="stage">
   <header class="top">
-    <h1 id="titulo">Donatón</h1>
-    <p class="sub">Construyendo juntos la casa de Dios</p>
+    <img id="insignia" class="insignia" alt="Imagen de la parroquia" hidden>
+    <div class="titulos">
+      <h1 id="titulo">Donatón</h1>
+      <p id="subtitulo" class="sub">Construyendo juntos la casa de Dios</p>
+    </div>
   </header>
 
   <section class="obra" aria-hidden="true">
@@ -141,6 +171,11 @@
     <p id="gracias" class="gracias">¡Gracias por sembrar en la casa de Dios!</p>
   </section>
 
+  <section class="muro" aria-label="Donantes">
+    <p class="etq">Gracias a quienes siembran</p>
+    <div class="muro-ventana"><div id="muro-pista" class="muro-pista"></div></div>
+  </section>
+
   <footer class="pie">
     <button id="actualizar" type="button">Barra espaciadora: actualizar el conteo</button>
     <span>F: pantalla completa</span>
@@ -148,12 +183,12 @@
   </footer>
 </main>
 
-<div id="intro" class="intro"><p>Contando las ofrendas<span class="puntos"><i>.</i><i>.</i><i>.</i></span></p></div>
+<div id="intro" class="intro"><div class="intro-caja"><img id="insignia-intro" class="insignia-intro" alt="" hidden><p>Contando las ofrendas<span class="puntos"><i>.</i><i>.</i><i>.</i></span></p></div></div>
 <div id="hito" class="hito"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDy9nmz3x8h20vSX5OMVEDAV1B5JCg73Hg",
@@ -170,7 +205,7 @@ const formato = new Intl.NumberFormat("es-CO", { style: "currency", currency: "C
 const cop = n => formato.format(Math.round(n));
 const reducir = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const esperar = ms => new Promise(r => setTimeout(r, ms));
-const COLORES = ["#F3C454", "#EADFC8", "#B4502E", "#FFFFFF"];
+const COLORES = ["#DDB86E", "#F3E6D0", "#8E2A2A", "#E3B892", "#B5B9B4"];
 let meta = 50000000;
 
 /* ================= Iglesia de ladrillos ================= */
@@ -200,7 +235,7 @@ svg.append(defs);
 svg.append(el("line", { x1: 40, y1: 581, x2: 560, y2: 581, class: "suelo" }));
 svg.append(el("polygon", { points: puntos, class: "plano" }));
 const grupo = el("g", { "clip-path": "url(#silueta)" });
-const tonos = ["#B4502E", "#A3472A", "#C25E37", "#9C4227", "#B85A35"];
+const tonos = ["#A3513A", "#8F4430", "#B05E44", "#8A3A2C", "#9C4A35"];
 const ladrillos = [];
 for (let r = 0; ; r++) {
   const y = 580 - (r + 1) * 12;
@@ -370,15 +405,67 @@ function celebrarFinal(total) {
 function estado(txt, error = false) { const e = $("#estado"); e.textContent = txt; e.classList.toggle("error", error); }
 
 async function leerTotal() {
-  const [snap, conf] = await Promise.all([
-    getDocs(collection(db, "donaciones")),
-    getDoc(doc(db, "config", "evento"))
+  // Solo lee el total aprobado y la lista pública de donantes (sin valores)
+  const [res, conf, muro, imagen] = await Promise.all([
+    getDoc(doc(db, "resumen", "total")),
+    getDoc(doc(db, "config", "evento")),
+    getDocs(collection(db, "muro")),
+    getDoc(doc(db, "config", "imagen")).catch(() => null)
   ]);
+  if (imagen) ponerImagen(imagen.data()?.dataUrl || "", true);
   const c = conf.data() || {};
   if (Number(c.meta) > 0) meta = Number(c.meta);
   if (c.titulo) { $("#titulo").textContent = c.titulo; document.title = c.titulo + " | Pantalla"; }
-  return snap.docs.reduce((s, d) => s + (Number(d.data().monto) || 0), 0);
+  if (c.subtitulo) $("#subtitulo").textContent = c.subtitulo;
+  donantes = muro.docs.map(d => d.data())
+    .sort((x, y) => (y.orden?.toMillis?.() ?? 0) - (x.orden?.toMillis?.() ?? 0));
+  return Math.max(0, Number(res.data()?.total) || 0);
 }
+
+/* ================= Imagen de la parroquia ================= */
+function ponerImagen(url, guardar) {
+  for (const img of [$("#insignia"), $("#insignia-intro")]) {
+    if (url) { if (img.src !== url) img.src = url; img.hidden = false; } else { img.hidden = true; img.removeAttribute("src"); }
+  }
+  if (guardar) { try { url ? localStorage.setItem("donaton-imagen", url) : localStorage.removeItem("donaton-imagen"); } catch {} }
+}
+try { const guardada = localStorage.getItem("donaton-imagen"); if (guardada) ponerImagen(guardada, false); } catch {}
+
+/* ================= Muro de donantes que sube sin fin ================= */
+let donantes = [];
+const AVATARES = ["#DDB86E", "#E3B892", "#F3E6D0", "#B5B9B4", "#C98F6B"];
+function tarjetaDonante(d, i) {
+  const nombre = (d.nombre || "").trim() || "Anónimo";
+  const el = document.createElement("div"); el.className = "don";
+  const av = document.createElement("span"); av.className = "avatar";
+  av.style.background = AVATARES[i % AVATARES.length];
+  av.textContent = nombre === "Anónimo" ? "♥" : nombre.split(/\s+/).slice(0, 2).map(p => p[0]).join("").toUpperCase();
+  const txt = document.createElement("div");
+  const n = document.createElement("p"); n.className = "n"; n.textContent = nombre;
+  const t = document.createElement("p"); t.className = "t";
+  t.textContent = d.talonario ? `Talonario N.º ${d.talonario}` : "Ofrenda recibida";
+  txt.append(n, t); el.append(av, txt);
+  return el;
+}
+function pintarMuro() {
+  const pista = $("#muro-pista");
+  pista.classList.remove("anda"); pista.replaceChildren();
+  if (!donantes.length) {
+    const p = document.createElement("p"); p.className = "muro-vacio";
+    p.textContent = "Aquí aparecerán los nombres de quienes siembran en esta obra.";
+    pista.append(p); return;
+  }
+  const alto = $(".muro-ventana").clientHeight;
+  let vueltas = 0;
+  do { donantes.forEach((d, i) => pista.append(tarjetaDonante(d, i))); vueltas++; }
+  while (pista.scrollHeight < alto && vueltas < 40);
+  // Se duplica todo para que al llegar a la mitad empiece de nuevo sin que se note el salto
+  [...pista.children].forEach(e => { const c = e.cloneNode(true); c.setAttribute("aria-hidden", "true"); pista.append(c); });
+  pista.style.setProperty("--dur", Math.max(20, donantes.length * vueltas * 3.2) + "s");
+  if (!reducir) pista.classList.add("anda");
+}
+let tMuro;
+addEventListener("resize", () => { clearTimeout(tMuro); tMuro = setTimeout(pintarMuro, 300); });
 
 let corriendo = false;
 async function actualizar() {
@@ -396,6 +483,7 @@ async function actualizar() {
     $("#pct").textContent = "0";
     $("#meta").textContent = cop(meta);
     construirOdometro(total);
+    pintarMuro();
     ponerValor(0, true);
     $("#intro").classList.add("off");
     await esperar(700);
