@@ -132,6 +132,12 @@
   .pat-fila .acciones button{min-width:44px;flex:none}
   .check{flex-direction:row;align-items:center;gap:10px;font-weight:500}
   .check input{width:22px;height:22px;accent-color:var(--ladrillo)}
+  .mostrar .barra h2{margin:0}
+  .mostrar .badge{background:var(--pend-fondo);color:var(--pend)}
+  .mostrar .badge.todo{background:var(--ok-fondo);color:var(--ok)}
+  .m-valor{font-weight:800;font-size:2rem;line-height:1.1;color:var(--oro);font-variant-numeric:tabular-nums}
+  .m-ejes{display:flex;justify-content:space-between;color:var(--suave);font-size:.85rem;margin-top:-4px}
+  #m-rango{width:100%;padding:0;border:none;background:none;accent-color:var(--ladrillo);height:34px}
   [hidden]{display:none !important}
 </style>
 </head>
@@ -162,11 +168,27 @@
     </header>
 
     <div class="cifras">
-      <div class="cifra"><p>Aprobado (en pantalla)</p><p id="c-total" class="n">$ 0</p><p id="c-meta" class="s"></p></div>
+      <div class="cifra"><p>Recaudado real (aprobado)</p><p id="c-total" class="n">$ 0</p><p id="c-meta" class="s"></p></div>
       <div class="cifra"><p>Por aprobar</p><p id="c-pend" class="n">$ 0</p><p id="c-pend-n" class="s"></p></div>
     </div>
 
-    <p id="pub-estado" class="nota"></p>
+    <section class="panel mostrar">
+      <div class="barra">
+        <h2>Lo que se ve en pantalla</h2>
+        <span id="m-modo" class="badge"></span>
+      </div>
+      <p id="m-valor" class="m-valor">$ 0</p>
+      <input id="m-rango" type="range" min="0" max="0" step="1" value="0" aria-label="Cuánto mostrar en pantalla">
+      <div class="m-ejes"><span>$ 0</span><span id="m-max">Hasta el momento</span></div>
+      <div class="acciones">
+        <button type="button" data-ajuste="-500000">− 500 mil</button>
+        <button type="button" data-ajuste="500000">+ 500 mil</button>
+        <button type="button" data-ajuste="1000000">+ 1 millón</button>
+        <button type="button" id="m-todo" class="prim">Hasta el momento</button>
+      </div>
+      <p id="m-ayuda" class="nota"></p>
+      <p id="pub-estado" class="nota"></p>
+    </section>
 
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="pendiente" aria-selected="true">Por aprobar <span id="n-pendiente"></span></button>
@@ -287,6 +309,10 @@ const db = getFirestore(app);
 const authCrear = getAuth(initializeApp(firebaseConfig, "crear-cajeros"));
 const PANTALLA = doc(db, "publico", "pantalla");     // lo único que lee la pantalla
 const PATROCINADORES = doc(db, "config", "patrocinadores");
+const RANKING = doc(db, "ranking", "actual");         // lo leen los cajeros
+// Compara datos sin importar el orden de las claves (evita escrituras repetidas)
+const estable = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x)
+  ? Object.keys(x).sort().reduce((o, c) => (o[c] = x[c], o), {}) : x);
 
 /* ---------- Utilidades ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -382,7 +408,7 @@ $("#f-login").addEventListener("submit", async e => {
 document.querySelectorAll(".salir").forEach(b => b.addEventListener("click", () => signOut(auth)));
 
 /* ---------- Datos en vivo ---------- */
-let donaciones = [], cajeros = [], patrocinadores = [], evento = {}, pantallaActual = null, imagenActual = "";
+let donaciones = [], cajeros = [], patrocinadores = [], evento = {}, pantallaActual = null, imagenActual = "", rankingActual = null;
 let totalPantalla = 0, meta = 50000000, tab = "pendiente";
 const listos = new Set();
 function listo(k) { listos.add(k); programarPublicar(); }
@@ -411,18 +437,28 @@ function escuchar() {
   unsubs.push(onSnapshot(PATROCINADORES, s => { patrocinadores = s.data()?.lista || []; pintarPatrocinadores(); listo("patrocinadores"); }));
   unsubs.push(onSnapshot(collection(db, "cajeros"), s => {
     cajeros = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
-    pintarCajeros();
+    pintarCajeros(); listo("cajeros");
   }));
+  // Si las reglas aún no permiten el ranking, la pantalla se sigue publicando igual
+  unsubs.push(onSnapshot(RANKING, s => { rankingActual = s.exists() ? s.data() : null; listo("ranking"); },
+    () => { rankingActual = null; listo("ranking"); }));
 }
 
 /* ---------- Publicar el documento único que lee la pantalla ---------- */
 // Cada vez que cambia algo aprobado, el banco arma un solo documento con el total, la meta,
 // los nombres y talonarios (sin valores) y las versiones de la imagen y los logos.
+// Cuánto se muestra: todo lo aprobado, o solo hasta el valor que el banco elija con la barra
+const realAprobado = () => donaciones.filter(d => d.estado === "aprobada").reduce((t, d) => t + (Number(d.monto) || 0), 0);
+const mostrarTodo = () => evento.mostrarTodo !== false;
+function totalVisible() {
+  const real = realAprobado();
+  return mostrarTodo() ? real : Math.min(real, Math.max(0, Number(evento.mostrarHasta) || 0));
+}
 function armarPantalla() {
   const aprob = donaciones.filter(d => d.estado === "aprobada")
     .sort((a, b) => (aFecha(b.aprobadoEn) || aFecha(b.creadoEn) || 0) - (aFecha(a.aprobadoEn) || aFecha(a.creadoEn) || 0));
   return {
-    total: aprob.reduce((t, d) => t + (Number(d.monto) || 0), 0),
+    total: totalVisible(),            // solo lo que el banco decidió mostrar (el real no se publica)
     meta,
     titulo: evento.titulo || "Donatón",
     subtitulo: evento.subtitulo || "Construyendo juntos la casa de Dios",
@@ -431,14 +467,31 @@ function armarPantalla() {
     patrocinadoresVersion: Number(evento.patrocinadoresVersion) || (patrocinadores.length ? 1 : 0)
   };
 }
+/* ---------- Ranking de cajeros (aprobado y recogido de cada uno) ---------- */
+function armarRanking() {
+  const suma = a => a.reduce((t, d) => t + (Number(d.monto) || 0), 0);
+  return cajeros.map(c => {
+    const suyos = donaciones.filter(d => d.cajeroEmail?.toLowerCase() === c.id);
+    const ok = suyos.filter(d => d.estado === "aprobada"), pend = suyos.filter(d => d.estado === "pendiente");
+    return { aprobado: suma(ok), id: c.id, nombre: c.nombre || c.id, recogido: suma(ok) + suma(pend), registros: ok.length + pend.length };
+  }).sort((a, b) => b.aprobado - a.aprobado || b.recogido - a.recogido || a.nombre.localeCompare(b.nombre));
+}
+async function publicarRanking(forzar) {
+  const filas = armarRanking();
+  if (!forzar && rankingActual && estable(rankingActual.filas) === estable(filas)) return;
+  try { await setDoc(RANKING, { filas, actualizado: serverTimestamp() }); }
+  catch (err) { console.warn("No se pudo actualizar el ranking", err); }
+}
+
 let tPub;
 function programarPublicar() { clearTimeout(tPub); tPub = setTimeout(() => publicar(false), 900); }
 async function publicar(forzar) {
-  const faltan = ["donaciones", "pantalla", "evento", "imagen", "patrocinadores"].filter(k => !listos.has(k));
+  const faltan = ["donaciones", "pantalla", "evento", "imagen", "patrocinadores", "cajeros", "ranking"].filter(k => !listos.has(k));
   if (faltan.length) { if (forzar) toast("Todavía se están cargando los datos, intenta en un momento."); return; }
+  publicarRanking(forzar);
   const nuevo = armarPantalla();
   const claves = Object.keys(nuevo);
-  const igual = pantallaActual && JSON.stringify(claves.map(k => pantallaActual[k])) === JSON.stringify(claves.map(k => nuevo[k]));
+  const igual = pantallaActual && estable(claves.map(k => pantallaActual[k])) === estable(claves.map(k => nuevo[k]));
   if (igual && !forzar) { $("#pub-estado").textContent = "✓ La pantalla está al día."; return; }
   $("#pub-estado").textContent = "Actualizando la pantalla…";
   try {
@@ -450,8 +503,10 @@ async function publicar(forzar) {
 
 function pintarCifras() {
   const pend = donaciones.filter(d => d.estado === "pendiente");
-  $("#c-total").textContent = cop(totalPantalla);
-  $("#c-meta").textContent = `${meta > 0 ? Math.floor(totalPantalla / meta * 100) : 0}% de ${cop(meta)}`;
+  const real = realAprobado();
+  $("#c-total").textContent = cop(real);
+  $("#c-meta").textContent = `${meta > 0 ? Math.floor(real / meta * 100) : 0}% de ${cop(meta)}`;
+  pintarMostrar();
   $("#c-pend").textContent = cop(pend.reduce((s, d) => s + (d.monto || 0), 0));
   $("#c-pend-n").textContent = pend.length === 1 ? "1 registro" : `${pend.length} registros`;
   $("#n-pendiente").textContent = pend.length ? `(${pend.length})` : "";
@@ -767,6 +822,46 @@ $("#f-pat").addEventListener("submit", async e => {
     $("#pat-vista").hidden = true; $("#pat-vacia").hidden = false;
   } else b.disabled = false;
 });
+
+/* ---------- Barra de «lo que se ve en pantalla» ---------- */
+const rango = $("#m-rango");
+let arrastrando = false;
+function pintarMostrar(valorTemporal) {
+  const real = realAprobado();
+  rango.max = Math.max(real, 1);
+  rango.step = real > 20000000 ? 100000 : real > 2000000 ? 50000 : 10000;
+  const todo = mostrarTodo();
+  const v = valorTemporal ?? totalVisible();
+  if (!arrastrando) rango.value = todo ? rango.max : v;
+  $("#m-valor").textContent = cop(v);
+  $("#m-max").textContent = "Hasta el momento: " + cop(real);
+  const modo = $("#m-modo");
+  modo.textContent = todo ? "En vivo" : "Parcial";
+  modo.classList.toggle("todo", todo);
+  $("#m-ayuda").textContent = todo
+    ? "La pantalla muestra todo lo aprobado. Cada donación nueva que apruebes suma sola."
+    : `La pantalla muestra ${cop(v)} de ${cop(real)}. Ve subiendo la barra para revelar más, o pulsa «Hasta el momento».`;
+}
+async function guardarMostrar(cambios) {
+  try { await setDoc(doc(db, "config", "evento"), cambios, { merge: true }); }
+  catch (err) { toast("No se pudo cambiar lo que se muestra: " + err.message); }
+}
+function valorDesdeBarra() {
+  const real = realAprobado(), v = Number(rango.value);
+  return v >= real - Number(rango.step) / 2 ? { todo: true, v: real } : { todo: false, v };
+}
+rango.addEventListener("input", () => { arrastrando = true; const r = valorDesdeBarra(); pintarMostrar(r.v); });
+rango.addEventListener("change", () => {
+  arrastrando = false;
+  const r = valorDesdeBarra();
+  guardarMostrar(r.todo ? { mostrarTodo: true } : { mostrarTodo: false, mostrarHasta: r.v });
+});
+document.querySelectorAll("[data-ajuste]").forEach(b => b.addEventListener("click", () => {
+  const real = realAprobado();
+  const v = Math.max(0, totalVisible() + Number(b.dataset.ajuste));
+  guardarMostrar(v >= real ? { mostrarTodo: true } : { mostrarTodo: false, mostrarHasta: v });
+}));
+$("#m-todo").addEventListener("click", () => guardarMostrar({ mostrarTodo: true }));
 
 /* ---------- Pestañas ---------- */
 const TITULOS = { pendiente: "Por aprobar", aprobada: "Aprobadas", rechazada: "Rechazadas" };
