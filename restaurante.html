@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.16-1';
+const APP_VERSION='2026.10.18-3';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -2633,7 +2633,13 @@ function combo(cont,o){
     $$('.cbx-it',pop).forEach(d=> d.onmousedown=e=>{ e.preventDefault(); elegir(Number(d.dataset.i)); });
   }
   function abrir(){ if(abierto) return; abierto=true; pop.classList.remove('hide'); idx=-1; pintar(); }
-  function cerrar(){ abierto=false; creando=false; pop.classList.add('hide'); inp.value=texto(); filtro=''; }
+  function cerrar(){
+    /* escribió el nombre completo y se salió sin tocarlo en la lista: se escoge solo
+       (antes quedaba vacío y, en compras, esa línea se perdía sin avisar) */
+    const q=filtro.trim();
+    if(!val && q){ const ex=o.lista.filter(x=>normTxt(o.etiqueta(x)).trim()===normTxt(q));
+      if(ex.length===1){ abierto=false; creando=false; pop.classList.add('hide'); fijar(ex[0].id); return; } }
+    abierto=false; creando=false; pop.classList.add('hide'); inp.value=texto(); filtro=''; }
   function fijar(id,avisar){
     val=id||''; inp.value=texto(); filtro='';
     bx.style.display = val? 'block':'none';
@@ -2702,6 +2708,10 @@ function crearProveedorRapido(nombre,d){
   put('proveedores',p); return p.id;
 }
 function crearIngredienteRapido(nombre,d){
+  const clave=t=>normTxt(t).replace(/[^a-z0-9]+/g,'');
+  const ya=S.ingredientes.find(x=>clave(x.nombre)===clave(nombre));
+  if(ya){ if(ya.activo===false){ ya.activo=true; put('ingredientes',ya); }
+    toast('«'+ya.nombre+'» ya existía: se usa ese, no se crea otro','ok',4500); return ya.id; }
   const g={id:uid('g'),nombre:nombre.trim(),unidad:(d&&d.unidad)||'und',costo:0,stock:0,stockMin:0,activo:true};
   put('ingredientes',g); return g.id;
 }
@@ -2715,7 +2725,7 @@ const CREAR_PROVEEDOR={nota:'Luego le completas NIT y contacto en Proveedores',
   campos:[{k:'telefono',label:'Teléfono (opcional)',valor:''}], fn:crearProveedorRapido, lista:()=>S.proveedores.filter(x=>x.activo)};
 const CREAR_INGREDIENTE={nota:'Entra con saldo en cero; la compra le pone el costo',
   campos:[{k:'unidad',label:'Unidad de medida',valor:'g',opciones:['g','kg','ml','L','und','lb','oz']}],
-  fn:crearIngredienteRapido, lista:()=>S.ingredientes.filter(x=>x.activo)};
+  fn:crearIngredienteRapido, lista:()=>S.ingredientes.filter(x=>x.activo!==false)};
 const CREAR_CATEGORIA={campos:[{k:'emoji',label:'Icono',valor:'🍽️'}],
   fn:crearCategoriaRapida, lista:()=>S.categorias.filter(x=>x.activo)};
 const CREAR_TERCERO={nota:'Queda guardado como proveedor',
@@ -5370,31 +5380,196 @@ function gruposInventario(lista){
   return out;
 }
 let _invCat='all', _invCerrados={};
+/* ===================== KÁRDEX Y TRAZABILIDAD =====================
+   Todo lo que entró y salió de cada ingrediente, con su origen (compra,
+   venta, comida de empleados, conteo físico, recálculo…), quién lo hizo,
+   el saldo después de cada movimiento y el documento para abrirlo. */
+const ORIGEN_INV={
+  compra:{e:'🛒',n:'Compra',c:'ok'}, venta:{e:'🧾',n:'Venta',c:'bad'}, consumo:{e:'🍽️',n:'Comida empleados',c:'warn'},
+  ajuste:{e:'⚖️',n:'Conteo físico / ajuste',c:'info'}, recalculo:{e:'🔄',n:'Recalculado',c:'info'},
+  inicial:{e:'📥',n:'Saldo inicial',c:''}, importacion:{e:'📥',n:'Importado',c:''}, 'venta-anulada':{e:'↩️',n:'Venta devuelta',c:'ok'}
+};
+function origenInv(m){ return ORIGEN_INV[m.refTipo] || {e:m.tipo==='entrada'?'⬆️':m.tipo==='salida'?'⬇️':'⚖️', n:m.refTipo||m.tipo, c:''}; }
+function docDeMov(m){
+  if(!m.refId) return null;
+  if(m.refTipo==='compra'){ const d=byId('compras',m.refId); return d? {no:d.no, abrir:()=>verCompra(d), quien:nameOf('proveedores',d.proveedorId)} : null; }
+  if(m.refTipo==='venta'||m.refTipo==='venta-anulada'){ const d=byId('ventas',m.refId);
+    return d? {no:d.no, abrir:()=>verTicket(d), quien:(d.clienteId? nameOf('clientes',d.clienteId) : '')} : null; }
+  if(m.refTipo==='consumo'){ const d=byId('otrosdocs',m.refId); return d? {no:d.no, abrir:()=>mListaComidas(), quien:d.empleado} : null; }
+  return null;
+}
+/* movimientos de un ingrediente entre fechas con el saldo corrido */
+function kardexIng(gid,d1,d2){
+  const todos=S.movinv.filter(m=>m.ingredienteId===gid).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+  /* si el historial no arranca desde cero (había existencias antes de que existiera
+     el historial), se cuenta hacia atrás desde el stock actual para que cuadre */
+  const H=historialIng(gid), g=byId('ingredientes',gid)||{};
+  const base=H.confiable? 0 : round((Number(g.stock)||0)-sum(todos,m=>Number(m.cantidad)||0),4);
+  let saldo=base, inicial=base; const filas=[];
+  todos.forEach(m=>{
+    const q=Number(m.cantidad)||0, d=dISO(m.fecha);
+    if(d1 && d<d1){ saldo+=q; inicial=saldo; return; }
+    if(d2 && d>d2) return;
+    saldo=round(saldo+q,4);
+    filas.push({m:m, ent:q>0?q:0, sal:q<0?-q:0, saldo:saldo});
+  });
+  const r={filas:filas, inicial:round(inicial,4), final:round(saldo,4), confiable:H.confiable};
+  const por=k=>round(sum(filas.filter(f=>f.m.refTipo===k),f=>Number(f.m.cantidad)||0),4);
+  r.compras=por('compra'); r.ventas=-por('venta'); r.consumo=-por('consumo'); r.devuelto=por('venta-anulada');
+  r.ajustes=round(sum(filas.filter(f=>f.m.tipo==='ajuste'||f.m.refTipo==='ajuste'||f.m.refTipo==='recalculo'),f=>Number(f.m.cantidad)||0),4);
+  r.otros=round(r.final-r.inicial-r.compras+r.ventas+r.consumo-r.devuelto-r.ajustes,4);
+  return r;
+}
+function mKardex(gid,rango){
+  const g=byId('ingredientes',gid); if(!g) return;
+  let d1=(rango&&rango.d1)||dateAdd(todayISO(),-29), d2=(rango&&rango.d2)||todayISO(), filtro='todo';
+  const prods=S.productos.filter(p=>(p.receta||[]).some(r=>r.ingredienteId===gid) || p.invId===gid);
+  modal({title:'📜 Kárdex · '+g.nombre, size:'xl',
+    body:'<div class="row wrap" style="gap:8px;margin-bottom:10px;align-items:flex-end">'+
+        '<div class="f"><label>Desde</label><input type="date" id="kx1" value="'+d1+'"></div>'+
+        '<div class="f"><label>Hasta</label><input type="date" id="kx2" value="'+d2+'"></div>'+
+        '<button class="btn sm" data-kr="7">7 días</button><button class="btn sm" data-kr="30">30 días</button>'+
+        '<button class="btn sm" data-kr="mes">Este mes</button><button class="btn sm" data-kr="todo">Todo</button>'+
+        '<div class="f"><label>Ver</label><select id="kxf"><option value="todo">Todo</option><option value="entrada">Solo entradas</option>'+
+          '<option value="salida">Solo salidas</option><option value="ajuste">Solo ajustes y conteos</option></select></div></div>'+
+      '<div class="tiny muted" style="margin-bottom:8px">'+(prods.length? 'Lo descuentan: '+prods.map(p=>'<b>'+esc(p.nombre)+'</b>').join(', ')
+        : '<span style="color:var(--bad)">⚠ Ningún producto lo descuenta al vender</span>')+'</div>'+
+      '<div id="kxb"></div>',
+    footer:'<button class="btn" id="kxxl">⬇️ Excel</button><div class="spacer"></div><button class="btn" data-x>Cerrar</button>',
+    onOpen:m=>{
+      let K=null;
+      const pinta=()=>{
+        K=kardexIng(gid,d1,d2);
+        const u=esc(g.unidad||'');
+        let fs=K.filas.slice().reverse();                       // lo más nuevo arriba
+        if(filtro==='entrada') fs=fs.filter(f=>f.ent>0 && f.m.tipo!=='ajuste');
+        if(filtro==='salida') fs=fs.filter(f=>f.sal>0 && f.m.tipo!=='ajuste');
+        if(filtro==='ajuste') fs=fs.filter(f=>f.m.tipo==='ajuste'||f.m.refTipo==='ajuste'||f.m.refTipo==='recalculo');
+        const difHoy=round((Number(g.stock)||0)-K.final,4);
+        $('#kxb',m).innerHTML=
+          '<div class="kpis" style="margin-bottom:10px">'+
+            kpi('Había al inicio',num(K.inicial,2)+' '+u,fdate(d1),'')+
+            kpi('Entró por compras','+'+num(K.compras,2)+' '+u,'','ok')+
+            kpi('Salió por ventas','−'+num(K.ventas,2)+' '+u,K.consumo? '+ '+num(K.consumo,2)+' comida empleados':'','bad')+
+            kpi('Ajustes y conteos',(K.ajustes>0?'+':'')+num(K.ajustes,2)+' '+u,K.ajustes<0?'faltante':K.ajustes>0?'sobrante':'','info')+
+            kpi('Quedó',num(K.final,2)+' '+u,fdate(d2),'brand')+
+          '</div>'+
+          (K.confiable && Math.abs(difHoy)>0.0001 && d2>=todayISO()? '<div class="card" style="background:var(--warn-soft);margin-bottom:10px"><div class="bd tiny">'+
+            '⚠ El stock guardado ('+num(g.stock,2)+') no es igual a la suma del historial ('+num(K.final,2)+'). '+
+            'En Inventario ▸ 🩺 Revisar ▸ Recalcular se cuadra.</div></div>':'')+
+          '<div class="card"><div class="bd p0">'+tbl([
+            {t:'Fecha',f:f=>fdate(f.m.fecha,true)},
+            {t:'Origen',f:f=>{ const o=origenInv(f.m); return '<span class="pill '+o.c+'">'+o.e+' '+esc(o.n)+'</span>'; }},
+            {t:'Documento',f:f=>{ const d=docDeMov(f.m); return d? '<button class="btn ghost sm" data-kd="'+f.m.id+'">'+esc(d.no)+' 👁️</button>'+
+                (d.quien&&d.quien!=='—'? '<div class="tiny muted">'+esc(d.quien)+'</div>':'') : (f.m.refId? '<span class="tiny muted">ya no existe</span>':'—'); }},
+            {t:'Entró',num:1,f:f=>f.ent? '<b style="color:var(--ok)">+'+num(f.ent,3)+'</b>':''},
+            {t:'Salió',num:1,f:f=>f.sal? '<b style="color:var(--bad)">−'+num(f.sal,3)+'</b>':''},
+            {t:'Saldo',num:1,f:f=>'<b>'+num(f.saldo,3)+'</b>'},
+            verCostos()? {t:'Costo',num:1,f:f=>f.m.costoTotal!=null? money(Math.abs(f.m.costoTotal))+'<div class="tiny muted">'+money(f.m.costoUnit||0)+' c/u</div>':'—'} : null,
+            {t:'Detalle',f:f=>esc(f.m.nota||'')+(f.m.stockAntes!=null? '<div class="tiny muted">antes '+num(f.m.stockAntes,2)+'</div>':'')},
+            {t:'Usuario',f:f=>esc(nameOf('usuarios',f.m.usuarioId))}
+          ].filter(Boolean),fs,{empty:'Sin movimientos en estas fechas',icon:'📜'})+'</div></div>';
+        $$('[data-kd]',m).forEach(b=>b.onclick=()=>{ const mv=byId('movinv',b.dataset.kd); const d=mv&&docDeMov(mv);
+          if(d){ closeModal(); d.abrir(); } });
+      };
+      const fija=()=>{ d1=$('#kx1',m).value||d1; d2=$('#kx2',m).value||d2; pinta(); };
+      $('#kx1',m).onchange=fija; $('#kx2',m).onchange=fija;
+      $('#kxf',m).onchange=e=>{ filtro=e.target.value; pinta(); };
+      $$('[data-kr]',m).forEach(b=>b.onclick=()=>{ const k=b.dataset.kr;
+        if(k==='mes'){ d1=todayISO().slice(0,8)+'01'; d2=todayISO(); }
+        else if(k==='todo'){ const pri=S.movinv.filter(x=>x.ingredienteId===gid).map(x=>dISO(x.fecha)).sort()[0]; d1=pri||todayISO(); d2=todayISO(); }
+        else { d1=dateAdd(todayISO(),-(Number(k)-1)); d2=todayISO(); }
+        $('#kx1',m).value=d1; $('#kx2',m).value=d2; pinta(); });
+      $('#kxxl',m).onclick=()=>{
+        const b=x=>({v:x,b:1});
+        exportarExcel('kardex_'+normTxt(g.nombre).replace(/[^a-z0-9]+/g,'_')+'_'+d1+'_a_'+d2,[{nombre:'Kárdex',anchos:[18,22,14,10,10,10,14,40,16],filas:
+          [[{v:'Kárdex · '+g.nombre+' ('+(g.unidad||'')+')',t:'titulo'}],['Del '+fdate(d1)+' al '+fdate(d2)],['Había al inicio',{v:K.inicial}],[],
+           ['Fecha','Origen','Documento','Entró','Salió','Saldo','Costo','Detalle','Usuario'].map(b)]
+          .concat(K.filas.map(f=>{ const d=docDeMov(f.m); return [fdate(f.m.fecha,true),origenInv(f.m).n,d?d.no:'',{v:f.ent},{v:f.sal},{v:f.saldo},
+            {v:Math.abs(Number(f.m.costoTotal)||0)},f.m.nota||'',nameOf('usuarios',f.m.usuarioId)]; }))
+          .concat([[],['Quedó',{v:K.final}]])}]);
+      };
+      pinta();
+    }});
+}
 function viewInventario(vw){
   let tab='stock', q='';
+  const mf={d1:dateAdd(todayISO(),-6), d2:todayISO(), q:'', tipo:'todo', prod:''};
   topact('<button class="btn sm" id="audinv">🩺 Revisar</button>'+(puedeEditar()?'<button class="btn sm" id="recalc">🔄 Recalcular</button>':'')+
     '<button class="btn sm" id="aj" title="Si contaste físicamente un ingrediente, pon aquí cuánto hay de verdad">⚖️ Conteo físico</button>'+
     (esComercio()? '' : '<button class="btn pri sm" id="add">+ Ingrediente</button>'));
   vw.innerHTML='<div id="itabs"></div><div id="ibody"></div>';
-  $('#itabs').appendChild(tabsBar([['stock','Existencias'],['capas','Entradas'],['mov','Movimientos']],tab,t=>{tab=t;paint();}));
+  $('#itabs').appendChild(tabsBar([['stock','Existencias'],['mov','📜 Movimientos y kárdex'],['ajustes','⚖️ Ajustes'],['capas','Entradas']],tab,t=>{tab=t;paint();}));
   if($('#add')) $('#add').onclick=()=>edIngrediente(null);
   $('#aj').onclick=()=>mAjuste();
   if($('#audinv')) $('#audinv').onclick=mAuditoriaInv;
   if($('#recalc')) $('#recalc').onclick=hacerRecalculo;
   function paint(){
     $$('#itabs .tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
-    if(tab==='mov'){
-      const ms=S.movinv.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,400);
-      $('#ibody').innerHTML='<div class="card"><div class="bd p0">'+tbl([
+    if(tab==='mov' || tab==='ajustes'){
+      /* trazabilidad: filtros por fechas, ingrediente, producto y tipo */
+      const esAj=m=>m.tipo==='ajuste'||m.refTipo==='ajuste'||m.refTipo==='recalculo';
+      const prod=mf.prod? byId('productos',mf.prod) : null;
+      const deProd=prod? ((prod.receta||[]).map(r=>r.ingredienteId).concat(prod.invId?[prod.invId]:[])) : null;
+      let ms=S.movinv.filter(m=>{ const d=dISO(m.fecha); return d>=mf.d1 && d<=mf.d2; });
+      if(tab==='ajustes') ms=ms.filter(esAj);
+      else if(mf.tipo==='entrada') ms=ms.filter(m=>!esAj(m) && Number(m.cantidad)>0);
+      else if(mf.tipo==='salida') ms=ms.filter(m=>!esAj(m) && Number(m.cantidad)<0);
+      else if(mf.tipo!=='todo') ms=ms.filter(m=>m.refTipo===mf.tipo);
+      if(deProd) ms=ms.filter(m=>deProd.indexOf(m.ingredienteId)>=0);
+      if(mf.q.trim()) ms=ms.filter(m=>buscaTokens(nameOf('ingredientes',m.ingredienteId)+' '+(m.nota||'')+' '+((docDeMov(m)||{}).no||''),mf.q));
+      ms=ms.sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+      const tot=ms.length; ms=ms.slice(0,600);
+      const u=m=>esc((byId('ingredientes',m.ingredienteId)||{}).unidad||'');
+      const filtros='<div class="card" style="margin-bottom:12px"><div class="bd"><div class="row wrap" style="gap:8px;align-items:flex-end">'+
+        '<div class="f"><label>Desde</label><input type="date" id="mv1" value="'+mf.d1+'"></div>'+
+        '<div class="f"><label>Hasta</label><input type="date" id="mv2" value="'+mf.d2+'"></div>'+
+        '<button class="btn sm" data-mr="0">Hoy</button><button class="btn sm" data-mr="7">7 días</button><button class="btn sm" data-mr="mes">Este mes</button>'+
+        (tab==='mov'? '<div class="f"><label>Tipo</label><select id="mvt">'+
+          [['todo','Todo'],['entrada','Entradas'],['salida','Salidas'],['compra','🛒 Compras'],['venta','🧾 Ventas'],['consumo','🍽️ Comida empleados'],
+           ['ajuste','⚖️ Conteos físicos'],['recalculo','🔄 Recalculados']].map(x=>'<option value="'+x[0]+'"'+(mf.tipo===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+
+          '</select></div>' : '')+
+        (esComercio()? '' : '<div class="f" style="min-width:200px"><label>Producto</label><select id="mvp"><option value="">Todos</option>'+
+          S.productos.filter(p=>p.activo!==false && (p.receta||[]).length).sort((a,b)=>a.nombre.localeCompare(b.nombre))
+            .map(p=>'<option value="'+p.id+'"'+(mf.prod===p.id?' selected':'')+'>'+esc(p.nombre)+'</option>').join('')+'</select></div>')+
+        '<div class="f" style="flex:1;min-width:180px"><label>Buscar</label><input id="mvq" placeholder="Ingrediente, documento o motivo…" value="'+esc(mf.q)+'"></div>'+
+        '</div>'+(prod? '<div class="tiny muted" style="margin-top:6px">Mostrando los ingredientes que usa <b>'+esc(prod.nombre)+'</b>: '+
+          deProd.map(x=>esc(nameOf('ingredientes',x))).join(', ')+'</div>':'')+'</div></div>';
+      let resumen='';
+      if(tab==='ajustes'){
+        const faltan=ms.filter(m=>Number(m.cantidad)<0), sobran=ms.filter(m=>Number(m.cantidad)>0);
+        resumen='<div class="kpis" style="margin-bottom:12px">'+kpi('Ajustes',num(ms.length,0),'conteos físicos y recálculos','')+
+          kpi('Faltantes',num(faltan.length,0),verCostos()? money(sum(faltan,m=>Math.abs(m.costoTotal||0)))+' en valor':'','bad')+
+          kpi('Sobrantes',num(sobran.length,0),verCostos()? money(sum(sobran,m=>Math.abs(m.costoTotal||0)))+' en valor':'','ok')+'</div>'+
+          '<div class="hintx" style="margin-bottom:10px">Cada vez que alguien corrige el inventario queda aquí: cuánto había, cuánto quedó, quién y por qué. '+
+          'Los faltantes que se repiten en el mismo ingrediente son señal de desperdicio, porciones mal servidas o pérdida.</div>';
+      }
+      $('#ibody').innerHTML=filtros+resumen+'<div class="card"><div class="hd"><h3>'+(tab==='ajustes'?'⚖️ Ajustes de inventario':'📜 Movimientos')+'</h3>'+
+        '<span class="pill">'+num(tot,0)+'</span>'+(tot>600?'<span class="tiny muted">mostrando los 600 más recientes</span>':'')+
+        '<div class="spacer"></div><span class="tiny muted">Toca un ingrediente para ver su kárdex completo</span></div><div class="bd p0">'+tbl([
         {t:'Fecha',f:m=>fdate(m.fecha,true)},
-        {t:'Ingrediente',f:m=>esc(nameOf('ingredientes',m.ingredienteId))},
-        {t:'Tipo',f:m=>'<span class="pill '+(m.tipo==='entrada'?'ok':m.tipo==='salida'?'bad':'info')+'">'+esc(m.tipo)+'</span>'},
-        {t:'Cantidad',num:1,f:m=>(m.cantidad>0?'+':'')+num(m.cantidad,3)},
-        {t:'Costo',num:1,f:m=>m.costoTotal!=null?money(Math.abs(m.costoTotal)):'—'},
-        {t:'Saldo',num:1,f:m=>num(m.saldo,3)},
-        {t:'Origen',f:m=>esc(m.nota||m.refTipo||'—')},
+        {t:esComercio()?'Producto':'Ingrediente',f:m=>'<a href="#" data-kx="'+m.ingredienteId+'"><b>'+esc(nameOf('ingredientes',m.ingredienteId))+'</b></a>'},
+        {t:'Origen',f:m=>{ const o=origenInv(m); return '<span class="pill '+o.c+'">'+o.e+' '+esc(o.n)+'</span>'; }},
+        {t:'Documento',f:m=>{ const d=docDeMov(m); return d? '<button class="btn ghost sm" data-md="'+m.id+'">'+esc(d.no)+' 👁️</button>' : '—'; }},
+        tab==='ajustes'? {t:'Había',num:1,f:m=>m.stockAntes!=null? num(m.stockAntes,2) : num((Number(m.saldo)||0)-(Number(m.cantidad)||0),2)} : null,
+        {t:tab==='ajustes'?'Diferencia':'Cantidad',num:1,f:m=>{ const q=Number(m.cantidad)||0;
+          return '<b style="color:'+(q>0?'var(--ok)':q<0?'var(--bad)':'inherit')+'">'+(q>0?'+':'')+num(q,3)+'</b> <span class="tiny muted">'+u(m)+'</span>'; }},
+        {t:tab==='ajustes'?'Quedó':'Saldo',num:1,f:m=>num(m.saldo,3)},
+        verCostos()? {t:'Costo',num:1,f:m=>m.costoTotal!=null?money(Math.abs(m.costoTotal)):'—'} : null,
+        {t:tab==='ajustes'?'Motivo':'Detalle',f:m=>esc(m.nota||'—')},
         {t:'Usuario',f:m=>esc(nameOf('usuarios',m.usuarioId))}
-      ],ms,{empty:'Sin movimientos',icon:'📦'})+'</div></div>';
+      ].filter(Boolean),ms,{empty:'Sin movimientos con estos filtros',icon:'📦'})+'</div></div>';
+      const v=$('#ibody');
+      $('#mv1',v).onchange=e=>{ mf.d1=e.target.value||mf.d1; paint(); };
+      $('#mv2',v).onchange=e=>{ mf.d2=e.target.value||mf.d2; paint(); };
+      $$('[data-mr]',v).forEach(b=>b.onclick=()=>{ const k=b.dataset.mr; mf.d2=todayISO();
+        mf.d1= k==='mes'? todayISO().slice(0,8)+'01' : dateAdd(todayISO(),-(Math.max(1,Number(k))-1)); if(k==='0') mf.d1=todayISO(); paint(); });
+      if($('#mvt',v)) $('#mvt',v).onchange=e=>{ mf.tipo=e.target.value; paint(); };
+      if($('#mvp',v)) $('#mvp',v).onchange=e=>{ mf.prod=e.target.value; paint(); };
+      const qi=$('#mvq',v); qi.oninput=debounce(()=>{ mf.q=qi.value; const pos=qi.selectionStart; paint();
+        const n2=$('#mvq'); n2.focus(); n2.setSelectionRange(pos,pos); },220);
+      $$('[data-kx]',v).forEach(a=>a.onclick=e=>{ e.preventDefault(); mKardex(a.dataset.kx,{d1:mf.d1,d2:mf.d2}); });
+      $$('[data-md]',v).forEach(b=>b.onclick=()=>{ const mv=byId('movinv',b.dataset.md); const d=mv&&docDeMov(mv); if(d) d.abrir(); });
       return;
     }
     if(tab==='capas'){
@@ -5434,7 +5609,8 @@ function viewInventario(vw){
         {t:'Capas',num:1,f:g=>capasDe(g.id).length},
         {t:'Valor',num:1,f:g=>money(valorInv(g.id))},
         esComercio()? null : {t:'Usado en',num:1,f:g=>S.productos.filter(p=>(p.receta||[]).some(r=>r.ingredienteId===g.id)).length},
-        {t:'',f:g=>'<button class="btn ghost sm" data-e="'+g.id+'">✎</button>'}];
+        {t:'',f:g=>'<div class="row" style="gap:2px"><button class="btn ghost sm" data-kx="'+g.id+'" title="Kárdex: todo lo que entró y salió">📜</button>'+
+          '<button class="btn ghost sm" data-e="'+g.id+'">✎</button></div>'}];
     const colCat={t:'Categoría',f:g=>{ const k=catDeIng(g).id, c=byId('categorias',k);
         return c? '<span class="pill">'+esc((c.emoji?c.emoji+' ':'')+c.nombre)+'</span>'
              : '<span class="tiny muted">'+(k==='_varias'?'🔀 varias':'—')+'</span>'; }};
@@ -5462,6 +5638,7 @@ function viewInventario(vw){
       el.oninput=debounce(()=>{ q=el.value; const pos=el.selectionStart; paint();
         const n2=$('#bq'); n2.focus(); n2.setSelectionRange(pos,pos); },160); }
     $$('[data-e]',$('#view')).forEach(b=>b.onclick=()=>edIngrediente(byId('ingredientes',b.dataset.e)));
+    $$('[data-kx]',$('#view')).forEach(b=>b.onclick=()=>mKardex(b.dataset.kx));
     $$('[data-ic]',$('#view')).forEach(b=>b.onclick=()=>{ _invCat=b.dataset.ic; paint(); });
   }
   paint();
@@ -5797,6 +5974,20 @@ function mAuditoriaInv(){
         A.sinReceta.slice().sort((a,b)=>(A.vendidoSin[b.id]||0)-(A.vendidoSin[a.id]||0)).map(p=>li('<b>'+esc(p.nombre)+'</b>'+
           (A.vendidoSin[p.id]? ' <span class="tiny muted">· '+num(A.vendidoSin[p.id],0)+' vendidos en 30 días</span>':'')+
           ' <button class="btn ghost sm" data-ep="'+p.id+'">✎ Ponerle receta</button>')).join(''),'bad')+
+      (()=>{ if(esComercio()) return '';
+        /* se compran pero ningún producto los descuenta: casi siempre un ingrediente repetido */
+        const comprados={}; S.compras.filter(c=>c.estado!=='anulada' && dISO(c.fecha)>=dateAdd(todayISO(),-90))
+          .forEach(c=>(c.items||[]).forEach(i=>{ comprados[i.ingredienteId]=(comprados[i.ingredienteId]||0)+(Number(i.cantidad)||0); }));
+        const pal=t=>normTxt(t).split(/[^a-z0-9]+/).filter(w=>w.length>=3);
+        const lista=S.ingredientes.filter(g=>g.activo!==false && comprados[g.id] && !ingredienteUsado(g.id));
+        return sec('🔀','Se compran pero ningún producto los descuenta',lista.length,
+          '<div class="hintx" style="margin-bottom:6px">Entran al inventario con cada compra, pero al vender se descuenta de OTRO ingrediente '+
+          '(o de ninguno). Corrige la receta del producto para que use este, o compra siempre el que dice «lo usa».</div>'+
+          lista.map(g=>{ const ws=pal(g.nombre);
+            const par=S.ingredientes.filter(x=>x.id!==g.id && x.activo!==false && ingredienteUsado(x.id) && pal(x.nombre).some(w=>ws.indexOf(w)>=0));
+            return li('<b>'+esc(g.nombre)+'</b> <span class="tiny muted">· comprado '+num(comprados[g.id],2)+' '+esc(g.unidad||'')+' en 90 días · stock '+num(g.stock,2)+'</span>'+
+              (par.length? '<div class="tiny" style="margin-top:3px">¿Será el mismo que '+par.map(x=>'<b>'+esc(x.nombre)+'</b> (stock '+num(x.stock,2)+', lo usan los productos)').join(' o ')+'?</div>':'')); }).join(''),'bad');
+      })()+
       sec('🧩','Recetas incompletas',A.recetaRota.length,
         A.recetaRota.map(x=>li('<b>'+esc(x.p.nombre)+'</b>: '+esc(x.que)+' <button class="btn ghost sm" data-ep="'+x.p.id+'">✎ Corregir</button>')).join(''),'bad')+
       sec('🧾','Ventas recientes que no descontaron',A.ventasSin.length,
@@ -5952,9 +6143,13 @@ function viewCompras(vw){
   $('#add').onclick=()=>edCompra();
   paint();
 }
+/* ¿algún producto descuenta este ingrediente al venderse? */
+function ingredienteUsado(gid){
+  return S.productos.some(p=>p.activo!==false && ((p.receta||[]).some(r=>r.ingredienteId===gid && Number(r.cantidad)>0) || p.invId===gid));
+}
 function edCompra(orig){
   if(!exigirCaja(orig? 'corregir compras' : 'registrar compras')) return;
-  const gs=S.ingredientes.filter(g=>g.activo);
+  const gs=S.ingredientes.filter(g=>g.activo!==false);
   let items=orig? (orig.items||[]).map(i=>Object.assign({},i)) : [];
   let credito=orig? !!orig.credito : false;
   modal({title: orig? 'Editar compra '+orig.no : 'Nueva compra', size:'xl',
@@ -6012,10 +6207,11 @@ function edCompra(orig){
         const ba=$('[data-addi]',m); if(ba) ba.onclick=()=>$('#addi',m).click();
         $$('[data-i]',$('#rows',m)).forEach(row=>{ const i=+row.dataset.i;
           const tot=()=>{ $('[data-tt]',row).textContent=money(items[i].cantidad*items[i].costoUnit); calc(); };
-          combo($('[data-g]',row),{lista:S.ingredientes.filter(x=>x.activo), valor:items[i].ingredienteId,
+          combo($('[data-g]',row),{lista:S.ingredientes.filter(x=>x.activo!==false), valor:items[i].ingredienteId,
             placeholder:esComercio()?'Buscar producto o código…':'Buscar ingrediente…',
             sub:x=>{ const pr=x.productoId? byId('productos',x.productoId):null;
-              return (pr&&pr.codigo? pr.codigo+' · ':'')+'stock '+num(x.stock,2)+' '+x.unidad; },
+              return (pr&&pr.codigo? pr.codigo+' · ':'')+'stock '+num(x.stock,2)+' '+x.unidad+
+                (!esComercio() && !ingredienteUsado(x.id)? ' · ⚠ ningún producto lo usa':''); },
             crear:esComercio()? null : CREAR_INGREDIENTE,
             onPick:(id,obj)=>{ items[i].ingredienteId=id;
               $('[data-u]',row).textContent=(obj&&obj.unidad)||'';
@@ -6043,8 +6239,31 @@ function edCompra(orig){
       paintRows(); calc();
       $('#ok',m).onclick=()=>{
         if(!cajaAbiertaAhora()){ closeModal(); return exigirCaja('registrar compras'); }
-        items=items.filter(i=>i.ingredienteId && i.cantidad>0);
+        /* ANTES: las líneas sin ingrediente escogido se borraban sin avisar y lo
+           comprado no entraba al inventario. Ahora se detiene y se muestra cuál es. */
+        $$('#rows [data-i]',m).forEach(r=>r.style.outline='');
+        const marca=(i,msg)=>{ const r=$('#rows [data-i="'+i+'"]',m); if(r){ r.style.outline='2px solid var(--bad)'; r.style.borderRadius='8px';
+          r.scrollIntoView({block:'center'}); } toast(msg,'bad',7000); };
+        for(let i=0;i<items.length;i++){
+          const it=items[i];
+          if(!it.ingredienteId && (Number(it.costoUnit)||0)>0)
+            return marca(i,'La línea '+(i+1)+' no tiene '+(esComercio()?'producto':'ingrediente')+' escogido: búscalo y tócalo en la lista (o créalo). Si no, no entra al inventario.');
+          if(it.ingredienteId && !(Number(it.cantidad)>0))
+            return marca(i,'La línea '+(i+1)+' («'+nameOf('ingredientes',it.ingredienteId)+'») no tiene cantidad');
+          if(it.ingredienteId && !byId('ingredientes',it.ingredienteId))
+            return marca(i,'El ingrediente de la línea '+(i+1)+' ya no existe: escoge otro');
+        }
+        items=items.filter(i=>i.ingredienteId && i.cantidad>0);      // solo quita líneas totalmente vacías
         if(!items.length) return toast('Agrega ítems a la compra','warn');
+        /* lo que se compra pero ningún producto descuenta al vender (casi siempre un ingrediente repetido) */
+        if(!esComercio() && !m._sinUsoOk){
+          const sinUso=items.filter(i=>!ingredienteUsado(i.ingredienteId)).map(i=>nameOf('ingredientes',i.ingredienteId));
+          if(sinUso.length){
+            return confirmar('⚠ '+sinUso.join(', ')+(sinUso.length>1?' no los usa':' no lo usa')+' ningún producto. Sí entra al inventario, '+
+              'pero al vender no se descuenta de ahí. Casi siempre pasa porque hay dos ingredientes con nombre parecido '+
+              '(por ejemplo «Jugo Hit» y «Jugo HIT 350ml»). ¿Registrar la compra así?',()=>{ m._sinUsoOk=true; $('#ok',m).click(); });
+          }
+        }
         if(!cbPv.valor()) return toast('Busca o crea el proveedor','warn');
         const t=calc();
         if(!credito && bloqueaCaja($('#ct',m).value))
@@ -6067,15 +6286,29 @@ function edCompra(orig){
         if(!credito && !cp.cuentaId) toast('Ojo: la compra quedó sin cuenta de salida','warn',5000);
         if(orig) firmar(cp), put('compras',cp);
         closeModal(); render();
-        toast(orig? ('Compra '+cp.no+' corregida'+(parcial?' · parte ya se había vendido':''))
-                  : ('Compra '+cp.no+' registrada'),'ok', parcial?7000:2500);
+        const resumen=items.slice(0,6).map(i=>{ const g=byId('ingredientes',i.ingredienteId)||{};
+          return (g.nombre||'?')+' +'+num(i.cantidad,2)+' (queda '+num(g.stock,2)+' '+(g.unidad||'')+')'; }).join(' · ')+(items.length>6?' …':'');
+        toast((orig? ('Compra '+cp.no+' corregida'+(parcial?' · parte ya se había vendido':''))
+                  : ('Compra '+cp.no+' registrada'))+' · Entró al inventario: '+resumen,'ok', 8000);
       };
     }});
+}
+function avisosCompra(c){
+  const out=[];
+  (c.items||[]).forEach(i=>{
+    const g=byId('ingredientes',i.ingredienteId);
+    if(!g){ out.push('«'+(i.nombre||'línea')+'»: el ingrediente ya no existe'); return; }
+    const entro=S.movinv.some(mv=>mv.refId===c.id && mv.ingredienteId===i.ingredienteId && mv.tipo==='entrada');
+    if(!entro) out.push('«'+g.nombre+'»: no se ve la entrada en el kardex de este equipo (puede estar bajando de la nube)');
+    if(!esComercio() && !ingredienteUsado(g.id)) out.push('«'+g.nombre+'»: entró, pero ningún producto lo descuenta al vender. Revisa la receta del producto o si hay otro ingrediente con nombre parecido.');
+  });
+  return out;
 }
 function verCompra(c){
   if(!c) return;
   const ab=S.abonos.filter(a=>a.docId===c.id);
   const dobles=pagosDobles(c);
+  const avisos=c.estado!=='anulada'? avisosCompra(c) : [];
   modal({title:'Compra '+c.no,size:'wide',
     body:'<div class="grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">'+
       '<div><div class="tiny muted">Proveedor</div><b>'+esc(nameOf('proveedores',c.proveedorId))+'</b></div>'+
@@ -6095,6 +6328,9 @@ function verCompra(c){
       (ab.length?'<div class="tline"><span>Abonado</span><span class="v">'+money(abonadoDe(c.id))+'</span></div>':'')+
       (saldoCompra(c)>0.5?'<div class="tline" style="color:var(--bad)"><span>Saldo</span><span class="v">'+money(saldoCompra(c))+'</span></div>':'')+
       '</div>'+
+      (avisos.length? '<div class="card" style="background:var(--warn-soft,#fff7e6);margin-top:12px"><div class="bd">'+
+        '<b>⚠ Revisa el inventario de esta compra</b><ul style="margin:6px 0 0;padding-left:18px">'+
+        avisos.map(x=>'<li class="tiny" style="margin:3px 0">'+esc(x)+'</li>').join('')+'</ul></div></div>':'')+
       (dobles.length? '<div class="card" style="background:var(--bad-soft);margin-top:12px"><div class="bd">'+
         '<b>⚠ Esta compra se pagó dos veces</b>'+
         '<div class="tiny" style="margin-top:5px">Ya había salido la plata cuando la registró de contado, y además '+
