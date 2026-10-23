@@ -30,7 +30,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5SsIoHucEVt9ajYee_TQYh1LUkFetUp_Ow_-CT975RNOretxq4kmT3gQCMIGlxrHI/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxj1ILx89prxIVR2CbwxjwgBEPTRbvtEOIvJyqnJAO6PyZlNwnJM3Le2fukrj4oaM57/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -52,6 +52,7 @@
         <button type="button" onclick="abrirReporte('bancos')" class="w-full text-left px-4 py-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold">🏦 Descargar conciliación bancaria</button>
         <button type="button" onclick="abrirReporte('anticipos')" class="w-full text-left px-4 py-3 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 font-semibold">💰 Descargar anticipos pendientes</button>
         <button type="button" id="btnCargarCartera" class="w-full text-left px-4 py-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-800 font-semibold">📥 Cargar archivo de cartera</button>
+        <button type="button" id="btnConciliarContabilidad" class="w-full text-left px-4 py-3 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-semibold">🏦 Conciliar BANCOS vs contabilidad</button>
     </div>
     <div class="absolute bottom-0 left-0 right-0 p-4 border-t text-xs text-gray-500 bg-gray-50">
         El menú recuerda si lo dejaste abierto u oculto en este equipo.
@@ -339,6 +340,31 @@
 
 
 <!-- Modal para agregar última factura manual -->
+<div id="conciliacionModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-y-auto" style="max-height: 92vh;">
+        <div class="p-5 border-b bg-teal-50 rounded-t-xl flex justify-between items-start gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-teal-900">Conciliar BANCOS vs contabilidad</h3>
+                <p class="text-xs text-teal-800 mt-1">Sube el libro auxiliar de la cuenta de banco que genera el programa contable. Se compara con la hoja BANCOS por fecha, tercero (NIT) y valor.</p>
+            </div>
+            <button type="button" id="btnCerrarConciliacion" class="text-gray-500 hover:text-gray-900 text-2xl leading-none">&times;</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <label for="archivoContableInput" class="block text-xs font-semibold text-gray-600 mb-1">Libro auxiliar (.xlsx o .xls)</label>
+                <input type="file" id="archivoContableInput" accept=".xlsx,.xls" class="w-full border border-gray-300 rounded-md p-2 text-sm">
+            </div>
+            <div id="conciliacionEstado" class="hidden text-sm rounded-lg p-3"></div>
+            <div id="conciliacionResumen" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-700 space-y-1"></div>
+            <button type="button" id="btnDescargarConciliacion" disabled
+                    class="w-full font-bold py-3 px-4 rounded-lg text-base text-white bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:text-gray-500">
+                Descargar conciliación (Excel)
+            </button>
+            <p class="text-xs text-gray-500">La conciliación solo lee la hoja BANCOS; no modifica nada en Google Sheets.</p>
+        </div>
+    </div>
+</div>
+
 <div id="cargarCarteraModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-y-auto" style="max-height: 92vh;">
         <div class="p-5 border-b bg-red-50 rounded-t-xl flex justify-between items-start gap-4">
@@ -2432,6 +2458,398 @@
         });
 
         // ----------------------------------------------------
+        // CONCILIACIÓN: HOJA BANCOS vs LIBRO AUXILIAR DE CONTABILIDAD
+        // ----------------------------------------------------
+        function concNormNombre(v) {
+            return String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        function concNormNit(v) {
+            return String(v == null ? '' : v).toUpperCase().replace(/[\s.]/g, '').trim();
+        }
+        function concFechaIso(v) {
+            if (v instanceof Date && !isNaN(v)) {
+                return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+            }
+            const s = String(v == null ? '' : v).trim();
+            let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+            m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+            return '';
+        }
+        function concDiasEntre(a, b) {
+            if (!a || !b) return 9999;
+            return Math.round(Math.abs(new Date(a + 'T12:00:00') - new Date(b + 'T12:00:00')) / 86400000);
+        }
+        function concSumarDias(iso, dias) {
+            const d = new Date(iso + 'T12:00:00');
+            d.setDate(d.getDate() + dias);
+            return concFechaIso(d);
+        }
+
+        // Lee el "Libro auxiliar" de la cuenta de banco que genera el programa contable.
+        function leerLibroAuxiliar(XLSX, wb) {
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const filas = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, blankrows: false });
+            const filaEnc = filas.findIndex(f => f && String(f[0] || '').trim().toUpperCase() === 'FECHA'
+                && String(f[1] || '').trim().toUpperCase().startsWith('COMPROB'));
+            if (filaEnc < 0) {
+                throw new Error('El archivo no parece ser el libro auxiliar del programa contable (no se encontró el encabezado FECHA / COMPROB / DEBE / HABER).');
+            }
+            let cuenta = '';
+            let nitActual = '', nombreActual = '';
+            const movimientos = [];
+            for (let i = filaEnc + 1; i < filas.length; i++) {
+                const f = filas[i] || [];
+                const a = f[0];
+                const fecha = concFechaIso(a);
+                const comprobante = String(f[1] == null ? '' : f[1]).trim();
+                if (fecha && comprobante) {
+                    const detalle = String(f[3] == null ? '' : f[3]).replace(/\s+/g, ' ').trim();
+                    const mFila = detalle.match(/Banco fila:\s*(\d+)/i);
+                    movimientos.push({
+                        id: movimientos.length + 1,
+                        fecha,
+                        nit: nitActual,
+                        nombre: nombreActual,
+                        comprobante,
+                        detalle,
+                        debe: Number(f[4]) || 0,
+                        haber: Number(f[5]) || 0,
+                        filaBanco: mFila ? Number(mFila[1]) : 0,
+                        filaAsignada: 0,
+                        estado: '',
+                        observacion: ''
+                    });
+                    continue;
+                }
+                if (a !== null && a !== undefined && String(a).trim() !== '' && !fecha) {
+                    nitActual = String(a).trim();
+                    nombreActual = String(f[2] == null ? '' : f[2]).trim();
+                    continue;
+                }
+                if ((a === null || a === undefined) && f[1] !== null && f[1] !== undefined && f[3] && !cuenta) {
+                    const d = String(f[3]);
+                    if (/banco|cuenta/i.test(d)) cuenta = d.trim();
+                }
+            }
+            if (!movimientos.length) throw new Error('No se encontraron movimientos con fecha en el libro auxiliar.');
+            return { movimientos, cuenta };
+        }
+
+        // Busca un grupo de movimientos cuya suma sea exactamente "objetivo".
+        function concSubconjuntoExacto(candidatos, objetivo) {
+            const meta = Math.round(objetivo);
+            const lista = candidatos.slice(0, 18);
+            const n = lista.length;
+            let mejor = null;
+            for (let mask = 1; mask < (1 << n); mask++) {
+                let suma = 0, cuenta = 0;
+                for (let k = 0; k < n; k++) if (mask & (1 << k)) { suma += Math.round(lista[k].debe); cuenta++; }
+                if (Math.abs(suma - meta) <= 1 && (!mejor || cuenta < mejor.cuenta)) {
+                    mejor = { mask, cuenta };
+                }
+            }
+            if (!mejor) return null;
+            return lista.filter((_, k) => mejor.mask & (1 << k));
+        }
+
+        function conciliarBancosVsContabilidad(bancos, contab, terceros) {
+            // Nombre de tercero → NIT (TERCEROS y también los nombres del libro auxiliar)
+            const nitsPorNombre = {};
+            const agregarNombre = (nombre, nit) => {
+                const k = concNormNombre(nombre), n = concNormNit(nit);
+                if (!k || !n) return;
+                (nitsPorNombre[k] = nitsPorNombre[k] || new Set()).add(n);
+            };
+            (terceros || []).forEach(t => agregarNombre(t.nombre, t.nit));
+            contab.forEach(m => agregarNombre(m.nombre, m.nit));
+
+            const ingresos = contab.filter(m => m.debe > 0);
+            contab.filter(m => !(m.debe > 0)).forEach(m => {
+                m.estado = 'EGRESO (no se concilia)';
+                m.observacion = 'Movimiento de salida del banco (haber).';
+            });
+
+            const porFila = {};
+            bancos.forEach(b => {
+                b.nombres = String(b.terceroRelacionado || '').split('|').map(x => x.trim()).filter(Boolean);
+                b.nits = new Set();
+                b.sinNit = [];
+                b.nombres.forEach(nom => {
+                    const set = nitsPorNombre[concNormNombre(nom)];
+                    if (set && set.size) set.forEach(n => b.nits.add(n));
+                    else b.sinNit.push(nom);
+                });
+                b.objetivo = b.valorRelacionado > 0.5 ? b.valorRelacionado : b.valorBanco;
+                b.asignados = [];
+                b.notas = [];
+                porFila[b.fila] = b;
+            });
+
+            const asignar = (b, m, nota) => {
+                m.filaAsignada = b.fila;
+                if (nota) m.observacion = nota;
+                b.asignados.push(m);
+            };
+            const sumaAsignada = b => b.asignados.reduce((s, m) => s + m.debe, 0);
+
+            // 1) El detalle del recibo trae "Banco fila: N" → enlace directo.
+            ingresos.forEach(m => {
+                const b = m.filaBanco ? porFila[m.filaBanco] : null;
+                // Se valida que la fila siga siendo la misma (fecha cercana y mismo tercero).
+                if (b && concDiasEntre(b.fecha, m.fecha) <= 5 && (!b.nits.size || b.nits.has(concNormNit(m.nit)))) {
+                    asignar(b, m, 'Enlazado por "Banco fila" del recibo.');
+                }
+            });
+
+            const libres = () => ingresos.filter(m => !m.filaAsignada);
+            const ordenBancos = bancos.slice().sort((x, y) => x.fecha.localeCompare(y.fecha) || x.fila - y.fila);
+
+            // 2) Mismo día + mismo(s) tercero(s) + suma exacta.
+            // 3) Hasta 5 días de diferencia + mismo(s) tercero(s) + suma exacta.
+            [0, 5].forEach(margen => {
+                ordenBancos.forEach(b => {
+                    const falta = b.objetivo - sumaAsignada(b);
+                    if (falta <= 0.5 || !b.nits.size) return;
+                    const cand = libres().filter(m => b.nits.has(concNormNit(m.nit))
+                        && concDiasEntre(m.fecha, b.fecha) <= margen)
+                        .sort((x, y) => concDiasEntre(x.fecha, b.fecha) - concDiasEntre(y.fecha, b.fecha));
+                    const grupo = concSubconjuntoExacto(cand, falta);
+                    if (grupo) grupo.forEach(m => asignar(b, m, margen ? 'Mismo tercero y valor, con fecha diferente.' : ''));
+                });
+            });
+
+            // 4) Sin suma exacta: se asocia lo que haya del mismo tercero el mismo día.
+            ordenBancos.forEach(b => {
+                if (sumaAsignada(b) > 0.5 || !b.nits.size) return;
+                libres().filter(m => b.nits.has(concNormNit(m.nit)) && m.fecha === b.fecha)
+                    .forEach(m => asignar(b, m, 'Mismo tercero y fecha, pero el valor no cuadra.'));
+            });
+
+            // 5) Estados de BANCOS
+            bancos.forEach(b => {
+                const contable = sumaAsignada(b);
+                b.valorContable = contable;
+                b.diferencia = Math.round((b.valorBanco - contable) * 100) / 100;
+                const otraFecha = b.asignados.some(m => m.fecha !== b.fecha);
+                if (b.sinNit.length) b.notas.push('Tercero(s) sin NIT en TERCEROS: ' + b.sinNit.join(', '));
+                if (!b.nombres.length && !b.asignados.length) {
+                    b.estado = 'SIN RELACIONAR EN BANCOS';
+                    b.notas.push('El movimiento no tiene tercero relacionado.');
+                } else if (!b.asignados.length) {
+                    b.estado = 'NO ESTÁ EN CONTABILIDAD';
+                    b.notas.push('No se encontró recibo contable de ese tercero por ese valor.');
+                } else if (Math.abs(b.diferencia) <= 1) {
+                    b.estado = otraFecha ? 'OK - FECHA DIFERENTE' : 'OK';
+                } else if (Math.abs(contable - b.objetivo) <= 1 && b.objetivo < b.valorBanco) {
+                    b.estado = 'OK PARCIAL';
+                    b.notas.push(`Falta relacionar ${formatCurrency(b.valorBanco - b.objetivo)} de este movimiento en BANCOS.`);
+                } else {
+                    b.estado = 'DIFERENCIA';
+                    b.notas.push(`Banco ${formatCurrency(b.valorBanco)} vs contabilidad ${formatCurrency(contable)}.`);
+                }
+                b.asignados.forEach(m => {
+                    m.estado = b.estado === 'DIFERENCIA' ? 'DIFERENCIA' : (m.fecha !== b.fecha ? 'OK - FECHA DIFERENTE' : 'OK');
+                });
+            });
+
+            // 6) Lo que quedó en contabilidad sin movimiento de banco.
+            const sinRelacionar = bancos.filter(b => !b.nombres.length && !b.asignados.length);
+            libres().forEach(m => {
+                m.estado = 'NO ESTÁ EN BANCOS';
+                const posible = sinRelacionar.find(b => Math.abs(b.valorBanco - m.debe) <= 1 && concDiasEntre(b.fecha, m.fecha) <= 3);
+                m.observacion = posible
+                    ? `Posible movimiento sin relacionar en BANCOS: fila ${posible.fila} (${posible.fecha}, ${formatCurrency(posible.valorBanco)}).`
+                    : 'No hay movimiento en BANCOS de este tercero por este valor.';
+                if (posible) posible.notas.push(`Posible: ${m.comprobante} ${m.nombre} (${formatCurrency(m.debe)}).`);
+            });
+
+            return { bancos, contab };
+        }
+
+        function construirExcelConciliacion(XLSX, r, info) {
+            const wb = XLSX.utils.book_new();
+            const estadosB = {}, estadosC = {};
+            r.bancos.forEach(b => { const e = estadosB[b.estado] = estadosB[b.estado] || { n: 0, v: 0 }; e.n++; e.v += b.valorBanco; });
+            r.contab.forEach(m => { const e = estadosC[m.estado] = estadosC[m.estado] || { n: 0, v: 0 }; e.n++; e.v += (m.debe || m.haber); });
+            const totalBanco = r.bancos.reduce((s, b) => s + b.valorBanco, 0);
+            const totalContable = r.contab.reduce((s, m) => s + m.debe, 0);
+
+            const resumen = [
+                ['CONCILIACIÓN BANCOS vs CONTABILIDAD'],
+                ['Archivo contable', info.archivo],
+                ['Cuenta', info.cuenta || ''],
+                ['Periodo', `${info.desde} a ${info.hasta}`],
+                ['Generado', new Date().toLocaleString('es-CO')],
+                [],
+                ['Total ingresos en hoja BANCOS', totalBanco],
+                ['Total ingresos (debe) en contabilidad', totalContable],
+                ['Diferencia', totalBanco - totalContable],
+                [],
+                ['HOJA BANCOS', 'Movimientos', 'Valor'],
+                ...Object.entries(estadosB).map(([k, e]) => [k, e.n, e.v]),
+                [],
+                ['CONTABILIDAD', 'Movimientos', 'Valor'],
+                ...Object.entries(estadosC).map(([k, e]) => [k, e.n, e.v]),
+                [],
+                ['Qué significa cada estado'],
+                ['OK', 'El movimiento del banco cuadra exacto con los recibos contables.'],
+                ['OK - FECHA DIFERENTE', 'Cuadra el valor y el tercero, pero el recibo tiene otra fecha (hasta 5 días).'],
+                ['OK PARCIAL', 'Lo relacionado cuadra, pero falta relacionar parte del movimiento en BANCOS.'],
+                ['DIFERENCIA', 'Hay recibos del tercero ese día, pero la suma no cuadra con el banco.'],
+                ['NO ESTÁ EN CONTABILIDAD', 'El banco tiene tercero relacionado pero no hay recibo contable que lo respalde.'],
+                ['SIN RELACIONAR EN BANCOS', 'Movimiento del banco que todavía no tiene tercero en la hoja BANCOS.'],
+                ['NO ESTÁ EN BANCOS', 'Recibo contable que no se encontró en la hoja BANCOS.']
+            ];
+            const wsR = XLSX.utils.aoa_to_sheet(resumen);
+            wsR['!cols'] = [{ wch: 42 }, { wch: 80 }, { wch: 18 }];
+            XLSX.utils.book_append_sheet(wb, wsR, 'RESUMEN');
+
+            const filasB = [['Fila BANCOS', 'Fecha banco', 'Descripción', 'Referencia', 'Valor banco', 'Tercero(s) relacionado(s)',
+                'NIT(s)', 'Valor relacionado', 'Valor en contabilidad', 'Diferencia (banco - contable)', 'Comprobantes contables', 'Estado', 'Observación']];
+            r.bancos.slice().sort((x, y) => x.fecha.localeCompare(y.fecha) || x.fila - y.fila).forEach(b => {
+                filasB.push([b.fila, b.fecha, b.descripcion, b.referencia, b.valorBanco, b.terceroRelacionado,
+                    [...b.nits].join(' | '), b.valorRelacionado, b.valorContable, b.diferencia,
+                    b.asignados.map(m => `${m.comprobante} (${m.fecha}) ${formatCurrency(m.debe)}`).join(' | '),
+                    b.estado, b.notas.join(' ')]);
+            });
+            const wsB = XLSX.utils.aoa_to_sheet(filasB);
+            wsB['!cols'] = [8, 12, 35, 22, 14, 40, 22, 14, 14, 14, 50, 24, 60].map(w => ({ wch: w }));
+            wsB['!autofilter'] = { ref: `A1:M${filasB.length}` };
+            XLSX.utils.book_append_sheet(wb, wsB, 'BANCOS');
+
+            const filasC = [['Fecha', 'NIT', 'Tercero', 'Comprobante', 'Detalle', 'Debe', 'Haber', 'Fila BANCOS', 'Estado', 'Observación']];
+            r.contab.forEach(m => filasC.push([m.fecha, m.nit, m.nombre, m.comprobante, m.detalle, m.debe, m.haber,
+                m.filaAsignada || '', m.estado, m.observacion]));
+            const wsC = XLSX.utils.aoa_to_sheet(filasC);
+            wsC['!cols'] = [12, 16, 35, 14, 70, 14, 14, 10, 24, 60].map(w => ({ wch: w }));
+            wsC['!autofilter'] = { ref: `A1:J${filasC.length}` };
+            XLSX.utils.book_append_sheet(wb, wsC, 'CONTABILIDAD');
+
+            const problemas = [['Origen', 'Fecha', 'Tercero', 'Valor', 'Estado', 'Detalle']];
+            r.bancos.filter(b => !/^OK/.test(b.estado)).forEach(b =>
+                problemas.push(['BANCOS fila ' + b.fila, b.fecha, b.terceroRelacionado || '(sin tercero)', b.valorBanco, b.estado, b.notas.join(' ')]));
+            r.contab.filter(m => m.estado === 'NO ESTÁ EN BANCOS' || m.estado === 'DIFERENCIA').forEach(m =>
+                problemas.push(['Contabilidad ' + m.comprobante, m.fecha, m.nombre, m.debe, m.estado, m.observacion]));
+            const wsP = XLSX.utils.aoa_to_sheet(problemas);
+            wsP['!cols'] = [22, 12, 40, 14, 26, 80].map(w => ({ wch: w }));
+            wsP['!autofilter'] = { ref: `A1:F${problemas.length}` };
+            XLSX.utils.book_append_sheet(wb, wsP, 'POR REVISAR');
+            return wb;
+        }
+
+        const conciliacionModal = document.getElementById('conciliacionModal');
+        const archivoContableInput = document.getElementById('archivoContableInput');
+        const conciliacionEstado = document.getElementById('conciliacionEstado');
+        const conciliacionResumen = document.getElementById('conciliacionResumen');
+        const btnDescargarConciliacion = document.getElementById('btnDescargarConciliacion');
+        let conciliacionLibro = null, conciliacionNombre = '';
+
+        function estadoConciliacion(texto, tipo) {
+            const clases = {
+                info: 'bg-blue-50 text-blue-800 border border-blue-200',
+                ok: 'bg-green-50 text-green-800 border border-green-200',
+                error: 'bg-red-50 text-red-800 border border-red-200'
+            };
+            conciliacionEstado.className = 'text-sm rounded-lg p-3 ' + (clases[tipo] || clases.info);
+            conciliacionEstado.textContent = texto;
+            conciliacionEstado.classList.toggle('hidden', !texto);
+        }
+        function abrirConciliacion() {
+            conciliacionLibro = null;
+            archivoContableInput.value = '';
+            archivoContableInput.disabled = false;
+            conciliacionResumen.classList.add('hidden');
+            btnDescargarConciliacion.disabled = true;
+            estadoConciliacion('', 'info');
+            conciliacionModal.classList.remove('hidden');
+            conciliacionModal.classList.add('flex');
+            cargarSheetJS().catch(() => {});
+        }
+        function cerrarConciliacion() {
+            conciliacionModal.classList.add('hidden');
+            conciliacionModal.classList.remove('flex');
+        }
+        function descargarConciliacion() {
+            if (!conciliacionLibro || !window.XLSX) return;
+            window.XLSX.writeFile(conciliacionLibro, conciliacionNombre);
+        }
+        document.getElementById('btnConciliarContabilidad').addEventListener('click', () => { setMenuOpen(false); abrirConciliacion(); });
+        document.getElementById('btnCerrarConciliacion').addEventListener('click', cerrarConciliacion);
+        conciliacionModal.addEventListener('click', e => { if (e.target === conciliacionModal) cerrarConciliacion(); });
+        btnDescargarConciliacion.addEventListener('click', descargarConciliacion);
+
+        archivoContableInput.addEventListener('change', async function() {
+            conciliacionLibro = null;
+            btnDescargarConciliacion.disabled = true;
+            conciliacionResumen.classList.add('hidden');
+            const archivo = this.files && this.files[0];
+            if (!archivo) { estadoConciliacion('', 'info'); return; }
+            archivoContableInput.disabled = true;
+            try {
+                estadoConciliacion('Leyendo el libro auxiliar...', 'info');
+                const XLSX = await cargarSheetJS();
+                const wbIn = XLSX.read(await archivo.arrayBuffer(), { type: 'array', cellDates: true });
+                const { movimientos, cuenta } = leerLibroAuxiliar(XLSX, wbIn);
+
+                const fechas = movimientos.map(m => m.fecha).sort();
+                const desde = fechas[0], hasta = fechas[fechas.length - 1];
+                estadoConciliacion(`Consultando la hoja BANCOS del ${formatDate(desde)} al ${formatDate(hasta)}...`, 'info');
+                const url = `${SCRIPT_URL}?action=getReporteBancos&desde=${encodeURIComponent(concSumarDias(desde, -5))}&hasta=${encodeURIComponent(concSumarDias(hasta, 5))}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'No se pudo leer la hoja BANCOS.');
+
+                const bancosTodos = (data.filas || []).map(x => ({
+                    fila: Number(x.fila) || 0,
+                    fecha: concFechaIso(x.fecha),
+                    descripcion: String(x.descripcion || ''),
+                    referencia: String(x.referencia || ''),
+                    valorBanco: Number(x.valorBanco) || 0,
+                    terceroRelacionado: String(x.terceroRelacionado || ''),
+                    valorRelacionado: Number(x.valorRelacionado) || 0
+                })).filter(b => b.valorBanco > 0 && b.fecha);
+
+                estadoConciliacion('Conciliando...', 'info');
+                const r = conciliarBancosVsContabilidad(bancosTodos, movimientos, allData.clientes || []);
+                // En el reporte quedan los movimientos del periodo y los de los días
+                // de margen solo si se usaron para cuadrar algo.
+                r.bancos = r.bancos.filter(b => (b.fecha >= desde && b.fecha <= hasta) || b.asignados.length);
+
+                conciliacionLibro = construirExcelConciliacion(XLSX, r, { archivo: archivo.name, cuenta, desde, hasta });
+                conciliacionNombre = `Conciliacion_bancos_${desde}_a_${hasta}.xlsx`;
+
+                const contar = (lista, fn) => lista.filter(fn).length;
+                const okB = contar(r.bancos, b => /^OK/.test(b.estado));
+                const ingresosC = r.contab.filter(m => m.debe > 0);
+                const okC = contar(ingresosC, m => /^OK/.test(m.estado));
+                const filaRes = (t, v, cls = '') => `<div class="flex justify-between gap-3 ${cls}"><span>${t}</span><b>${v}</b></div>`;
+                conciliacionResumen.innerHTML =
+                    `<div class="font-semibold text-gray-900 mb-1">${escHtml(cuenta || archivo.name)}</div>` +
+                    filaRes('Periodo', `${formatDate(desde)} a ${formatDate(hasta)}`) +
+                    `<div class="pt-2 font-semibold">Hoja BANCOS (${r.bancos.length} movimientos)</div>` +
+                    filaRes('✅ Cuadran con contabilidad', okB, 'text-green-700') +
+                    filaRes('⚠️ Con diferencia', contar(r.bancos, b => b.estado === 'DIFERENCIA'), 'text-amber-700') +
+                    filaRes('❌ No están en contabilidad', contar(r.bancos, b => b.estado === 'NO ESTÁ EN CONTABILIDAD'), 'text-red-700') +
+                    filaRes('⏳ Sin tercero relacionado', contar(r.bancos, b => b.estado === 'SIN RELACIONAR EN BANCOS'), 'text-gray-600') +
+                    `<div class="pt-2 font-semibold">Contabilidad (${ingresosC.length} ingresos)</div>` +
+                    filaRes('✅ Encontrados en BANCOS', okC, 'text-green-700') +
+                    filaRes('❌ No están en BANCOS', contar(ingresosC, m => m.estado === 'NO ESTÁ EN BANCOS'), 'text-red-700');
+                conciliacionResumen.classList.remove('hidden');
+                btnDescargarConciliacion.disabled = false;
+                estadoConciliacion('Conciliación lista. Se descargó el Excel; la hoja POR REVISAR tiene lo que no cuadra.', 'ok');
+                descargarConciliacion();
+            } catch (err) {
+                console.error(err);
+                estadoConciliacion(err.message || 'No se pudo hacer la conciliación.', 'error');
+            } finally {
+                archivoContableInput.disabled = false;
+            }
+        });
+
+        // ----------------------------------------------------
         // ANTICIPOS DEL CLIENTE + RESUMEN DE FACTURAS PENDIENTES
         // ----------------------------------------------------
         function anticiposDeCliente(nit) {
@@ -2634,7 +3052,7 @@
             const cantidad = facturasAProcesar.length;
             const tituloDetalle = cantidad === 1 ? 'Factura pendiente:' : `Facturas pendientes (${cantidad}):`;
             
-            const msj = `Hola, Buen dia.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n*${tituloDetalle}*\n${detalleTxt}\n\n${lineasAnticipoMensaje(total, false)}\n\nAgradecemos tu gestión para ponerte al día. Si ya realizaste el pago, por favor envíanos el soporte para actualizar tu estado de cuenta.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
+            const msj = `Hola, un saludo cordial.\n\nTe compartimos el estado de cuenta actual a nombre de *${currentClient.nombre}*.\n\n*${tituloDetalle}*\n${detalleTxt}\n\n${lineasAnticipoMensaje(total, false)}\n\nAgradecemos tu gestión para ponerte al día. Si ya realizaste el pago, por favor envíanos el soporte para actualizar tu estado de cuenta.\n\nQuedamos muy atentos a cualquier inquietud.\nFirma:\nÁrea de Cartera.`;
             
             const textArea = document.createElement("textarea");
             textArea.value = msj;
