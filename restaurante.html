@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.18-3';
+const APP_VERSION='2026.10.26-3';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -1235,7 +1235,7 @@ function esEstacion(){ return !!S.cfg.estacion; }
 /* Solo cuenta lo que alguien MANDÓ a cocina (botón Cocina). Un pedido que se
    está tomando o que solo se guardó no se imprime hasta que lo envíen. */
 function comandasPendientes(){
-  return S.comandas.filter(cm=>(cm.estado==='abierta'||cm.estado==='anulada'||cm.estado==='consumo') && cm.cocinaMs && pendientesComanda(cm).uds>0)
+  return S.comandas.filter(cm=>(cm.estado==='abierta'||cm.estado==='anulada'||cm.estado==='consumo'||cm.estado==='reimpresion') && cm.cocinaMs && pendientesComanda(cm).uds>0)
     .sort((a,b)=>String(a.cocinaMs||a.apertura||'').localeCompare(String(b.cocinaMs||b.apertura||'')));
 }
 function unidadesPendientes(){ return sum(comandasPendientes(),cm=>pendientesComanda(cm).uds); }
@@ -1246,9 +1246,35 @@ function docComanda(cm,d){
   return comandaHTML({no:(soloBaja?'ANULA · ':d.yaEnviado?'AGREGADO · ':'PEDIDO · ')+dest,
     fecha:now(), tipo:cm.tipo||(mesa?'mesa':'mostrador'), mesaId:cm.mesaId||'',
     usuarioId:cm.meseroId||'', items:d.nuevos, cambios:d.cambios, bajas:d.bajas,
-    adicional:d.yaEnviado, nota:cm.nota, nroTurno:cm.nroTurno||0, nombrePedido:nombreDePedido(cm)});
+    adicional:d.yaEnviado, nota:cm.nota, nroTurno:cm.nroTurno||0, nombrePedido:nombreDePedido(cm), paraLlevar:cm.paraLlevar});
 }
 /* imprime lo que falta de esa comanda y lo deja marcado para que nadie lo repita */
+/* ===================== REIMPRIMIR LO DE COCINA =====================
+   Saca otra vez TODO lo que va a cocina de un pedido (abierto, cobrado o
+   comida de empleados), marcado como COPIA. Si este equipo no tiene la
+   impresora de cocina (un teléfono), se la pide al PC de la cocina. */
+function imprimeCocinaAqui(){ return esEstacion() || !S.cfg.fbOn || (S.cfg.modoImp==='rawbt' && esAndroid()); }
+function reimprimirCocina(src){
+  if(!src) return;
+  const its=(src.items||[]).filter(i=>(Number(i.cant)||0)>0).filter(vaAComanda).map(i=>Object.assign({},i));
+  if(!its.length) return toast('Este pedido no tiene nada que vaya a la cocina','warn',4000);
+  const doc={no:'COPIA', fecha:now(), tipo:src.tipo||(src.mesaId?'mesa':'mostrador'), mesaId:src.mesaId||'',
+    usuarioId:src.usuarioId||src.meseroId||(S.user?S.user.id:''), items:its, cambios:[], bajas:[], adicional:false,
+    nota:src.nota||'', nroTurno:src.nroTurno||turnoDeCarritoSeguro(src)||0, nombrePedido:nombreDePedido(src),
+    paraLlevar:src.paraLlevar, esDom:src.esDom, destNombre:src.destNombre};
+  if(imprimeCocinaAqui()){
+    encolarImp(comandaHTML(doc,true),'comanda',S.cfg.impresoraComanda);
+    toast('🖨️ Comanda reimpresa','ok');
+  } else {
+    /* la saca el PC de la cocina */
+    put('comandas',Object.assign({}, doc, {id:uid('cm'), estado:'reimpresion', meseroId:doc.usuarioId,
+      items:its.map(i=>Object.assign(i,{env:0,envNota:''})), cocinaMs:Date.now(), nota:'COPIA'+(doc.nota?' · '+doc.nota:''),
+      apertura:now(), cierre:now()}));
+    if(S.cfg.autoSync) scheduleSync(200);
+    toast('🖨️ Pedida al PC de la cocina: sale en unos segundos','ok',4500);
+  }
+}
+function turnoDeCarritoSeguro(c){ try{ return turnoDeCarrito(c); }catch(e){ return 0; } }
 function imprimirPendiente(cm){
   if(!cm) return false;
   const d=pendientesComanda(cm);
@@ -3002,8 +3028,12 @@ function paintCart(){
   if(!cn){ cn=document.createElement('div'); cn.id='cnom';
     cn.style.cssText='padding:8px 12px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center';
     cn.innerHTML='<span style="font-size:17px">👤</span><input id="cnomi" autocomplete="off" '+
-      'placeholder="Nombre del cliente (obligatorio)" style="flex:1;font-size:15px;font-weight:650;padding:8px 10px">';
+      'placeholder="Nombre del cliente (obligatorio)" style="flex:1;font-size:15px;font-weight:650;padding:8px 10px">'+
+      '<div id="cllev" class="segm" style="display:flex;gap:4px;flex:0 0 auto">'+
+        '<button type="button" class="btn sm" data-ll="1" title="Sale en la comanda: PARA LLEVAR">🥡 Llevar</button>'+
+        '<button type="button" class="btn sm" data-ll="0" title="Sale en la comanda: COMER AQUÍ">🍽️ Aquí</button></div>';
     hd.after(cn);
+    $$('#cllev [data-ll]').forEach(b=>b.onclick=()=>{ S.cart.paraLlevar=b.dataset.ll==='1'; pintaLlevar(); persistComanda(); });
     $('#cnomi').oninput=e=>{ S.cart.nombrePedido=e.target.value.trimStart(); };
     $('#cnomi').onchange=e=>{ const v=e.target.value.trim(); S.cart.nombrePedido=v;
       const mm=S.cart.mesaId? byId('mesas',S.cart.mesaId):null;
@@ -3015,6 +3045,7 @@ function paintCart(){
       if(mm && mm.temporal) setTimeout(()=>{ const h=$('#cnomi'); if(h && document.activeElement!==h) paintCart(); },400); };
   }
   if(document.activeElement!==$('#cnomi')) $('#cnomi').value=c.nombrePedido||(mesa&&mesa.temporal? mesa.nombre:'');
+  pintaLlevar();
   cn.style.display= modoNombre()==='oculto'? 'none' : 'flex';
   $('#cnomi').placeholder= modoNombre()==='obligatorio'? 'Nombre del cliente (obligatorio)' : 'Nombre del cliente (opcional)';
   const viejo=$('#cedav'); if(viejo) viejo.remove();
@@ -3073,7 +3104,8 @@ function paintCart(){
         const falta=d.nuevos.length+d.cambios.length+d.bajas.length;
         return '<button class="btn sm'+(falta?'':' ghost')+'" id="ccom" style="flex:1 1 76px" title="'+
           (falta? 'Mandar a cocina solo lo que falta':'La cocina ya tiene todo')+'">👨‍🍳 Cocina'+
-          (d.yaEnviado? (falta? ' <b>+'+d.uds+'</b>':' ✓'):'')+'</button>'; })():'')+
+          (d.yaEnviado? (falta? ' <b>+'+d.uds+'</b>':' ✓'):'')+'</button>'+
+          (d.yaEnviado? '<button class="btn sm ghost" id="creimp" style="flex:0 0 auto" title="Volver a sacar todo lo de cocina (sale como COPIA)">🖨️</button>':''); })():'')+
     '</div>'+
     '<div class="row" style="margin-top:9px;gap:8px">'+
       (c.editandoId? '' : '<button class="btn lg" id="csave" style="flex:1 1 0;font-weight:750;border:2px solid var(--brand);color:var(--brand)"'+
@@ -3083,6 +3115,8 @@ function paintCart(){
   $('#cdesc').onclick=mDescuento; if($('#cprop')) $('#cprop').onclick=mPropina;
   if($('#csave')) $('#csave').onclick=()=>guardarPedido();
   if($('#ccom')) $('#ccom').onclick=enviarACocina;
+  if($('#creimp')) $('#creimp').onclick=()=>confirmar('¿Reimprimir todo lo que ya está en cocina de este pedido? Sale marcado como COPIA.',
+    ()=>reimprimirCocina(Object.assign({},S.cart,{items:S.cart.items.filter(i=>(Number(i.env)||0)>0).map(i=>Object.assign({},i,{cant:i.env}))})));
   $('#ccobrar').onclick=mCobrar;
 }
 
@@ -3178,7 +3212,7 @@ function enviarACocina(){
   encolarImp(comandaHTML({no:(soloBaja?'ANULA · ':d.yaEnviado?'AGREGADO · ':'PEDIDO · ')+dest, fecha:now(),
     tipo:c.tipo, mesaId:c.mesaId||'', usuarioId:S.user?S.user.id:'',
     items:d.nuevos, cambios:d.cambios, bajas:d.bajas, adicional:d.yaEnviado, nota:c.nota,
-    nroTurno:turnoDeCarrito(c), nombrePedido:nombreDePedido(c)}),
+    nroTurno:turnoDeCarrito(c), nombrePedido:nombreDePedido(c), paraLlevar:c.paraLlevar}),
     'comanda',S.cfg.impresoraComanda);
   marcarEnviado(c);
   if(c.mesaId) guardarPedido(d.yaEnviado? 'Agregado a cocina · guardado en ' : 'Pedido a cocina y guardado en ',true);
@@ -3259,7 +3293,7 @@ function persistComanda(force){
           const ms=byId('mesas',c.mesaId);
           encolarImp(comandaHTML({no:'ANULA · '+(ms? ms.nombre:'MOSTRADOR'), fecha:now(), tipo:c.tipo, mesaId:c.mesaId||'',
             usuarioId:S.user?S.user.id:'', items:[], cambios:[], bajas:pb, adicional:true,
-            nroTurno:vieja.nroTurno||0, nombrePedido:nombreDePedido(vieja)}),'comanda',S.cfg.impresoraComanda);
+            nroTurno:vieja.nroTurno||0, nombrePedido:nombreDePedido(vieja), paraLlevar:vieja.paraLlevar}),'comanda',S.cfg.impresoraComanda);
           vieja.bajas=[];
         } else vieja.cocinaMs=Date.now();
       }
@@ -3271,7 +3305,7 @@ function persistComanda(force){
     const ml=byId('mesas',c.mesaId); if(esLlevar(ml)){ remove('mesas',ml.id); c.mesaId=null; }
     return; }
   if(!c.items.length) return;
-  const cm={ id:c.comandaId||uid('cm'), mesaId:c.mesaId, nombrePedido:c.nombrePedido||'',
+  const cm={ id:c.comandaId||uid('cm'), mesaId:c.mesaId, nombrePedido:c.nombrePedido||'', paraLlevar:c.paraLlevar,
     items:c.items.map(i=>Object.assign({},i)), clienteId:c.clienteId,
     bajas:(c.bajas||[]).slice(), anulados:(c.anulados||[]).slice(), cocinaMs:c.cocinaMs||null, tipo:c.tipo||'mesa',
     descuento:c.descuento, propinaPct:c.propinaPct, nota:c.nota, estado:'abierta',
@@ -3632,6 +3666,7 @@ function registrarVenta(o){
     v.turnoId=original.turnoId||v.turnoId; }
   datosEntregaVenta(v,c,original);
   v.nombrePedido = (original&&original.nombrePedido) || nombreDePedido(c) || '';
+  if(c.paraLlevar!==undefined) v.paraLlevar=c.paraLlevar;
   if(v.clienteId){ const cl=byId('clientes',v.clienteId); if(cl&&cl.nombre) v.clienteNombre=cl.nombre;
     else if(original&&original.clienteNombre) v.clienteNombre=original.clienteNombre; }
   v.anulados = ((original&&original.anulados)||[]).concat((c.anulados||[]).filter(a=>
@@ -4288,7 +4323,20 @@ function viewCocina(vw){
           '<button class="btn ghost sm" data-ab="'+cm.id+'" title="Abrir el pedido">👁️</button>'+
           '<button class="btn ghost sm" data-ver title="Ver sin imprimir">👁️</button><button class="btn ghost sm" data-re="'+cm.id+'" title="Reimprimir todo el pedido">🖨️</button></div>'}
       ],abiertas,{empty:'No hay mesas abiertas',icon:'🍽️'})+
-    '</div></div>';
+    '</div></div>'+
+    (()=>{ /* lo que ya pasó por cocina hoy: ventas cobradas y comidas de empleados */
+      const hoyD=todayISO();
+      const vs=S.ventas.filter(v=>v.estado!=='anulada' && dISO(v.fecha)===hoyD && (v.items||[]).some(vaAComanda))
+        .map(v=>({k:'ventas', o:v, f:v.fecha, que:v.no, dest:(v.esDom?'🛵 ':'')+(nombreDePedido(v)||(v.mesaId?'Mesa '+nameOf('mesas',v.mesaId):'Mostrador'))}));
+      const ce=S.otrosdocs.filter(d=>d.tipo==='consumo' && dISO(d.fecha)===hoyD)
+        .map(d=>({k:'otrosdocs', o:d, f:d.fecha, que:d.no, dest:'🍽️ Empleados · '+d.empleado}));
+      const l=vs.concat(ce).sort((a,b)=>String(b.f).localeCompare(String(a.f))).slice(0,40);
+      return '<div class="card" style="margin-top:14px"><div class="hd"><h3>Ya cobrados hoy</h3><span class="pill">'+l.length+'</span>'+
+        '<div class="spacer"></div><span class="tiny muted">Para volver a sacar la comanda de un pedido que ya se cobró</span></div><div class="bd p0">'+
+        tbl([{t:'Hora',f:x=>ftime(x.f)},{t:'Pedido',f:x=>'<b>'+esc(x.dest)+'</b> <span class="tiny muted">'+esc(x.que)+'</span>'},
+          {t:'Productos',f:x=>esc((x.o.items||[]).filter(vaAComanda).map(i=>i.cant+' '+i.nombre).join(', '))},
+          {t:'',f:x=>'<button class="btn ghost sm" data-rv="'+x.k+':'+x.o.id+'" title="Reimprimir la comanda">🖨️</button>'}],
+          l,{empty:'Todavía no hay pedidos cobrados hoy',icon:'🧾'})+'</div></div>'; })();
 
   $('#k_est').onchange=e=>{ S.cfg.estacion=e.target.checked; saveCfg();
     toast(e.target.checked? 'Listo: este equipo imprime los pedidos que lleguen'
@@ -4311,12 +4359,8 @@ function viewCocina(vw){
       render(); toast('Marcado como entregado','ok'); }); });
   $$('[data-ab]',vw).forEach(b=>b.onclick=()=>{ const cm=byId('comandas',b.dataset.ab);
     if(cm.mesaId) abrirMesa(cm.mesaId); else toast('Ese pedido es de mostrador','warn'); });
-  $$('[data-re]',vw).forEach(b=>b.onclick=()=>{ const cm=byId('comandas',b.dataset.re);
-    const coci=(cm.items||[]).filter(vaAComanda).map(i=>Object.assign({},i));
-    if(!coci.length) return toast('Este pedido no tiene nada que vaya a la cocina','warn',4000);
-    encolarImp(docComanda(cm,{nuevos:coci,cambios:[],bajas:[],
-      yaEnviado:false,uds:sum(coci,i=>i.cant)}),'comanda',S.cfg.impresoraComanda);
-    toast('Pedido completo reimpreso','ok'); });
+  $$('[data-re]',vw).forEach(b=>b.onclick=()=>reimprimirCocina(byId('comandas',b.dataset.re)));
+  $$('[data-rv]',vw).forEach(b=>b.onclick=()=>{ const x=b.dataset.rv.split(':'); reimprimirCocina(byId(x[0],x[1])); });
 }
 
 /* ============================ IMPRESIÓN ==============================
@@ -4438,6 +4482,13 @@ function htmlAEscPos(html,anchoMm){
       if(hijos.length===2 && hijos.every(h=>h.tagName==='SPAN')){ fila([txt(hijos[0]),txt(hijos[1])]); continue; }
       if(hijos.some(h=>/^(DIV|TABLE|H1|H2|H3|P|HR)$/.test(h.tagName))){ recorrer(n); continue; }
       const t=txt(n);
+      if(/ tag /.test(cl)){
+        const inv=/ inv /.test(cl);
+        add([ESC,0x61,1, GS,0x21,0x01]); if(inv) add([GS,0x42,1]);
+        add(bytesTexto(t.slice(0,COLS))); B.push(0x0A);
+        if(inv) add([GS,0x42,0]); add([GS,0x21,0x00, ESC,0x61,0]);
+        continue;
+      }
       if(tag==='H1') linea(t,{big:true,center:true});
       else if(tag==='H2'||tag==='H3') { linea(t,{}); add(bytesTexto('-'.repeat(COLS))); B.push(0x0A); }
       else linea(t,{big:GRANDE.test(cl), center:CENTRO.test(cl)});
@@ -4613,14 +4664,36 @@ function leerPapel(v){ return v==='carta'? 'carta' : (Number(v)||80); }
    grandes, sin cajas, sin líneas de pie, sin márgenes; el encabezado va en
    una o dos líneas y los productos iguales se juntan en una sola línea.
    Gasta más o menos la mitad (o menos) de papel que la comanda normal. */
+/* botones Llevar / Aquí: solo en pedidos de mostrador */
+function pintaLlevar(){
+  const box=$('#cllev'); if(!box || !S.cart) return;
+  const c=S.cart, mesa=c.mesaId? byId('mesas',c.mesaId):null;
+  const mostr= mesa? esLlevar(mesa) : (c.tipo!=='mesa' && c.tipo!=='domicilio');
+  box.style.display= mostr? 'flex' : 'none';
+  const llevar=c.paraLlevar!==false;
+  $$('[data-ll]',box).forEach(b=>{ const on=(b.dataset.ll==='1')===llevar; b.classList.toggle('pri',on); });
+}
+function esMostradorDoc(v){
+  const mesa=v.mesaId? byId('mesas',v.mesaId):null;
+  if(mesa) return esLlevar(mesa);
+  return v.tipo!=='mesa' && v.tipo!=='domicilio' && !v.esDom;
+}
+function encabezadoComanda(v){
+  const mesa=v.mesaId? byId('mesas',v.mesaId):null;
+  const nm=String(nombreDePedido(v)||'').trim().toUpperCase();
+  if((mesa && esDomicilio(mesa)) || (!mesa && (v.tipo==='domicilio'||v.esDom)))
+    return {grande: nm || String(v.destNombre||'').toUpperCase() || 'DOMICILIO', etiqueta:'DOMICILIO'};
+  if(mesa && !esLlevar(mesa)){
+    const mn='MESA '+String(mesa.nombre).toUpperCase();
+    return {grande: mn, etiqueta:'', nombre: nm && nm!==String(mesa.nombre).toUpperCase()? nm : ''};
+  }
+  return {grande: nm || 'MOSTRADOR', etiqueta: v.paraLlevar===false? 'COMER AQUÍ' : 'PARA LLEVAR'};
+}
 function comandaCortaHTML(v,copia){
   const c=S.cfg, P=papel(c.comandaAncho), w=P.w;
   /* tamaño propio de la comanda (no afecta la factura) */
   const kL=(k=>(k>=0.7&&k<=1.5)? k : 1)(Number(c.comandaLetra)), px=b=>round(b*kL,1)+'px';
-  const mesa=v.mesaId? byId('mesas',v.mesaId):null;
-  const destino = mesa? (esDomicilio(mesa)? ('DOMICILIO '+String(mesa.nombre).toUpperCase())
-                       : esLlevar(mesa)? 'MOSTRADOR' : ('MESA '+String(mesa.nombre).toUpperCase()))
-                 : v.tipo==='domicilio'? 'DOMICILIO'+(v.destNombre? ' '+String(v.destNombre).toUpperCase():'') : 'LLEVAR';
+  const E=encabezadoComanda(v);
   /* junta los iguales (mismo producto y misma nota) en una línea */
   const juntar=l=>{ const m={}, out=[];
     (l||[]).forEach(i=>{ const k=String(i.nombre).toUpperCase()+'|'+String(i.nota||'').toUpperCase();
@@ -4634,22 +4707,26 @@ function comandaCortaHTML(v,copia){
   const cambios=juntar(v.cambios).map(i=>linea(i)).join('');
   const bajas=juntar(v.bajas).map(i=>linea(i,'baja')).join('');
   const soloBaja=!filas && !cambios && !!bajas;
-  const nm=nombreDePedido(v);
-  const marca= soloBaja? 'ANULA ' : (v.adicional? '+AGREGA ' : '');
+  const marca= soloBaja? 'ANULA · ' : (v.adicional? '+AGREGA · ' : '');
   const quien=(nameOf('usuarios',v.usuarioId)||'').split(' ')[0];
   const sub=[ v.nroTurno? 'TURNO '+Number(v.nroTurno) : '',
-    nm && !destino.includes(String(nm).toUpperCase())? String(nm).toUpperCase() : '',
     ftime(v.fecha), quien!=='—'? quien : '', copia? 'COPIA':'' ].filter(Boolean).join(' · ');
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+
     '@page{size:'+w+'mm auto;margin:0 1mm}'+
     'body{font:'+px(12)+'/1.12 Arial,Helvetica,sans-serif;color:#000;margin:0;width:'+(w-3)+'mm;font-weight:bold}'+
-    '.d{font-size:'+px(15)+';line-height:1.1}.s{font-size:'+px(9.5)+';font-weight:normal;border-bottom:1.5px solid #000;padding-bottom:1px;margin-bottom:1px}'+
+    '.d{font-size:'+px(19)+';line-height:1.1}.d2{font-size:'+px(17)+';line-height:1.1}'+
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+    '.tag{display:block;text-align:center;border:2px solid #000;padding:1px 4px;margin:2px 0;font-size:'+px(16)+';letter-spacing:1px}'+
+    '.tag.inv{background:#000;color:#fff}.s{font-size:'+px(9.5)+';font-weight:normal;border-bottom:1.5px solid #000;padding-bottom:1px;margin-bottom:1px}'+
     'table{width:100%;border-collapse:collapse}td{padding:0;vertical-align:top}'+
     '.q{width:1.5em;font-size:'+px(13)+'}.n{font-size:'+px(12.5)+'}.n i{font-style:normal;font-size:'+px(11)+';text-decoration:underline}'+
     '.p{text-align:right;font-size:'+px(10.5)+';white-space:nowrap}.baja{text-decoration:line-through}'+
     '.t{font-size:'+px(10)+';border-top:1px solid #000;margin-top:1px}'+
     '</style></head><body>'+
-    '<div class="d">'+esc(marca+destino)+'</div>'+
+    '<div class="d">'+esc(marca+E.grande)+'</div>'+
+    (E.nombre? '<div class="d2">'+esc(E.nombre)+'</div>':'')+
+    (E.etiqueta? '<div class="tag'+(E.etiqueta==='COMER AQUÍ'?' inv':'')+'">'+
+      esc(E.etiqueta==='PARA LLEVAR'?'>> PARA LLEVAR <<':E.etiqueta==='COMER AQUÍ'?'** COMER AQUÍ **':E.etiqueta)+'</div>':'')+
     '<div class="s">'+esc(sub)+'</div>'+
     (filas? '<table>'+filas+'</table>':'')+
     (cambios? '<div class="t">CAMBIO:</div><table>'+cambios+'</table>':'')+
@@ -4660,11 +4737,10 @@ function comandaCortaHTML(v,copia){
 function comandaHTML(v,copia){
   if(S.cfg.comandaCorta!==false && !papel(S.cfg.comandaAncho).carta) return comandaCortaHTML(v,copia);
   const c=S.cfg, P=papel(c.comandaAncho), w=P.w;
-  const mesa=v.mesaId? byId('mesas',v.mesaId):null;
-  const destino = mesa? (esDomicilio(mesa)? ('🛵 DOMICILIO · '+String(mesa.nombre).toUpperCase())
-                       : esLlevar(mesa)? 'MOSTRADOR'
-                                           : ('MESA '+String(mesa.nombre).toUpperCase()))
-                 : v.tipo==='domicilio'? '🛵 DOMICILIO'+(v.destNombre? ' · '+String(v.destNombre).toUpperCase():'') : 'PARA LLEVAR';
+  const E=encabezadoComanda(v);
+  /* recuadro: la mesa, o "PARA LLEVAR / COMER AQUÍ / DOMICILIO"; el nombre va aparte en letra grande */
+  const destino = E.etiqueta || E.grande;
+  const nomGrande = E.etiqueta? (E.grande!=='MOSTRADOR' && E.grande!=='DOMICILIO'? E.grande : '') : (E.nombre||'');
   const linea=(i,cls)=>'<tr><td class="q">'+esc(i.cant)+'</td><td class="n'+(cls?' '+cls:'')+'">'+
     esc(String(i.nombre).toUpperCase())+
     (i.nota? '<div class="nota">** '+esc(String(i.nota).toUpperCase())+'</div>':'')+
@@ -4693,7 +4769,7 @@ function comandaHTML(v,copia){
       'padding:4px 0;margin:5px 0;letter-spacing:1px}'+
     '.sec{font-size:'+px(14)+';font-weight:bold;margin:7px 0 2px;border-bottom:2px solid #000}'+
     '.baja{text-decoration:line-through}'+
-    '.nomb{text-align:center;font-size:'+px(24)+';font-weight:bold;margin:4px 0;line-height:1.15}'+
+    '.nomb{text-align:center;font-size:'+px(27)+';font-weight:bold;margin:4px 0;line-height:1.15}'+
     '.turno{text-align:center;border:2px solid #000;border-radius:5px;margin:4px 0;padding:2px 0 4px}'+
     '.turno small{display:block;font-size:'+px(10.5)+';letter-spacing:2px}'+
     '.turno b{display:block;font-size:'+px(24)+';line-height:1.05;letter-spacing:1px}'+
@@ -4702,8 +4778,7 @@ function comandaHTML(v,copia){
     (v.nroTurno? '<div class="turno"><small>TURNO</small><b>'+fmtTurno(v.nroTurno)+'</b></div>':'')+
     '<div class="cab">'+esc(v.no)+' · '+ftime(v.fecha)+'</div>'+
     '<div class="dest">'+esc(destino)+'</div>'+
-    (()=>{ const nm=nombreDePedido(v); return nm && !String(destino).toUpperCase().includes(String(nm).toUpperCase())
-        ? '<div class="nomb">'+esc(String(nm).toUpperCase())+'</div>' : ''; })()+
+    (nomGrande? '<div class="nomb">'+esc(nomGrande)+'</div>' : '')+
     (v.adicional&&!soloBaja? '<div class="agr">SOLO ESTO ES NUEVO</div>':'')+
     '<div class="cab">Atiende: '+esc(nameOf('usuarios',v.usuarioId))+'</div><hr>'+
     (filas? '<table>'+filas+'</table>':'')+
@@ -4915,6 +4990,7 @@ function abrirMesa(mesaId){
   const mm=byId('mesas',mesaId);
   S.cart=newCart({mesaId:mesaId,tipo: esDomicilio(mm)?'domicilio':esLlevar(mm)?'mostrador':'mesa'});
   S.cart.nombrePedido=(cm&&cm.nombrePedido) || (mm&&mm.temporal? mm.nombre:'');
+  if(cm && cm.paraLlevar!==undefined) S.cart.paraLlevar=cm.paraLlevar;
   if(cm){ S.cart.comandaId=cm.id;
     S.cart.items=(cm.items||[]).map(i=>Object.assign({},i));   // copia: no tocar la comanda guardada
     S.cart.bajas=(cm.bajas||[]).slice();
@@ -5021,7 +5097,7 @@ function viewVentas(vw){
     $$('[data-t]',$('#view')).forEach(b=> b.onclick=()=>verTicket(byId('ventas',b.dataset.t)));
     $$('[data-a]',$('#view')).forEach(b=> b.onclick=()=>anularVenta(byId('ventas',b.dataset.a)));
     $$('[data-ev]',$('#view')).forEach(b=> b.onclick=()=>editarVenta(byId('ventas',b.dataset.ev)));
-    $$('[data-rc]',$('#view')).forEach(b=> b.onclick=()=>reimprimir(byId('ventas',b.dataset.rc),'comanda'));
+    $$('[data-rc]',$('#view')).forEach(b=> b.onclick=()=>reimprimirCocina(byId('ventas',b.dataset.rc)));
   }
   $('#vfil').innerHTML='<div class="card" style="margin-bottom:14px"><div class="bd">'+
     '<div class="row wrap" style="margin-bottom:10px">'+
