@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.26-5';
+const APP_VERSION='2026.10.26-6';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -7148,220 +7148,287 @@ function edCuenta(c,despues){
 }
 function mMovimiento(){
   if(!exigirCaja('mover dinero')) return;
-  modal({title:'Movimiento de tesorería',
-    body:'<div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">'+
-      '<div class="f"><label>Tipo</label><select id="t"><option value="ingreso">Ingreso (entra plata)</option>'+
-        '<option value="egreso">Egreso (sale plata)</option>'+
-        '<option value="traslado">Traslado entre cuentas</option></select></div>'+
-      '<div class="f"><label>Monto</label><input id="mt" type="number" step="any"></div></div>'+
-      '<div class="f" style="margin-bottom:10px"><label id="c1l">Cuenta</label><select id="c1">'+
-        selOpts(S.cuentas.filter(c=>c.activo!==false),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+
-        '<option value="__credito" id="optcred" hidden disabled>📕 A crédito · no sale plata, queda por pagar</option></select></div>'+
-      '<div id="crbox" class="card hide" style="background:var(--panel2);margin-bottom:10px"><div class="bd">'+
-        '<b>📕 Gasto a crédito</b><div class="tiny" style="margin-top:4px">No sale plata de ninguna caja ni banco. El gasto se registra hoy '+
-        '(cuenta en la utilidad) y queda en <b>Cartera ▸ por pagar</b> a nombre del tercero. Cuando lo pagues, lo buscas en una '+
-        '<b>salida</b> y marcas la factura.</div>'+
-        '<div class="f" style="margin-top:8px"><label>¿A cuántos días lo vas a pagar?</label>'+
-        '<input id="crplz" type="number" value="30" style="max-width:110px"></div></div></div>'+
-      '<div class="f hide" id="c2b" style="margin-bottom:10px"><label>Cuenta destino</label><select id="c2">'+
-        selOpts(S.cuentas.filter(c=>c.activo!==false),'',c=>c.nombre+' · '+money(saldoCuenta(c.id)))+'</select></div>'+
-      '<div id="nocuenta">'+
-        '<div class="f" style="margin-bottom:10px"><label>¿De qué es? (categoría)</label><div id="cat"></div></div>'+
-        '<div class="f" style="margin-bottom:10px"><label>Concepto</label>'+
-          '<input id="co" placeholder="Detalle de este movimiento"></div>'+
-        '<div class="f" id="terbox"><label>Tercero (a quién le paga o de quién recibe)</label><div id="ter"></div></div>'+
-        '<div id="docsbox" class="card hide" style="background:var(--panel2);margin-top:11px"><div class="bd" id="docsin"></div></div>'+
-        '<div id="avcart" class="card hide" style="background:var(--info-soft,var(--panel2));margin-top:11px">'+
+  const ctas=S.cuentas.filter(c=>c.activo!==false);
+  const optCtas=ctas.map(c=>'<option value="'+c.id+'">'+esc(c.nombre)+' · '+money(saldoCuenta(c.id))+'</option>').join('');
+  modal({title:'Movimiento de tesorería', size:'wide',
+    body:
+      /* 1) qué es */
+      '<div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
+        '<div class="f"><label>Tipo</label><select id="t"><option value="egreso">Salida (sale plata · pagos y gastos)</option>'+
+          '<option value="ingreso">Entrada (entra plata · cobros)</option>'+
+          '<option value="traslado">Traslado entre cuentas</option></select></div>'+
+        '<div class="f" id="terbox"><label>Tercero (a quién le pagas o quién te paga)</label><div id="ter"></div></div></div>'+
+      /* 2) resumen de deudas del tercero, apenas se escoge */
+      '<div id="tsum" class="hide" style="margin-bottom:10px"></div>'+
+      /* 3) facturas a pagar o cobrar */
+      '<div id="docsbox" class="card hide" style="background:var(--panel2);margin-bottom:10px"><div class="bd" id="docsin"></div></div>'+
+      /* 4) cruce con lo del otro lado */
+      '<div id="cruzbox" class="card hide" style="background:var(--info-soft,var(--panel2));margin-bottom:10px"><div class="bd" id="cruzin"></div></div>'+
+      /* 5) gasto libre */
+      '<div id="libre">'+
+        '<div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
+          '<div class="f"><label>¿De qué es? (categoría)</label><div id="cat"></div></div>'+
+          '<div class="f"><label>Concepto</label><input id="co" placeholder="Detalle de este movimiento"></div></div>'+
+        '<div id="avcart" class="card hide" style="background:var(--info-soft,var(--panel2));margin-bottom:10px">'+
           '<div class="bd"><b id="avt"></b><div class="tiny" id="avd" style="margin-top:4px"></div>'+
           '<div class="f" style="margin-top:8px"><label>¿A cuántos días lo debe devolver?</label>'+
-          '<input id="plz" type="number" value="30" style="max-width:110px"></div></div></div>'+
-      '</div>',
+          '<input id="plz" type="number" value="30" style="max-width:110px"></div></div></div></div>'+
+      /* 6) traslado */
+      '<div id="trasbox" class="hide grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
+        '<div class="f"><label>Sale de</label><select id="c1">'+optCtas+'</select></div>'+
+        '<div class="f"><label>Entra a</label><select id="c2">'+optCtas+'</select></div></div>'+
+      /* 7) total y formas de pago */
+      '<div class="card" style="margin-bottom:4px"><div class="bd">'+
+        '<div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap">'+
+          '<div class="f" style="max-width:200px"><label>Valor total</label><input id="mt" type="number" step="any" style="font-size:17px;font-weight:700"></div>'+
+          '<div id="resfp" class="tiny" style="flex:1;min-width:200px;padding-bottom:8px"></div></div>'+
+        '<div id="fpbox" style="margin-top:10px"><label class="tiny muted" style="text-transform:uppercase;letter-spacing:.04em">Cómo se paga</label>'+
+          '<div id="fps"></div>'+
+          '<button class="btn sm" id="fpadd" style="margin-top:6px">+ Otra forma de pago</button></div>'+
+        '<div id="crbox" class="hide tiny" style="margin-top:8px">📕 La parte <b>a crédito</b> no sale de ninguna caja: queda en Cartera ▸ por pagar. '+
+          'Pagar en <input id="crplz" type="number" value="30" style="width:60px;padding:2px 5px"> días.</div>'+
+      '</div></div>',
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Registrar</button>',
     onOpen:m=>{
+      let sel={}, docs=[], selX={}, docsX=[], fps=[];        // fps: [{c:cuentaId|'__credito', v:monto}]
+      const cajaIni=(cuentaDeMedio('efectivo')||(ctas[0]||{}).id||'');
+      fps=[{c:cajaIni, v:0}];
+      const T=()=>$('#t',m).value;
+      const tid=()=>cbT.valor();
       const cbT=combo($('#ter',m),{lista:listaTerceros(), vacio:'— sin tercero —',
         placeholder:'Buscar proveedor, cliente o empleado…', sub:x=>x.tipo, crear:CREAR_TERCERO,
-        onPick:()=>{ sel={}; pintarDocs(); }});
-      /* documentos de cartera del tercero: en un ingreso sus cuentas por cobrar,
-         en un egreso sus cuentas por pagar. Se marcan con check y se abonan aquí */
-      let sel={};                                   // docId -> monto a abonar
-      let docs=[];
-      function pintarDocs(){
-        const t=$('#t',m).value, box=$('#docsbox',m);
-        docs=docsDeTercero(cbT.valor(),t);
-        Object.keys(sel).forEach(k=>{ if(!docs.some(d=>d.id===k)) delete sel[k]; });
-        if(!docs.length){
-          /* no tiene deudas de este lado: si las tiene del otro, se avisa y se ofrece cambiar */
-          const otro = t==='ingreso'? 'egreso' : (t==='egreso'? 'ingreso' : '');
-          const dOtro = otro? docsDeTercero(cbT.valor(),otro) : [];
-          if(dOtro.length){
-            $('#docsin',m).innerHTML='<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">'+
-              '<span>'+(otro==='egreso'? '📕 A esta persona <b>le debes</b> '+money(sum(dOtro,saldoDoc))+' ('+dOtro.length+' factura/s). Para pagarle es una <b>salida</b>.'
-                                     : '📗 Esta persona <b>te debe</b> '+money(sum(dOtro,saldoDoc))+' ('+dOtro.length+' factura/s). Para cobrarle es una <b>entrada</b>.')+'</span>'+
-              '<button class="btn sm pri" id="dcambia">'+(otro==='egreso'?'Cambiar a salida (pagar)':'Cambiar a entrada (cobrar)')+'</button></div>';
-            box.classList.remove('hide');
-            $('#dcambia',m).onclick=()=>{ $('#t',m).value=otro; $('#t',m).onchange({target:$('#t',m)}); };
-            sel={}; actualizar(); return;
-          }
-          box.classList.add('hide'); sel={}; actualizar(); return; }
-        const esC=t==='ingreso', hoy=todayISO();
-        const saldoT=round(sum(docs,saldoDoc),2);
-        const todas=docs.every(d=>sel[d.id]!==undefined);
-        $('#docsin',m).innerHTML=
-          '<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+
-            '<b>'+(esC?'📗 Te debe estas facturas':'📕 Le debes estas facturas')+' · '+docs.length+'</b>'+
-            '<span class="tiny">Saldo total <b>'+money(saldoT)+'</b></span></div>'+
-          '<label class="row tiny" style="gap:7px;margin-bottom:6px;cursor:pointer">'+
-            '<input type="checkbox" id="dtodas"'+(todas?' checked':'')+'> Marcar todas</label>'+
-          '<div style="max-height:240px;overflow-y:auto;border-top:1px solid var(--line)">'+
-          docs.map(d=>{
-            const sd=saldoDoc(d), on=sel[d.id]!==undefined, venc=d.vence && d.vence<hoy;
-            return '<div class="row" style="gap:9px;padding:7px 0;border-bottom:1px solid var(--line);align-items:center">'+
-              '<input type="checkbox" data-dk="'+d.id+'"'+(on?' checked':'')+' style="width:18px;height:18px;flex:0 0 auto">'+
-              '<div style="flex:1;min-width:0">'+
-                '<div><b>'+esc(d.no)+'</b> <span class="tiny">'+fdate(d.fecha)+'</span>'+
-                  (venc?' <span class="pill" style="background:var(--bad-soft);color:var(--bad)">vencida</span>':'')+'</div>'+
-                '<div class="tiny" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
-                  esc(d.concepto||(d.proveedorId!==undefined?'Compra a crédito':'Venta a crédito'))+' · saldo '+money(sd)+'</div></div>'+
-              '<input type="number" step="any" data-dm="'+d.id+'" value="'+(on?sel[d.id]:sd)+'"'+
-                (on?'':' disabled')+' style="width:110px;flex:0 0 auto;text-align:right" title="Cuánto abona a esta factura">'+
-            '</div>';
-          }).join('')+'</div>'+
-          '<div class="row tiny" style="justify-content:space-between;gap:10px;margin-top:8px">'+
-            '<span>Marca las que va a '+(esC?'cobrar':'pagar')+'; puedes cambiar el valor para un abono parcial.</span>'+
-            '<b id="dtot" style="white-space:nowrap"></b></div>';
-        box.classList.remove('hide');
-        $('#dtodas',m).onchange=e=>{ docs.forEach(d=>{ if(e.target.checked) sel[d.id]=saldoDoc(d); else delete sel[d.id]; });
-          pintarDocs(); };
-        $$('[data-dk]',m).forEach(ch=>ch.onchange=()=>{
-          const id=ch.dataset.dk, inp=$('[data-dm="'+id+'"]',m);
-          if(ch.checked){ sel[id]=toN(inp.value)||saldoDoc(byId2(id)); inp.disabled=false; inp.focus(); inp.select(); }
-          else { delete sel[id]; inp.disabled=true; inp.value=saldoDoc(byId2(id)); }
-          $('#dtodas',m).checked=docs.every(d=>sel[d.id]!==undefined);
-          actualizar(); });
-        $$('[data-dm]',m).forEach(inp=>inp.oninput=()=>{
-          if(sel[inp.dataset.dm]!==undefined){ sel[inp.dataset.dm]=toN(inp.value); actualizar(); } });
-        actualizar();
-      }
-      function byId2(id){ return docs.find(d=>d.id===id)||docCartera(id); }
-      /* con facturas marcadas, el monto es la suma de los abonos y no se necesita categoría */
-      function actualizar(){
-        const n=Object.keys(sel).length, mt=$('#mt',m), tot=round(sum(Object.values(sel),x=>toN(x)),2);
-        if(n){ mt.value=tot; mt.readOnly=true; mt.style.opacity=.75; }
-        else if(mt.readOnly){ mt.readOnly=false; mt.style.opacity=''; mt.value=''; }
-        const dt=$('#dtot',m); if(dt) dt.textContent=n? n+' marcada(s) · '+money(tot) : '';
-        $('#cat',m).closest('.f').classList.toggle('hide',n>0);
-        if(n) $('#avcart',m).classList.add('hide'); else avisar();
-      }
+        onPick:()=>{ sel={}; selX={}; todo(); }});
       const cbC=combo($('#cat',m),{lista:categoriasGasto(), vacio:'— sin categoría —',
         placeholder:'Escribe: verduras, domicilios, parqueadero, anticipo…', crear:CREAR_CATGASTO,
-        onPick:()=>avisar()});
+        onPick:()=>{ avisar(); pintaFP(); }});
+
+      const totDocs=()=>round(sum(Object.values(sel),x=>toN(x)),2);
+      const totCruce=()=>round(sum(Object.values(selX),x=>toN(x)),2);
+      const hayDocs=()=>Object.keys(sel).length>0;
+      const total=()=> hayDocs()? totDocs() : toN($('#mt',m).value);
+      /* el crédito solo para gastos sueltos (no al pagar facturas ni anticipos) */
+      const permiteCredito=()=> T()==='egreso' && !hayDocs() && !esCategoriaCartera(cbC.valor());
+
+      function resumenTercero(){
+        const box=$('#tsum',m), id=tid();
+        if(!id || T()==='traslado'){ box.classList.add('hide'); return; }
+        const meDebe=round(sum(docsDeTercero(id,'ingreso'),saldoDoc),2), leDebo=round(sum(docsDeTercero(id,'egreso'),saldoDoc),2);
+        box.classList.remove('hide');
+        box.innerHTML='<div class="row" style="gap:8px;flex-wrap:wrap">'+
+          '<span class="pill '+(meDebe>0.5?'ok':'')+'" style="font-size:12.5px;padding:5px 10px">📗 Te debe: <b>'+money(meDebe)+'</b></span>'+
+          '<span class="pill '+(leDebo>0.5?'bad':'')+'" style="font-size:12.5px;padding:5px 10px">📕 Le debes: <b>'+money(leDebo)+'</b></span>'+
+          (meDebe>0.5 && leDebo>0.5? '<span class="tiny muted" style="align-self:center">Puedes cruzar una cosa con la otra ↓</span>':'')+'</div>';
+      }
+      function listaDocsHTML(lista, s, clave, titulo, ayuda){
+        const hoy=todayISO();
+        const todas=lista.length && lista.every(d=>s[d.id]!==undefined);
+        return '<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">'+
+            '<b>'+titulo+' · '+lista.length+'</b><span class="tiny">Saldo total <b>'+money(sum(lista,saldoDoc))+'</b></span></div>'+
+          '<label class="row tiny" style="gap:7px;margin-bottom:4px;cursor:pointer"><input type="checkbox" data-todas="'+clave+'"'+(todas?' checked':'')+'> Marcar todas</label>'+
+          '<div style="max-height:200px;overflow-y:auto;border-top:1px solid var(--line)">'+
+          lista.map(d=>{ const sd=saldoDoc(d), on=s[d.id]!==undefined, venc=d.vence&&d.vence<hoy;
+            return '<div class="row" style="gap:9px;padding:6px 0;border-bottom:1px solid var(--line);align-items:center">'+
+              '<input type="checkbox" data-'+clave+'k="'+d.id+'"'+(on?' checked':'')+' style="width:18px;height:18px;flex:0 0 auto">'+
+              '<div style="flex:1;min-width:0"><div><b>'+esc(d.no)+'</b> <span class="tiny">'+fdate(d.fecha)+'</span>'+
+                (venc?' <span class="pill" style="background:var(--bad-soft);color:var(--bad)">vencida</span>':'')+'</div>'+
+              '<div class="tiny" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+                esc(d.concepto||(d.proveedorId!==undefined?'Compra a crédito':'Venta a crédito'))+' · saldo '+money(sd)+'</div></div>'+
+              '<input type="number" step="any" data-'+clave+'m="'+d.id+'" value="'+(on?s[d.id]:sd)+'"'+(on?'':' disabled')+
+                ' style="width:110px;flex:0 0 auto;text-align:right"></div>'; }).join('')+'</div>'+
+          '<div class="tiny muted" style="margin-top:6px">'+ayuda+'</div>';
+      }
+      function enganchar(clave, lista, s){
+        const td=$('[data-todas="'+clave+'"]',m);
+        if(td) td.onchange=e=>{ lista.forEach(d=>{ if(e.target.checked) s[d.id]=saldoDoc(d); else delete s[d.id]; }); todo(); };
+        $$('[data-'+clave+'k]',m).forEach(ch=>ch.onchange=()=>{ const id=ch.getAttribute('data-'+clave+'k'), inp=$('[data-'+clave+'m="'+id+'"]',m);
+          if(ch.checked){ s[id]=toN(inp.value)||saldoDoc(lista.find(d=>d.id===id)); } else delete s[id]; todo(); });
+        $$('[data-'+clave+'m]',m).forEach(inp=>inp.oninput=()=>{ const id=inp.getAttribute('data-'+clave+'m');
+          if(s[id]!==undefined){ s[id]=toN(inp.value); recalcular(); } });
+      }
+      function pintarDocs(){
+        const t=T(), id=tid(), box=$('#docsbox',m), xb=$('#cruzbox',m);
+        if(t==='traslado' || !id){ box.classList.add('hide'); xb.classList.add('hide'); docs=[]; docsX=[]; sel={}; selX={}; return; }
+        docs=docsDeTercero(id,t); docsX=docsDeTercero(id, t==='ingreso'?'egreso':'ingreso');
+        Object.keys(sel).forEach(k=>{ if(!docs.some(d=>d.id===k)) delete sel[k]; });
+        Object.keys(selX).forEach(k=>{ if(!docsX.some(d=>d.id===k)) delete selX[k]; });
+        if(docs.length){
+          box.classList.remove('hide');
+          $('#docsin',m).innerHTML=listaDocsHTML(docs, sel, 'd', t==='ingreso'?'📗 Te debe estas facturas':'📕 Le debes estas facturas',
+            'Marca las que vas a '+(t==='ingreso'?'cobrar':'pagar')+'. Cambia el valor para un abono parcial.');
+          enganchar('d', docs, sel);
+        } else box.classList.add('hide');
+        /* cruce: solo si hay algo que pagar o cobrar de este lado */
+        const puedeCruzar = docsX.length && (hayDocs() || (t==='egreso' && !esCategoriaCartera(cbC.valor())));
+        if(puedeCruzar){
+          xb.classList.remove('hide');
+          $('#cruzin',m).innerHTML=listaDocsHTML(docsX, selX, 'x',
+            t==='egreso'? '🔁 Cruzar con lo que él te debe' : '🔁 Cruzar con lo que tú le debes',
+            t==='egreso'? 'Lo que marques aquí se descuenta de su deuda contigo y cuenta como parte de este pago (no sale plata por esa parte).'
+                        : 'Lo que marques aquí se descuenta de lo que tú le debes y cuenta como parte de este cobro (no entra plata por esa parte).');
+          enganchar('x', docsX, selX);
+        } else { xb.classList.add('hide'); selX={}; }
+      }
       function avisar(){
-        const cat=cbC.valor(), t=$('#t',m).value, box=$('#avcart',m);
-        const aplica = esCategoriaCartera(cat) && t!=='traslado';
+        const cat=cbC.valor(), t=T(), box=$('#avcart',m);
+        const aplica = esCategoriaCartera(cat) && t!=='traslado' && !hayDocs();
         box.classList.toggle('hide',!aplica);
         if(!aplica) return;
         const esCobrar = t==='egreso';
         $('#avt',m).textContent = esCobrar? '📗 Se crea una CUENTA POR COBRAR' : '📕 Se crea una CUENTA POR PAGAR';
         $('#avd',m).textContent = esCobrar
-          ? 'La plata sale de la cuenta y queda anotada en Cartera como un documento por cobrarle a esa persona.'
-          : 'La plata entra a la cuenta y queda anotada en Cartera como un documento que usted debe devolver.';
+          ? 'La plata sale y queda anotada en Cartera como un documento por cobrarle a esa persona.'
+          : 'La plata entra y queda anotada en Cartera como un documento que debes devolver.';
       }
-      /* "A crédito" solo existe en una salida */
-      const pintaCred=()=>{ const eg=$('#t',m).value==='egreso', oc=$('#optcred',m);
-        oc.hidden=!eg; oc.disabled=!eg;
-        if(!eg && $('#c1',m).value==='__credito') $('#c1',m).selectedIndex=0;
-        const cr=$('#c1',m).value==='__credito';
-        $('#crbox',m).classList.toggle('hide',!cr);
-        if(cr){ sel={}; $('#docsbox',m).classList.add('hide'); $('#avcart',m).classList.add('hide'); actualizar(); } };
-      $('#c1',m).addEventListener('change',()=>{ pintaCred(); if($('#c1',m).value!=='__credito') pintarDocs(); });
-      $('#t',m).addEventListener('change',pintaCred);
-      $('#t',m).onchange=e=>{ const tr=e.target.value==='traslado';
-        $('#c2b',m).classList.toggle('hide',!tr);
-        $('#nocuenta',m).classList.toggle('hide',tr);
-        sel={}; pintarDocs(); avisar(); };
+      function pintaFP(){
+        const cr=permiteCredito();
+        fps.forEach(f=>{ if(f.c==='__credito' && !cr) f.c=cajaIni; });
+        const opts=c=>ctas.map(x=>'<option value="'+x.id+'"'+(x.id===c?' selected':'')+'>'+esc(x.nombre)+' · '+money(saldoCuenta(x.id))+'</option>').join('')+
+          (cr? '<option value="__credito"'+(c==='__credito'?' selected':'')+'>📕 A crédito (queda por pagar)</option>':'');
+        $('#fps',m).innerHTML=fps.map((f,i)=>'<div class="row" style="gap:8px;margin-top:6px;align-items:center">'+
+          '<select data-fc="'+i+'" style="flex:1">'+opts(f.c)+'</select>'+
+          '<input type="number" step="any" data-fv="'+i+'" value="'+(f.v||'')+'" placeholder="0" style="width:140px;text-align:right">'+
+          (fps.length>1? '<button class="btn ghost sm" data-fx="'+i+'" title="Quitar">✕</button>':'<span style="width:34px"></span>')+'</div>').join('');
+        $$('[data-fc]',m).forEach(s=>s.onchange=()=>{ fps[+s.dataset.fc].c=s.value; recalcular(); });
+        $$('[data-fv]',m).forEach(inp=>inp.oninput=()=>{ fps[+inp.dataset.fv].v=toN(inp.value); fps._manual=true; recalcular(false); });
+        $$('[data-fx]',m).forEach(b=>b.onclick=()=>{ fps.splice(+b.dataset.fx,1); pintaFP(); recalcular(); });
+        $('#crbox',m).classList.toggle('hide',!fps.some(f=>f.c==='__credito'));
+      }
+      /* con una sola forma de pago, esa lleva todo lo que falta */
+      function recalcular(autollenar){
+        const mt=$('#mt',m);
+        if(hayDocs()){ mt.value=totDocs(); mt.readOnly=true; mt.style.opacity=.75; }
+        else if(mt.readOnly){ mt.readOnly=false; mt.style.opacity=''; }
+        const tot=total(), cz=totCruce();
+        const porPagar=round(tot-cz,2);
+        if(autollenar!==false && fps.length===1){ fps[0].v=Math.max(0,porPagar);
+          const inp=$('[data-fv="0"]',m); if(inp) inp.value=fps[0].v||''; }
+        const asign=round(sum(fps,f=>toN(f.v)),2), falta=round(porPagar-asign,2);
+        $('#resfp',m).innerHTML=(cz? '🔁 Cruce <b>'+money(cz)+'</b> · ':'')+
+          (T()==='traslado'? '' : 'Formas de pago <b>'+money(asign)+'</b> · ')+
+          (Math.abs(falta)<0.5? '<span style="color:var(--ok)">✓ cuadra</span>'
+            : falta>0? '<span style="color:var(--bad)">Falta asignar <b>'+money(falta)+'</b></span>'
+                     : '<span style="color:var(--bad)">Te pasaste <b>'+money(-falta)+'</b></span>');
+        $('#crbox',m).classList.toggle('hide',!fps.some(f=>f.c==='__credito'));
+      }
+      function todo(){
+        const t=T(), tr=t==='traslado';
+        $('#terbox',m).classList.toggle('hide',tr);
+        $('#trasbox',m).classList.toggle('hide',!tr);
+        $('#fpbox',m).classList.toggle('hide',tr);
+        resumenTercero(); pintarDocs();
+        $('#libre',m).classList.toggle('hide',tr || hayDocs());
+        avisar(); pintaFP(); recalcular();
+      }
+      $('#t',m).onchange=()=>{ sel={}; selX={}; todo(); };
+      $('#mt',m).oninput=()=>recalcular();
+      $('#fpadd',m).onclick=()=>{ const tot=total()-totCruce(), asig=sum(fps,f=>toN(f.v));
+        const usada=fps.map(f=>f.c), otra=(ctas.find(c=>usada.indexOf(c.id)<0)||{}).id||cajaIni;
+        fps.push({c:otra, v:Math.max(0,round(tot-asig,2))}); pintaFP(); recalcular(false); };
+
       $('#ok',m).onclick=()=>{
-        const t=$('#t',m).value, v=toN($('#mt',m).value), c1=$('#c1',m).value, co=$('#co',m).value.trim();
-        if(v<=0) return toast('Monto inválido','warn');
-        const c2 = t==='traslado'? $('#c2',m).value : '';
-        if(t==='traslado' && c1===c2) return toast('Las cuentas deben ser distintas','warn');
-        const tid=cbT.valor();
-        if(c1==='__credito'){
-          /* gasto a crédito: no mueve plata, crea la cuenta por pagar */
-          if(t!=='egreso') return toast('El crédito solo aplica para salidas','warn');
-          if(!tid) return toast('Dime a quién se le debe: escoge o crea el proveedor','warn',4500);
-          const catC=cbC.valor()||'otros';
-          if(esCategoriaCartera(catC)) return toast('Un anticipo o préstamo no puede quedar a crédito: escoge la categoría del gasto','warn',5500);
-          const terC={id:tid, nombre:(listaTerceros().find(x=>x.id===tid)||{}).nombre||''};
-          const fecha=todayISO();
-          const d={id:uid('od'), no:nextNo('cxp','GC-'), tipo:'cxp', esOtro:true, gastoCredito:true,
-            fecha:fecha, fechaReg:now(), terceroId:tid, terceroNombre:terC.nombre,
-            concepto: co || ('Gasto a crédito · '+catC), total:round(v,2),
-            vence:dateAdd(fecha,Math.max(0,toN($('#crplz',m).value)||30)),
-            estado:'pendiente', categoria:catC, cuentaId:'', medioPago:'credito', nota:'',
-            usuarioId:S.user?S.user.id:'', turnoId:S.turno?S.turno.id:''};
-          put('otrosdocs',d);
-          closeModal(); render();
-          toast('📕 Gasto a crédito '+d.no+' · '+terC.nombre+' · '+money(v)+' queda por pagar','ok',5000);
-          if(S.cfg.impTicket!==false) comprobanteOtro(d);
-          return;
-        }
-        const marcadas=t!=='traslado'? docs.filter(d=>sel[d.id]!==undefined) : [];
-        if(marcadas.length){
-          for(const d of marcadas){
-            const va=toN(sel[d.id]);
-            if(va<=0) return toast('Pon un valor a abonar en '+d.no,'warn');
-            if(va>saldoDoc(d)+0.5) return toast('En '+d.no+' el abono supera el saldo ('+money(saldoDoc(d))+')','warn',4500);
-          }
-          const hacer=()=>{
-            const tipo=t==='ingreso'?'cxc':'cxp';
-            const medio=(byId('cuentas',c1)||{}).medio||'efectivo';
-            const abonos=abonarDocs(tipo,marcadas.map(d=>({doc:d,monto:toN(sel[d.id])})),c1,medio,co);
-            closeModal(); render();
-            toast((tipo==='cxc'?'Cobradas ':'Pagadas ')+abonos.length+' factura(s) · '+money(v),'ok',4500);
-            if(S.cfg.impTicket!==false) comprobanteAbonos(abonos);
-          };
-          if(bloqueaCaja(c1)) conCaja(c1,hacer,(t==='ingreso'?'Cobro':'Pago')+' de '+money(v));
-          else hacer();
-          return;
-        }
-        const cat=cbC.valor()||'otros';
-        const cartera = t!=='traslado' && esCategoriaCartera(cat);
-        if(cartera && !tid) return toast('Dime a quién: escoge el empleado o la persona','warn',4500);
-        const guardar=()=>{
-          if(t==='traslado'){
-            movTes(c1,'egreso',v,'Traslado a '+nameOf('cuentas',c2),'traslado','','');
+        const t=T(), co=$('#co',m).value.trim(), id=tid();
+        const ter=id? {id:id, nombre:(listaTerceros().find(x=>x.id===id)||{}).nombre||''} : null;
+        /* ---------- traslado ---------- */
+        if(t==='traslado'){
+          const v=toN($('#mt',m).value), c1=$('#c1',m).value, c2=$('#c2',m).value;
+          if(v<=0) return toast('Escribe el valor','warn');
+          if(c1===c2) return toast('Las cuentas deben ser distintas','warn');
+          const b=bloqueaCaja(c1)? c1 : (bloqueaCaja(c2)? c2 : '');
+          const hacer=()=>{ movTes(c1,'egreso',v,'Traslado a '+nameOf('cuentas',c2),'traslado','','');
             movTes(c2,'ingreso',v,'Traslado desde '+nameOf('cuentas',c1),'traslado','','');
-            closeModal(); render(); toast('Traslado registrado','ok'); return;
-          }
-          const ter=tid? {id:tid, nombre:(listaTerceros().find(x=>x.id===tid)||{}).nombre||''} : null;
-          if(cartera){
-            /* anticipo o préstamo: no es gasto ni ingreso del negocio, es cartera */
-            const esCxc = t==='egreso';
-            const tipo = esCxc? 'cxc':'cxp';
-            const fecha=todayISO();
-            const d={id:uid('od'), no:nextNo(tipo, esCxc?'PC-':'PP-'), tipo:tipo, esOtro:true,
-              fecha:fecha, terceroId:tid, terceroNombre:ter.nombre,
-              concepto: co || (esCxc? 'Anticipo · '+cat : 'Préstamo recibido · '+cat),
-              total:round(v,2), vence:dateAdd(fecha,Math.max(0,toN($('#plz',m).value)||30)),
-              estado:'pendiente', categoria:cat, cuentaId:c1,
-              medioPago:(byId('cuentas',c1)||{}).medio||'', nota:'', usuarioId:S.user?S.user.id:''};
-            put('otrosdocs',d);
-            movTes(c1,t,v,(esCxc?'Anticipo ':'Préstamo ')+d.no+' · '+ter.nombre+(co?' · '+co:''),
-              cat,tipo,d.id,ter);
+            closeModal(); render(); toast('Traslado registrado','ok'); };
+          return b? conCaja(b,hacer,'Traslado de '+money(v)) : hacer();
+        }
+        const tot=total(), cz=totCruce();
+        if(tot<=0) return toast('Escribe el valor o marca las facturas','warn');
+        const lineas=fps.filter(f=>toN(f.v)>0).map(f=>({c:f.c, v:round(toN(f.v),2)}));
+        const asign=round(sum(lineas,f=>f.v),2);
+        if(Math.abs(round(tot-cz-asign,2))>=0.5)
+          return toast('Las formas de pago ('+money(asign)+')'+(cz?' + el cruce ('+money(cz)+')':'')+' deben sumar '+money(tot),'warn',6000);
+        if(cz>tot+0.5) return toast('El cruce no puede ser mayor que el total','warn');
+        for(const d of docs.filter(d=>sel[d.id]!==undefined)){ const va=toN(sel[d.id]);
+          if(va<=0) return toast('Pon un valor en '+d.no,'warn');
+          if(va>saldoDoc(d)+0.5) return toast('En '+d.no+' el valor supera el saldo ('+money(saldoDoc(d))+')','warn',4500); }
+        for(const d of docsX.filter(d=>selX[d.id]!==undefined)){ const va=toN(selX[d.id]);
+          if(va<=0 || va>saldoDoc(d)+0.5) return toast('Revisa el valor a cruzar en '+d.no,'warn',4500); }
+        const credito=round(sum(lineas.filter(f=>f.c==='__credito'),f=>f.v),2);
+        const enCaja=lineas.filter(f=>f.c!=='__credito');
+        if((credito||cz) && !id) return toast('Escoge el tercero: '+(credito?'el crédito':'el cruce')+' queda a su nombre','warn',4500);
+        const bloq=enCaja.map(f=>f.c).find(c=>bloqueaCaja(c));
+        const cuentaTxt=enCaja.map(f=>nameOf('cuentas',f.c)+' '+money(f.v)).join(' + ');
+        const notaFP=[enCaja.length? cuentaTxt:'', cz? 'cruce '+money(cz):'', credito? 'crédito '+money(credito):''].filter(Boolean).join(' + ');
+
+        const hacer=()=>{
+          const abonos=[];
+          const xTipo = t==='egreso'? 'cxc' : 'cxp';                // el lado que se cruza
+          const cruzar=(monto,refTxt)=>{                             // descuenta del otro lado
+            let r=round(monto,2); const lista=[];
+            docsX.filter(d=>selX[d.id]!==undefined).forEach(d=>{ if(r<=0.004) return;
+              const v=Math.min(round(toN(selX[d.id]),2), r); if(v>0){ lista.push({doc:d,monto:v}); r=round(r-v,2); } });
+            if(lista.length) abonarDocs(xTipo,lista,'','cruce','Cruce con '+refTxt).forEach(a=>abonos.push(a));
+          };
+          /* ---------- pagar / cobrar facturas ---------- */
+          if(hayDocs()){
+            const tipo=t==='ingreso'?'cxc':'cxp';
+            const fuentes=[]; if(cz) fuentes.push({c:'__cruce', v:cz}); enCaja.forEach(f=>fuentes.push({c:f.c, v:f.v}));
+            const marcadas=docs.filter(d=>sel[d.id]!==undefined);
+            let fi=0;
+            marcadas.forEach(d=>{ let r=round(toN(sel[d.id]),2);
+              while(r>0.004 && fi<fuentes.length){ const f=fuentes[fi], v=Math.min(f.v,r);
+                if(v>0){
+                  if(f.c==='__cruce') abonarDocs(tipo,[{doc:d,monto:v}],'','cruce',
+                    'Cruce con '+docsX.filter(x=>selX[x.id]!==undefined).map(x=>x.no).join(', ')+(co?' · '+co:'')).forEach(a=>abonos.push(a));
+                  else abonarDocs(tipo,[{doc:d,monto:v}],f.c,(byId('cuentas',f.c)||{}).medio||'efectivo',co).forEach(a=>abonos.push(a));
+                  f.v=round(f.v-v,2); r=round(r-v,2); }
+                if(f.v<=0.004) fi++; } });
+            if(cz) cruzar(cz, marcadas.map(d=>d.no).join(', '));
             closeModal(); render();
-            toast((esCxc? 'Cuenta por cobrar ':'Cuenta por pagar ')+d.no+' creada a '+ter.nombre+
-                  ' · '+money(v),'ok',4500);
+            toast((tipo==='cxc'?'Cobradas ':'Pagadas ')+marcadas.length+' factura(s) · '+money(tot)+' · '+notaFP,'ok',5500);
+            if(S.cfg.impTicket!==false) comprobanteAbonos(abonos.filter(a=>a.tipo===tipo));
+            return;
+          }
+          /* ---------- gasto o ingreso suelto ---------- */
+          const cat=cbC.valor()||'otros';
+          if(esCategoriaCartera(cat)){
+            /* anticipo o préstamo: es cartera, no gasto */
+            if(!id) return toast('Dime a quién: escoge el empleado o la persona','warn',4500);
+            const esCxc=t==='egreso', tipo=esCxc?'cxc':'cxp', fecha=todayISO();
+            const d={id:uid('od'), no:nextNo(tipo, esCxc?'PC-':'PP-'), tipo:tipo, esOtro:true, fecha:fecha, terceroId:id, terceroNombre:ter.nombre,
+              concepto: co || (esCxc? 'Anticipo · '+cat : 'Préstamo recibido · '+cat), total:round(tot,2),
+              vence:dateAdd(fecha,Math.max(0,toN($('#plz',m).value)||30)), estado:'pendiente', categoria:cat,
+              cuentaId:(enCaja[0]||{}).c||'', medioPago:notaFP, nota:'', usuarioId:S.user?S.user.id:''};
+            put('otrosdocs',d);
+            enCaja.forEach(f=>movTes(f.c,t,f.v,(esCxc?'Anticipo ':'Préstamo ')+d.no+' · '+ter.nombre+(co?' · '+co:''),cat,tipo,d.id,ter));
+            closeModal(); render(); toast((esCxc?'Cuenta por cobrar ':'Cuenta por pagar ')+d.no+' · '+ter.nombre+' · '+money(tot),'ok',4500);
             if(S.cfg.impTicket!==false) comprobanteOtro(d);
             return;
           }
-          movTes(c1,t,v,co||('Movimiento · '+cat),cat,'','',ter);
-          closeModal(); render(); toast('Movimiento registrado','ok');
+          const concepto=co||('Movimiento · '+cat);
+          enCaja.forEach(f=>movTes(f.c,t,f.v,concepto+(lineas.length+(cz?1:0)>1?' ('+notaFP+')':''),cat,'','',ter));
+          /* lo que no sale de caja (crédito o cruce) queda como gasto a crédito a su nombre */
+          const gastoSinCaja=(monto,esCruce)=>{
+            const fecha=todayISO();
+            const d={id:uid('od'), no:nextNo('cxp','GC-'), tipo:'cxp', esOtro:true, gastoCredito:true, fecha:fecha, fechaReg:now(),
+              terceroId:id, terceroNombre:ter.nombre, concepto:concepto+(esCruce?' (cruzado)':' (a crédito)'), total:round(monto,2),
+              vence:dateAdd(fecha,Math.max(0,toN($('#crplz',m).value)||30)), estado:'pendiente', categoria:cat, cuentaId:'',
+              medioPago:esCruce?'cruce':'credito', nota:notaFP, usuarioId:S.user?S.user.id:'', turnoId:S.turno?S.turno.id:''};
+            put('otrosdocs',d); return d; };
+          let dCred=null;
+          if(credito) dCred=gastoSinCaja(credito,false);
+          if(cz && t==='egreso'){
+            const dc=gastoSinCaja(cz,true);
+            abonarDocs('cxp',[{doc:dc,monto:cz}],'','cruce','Cruce con '+docsX.filter(x=>selX[x.id]!==undefined).map(x=>x.no).join(', '))
+              .forEach(a=>abonos.push(a));
+            cruzar(cz, dc.no);
+          }
+          closeModal(); render();
+          toast((t==='egreso'?'Salida':'Entrada')+' de '+money(tot)+' registrada · '+notaFP+(dCred?' · '+dCred.no+' queda por pagar':''),'ok',5500);
+          if(dCred && S.cfg.impTicket!==false) comprobanteOtro(dCred);
         };
-        const bloquea = bloqueaCaja(c1)? c1 : (bloqueaCaja(c2)? c2 : '');
-        if(bloquea) conCaja(bloquea,guardar,(t==='traslado'?'Traslado':(t==='ingreso'?'Ingreso':'Egreso'))+' de '+money(v));
-        else guardar();
+        if(bloq) return conCaja(bloq,hacer,(t==='ingreso'?'Entrada':'Salida')+' de '+money(tot));
+        hacer();
       };
-      avisar();
+      todo();
     }});
 }
 
