@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.26-3';
+const APP_VERSION='2026.10.26-4';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -6010,9 +6010,120 @@ function recalcularInventario(){
   });
   return cambios;
 }
+/* ===================== VENTAS QUE NO DESCONTARON =====================
+   Compara cada venta (y cada comida de empleados) con lo que dice la receta
+   de sus productos HOY, y mira qué salió de verdad del inventario por esa
+   venta. Si a un ingrediente no se le descontó nada, lo reporta para que el
+   administrador decida si se descuenta. No toca nada solo. */
+function faltantesDeInventario(desde){
+  if(S.meta.pullInc && S.meta.pullInc.movinv) return {cargando:true, docs:[]};
+  const salio={};                                   // refId -> {gid: cantidad}
+  S.movinv.forEach(m=>{ if(m.tipo!=='salida' || !m.refId) return;
+    const o=salio[m.refId]=salio[m.refId]||{}; o[m.ingredienteId]=(o[m.ingredienteId]||0)+Math.abs(Number(m.cantidad)||0); });
+  const revisar=(doc,k,tipoRef)=>{
+    const esperado={}, porProd={};
+    (doc.items||[]).forEach(it=>{
+      const p=byId('productos',it.productoId); if(!p) return;
+      (p.receta||[]).forEach(r=>{ const q=round((Number(r.cantidad)||0)*(Number(it.cant)||0),4);
+        if(!r.ingredienteId || !q || !byId('ingredientes',r.ingredienteId)) return;
+        esperado[r.ingredienteId]=(esperado[r.ingredienteId]||0)+q;
+        (porProd[r.ingredienteId]=porProd[r.ingredienteId]||[]).push(it.nombre); });
+    });
+    const real=salio[doc.id]||{};
+    const falta=Object.keys(esperado).filter(g=>!(real[g]>0.000001))      // solo lo que NO se descontó nada
+      .map(g=>({gid:g, q:round(esperado[g],4), prods:porProd[g].filter((x,i,a)=>a.indexOf(x)===i)}));
+    if(!falta.length) return null;
+    const nada=!Object.keys(real).length;
+    return {doc:doc, k:k, tipoRef:tipoRef, falta:falta, nada:nada,
+      porque: nada? 'No descontó nada (el producto no tenía receta cuando se vendió, o se vendió en un equipo sin sincronizar)'
+                  : 'Descontó una parte; le faltó lo que se agregó después a la receta o quedó sin ingrediente'};
+  };
+  const out=[];
+  S.ventas.filter(v=>v.estado!=='anulada' && dISO(v.fecha)>=desde).forEach(v=>{ const r=revisar(v,'ventas','venta'); if(r) out.push(r); });
+  S.otrosdocs.filter(d=>d.tipo==='consumo' && d.estado!=='anulado' && dISO(d.fecha)>=desde).forEach(d=>{ const r=revisar(d,'otrosdocs','consumo'); if(r) out.push(r); });
+  out.sort((a,b)=>String(b.doc.fecha).localeCompare(String(a.doc.fecha)));
+  return {cargando:false, docs:out};
+}
+function descontarFaltantes(lista){
+  let n=0, costo=0;
+  lista.forEach(x=>{
+    const d=x.doc; d.consumo=d.consumo||[];
+    let c=0;
+    x.falta.forEach(f=>{
+      const m=movInv(f.gid,'salida',f.q,null,x.tipoRef,d.id,'Faltaba descontar de '+(d.no||'')+' ('+fdate(d.fecha)+') · '+f.prods.join(', '));
+      const cm=m? (m.costoMov||0) : 0; c+=cm;
+      d.consumo.push({ingredienteId:f.gid, cantidad:f.q, costo:round(cm,2)});
+    });
+    d.costo=round((Number(d.costo)||0)+c,2);
+    if(x.k==='ventas') d.utilidad=round((Number(d.total)||0)-(Number(d.propina)||0)-(Number(d.impuesto)||0)-d.costo,2);
+    put(x.k,d); n++; costo+=c;
+  });
+  return {n:n, costo:round(costo,2)};
+}
+function mFaltantesInventario(despues){
+  let desde=dateAdd(todayISO(),-30), sel={};
+  modal({title:'🔎 Ventas que no descontaron del inventario', size:'xl',
+    body:'<div class="row wrap" style="gap:8px;align-items:flex-end;margin-bottom:10px">'+
+        '<div class="f"><label>Revisar desde</label><input type="date" id="fi_d" value="'+desde+'"></div>'+
+        '<button class="btn sm" data-fd="7">7 días</button><button class="btn sm" data-fd="30">30 días</button><button class="btn sm" data-fd="90">90 días</button></div>'+
+      '<div class="hintx" style="margin-bottom:10px">Comparo cada venta con la receta de sus productos y miro qué salió del inventario por ella. '+
+        'Aquí salen solo los ingredientes a los que <b>no se les descontó nada</b>. Marca los que sí deben bajar y tócale <b>Descontar</b>: '+
+        'sale del inventario hoy, queda en el kárdex con el número de la venta y el costo se suma a esa venta.</div>'+
+      '<div id="fi_b"></div>',
+    footer:'<button class="btn" data-x>Cerrar</button><div class="spacer"></div>'+
+      (despues? '<button class="btn" id="fi_sig">Seguir sin descontar</button>':'')+
+      '<button class="btn pri" id="fi_ok" disabled>Descontar marcadas</button>',
+    onOpen:m=>{
+      let R=null;
+      const pinta=()=>{
+        R=faltantesDeInventario(desde);
+        if(R.cargando){ $('#fi_b',m).innerHTML='<div class="empty">⏳ Todavía está bajando el historial del inventario de la nube. Intenta en un momento.</div>'; return; }
+        if(!R.docs.length){ $('#fi_b',m).innerHTML='<div class="empty"><span class="ico">✅</span>Todas las ventas desde el '+fdate(desde)+' descontaron lo que dice la receta.</div>';
+          $('#fi_ok',m).disabled=true; return; }
+        /* total por ingrediente */
+        const tot={}; R.docs.forEach(x=>x.falta.forEach(f=>{ tot[f.gid]=(tot[f.gid]||0)+f.q; }));
+        $('#fi_b',m).innerHTML=
+          '<div class="card" style="margin-bottom:10px;background:var(--warn-soft)"><div class="bd"><b>'+R.docs.length+' venta(s) con algo sin descontar.</b> En total faltaría bajar: '+
+            Object.keys(tot).map(g=>{ const ig=byId('ingredientes',g)||{}; return '<b>'+esc(ig.nombre||'?')+'</b> '+num(tot[g],2)+' '+esc(ig.unidad||''); }).join(' · ')+'</div></div>'+
+          '<div class="row" style="gap:8px;margin-bottom:6px"><button class="btn sm" id="fi_all">Marcar todas</button><button class="btn sm" id="fi_none">Ninguna</button></div>'+
+          '<div class="card"><div class="bd p0">'+tbl([
+            {t:'',f:x=>'<input type="checkbox" data-fi="'+x.doc.id+'"'+(sel[x.doc.id]?' checked':'')+'>'},
+            {t:'Fecha',f:x=>fdate(x.doc.fecha,true)},
+            {t:'Documento',f:x=>'<b>'+esc(x.doc.no||'')+'</b>'+(x.k==='otrosdocs'?' <span class="pill warn">comida empleados</span>':'')+
+              '<div class="tiny muted">'+esc((x.doc.items||[]).map(i=>i.cant+' '+i.nombre).join(', '))+'</div>'},
+            {t:'Le faltó descontar',f:x=>x.falta.map(f=>{ const ig=byId('ingredientes',f.gid)||{};
+              return '<div><b>'+num(f.q,2)+' '+esc(ig.unidad||'')+'</b> de '+esc(ig.nombre||'?')+' <span class="tiny muted">('+esc(f.prods.join(', '))+')</span></div>'; }).join('')},
+            {t:'Por qué',f:x=>'<span class="tiny">'+esc(x.porque)+'</span>'}
+          ],R.docs)+'</div></div>';
+        const cuenta=()=>{ const k=Object.keys(sel).filter(x=>sel[x]).length; $('#fi_ok',m).disabled=!k;
+          $('#fi_ok',m).textContent= k? 'Descontar '+k+' venta(s)' : 'Descontar marcadas'; };
+        $$('[data-fi]',m).forEach(c=>c.onchange=()=>{ sel[c.dataset.fi]=c.checked; cuenta(); });
+        $('#fi_all',m).onclick=()=>{ R.docs.forEach(x=>sel[x.doc.id]=true); pinta(); };
+        $('#fi_none',m).onclick=()=>{ sel={}; pinta(); };
+        cuenta();
+      };
+      $('#fi_d',m).onchange=e=>{ desde=e.target.value||desde; sel={}; pinta(); };
+      $$('[data-fd]',m).forEach(b=>b.onclick=()=>{ desde=dateAdd(todayISO(),-Number(b.dataset.fd)); $('#fi_d',m).value=desde; sel={}; pinta(); });
+      $('#fi_ok',m).onclick=()=>{
+        const lista=R.docs.filter(x=>sel[x.doc.id]); if(!lista.length) return;
+        confirmar('¿Descontar del inventario lo que les faltó a '+lista.length+' venta(s)? Queda registrado en el kárdex.',()=>{
+          const r=descontarFaltantes(lista);
+          toast('Listo: '+r.n+' venta(s) descontadas'+(verCostos()? ' · costo '+money(r.costo):''),'ok',5000);
+          closeModal(); render(); if(despues) despues();
+        });
+      };
+      if($('#fi_sig',m)) $('#fi_sig',m).onclick=()=>{ closeModal(); despues(); };
+      pinta();
+    }});
+}
 function hacerRecalculo(){
   if(!exigirCaja('recalcular el inventario')) return;
   if(!puedeEditar()) return pedirAlAdmin('recalcular el inventario');
+  /* antes de recalcular, mira si hay ventas a las que les faltó descontar */
+  const F=faltantesDeInventario(dateAdd(todayISO(),-30));
+  if(!F.cargando && F.docs.length && !hacerRecalculo._ya){
+    return mFaltantesInventario(()=>{ hacerRecalculo._ya=true; try{ hacerRecalculo(); } finally{ hacerRecalculo._ya=false; } });
+  }
   confirmar('¿Recalcular el inventario? Cada ingrediente queda con lo que dicen todas las compras, ventas y ajustes registrados. '+
     'Lo que esté en negativo queda en 0. Todo queda registrado.',()=>{
     const ch=recalcularInventario(); render();
@@ -6032,7 +6143,8 @@ function mAuditoriaInv(){
     '<div class="hd"><h3>'+ico+' '+titulo+'</h3>'+(n? '<span class="pill '+(tono||'warn')+'">'+n+'</span>':'<span class="pill ok">✓ bien</span>')+'</div>'+
     (n? '<div class="bd">'+cuerpo+'</div>':'')+'</div>';
   const li=a=>'<div style="padding:5px 0;border-bottom:1px solid var(--line)">'+a+'</div>';
-  const total=A.sinReceta.length+A.recetaRota.length+A.malValor.length+A.malHist.length+A.negativos.length+A.ventasSin.length;
+  const FAL=faltantesDeInventario(dateAdd(todayISO(),-30));
+  const total=A.sinReceta.length+A.recetaRota.length+A.malValor.length+A.malHist.length+A.negativos.length+FAL.docs.length;
   modal({title:'🩺 Revisión del inventario', size:'wide',
     body:'<div class="card" style="background:'+(total?'var(--warn-soft)':'var(--ok-soft)')+';margin-bottom:12px"><div class="bd"><b>'+
         (total? 'Encontré '+total+' cosa(s) para revisar.' : '✅ Todo cuadra: lo que se vende descuenta y el inventario está consistente.')+'</b>'+
@@ -6066,9 +6178,10 @@ function mAuditoriaInv(){
       })()+
       sec('🧩','Recetas incompletas',A.recetaRota.length,
         A.recetaRota.map(x=>li('<b>'+esc(x.p.nombre)+'</b>: '+esc(x.que)+' <button class="btn ghost sm" data-ep="'+x.p.id+'">✎ Corregir</button>')).join(''),'bad')+
-      sec('🧾','Ventas recientes que no descontaron',A.ventasSin.length,
-        '<div class="hintx" style="margin-bottom:6px">Se vendieron antes de que el producto tuviera receta. Si quieres que descuenten, edítalas y vuelve a cobrarlas, o haz un ajuste.</div>'+
-        A.ventasSin.slice(0,30).map(v=>li(esc(v.no)+' · '+fdate(v.fecha,true)+' · '+money(v.total))).join(''))+
+      (()=>{ const F=FAL;
+        return sec('🔎','Ventas a las que les faltó descontar (30 días)',F.docs.length,
+          '<div class="hintx" style="margin-bottom:6px">Ventas que según la receta debían bajar ingredientes y no lo hicieron.</div>'+
+          '<button class="btn pri sm" id="au_falt">Revisar y descontar</button>','bad'); })()+
       sec('📉','Ingredientes en negativo',A.negativos.length,
         '<div class="hintx" style="margin-bottom:6px">Se vendió más de lo que había registrado. Casi siempre falta registrar una compra. Recalcular los deja en 0.</div>'+
         A.negativos.map(x=>li('<b>'+esc(x.g.nombre)+'</b>: '+num(x.stock,2)+' '+esc(x.g.unidad||''))).join(''),'bad')+
@@ -6101,6 +6214,7 @@ function mAuditoriaInv(){
       $$('[data-ep]',m).forEach(b=>b.onclick=()=>{ closeModal(); edProducto(byId('productos',b.dataset.ep)); });
       $$('[data-aj]',m).forEach(b=>b.onclick=()=>{ closeModal(); mAjuste(b.dataset.aj); });
       if($('#au_recalc',m)) $('#au_recalc',m).onclick=()=>{ closeModal(); hacerRecalculo(); };
+      if($('#au_falt',m)) $('#au_falt',m).onclick=()=>{ closeModal(); mFaltantesInventario(); };
     }});
 }
 function mAjuste(gid){
