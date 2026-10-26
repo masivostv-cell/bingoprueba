@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.26-4';
+const APP_VERSION='2026.10.26-5';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -869,7 +869,7 @@ function fsDoc(fields){ const o={}; Object.keys(fields||{}).forEach(k=>{ o[k]=fs
 
 /* la configuración del dispositivo nunca viaja a la nube */
 const CFG_LOCAL=['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho','prueba',
-  'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp','respaldoCierre'];
+  'estacion','estacionAuto','estacionSonido','estacionVel','impresoraComanda','impresoraTicket','modoImp','respaldoCierre'];
 function cfgParaNube(){ const o={}; Object.keys(S.cfg).forEach(k=>{ if(CFG_LOCAL.indexOf(k)<0) o[k]=S.cfg[k]; }); o.id='cfg'; return o; }
 
 /* ------------------------- cola de envío (outbox) ------------------- */
@@ -1020,6 +1020,17 @@ function aplicarRemoto(coll,o){
   if(i>=0) S[coll][i]=o; else S[coll].push(o);
   idbPut(coll,o); return true;
 }
+/* AHORRO DE LECTURAS. Cada venta cambia muchos documentos de inventario y
+   contabilidad (ingredientes, capas, kárdex, movimientos de caja…). Antes cada
+   equipo los bajaba al instante, uno por uno, aunque nadie los estuviera
+   mirando: si el aceite cambiaba 20 veces en 3 minutos, se leía 20 veces.
+   Ahora esos se bajan juntos cada 3 minutos (se lee solo la última versión) o
+   apenas alguien abre una pantalla que los usa. Lo del servicio (pedidos,
+   mesas, ventas, turnos, productos) sigue llegando al instante. */
+const COLL_FONDO=['movinv','capas','ingredientes','movimientos','abonos','compras','otrosdocs'];
+const VISTAS_FONDO=['inventario','compras','tesoreria','caja','cartera','reportes','productos','clientes'];
+let _ultFondo=0, _fondoYa=false, _ultCambioNube=Date.now();
+function pedirFondo(){ _fondoYa=true; if(S.cfg.fbOn && S.user) pullCloud().catch(()=>{}); }
 async function pullCloud(manual){
   if(pulling) return 0;
   if(S.cfg.prueba){ if(manual) toast('Está en modo prueba: no se baja nada de la nube','warn',4000); return 0; }
@@ -1044,6 +1055,10 @@ async function pullCloud(manual){
         if(!r) return false;                       // esa colección nunca se ha escrito
         return r!==String(visto[c]||'');           // distinto (no "mayor"): aguanta relojes desfasados
       });
+      /* lo de fondo espera su turno (queda pendiente: el pulso no se marca como visto) */
+      const tocaFondo = manual || _fondoYa || (Date.now()-_ultFondo)>180000 || VISTAS_FONDO.indexOf(S.view)>=0;
+      if(!tocaFondo) listas=listas.filter(c=>COLL_FONDO.indexOf(c)<0);
+      else if(listas.some(c=>COLL_FONDO.indexOf(c)>=0)){ _ultFondo=Date.now(); _fondoYa=false; }
       if(!listas.length){
         S.turno=turnoAbierto(); lastPull=now(); syncErr=0;
         pulling=false; paintSync();
@@ -1109,7 +1124,10 @@ async function pullCloud(manual){
     pulling=false; paintSync();
     if(cambios && (listas.indexOf('movinv')>=0 || listas.indexOf('ingredientes')>=0)){
       try{ const r=reconciliarStock(); if(r) console.log('Stock corregido desde el historial:',r); }catch(e){} }
-    if(cambios){ toast(cambios+' cambio(s) recibidos de otra terminal','ok'); if(S.user) render(); }
+    if(cambios){ _ultCambioNube=Date.now();
+      /* solo se avisa y se repinta si cambió algo que se ve en la pantalla de servicio */
+      if(listas.some(c=>COLL_FONDO.indexOf(c)<0) || VISTAS_FONDO.indexOf(S.view)>=0){
+        toast(cambios+' cambio(s) recibidos de otra terminal','ok'); if(S.user) render(); } }
     if(esEstacion() && S.user) setTimeout(revisarCocina,300);
     else if(manual) toast('Todo al día','ok');
   }catch(e){
@@ -1203,9 +1221,18 @@ let _ultToque=Date.now();
   const dormido=Date.now()-_ultToque>3*60000; _ultToque=Date.now();
   if(dormido && S.user && S.cfg.fbOn){ _quietos=0; pullCloud().catch(()=>{}); programarPull(); }
 },{passive:true,capture:true}));
+function segEstacion(){
+  const vel={rapida:5, normal:8, ahorro:15}[S.cfg.estacionVel||'normal']||8;
+  const hayPedidos=S.comandas.some(c=>c.estado==='abierta');
+  const quietoNube=Date.now()-_ultCambioNube, quietoLocal=Date.now()-_ultToque;
+  const quieto=Math.min(quietoNube,quietoLocal);
+  if(hayPedidos || quieto<30*60000) return vel;       // en servicio: rápido
+  if(quieto<2*3600000) return Math.max(vel,25);       // media hora sin nada: más despacio
+  return 90;                                          // de noche / cerrado
+}
 function pullSegActual(){
   const base=Math.max(5,Number(S.cfg.pullSeg)||12);
-  if(esEstacion()) return base;                       // la cocina no se puede dormir
+  if(esEstacion()) return segEstacion();              // la cocina no se duerme, pero en la noche va despacio
   const quieto=Date.now()-_ultToque;
   if(!S.user) return 120;                             // pantalla de entrada: casi nada
   if(quieto>20*60000) return 180;                     // nadie lo usa hace 20 min
@@ -2284,6 +2311,7 @@ function go(v){
   if(esComercio() && ['mesas','cocina','entregas'].indexOf(v)>=0) v='pos';
   if(!can(v)) { toast('No tienes permiso para esta sección','warn'); return; }
   S.view=v; render();
+  if(VISTAS_FONDO.indexOf(v)>=0 && Date.now()-_ultFondo>20000) pedirFondo();
 }
 function render(){
   /* si alguien quedó parado en una sección que ya no le corresponde, se saca */
@@ -4272,7 +4300,13 @@ function viewCocina(vw){
               (S.cfg.estacionAuto!==false?' checked':'')+'> Imprimir apenas llegue</label>'+
             '<label class="row tiny" style="gap:7px"><input type="checkbox" id="k_snd"'+
               (S.cfg.estacionSonido!==false?' checked':'')+'> Sonar al llegar</label>'+
+            (esEstacion()? '<label class="row tiny" style="gap:7px">Revisar pedidos: <select id="k_vel" style="padding:3px 6px">'+
+              [['rapida','Rápido · cada 5 s (más lecturas)'],['normal','Normal · cada 8 s'],['ahorro','Ahorro · cada 15 s']]
+                .map(x=>'<option value="'+x[0]+'"'+((S.cfg.estacionVel||'normal')===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+
+              '</select></label>' : '')+
           '</div>'+
+          (esEstacion()? '<div class="tiny muted" style="margin-top:6px">Ahora va cada <b>'+segEstacion()+' s</b>. Con pedidos abiertos o movimiento en la última media hora va a la velocidad escogida; '+
+            'sin nada por media hora pasa a 25 s y en la noche (2 h sin nada) a 90 s. Apenas llega un pedido vuelve a la velocidad normal.</div>':'')+
         '</div>'+
         '<div class="kpis" style="flex:1 1 300px;min-width:260px">'+
           kpi('Esperando',pend.length,unidadesPendientes()+' unidad(es)',pend.length?'bad':'ok')+
@@ -4344,6 +4378,7 @@ function viewCocina(vw){
     if(e.target.checked) setTimeout(revisarCocina,400);
     render(); };
   $('#k_auto').onchange=e=>{ S.cfg.estacionAuto=e.target.checked; saveCfg(); };
+  if($('#k_vel')) $('#k_vel').onchange=e=>{ S.cfg.estacionVel=e.target.value; saveCfg(); _quietos=0; programarPull(); render(); };
   $('#k_snd').onchange=e=>{ S.cfg.estacionSonido=e.target.checked; saveCfg(); if(e.target.checked) campanaCocina(); };
   $('#k_ref').onclick=async()=>{ await pullCloud(true);
     const n=esEstacion()? revisarCocina():0;
@@ -7781,6 +7816,10 @@ function mAbrirCaja(){
     }});
 }
 function mCerrarCaja(){
+  if(S.cfg.fbOn && navigator.onLine && !mCerrarCaja._ya && Date.now()-_ultFondo>15000){
+    mCerrarCaja._ya=true; toast('Trayendo los últimos movimientos…','ok',2000);
+    _fondoYa=true; return pullCloud().catch(()=>{}).then(()=>{ mCerrarCaja._ya=false; mCerrarCaja(); });
+  }
   const t=S.turno; if(!t) return;
   const D=detalleTurno(t), esperado=D.esperado;
   const den=[100000,50000,20000,10000,5000,2000,1000,500,200,100,50];
@@ -10707,7 +10746,7 @@ async function entrarANegocio(id,nombre){
    izquierda) y escoge. Cada uno tiene su base en el equipo; la primera vez
    se descarga de la nube y después abre aunque no haya internet. */
 const CFG_EQUIPO=['fbApiKey','fbProjectId','fbOn','autoSync','pullSeg','tema','ticketAncho','comandaAncho','terminal',
-  'estacion','estacionAuto','estacionSonido','impresoraComanda','impresoraTicket','modoImp','letra'];
+  'estacion','estacionAuto','estacionSonido','estacionVel','impresoraComanda','impresoraTicket','modoImp','letra'];
 function nombreNegocio(id){ const nn=lsJSON('pos_negnombres',{});
   return nn[id] || (id===S.cfg.fbNegocio? S.cfg.nombre : '') || id; }
 /* El nombre del restaurante en el que está este equipo. Si el nombre
