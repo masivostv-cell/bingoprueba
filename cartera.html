@@ -30,7 +30,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxj1ILx89prxIVR2CbwxjwgBEPTRbvtEOIvJyqnJAO6PyZlNwnJM3Le2fukrj4oaM57/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxgUhWV92V-jSnHbrWSwcIyAJufT-8k-d4qtd3DOIMWdgdirbDw6NnYo-CIFDiUyD9l/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -341,11 +341,11 @@
 
 <!-- Modal para agregar última factura manual -->
 <div id="conciliacionModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-y-auto" style="max-height: 92vh;">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-y-auto" style="max-height: 92vh;">
         <div class="p-5 border-b bg-teal-50 rounded-t-xl flex justify-between items-start gap-4">
             <div>
                 <h3 class="text-lg font-bold text-teal-900">Conciliar BANCOS vs contabilidad</h3>
-                <p class="text-xs text-teal-800 mt-1">Sube el libro auxiliar de la cuenta de banco que genera el programa contable. Se compara con la hoja BANCOS por fecha, tercero (NIT) y valor.</p>
+                <p class="text-xs text-teal-800 mt-1">Sube el libro auxiliar de la cuenta de banco que genera el programa contable. Cada nombre de BANCOS se convierte en NIT con la hoja TERCEROS y se concilia <b>por NIT</b>, fecha y valor.</p>
             </div>
             <button type="button" id="btnCerrarConciliacion" class="text-gray-500 hover:text-gray-900 text-2xl leading-none">&times;</button>
         </div>
@@ -356,11 +356,26 @@
             </div>
             <div id="conciliacionEstado" class="hidden text-sm rounded-lg p-3"></div>
             <div id="conciliacionResumen" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-700 space-y-1"></div>
+            <div id="asociarPanel" class="hidden border border-amber-300 rounded-lg">
+                <div class="p-3 bg-amber-50 rounded-t-lg">
+                    <div class="font-bold text-amber-900 text-sm">Asociar nombres de BANCOS con su NIT</div>
+                    <p class="text-xs text-amber-800 mt-1">Estos nombres de la hoja BANCOS no están escritos igual que en TERCEROS. Escoge el NIT correcto (las sugerencias con ✅ tienen un recibo contable que cuadra con el banco) o escribe el NIT. Se guardan en la hoja <b>ALIAS_TERCEROS</b> y la próxima vez se asocian solos.</p>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <input type="text" id="asociarFiltro" placeholder="Filtrar nombres..." class="flex-1 min-w-[160px] border border-gray-300 rounded-md px-2 py-1 text-sm">
+                        <button type="button" id="btnAceptarSugerencias" class="text-xs bg-white border border-amber-400 text-amber-900 rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Usar la 1.ª sugerencia con ✅ en todos</button>
+                    </div>
+                </div>
+                <div id="asociarLista" class="divide-y max-h-80 overflow-y-auto text-sm"></div>
+                <div class="p-3 border-t bg-gray-50 rounded-b-lg flex flex-wrap items-center gap-3">
+                    <button type="button" id="btnGuardarAsociaciones" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-lg px-4 py-2 disabled:bg-gray-300">Guardar asociaciones y volver a conciliar</button>
+                    <span id="asociarConteo" class="text-xs text-gray-600"></span>
+                </div>
+            </div>
             <button type="button" id="btnDescargarConciliacion" disabled
                     class="w-full font-bold py-3 px-4 rounded-lg text-base text-white bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:text-gray-500">
                 Descargar conciliación (Excel)
             </button>
-            <p class="text-xs text-gray-500">La conciliación solo lee la hoja BANCOS; no modifica nada en Google Sheets.</p>
+            <p class="text-xs text-gray-500">La conciliación solo lee la hoja BANCOS; no la modifica. Lo único que se guarda son las asociaciones de nombre → NIT que confirmes.</p>
         </div>
     </div>
 </div>
@@ -978,7 +993,69 @@
         let indiceBusqueda = [];
         let datosIniciados = false;
 
+        // ----------------------------------------------------
+        // UNIR CARTERA CON TERCEROS POR NIT
+        // - El NIT de cada factura se lleva al NIT tal como está en TERCEROS
+        //   (sin importar espacios, puntos o si a uno le falta el dígito de verificación).
+        // - Los clientes que tienen facturas en CARTERA pero no están en TERCEROS
+        //   se agregan a la búsqueda para que sus facturas sí aparezcan.
+        // ----------------------------------------------------
+        function nitClave(n) { return String(n == null ? '' : n).toUpperCase().replace(/[\s.]/g, '').trim(); }
+        function unirCarteraConTerceros() {
+            const clientes = allData.clientes = (allData.clientes || []).filter(c => !c.sinTerceros);
+            const porClave = new Map(), porBase = new Map();
+            clientes.forEach(c => {
+                const k = nitClave(c.nit);
+                if (!k) return;
+                if (!porClave.has(k)) porClave.set(k, c.nit);
+                const base = k.split('-')[0];
+                if (!porBase.has(base)) porBase.set(base, new Set());
+                porBase.get(base).add(c.nit);
+            });
+            const nitTerceros = nit => {
+                const k = nitClave(nit);
+                if (!k) return null;
+                if (porClave.has(k)) return porClave.get(k);
+                const grupo = porBase.get(k.split('-')[0]);
+                // Solo si uno de los dos no trae dígito de verificación y no hay ambigüedad.
+                if (grupo && grupo.size === 1) {
+                    const unico = [...grupo][0];
+                    if (!k.includes('-') || !nitClave(unico).includes('-')) return unico;
+                }
+                return null;
+            };
+
+            const nombresCartera = new Map();
+            (allData.clientesCartera || []).forEach(c => nombresCartera.set(nitClave(c.nit), c.nombre));
+
+            const agregados = new Set();
+            const ajustar = obj => {
+                if (!obj || !obj.nit) return;
+                const enTerceros = nitTerceros(obj.nit);
+                if (enTerceros) { obj.nit = enTerceros; return; }
+                const k = nitClave(obj.nit);
+                obj.nit = String(obj.nit).trim();
+                if (!agregados.has(k)) {
+                    agregados.add(k);
+                    clientes.push({
+                        nombre: nombresCartera.get(k) || `NIT ${obj.nit} (no está en TERCEROS)`,
+                        nit: obj.nit,
+                        telefono: '',
+                        sinTerceros: true
+                    });
+                    porClave.set(k, obj.nit);
+                }
+            };
+            (allData.cartera || []).forEach(ajustar);
+            (allData.anticiposCartera || []).forEach(a => {
+                const enTerceros = nitTerceros(a.nit);
+                if (enTerceros) a.nit = enTerceros;
+            });
+            allData.clientesFueraDeTerceros = clientes.filter(c => c.sinTerceros).length;
+        }
+
         function construirIndiceBusqueda() {
+            unirCarteraConTerceros();
             const detallesPorNit = new Map();
             for (const inv of (allData.cartera || [])) {
                 if (!inv || !inv.detalle) continue;
@@ -1244,7 +1321,21 @@
                     <div><b>Facturas:</b> ${r.facturas.toLocaleString('es-CO')}</div>
                     <div><b>Saldo total de facturas:</b> ${formatCurrency(r.totalSaldo)}</div>
                     ${r.anticipos > 0 ? `<div><b>Clientes con anticipo:</b> ${r.anticipos.toLocaleString('es-CO')} (total ${formatCurrency(r.totalAnticipos)})</div>` : ''}
-                    <div><b>Filas que se escribirán en CARTERA:</b> ${r.filas.length.toLocaleString('es-CO')}</div>`;
+                    <div><b>Filas que se escribirán en CARTERA:</b> ${r.filas.length.toLocaleString('es-CO')}</div>
+                    ${(() => {
+                        const enTerceros = new Set((allData.clientes || []).filter(c => !c.sinTerceros).map(c => nitClave(c.nit)));
+                        const basesTerceros = new Set([...enTerceros].map(k => k.split('-')[0]));
+                        const faltan = [];
+                        r.filas.forEach(f => {
+                            if (f[0] && String(f[1]).startsWith(f[0])) {
+                                const k = nitClave(f[0]);
+                                if (!enTerceros.has(k) && !basesTerceros.has(k.split('-')[0])) faltan.push(String(f[1]));
+                            }
+                        });
+                        if (!faltan.length) return '<div class="text-green-700"><b>Todos los clientes del archivo están en TERCEROS.</b></div>';
+                        return `<div class="text-amber-800"><b>${faltan.length} cliente(s) no están en TERCEROS.</b> Igual se cargan y aparecen en la búsqueda marcados "no está en TERCEROS":
+                            <div class="text-xs mt-1 max-h-28 overflow-y-auto">${faltan.slice(0, 200).map(x => escHtml(x)).join('<br>')}</div></div>`;
+                    })()}`;
                 cargarCarteraResumen.classList.remove('hidden');
                 estadoCargaCartera('Archivo listo. Revisa el resumen y confirma para reemplazar la hoja CARTERA.', 'ok');
                 btnConfirmarCargarCartera.disabled = false;
@@ -2249,7 +2340,7 @@
                     return `
                         <div class="search-item cursor-pointer p-3 border-b hover:bg-blue-50 transition-colors" onclick="selectClient('${c.nit}', '${(c.nombre||'').replace(/'/g, "\\'")}')">
                             <div class="font-medium text-gray-800">${nombreHighlighted}</div>
-                            <div class="text-xs text-gray-500">NIT: ${nitHighlighted}</div>
+                            <div class="text-xs text-gray-500">NIT: ${nitHighlighted}${c.sinTerceros ? ' <span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">no está en TERCEROS</span>' : ''}</div>
                             ${detalleHtml}
                         </div>
                     `;
@@ -2555,16 +2646,98 @@
             return lista.filter((_, k) => mejor.mask & (1 << k));
         }
 
-        function conciliarBancosVsContabilidad(bancos, contab, terceros) {
-            // Nombre de tercero → NIT (TERCEROS y también los nombres del libro auxiliar)
-            const nitsPorNombre = {};
-            const agregarNombre = (nombre, nit) => {
+        // ---------- Asociación de nombres de BANCOS → NIT ----------
+        const CONC_STOP = new Set(['SAS','SA','S','A','LTDA','LTD','DE','LA','EL','DEL','LOS','LAS','Y','E','U','EU','CIA','EN','C','I','SCA','ESP','IPS','EL','SU']);
+        function concTokens(n) {
+            return concNormNombre(n).split(' ').filter(t => t.length > 1 && !CONC_STOP.has(t));
+        }
+        // Parecido entre dos nombres (0 a 1) por palabras en común, sin importar el orden.
+        function concSimilitud(ta, tb) {
+            if (!ta.length || !tb.length) return 0;
+            const setB = new Set(tb);
+            let inter = 0;
+            ta.forEach(t => {
+                if (setB.has(t)) inter++;
+                else if (t.length >= 4 && tb.some(x => x.length >= 4 && (x.startsWith(t) || t.startsWith(x)))) inter += 0.8;
+            });
+            const menor = Math.min(ta.length, tb.length), mayor = Math.max(ta.length, tb.length);
+            let sc = inter / menor;
+            if (menor > 1 && inter < 2) sc *= 0.5;
+            if (menor === 1 && mayor > 2) sc *= 0.6;
+            sc = sc * 0.85 + (inter / mayor) * 0.15;
+            return Math.min(1, sc);
+        }
+
+        // Crea el buscador de NIT a partir de: asociaciones guardadas, TERCEROS,
+        // PAGOS (nombre + NIT del recibo) y, solo como sugerencia, el libro auxiliar.
+        function crearResolutorNit(terceros, contab, pagos, alias) {
+            const exactos = {};       // nombre normalizado → { nits:Set, fuente }
+            const poner = (nombre, nit, fuente) => {
                 const k = concNormNombre(nombre), n = concNormNit(nit);
                 if (!k || !n) return;
-                (nitsPorNombre[k] = nitsPorNombre[k] || new Set()).add(n);
+                if (!exactos[k]) exactos[k] = { nits: new Set(), fuente };
+                if (exactos[k].fuente === fuente) exactos[k].nits.add(n);
             };
-            (terceros || []).forEach(t => agregarNombre(t.nombre, t.nit));
-            contab.forEach(m => agregarNombre(m.nombre, m.nit));
+            (alias || []).forEach(a => poner(a.nombre, a.nit, 'ASOCIACIÓN GUARDADA'));
+            (terceros || []).forEach(t => poner(t.nombre, t.nit, 'TERCEROS'));
+            (pagos || []).forEach(pg => poner(pg.cliente, pg.nit, 'PAGOS'));
+
+            const candidatos = [];
+            const vistos = new Set();
+            const agregarCand = (nombre, nit, fuente) => {
+                const n = concNormNit(nit), clave = n + '|' + concNormNombre(nombre);
+                if (!n || !nombre || vistos.has(clave)) return;
+                vistos.add(clave);
+                candidatos.push({ nit: n, nombre: String(nombre).trim(), fuente, tokens: concTokens(nombre) });
+            };
+            (terceros || []).forEach(t => agregarCand(t.nombre, t.nit, 'TERCEROS'));
+            (pagos || []).forEach(pg => agregarCand(pg.cliente, pg.nit, 'PAGOS'));
+            (contab || []).forEach(m => agregarCand(m.nombre, m.nit, 'CONTABILIDAD'));
+            const indice = {};
+            candidatos.forEach((c, i) => c.tokens.forEach(t => (indice[t] = indice[t] || []).push(i)));
+
+            return {
+                exacto(nombre) {
+                    const r = exactos[concNormNombre(nombre)];
+                    return r ? { nits: [...r.nits], fuente: r.fuente } : null;
+                },
+                sugerir(nombre, max = 5) {
+                    const tq = concTokens(nombre);
+                    const ids = new Set();
+                    tq.forEach(t => (indice[t] || []).forEach(i => ids.add(i)));
+                    const mejorPorNit = {};
+                    ids.forEach(i => {
+                        const c = candidatos[i];
+                        const sc = concSimilitud(tq, c.tokens);
+                        if (sc < 0.35) return;
+                        if (!mejorPorNit[c.nit] || sc > mejorPorNit[c.nit].score) mejorPorNit[c.nit] = { ...c, score: sc };
+                    });
+                    return Object.values(mejorPorNit).sort((a, b) => b.score - a.score).slice(0, max);
+                }
+            };
+        }
+
+        function conciliarBancosVsContabilidad(bancos, contab, terceros, extras = {}) {
+            // La conciliación es SOLO POR NIT.
+            // El nombre de BANCOS (columna E) se usa únicamente para buscar su NIT
+            // en TERCEROS (nombre en A, NIT en E). Contra la contabilidad se compara
+            // el NIT, nunca el nombre.
+            const resolutor = crearResolutorNit(terceros, contab, extras.pagos || [], extras.alias || []);
+            const pendientes = {}; // nombres que necesitan asociación (manual o confirmar)
+
+            // NIT del libro auxiliar normalizado. Si TERCEROS tiene el NIT sin dígito
+            // de verificación (o al revés), se acepta solo cuando no hay otro NIT
+            // en la contabilidad con el mismo número base.
+            const baseNit = n => n.split('-')[0];
+            const nitsContables = new Set(contab.map(m => concNormNit(m.nit)).filter(Boolean));
+            const basesContables = {};
+            nitsContables.forEach(n => (basesContables[baseNit(n)] = basesContables[baseNit(n)] || new Set()).add(n));
+            const nitContableDe = nitTerceros => {
+                if (nitsContables.has(nitTerceros)) return [nitTerceros];
+                const grupo = basesContables[baseNit(nitTerceros)];
+                return grupo && grupo.size === 1 ? [...grupo] : [nitTerceros];
+            };
+            contab.forEach(m => { m.nitNorm = concNormNit(m.nit); });
 
             const ingresos = contab.filter(m => m.debe > 0);
             contab.filter(m => !(m.debe > 0)).forEach(m => {
@@ -2572,19 +2745,68 @@
                 m.observacion = 'Movimiento de salida del banco (haber).';
             });
 
+            // ¿Hay en contabilidad un recibo de este NIT que respalde este movimiento?
+            const hayEvidencia = (b, nit) => ingresos.some(m =>
+                nitContableDe(nit).includes(m.nitNorm) && concDiasEntre(m.fecha, b.fecha) <= 3 &&
+                (Math.abs(m.debe - b.valorBanco) <= 1 || (b.nombres.length > 1 && m.debe < b.valorBanco + 1)));
+
             const porFila = {};
             bancos.forEach(b => {
+                b.notas = [];
                 b.nombres = String(b.terceroRelacionado || '').split('|').map(x => x.trim()).filter(Boolean);
                 b.nits = new Set();
                 b.sinNit = [];
+                b.nitPorNombre = [];
                 b.nombres.forEach(nom => {
-                    const set = nitsPorNombre[concNormNombre(nom)];
-                    if (set && set.size) set.forEach(n => b.nits.add(n));
-                    else b.sinNit.push(nom);
+                    const ex = resolutor.exacto(nom);
+                    if (ex && ex.nits.length) {
+                        const encontrados = [];
+                        ex.nits.forEach(n => nitContableDe(n).forEach(nc => { b.nits.add(nc); encontrados.push(nc); }));
+                        b.nitPorNombre.push(`${nom} → ${encontrados.join(' / ')}${ex.fuente === 'TERCEROS' ? '' : ' (' + ex.fuente + ')'}`);
+                        if (ex.nits.length > 1) b.notas.push(`"${nom}" tiene ${ex.nits.length} NIT en ${ex.fuente}.`);
+                        return;
+                    }
+
+                    // Sin coincidencia exacta: se buscan nombres parecidos y se revisa
+                    // si ese NIT tiene un recibo contable que respalde el movimiento.
+                    const sugs = resolutor.sugerir(nom, 5).map(sg => ({ ...sg, evidencia: hayEvidencia(b, sg.nit) }));
+                    // Si ningún nombre parecido tiene recibo, se sugieren los recibos contables
+                    // del mismo valor y fecha (cuando el movimiento es de un solo tercero).
+                    if (!sugs.some(sg => sg.evidencia) && b.nombres.length === 1) {
+                        ingresos.filter(m => Math.abs(m.debe - b.valorBanco) <= 1 && concDiasEntre(m.fecha, b.fecha) <= 1)
+                            .slice(0, 3)
+                            .forEach(m => {
+                                if (!sugs.some(sg => sg.nit === m.nitNorm)) {
+                                    sugs.push({ nit: m.nitNorm, nombre: m.nombre, fuente: `recibo ${m.comprobante} mismo valor y fecha`, score: 0, evidencia: true, porValor: true });
+                                }
+                            });
+                    }
+                    sugs.sort((x, y) => (y.evidencia - x.evidencia) || (y.score - x.score));
+                    const top = sugs[0], segundo = sugs[1];
+                    let auto = null;
+                    if (top && top.evidencia && top.score >= 0.6) auto = top;
+                    else if (top && top.score >= 0.9 && (!segundo || segundo.score < top.score - 0.15)) auto = top;
+
+                    const k = concNormNombre(nom);
+                    const pend = pendientes[k] = pendientes[k] || { nombre: nom, filas: [], sugerencias: {}, auto: null };
+                    pend.filas.push(b.fila);
+                    sugs.forEach(sg => {
+                        const prev = pend.sugerencias[sg.nit];
+                        if (!prev || sg.score > prev.score || (sg.evidencia && !prev.evidencia)) pend.sugerencias[sg.nit] = sg;
+                    });
+
+                    if (auto) {
+                        nitContableDe(auto.nit).forEach(nc => b.nits.add(nc));
+                        if (!pend.auto || auto.score > pend.auto.score) pend.auto = auto;
+                        b.nitPorNombre.push(`${nom} → ${auto.nit} (por parecido con "${auto.nombre}", ${Math.round(auto.score * 100)}%)`);
+                        b.notas.push(`NIT asociado automáticamente para "${nom}". Confírmalo en "Asociar nombres".`);
+                    } else {
+                        b.sinNit.push(nom);
+                        b.nitPorNombre.push(`${nom} → SIN NIT`);
+                    }
                 });
                 b.objetivo = b.valorRelacionado > 0.5 ? b.valorRelacionado : b.valorBanco;
                 b.asignados = [];
-                b.notas = [];
                 porFila[b.fila] = b;
             });
 
@@ -2599,7 +2821,7 @@
             ingresos.forEach(m => {
                 const b = m.filaBanco ? porFila[m.filaBanco] : null;
                 // Se valida que la fila siga siendo la misma (fecha cercana y mismo tercero).
-                if (b && concDiasEntre(b.fecha, m.fecha) <= 5 && (!b.nits.size || b.nits.has(concNormNit(m.nit)))) {
+                if (b && concDiasEntre(b.fecha, m.fecha) <= 5 && (!b.nits.size || b.nits.has(m.nitNorm))) {
                     asignar(b, m, 'Enlazado por "Banco fila" del recibo.');
                 }
             });
@@ -2613,19 +2835,19 @@
                 ordenBancos.forEach(b => {
                     const falta = b.objetivo - sumaAsignada(b);
                     if (falta <= 0.5 || !b.nits.size) return;
-                    const cand = libres().filter(m => b.nits.has(concNormNit(m.nit))
+                    const cand = libres().filter(m => b.nits.has(m.nitNorm)
                         && concDiasEntre(m.fecha, b.fecha) <= margen)
                         .sort((x, y) => concDiasEntre(x.fecha, b.fecha) - concDiasEntre(y.fecha, b.fecha));
                     const grupo = concSubconjuntoExacto(cand, falta);
-                    if (grupo) grupo.forEach(m => asignar(b, m, margen ? 'Mismo tercero y valor, con fecha diferente.' : ''));
+                    if (grupo) grupo.forEach(m => asignar(b, m, margen ? 'Mismo NIT y valor, con fecha diferente.' : ''));
                 });
             });
 
             // 4) Sin suma exacta: se asocia lo que haya del mismo tercero el mismo día.
             ordenBancos.forEach(b => {
                 if (sumaAsignada(b) > 0.5 || !b.nits.size) return;
-                libres().filter(m => b.nits.has(concNormNit(m.nit)) && m.fecha === b.fecha)
-                    .forEach(m => asignar(b, m, 'Mismo tercero y fecha, pero el valor no cuadra.'));
+                libres().filter(m => b.nits.has(m.nitNorm) && m.fecha === b.fecha)
+                    .forEach(m => asignar(b, m, 'Mismo NIT y fecha, pero el valor no cuadra.'));
             });
 
             // 5) Estados de BANCOS
@@ -2634,13 +2856,15 @@
                 b.valorContable = contable;
                 b.diferencia = Math.round((b.valorBanco - contable) * 100) / 100;
                 const otraFecha = b.asignados.some(m => m.fecha !== b.fecha);
-                if (b.sinNit.length) b.notas.push('Tercero(s) sin NIT en TERCEROS: ' + b.sinNit.join(', '));
+                if (b.sinNit.length) b.notas.push('No se encontró el NIT en TERCEROS para: ' + b.sinNit.join(', ') + '. Sin NIT no se puede conciliar.');
                 if (!b.nombres.length && !b.asignados.length) {
                     b.estado = 'SIN RELACIONAR EN BANCOS';
                     b.notas.push('El movimiento no tiene tercero relacionado.');
+                } else if (!b.asignados.length && b.nombres.length && !b.nits.size) {
+                    b.estado = 'SIN NIT EN TERCEROS';
                 } else if (!b.asignados.length) {
                     b.estado = 'NO ESTÁ EN CONTABILIDAD';
-                    b.notas.push('No se encontró recibo contable de ese tercero por ese valor.');
+                    b.notas.push(`No hay recibo contable del NIT ${[...b.nits].join(' / ')} por ese valor.`);
                 } else if (Math.abs(b.diferencia) <= 1) {
                     b.estado = otraFecha ? 'OK - FECHA DIFERENTE' : 'OK';
                 } else if (Math.abs(contable - b.objetivo) <= 1 && b.objetivo < b.valorBanco) {
@@ -2662,11 +2886,19 @@
                 const posible = sinRelacionar.find(b => Math.abs(b.valorBanco - m.debe) <= 1 && concDiasEntre(b.fecha, m.fecha) <= 3);
                 m.observacion = posible
                     ? `Posible movimiento sin relacionar en BANCOS: fila ${posible.fila} (${posible.fecha}, ${formatCurrency(posible.valorBanco)}).`
-                    : 'No hay movimiento en BANCOS de este tercero por este valor.';
+                    : `No hay movimiento en BANCOS del NIT ${m.nit} por este valor.`;
                 if (posible) posible.notas.push(`Posible: ${m.comprobante} ${m.nombre} (${formatCurrency(m.debe)}).`);
             });
 
-            return { bancos, contab };
+            const pendientesAlias = Object.values(pendientes).map(pd => ({
+                nombre: pd.nombre,
+                filas: pd.filas,
+                auto: pd.auto,
+                sugerencias: Object.values(pd.sugerencias)
+                    .sort((x, y) => (y.evidencia - x.evidencia) || (y.score - x.score)).slice(0, 5)
+            })).sort((x, y) => (!!x.auto - !!y.auto) || (y.filas.length - x.filas.length));
+
+            return { bancos, contab, pendientesAlias };
         }
 
         function construirExcelConciliacion(XLSX, r, info) {
@@ -2695,11 +2927,13 @@
                 ...Object.entries(estadosC).map(([k, e]) => [k, e.n, e.v]),
                 [],
                 ['Qué significa cada estado'],
-                ['OK', 'El movimiento del banco cuadra exacto con los recibos contables.'],
-                ['OK - FECHA DIFERENTE', 'Cuadra el valor y el tercero, pero el recibo tiene otra fecha (hasta 5 días).'],
+                ['OK', 'El NIT, la fecha y el valor cuadran exacto con los recibos contables.'],
+                ['OK - FECHA DIFERENTE', 'Cuadran el NIT y el valor, pero el recibo tiene otra fecha (hasta 5 días).'],
                 ['OK PARCIAL', 'Lo relacionado cuadra, pero falta relacionar parte del movimiento en BANCOS.'],
-                ['DIFERENCIA', 'Hay recibos del tercero ese día, pero la suma no cuadra con el banco.'],
-                ['NO ESTÁ EN CONTABILIDAD', 'El banco tiene tercero relacionado pero no hay recibo contable que lo respalde.'],
+                ['DIFERENCIA', 'Hay recibos de ese NIT ese día, pero la suma no cuadra con el banco.'],
+                ['NO ESTÁ EN CONTABILIDAD', 'Se encontró el NIT, pero no hay recibo contable de ese NIT que lo respalde.'],
+                ['SIN NIT EN TERCEROS', 'El nombre de BANCOS no está en TERCEROS, así que no hay NIT para conciliar.'],
+                ['Regla', 'La conciliación se hace solo por NIT + fecha + valor. El nombre solo sirve para buscar el NIT en TERCEROS.'],
                 ['SIN RELACIONAR EN BANCOS', 'Movimiento del banco que todavía no tiene tercero en la hoja BANCOS.'],
                 ['NO ESTÁ EN BANCOS', 'Recibo contable que no se encontró en la hoja BANCOS.']
             ];
@@ -2708,15 +2942,15 @@
             XLSX.utils.book_append_sheet(wb, wsR, 'RESUMEN');
 
             const filasB = [['Fila BANCOS', 'Fecha banco', 'Descripción', 'Referencia', 'Valor banco', 'Tercero(s) relacionado(s)',
-                'NIT(s)', 'Valor relacionado', 'Valor en contabilidad', 'Diferencia (banco - contable)', 'Comprobantes contables', 'Estado', 'Observación']];
+                'NIT buscado en TERCEROS', 'Valor relacionado', 'Valor en contabilidad', 'Diferencia (banco - contable)', 'Comprobantes contables', 'Estado', 'Observación']];
             r.bancos.slice().sort((x, y) => x.fecha.localeCompare(y.fecha) || x.fila - y.fila).forEach(b => {
                 filasB.push([b.fila, b.fecha, b.descripcion, b.referencia, b.valorBanco, b.terceroRelacionado,
-                    [...b.nits].join(' | '), b.valorRelacionado, b.valorContable, b.diferencia,
-                    b.asignados.map(m => `${m.comprobante} (${m.fecha}) ${formatCurrency(m.debe)}`).join(' | '),
+                    b.nitPorNombre.join(' | '), b.valorRelacionado, b.valorContable, b.diferencia,
+                    b.asignados.map(m => `${m.comprobante} NIT ${m.nit} (${m.fecha}) ${formatCurrency(m.debe)}`).join(' | '),
                     b.estado, b.notas.join(' ')]);
             });
             const wsB = XLSX.utils.aoa_to_sheet(filasB);
-            wsB['!cols'] = [8, 12, 35, 22, 14, 40, 22, 14, 14, 14, 50, 24, 60].map(w => ({ wch: w }));
+            wsB['!cols'] = [8, 12, 35, 22, 14, 40, 45, 14, 14, 14, 60, 24, 60].map(w => ({ wch: w }));
             wsB['!autofilter'] = { ref: `A1:M${filasB.length}` };
             XLSX.utils.book_append_sheet(wb, wsB, 'BANCOS');
 
@@ -2728,15 +2962,24 @@
             wsC['!autofilter'] = { ref: `A1:J${filasC.length}` };
             XLSX.utils.book_append_sheet(wb, wsC, 'CONTABILIDAD');
 
-            const problemas = [['Origen', 'Fecha', 'Tercero', 'Valor', 'Estado', 'Detalle']];
+            const problemas = [['Origen', 'Fecha', 'Tercero → NIT', 'Valor', 'Estado', 'Detalle']];
             r.bancos.filter(b => !/^OK/.test(b.estado)).forEach(b =>
-                problemas.push(['BANCOS fila ' + b.fila, b.fecha, b.terceroRelacionado || '(sin tercero)', b.valorBanco, b.estado, b.notas.join(' ')]));
+                problemas.push(['BANCOS fila ' + b.fila, b.fecha, (b.nitPorNombre.join(' | ') || '(sin tercero)'), b.valorBanco, b.estado, b.notas.join(' ')]));
             r.contab.filter(m => m.estado === 'NO ESTÁ EN BANCOS' || m.estado === 'DIFERENCIA').forEach(m =>
-                problemas.push(['Contabilidad ' + m.comprobante, m.fecha, m.nombre, m.debe, m.estado, m.observacion]));
+                problemas.push(['Contabilidad ' + m.comprobante, m.fecha, `${m.nombre} → ${m.nit}`, m.debe, m.estado, m.observacion]));
             const wsP = XLSX.utils.aoa_to_sheet(problemas);
             wsP['!cols'] = [22, 12, 40, 14, 26, 80].map(w => ({ wch: w }));
             wsP['!autofilter'] = { ref: `A1:F${problemas.length}` };
             XLSX.utils.book_append_sheet(wb, wsP, 'POR REVISAR');
+
+            const filasA = [['Nombre en BANCOS', 'Movimientos', 'Filas BANCOS', 'Asociado automáticamente', 'Sugerencia 1', 'Sugerencia 2', 'Sugerencia 3']];
+            (r.pendientesAlias || []).forEach(pd => {
+                const sg = pd.sugerencias.map(x => `${x.nit} ${x.nombre} (${x.fuente}, ${Math.round(x.score * 100)}%${x.evidencia ? ', tiene recibo' : ''})`);
+                filasA.push([pd.nombre, pd.filas.length, pd.filas.join(', '), pd.auto ? `${pd.auto.nit} ${pd.auto.nombre}` : '', sg[0] || '', sg[1] || '', sg[2] || '']);
+            });
+            const wsA = XLSX.utils.aoa_to_sheet(filasA);
+            wsA['!cols'] = [40, 12, 20, 45, 55, 55, 55].map(w => ({ wch: w }));
+            XLSX.utils.book_append_sheet(wb, wsA, 'NOMBRES A ASOCIAR');
             return wb;
         }
 
@@ -2762,6 +3005,7 @@
             archivoContableInput.value = '';
             archivoContableInput.disabled = false;
             conciliacionResumen.classList.add('hidden');
+            document.getElementById('asociarPanel').classList.add('hidden');
             btnDescargarConciliacion.disabled = true;
             estadoConciliacion('', 'info');
             conciliacionModal.classList.remove('hidden');
@@ -2781,10 +3025,159 @@
         conciliacionModal.addEventListener('click', e => { if (e.target === conciliacionModal) cerrarConciliacion(); });
         btnDescargarConciliacion.addEventListener('click', descargarConciliacion);
 
+        let conciliacionDatos = null;   // datos cargados para poder reconciliar sin volver a subir el archivo
+        let asociacionesGuardadas = [];   // ALIAS_TERCEROS
+
+        function ejecutarConciliacion(descargar) {
+            const d = conciliacionDatos;
+            const XLSX = window.XLSX;
+            // Copias limpias para poder repetir la conciliación.
+            const movs = d.movimientos.map(m => ({ ...m, filaAsignada: 0, estado: '', observacion: '' }));
+            const bancos = d.bancosTodos.map(x => ({ ...x }));
+            const r = conciliarBancosVsContabilidad(bancos, movs, allData.clientes || [], {
+                pagos: allData.pagos || [],
+                alias: asociacionesGuardadas
+            });
+            r.bancos = r.bancos.filter(b => (b.fecha >= d.desde && b.fecha <= d.hasta) || b.asignados.length);
+
+            conciliacionLibro = construirExcelConciliacion(XLSX, r, { archivo: d.archivo, cuenta: d.cuenta, desde: d.desde, hasta: d.hasta });
+            conciliacionNombre = `Conciliacion_bancos_${d.desde}_a_${d.hasta}.xlsx`;
+
+            const contar = (lista, fn) => lista.filter(fn).length;
+            const okB = contar(r.bancos, b => /^OK/.test(b.estado));
+            const ingresosC = r.contab.filter(m => m.debe > 0);
+            const okC = contar(ingresosC, m => /^OK/.test(m.estado));
+            const filaRes = (t, v, cls = '') => `<div class="flex justify-between gap-3 ${cls}"><span>${t}</span><b>${v}</b></div>`;
+            conciliacionResumen.innerHTML =
+                `<div class="font-semibold text-gray-900 mb-1">${escHtml(d.cuenta || d.archivo)}</div>` +
+                filaRes('Periodo', `${formatDate(d.desde)} a ${formatDate(d.hasta)}`) +
+                `<div class="pt-2 font-semibold">Hoja BANCOS (${r.bancos.length} movimientos)</div>` +
+                filaRes('✅ Cuadran con contabilidad', okB, 'text-green-700') +
+                filaRes('⚠️ Con diferencia', contar(r.bancos, b => b.estado === 'DIFERENCIA'), 'text-amber-700') +
+                filaRes('❌ No están en contabilidad', contar(r.bancos, b => b.estado === 'NO ESTÁ EN CONTABILIDAD'), 'text-red-700') +
+                filaRes('🔎 Nombre sin NIT en TERCEROS', contar(r.bancos, b => b.estado === 'SIN NIT EN TERCEROS'), 'text-red-700') +
+                filaRes('⏳ Sin tercero relacionado', contar(r.bancos, b => b.estado === 'SIN RELACIONAR EN BANCOS'), 'text-gray-600') +
+                `<div class="pt-2 font-semibold">Contabilidad (${ingresosC.length} ingresos)</div>` +
+                filaRes('✅ Encontrados en BANCOS', okC, 'text-green-700') +
+                filaRes('❌ No están en BANCOS', contar(ingresosC, m => m.estado === 'NO ESTÁ EN BANCOS'), 'text-red-700');
+            conciliacionResumen.classList.remove('hidden');
+            btnDescargarConciliacion.disabled = false;
+
+            pintarAsociaciones(r.pendientesAlias || []);
+            const pend = (r.pendientesAlias || []).length;
+            estadoConciliacion(pend
+                ? `Conciliación lista${descargar ? ' y descargada' : ''}. Hay ${pend} nombre(s) para asociar con su NIT; al guardarlos se reconcilia solo.`
+                : `Conciliación lista${descargar ? ' y descargada' : ''}. La hoja POR REVISAR tiene lo que no cuadra.`, 'ok');
+            if (descargar) descargarConciliacion();
+        }
+
+        // ---------- Panel "Asociar nombres" ----------
+        const asociarPanel = document.getElementById('asociarPanel');
+        const asociarLista = document.getElementById('asociarLista');
+        const asociarFiltro = document.getElementById('asociarFiltro');
+        const asociarConteo = document.getElementById('asociarConteo');
+        const btnGuardarAsociaciones = document.getElementById('btnGuardarAsociaciones');
+
+        function pintarAsociaciones(pendientes) {
+            if (!pendientes.length) { asociarPanel.classList.add('hidden'); asociarLista.innerHTML = ''; return; }
+            asociarLista.innerHTML = pendientes.map((pd, i) => {
+                const opciones = pd.sugerencias.map(sg =>
+                    `<option value="${escHtml(sg.nit)}" ${pd.auto && pd.auto.nit === sg.nit ? 'selected' : ''} data-evidencia="${sg.evidencia ? 1 : 0}">` +
+                    `${sg.evidencia ? '✅ ' : ''}${escHtml(sg.nit)} · ${escHtml(sg.nombre)} (${escHtml(sg.fuente)}, ${Math.round(sg.score * 100)}%)</option>`).join('');
+                return `<div class="p-3 asociar-fila" data-nombre="${escHtml(concNormNombre(pd.nombre))}">
+                    <div class="flex justify-between gap-2">
+                        <div class="font-semibold text-gray-900">${escHtml(pd.nombre)}</div>
+                        <div class="text-xs text-gray-500 whitespace-nowrap">${pd.filas.length} mov. · fila${pd.filas.length > 1 ? 's' : ''} ${escHtml(pd.filas.slice(0, 6).join(', '))}${pd.filas.length > 6 ? '…' : ''}</div>
+                    </div>
+                    ${pd.auto ? '<div class="text-xs text-green-700">Asociado automáticamente; confírmalo para guardarlo.</div>' : ''}
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        <select class="asociar-select flex-1 min-w-[240px] border border-gray-300 rounded-md px-2 py-1 text-xs" data-i="${i}">
+                            <option value="">— No asociar por ahora —</option>
+                            ${opciones}
+                            <option value="__otro__">Escribir otro NIT…</option>
+                        </select>
+                        <input type="text" class="asociar-otro hidden border border-gray-300 rounded-md px-2 py-1 text-xs w-40" placeholder="NIT, ej: 900123456-7">
+                    </div>
+                </div>`;
+            }).join('');
+            asociarLista.querySelectorAll('.asociar-select').forEach(sel => {
+                sel.addEventListener('change', () => {
+                    sel.parentElement.querySelector('.asociar-otro').classList.toggle('hidden', sel.value !== '__otro__');
+                    contarAsociaciones();
+                });
+            });
+            asociarLista.querySelectorAll('.asociar-otro').forEach(inp => inp.addEventListener('input', contarAsociaciones));
+            asociarLista._pendientes = pendientes;
+            asociarFiltro.value = '';
+            asociarPanel.classList.remove('hidden');
+            contarAsociaciones();
+        }
+
+        function leerAsociacionesElegidas() {
+            const pendientes = asociarLista._pendientes || [];
+            const elegidas = [];
+            asociarLista.querySelectorAll('.asociar-fila').forEach((fila, i) => {
+                const sel = fila.querySelector('.asociar-select');
+                let nit = sel.value;
+                if (nit === '__otro__') nit = fila.querySelector('.asociar-otro').value.trim();
+                if (!nit) return;
+                const pd = pendientes[Number(sel.dataset.i)];
+                const sg = pd.sugerencias.find(x => x.nit === nit);
+                elegidas.push({ nombre: pd.nombre, nit, nombreTercero: sg ? sg.nombre : '' });
+            });
+            return elegidas;
+        }
+        function contarAsociaciones() {
+            const n = leerAsociacionesElegidas().length;
+            asociarConteo.textContent = `${n} de ${(asociarLista._pendientes || []).length} nombres con NIT escogido.`;
+            btnGuardarAsociaciones.disabled = n === 0;
+        }
+        asociarFiltro.addEventListener('input', () => {
+            const q = concNormNombre(asociarFiltro.value);
+            asociarLista.querySelectorAll('.asociar-fila').forEach(f => {
+                f.classList.toggle('hidden', !!q && !f.dataset.nombre.includes(q));
+            });
+        });
+        document.getElementById('btnAceptarSugerencias').addEventListener('click', () => {
+            asociarLista.querySelectorAll('.asociar-select').forEach(sel => {
+                if (sel.value) return;
+                const op = [...sel.options].find(o => o.dataset.evidencia === '1');
+                if (op) sel.value = op.value;
+            });
+            contarAsociaciones();
+        });
+        btnGuardarAsociaciones.addEventListener('click', async () => {
+            const elegidas = leerAsociacionesElegidas();
+            if (!elegidas.length) return;
+            btnGuardarAsociaciones.disabled = true;
+            const textoOriginal = btnGuardarAsociaciones.textContent;
+            btnGuardarAsociaciones.textContent = 'Guardando...';
+            try {
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'guardarAliasTerceros', alias: elegidas })
+                });
+                const data = await res.json();
+                if (data.status !== 'success') throw new Error(data.message || 'No se pudieron guardar las asociaciones.');
+                asociacionesGuardadas = data.alias || asociacionesGuardadas.concat(elegidas);
+                showToast(`${elegidas.length} asociación(es) guardada(s).`, 'success');
+                ejecutarConciliacion(true);
+            } catch (err) {
+                console.error(err);
+                estadoConciliacion('No se pudieron guardar las asociaciones: ' + (err.message || err), 'error');
+            } finally {
+                btnGuardarAsociaciones.textContent = textoOriginal;
+                contarAsociaciones();
+            }
+        });
+
         archivoContableInput.addEventListener('change', async function() {
             conciliacionLibro = null;
+            conciliacionDatos = null;
             btnDescargarConciliacion.disabled = true;
             conciliacionResumen.classList.add('hidden');
+            asociarPanel.classList.add('hidden');
             const archivo = this.files && this.files[0];
             if (!archivo) { estadoConciliacion('', 'info'); return; }
             archivoContableInput.disabled = true;
@@ -2797,10 +3190,17 @@
                 const fechas = movimientos.map(m => m.fecha).sort();
                 const desde = fechas[0], hasta = fechas[fechas.length - 1];
                 estadoConciliacion(`Consultando la hoja BANCOS del ${formatDate(desde)} al ${formatDate(hasta)}...`, 'info');
-                const url = `${SCRIPT_URL}?action=getReporteBancos&desde=${encodeURIComponent(concSumarDias(desde, -5))}&hasta=${encodeURIComponent(concSumarDias(hasta, 5))}`;
-                const res = await fetch(url);
-                const data = await res.json();
+                const urlBancos = `${SCRIPT_URL}?action=getReporteBancos&desde=${encodeURIComponent(concSumarDias(desde, -5))}&hasta=${encodeURIComponent(concSumarDias(hasta, 5))}`;
+                const [resB, resA] = await Promise.all([
+                    fetch(urlBancos),
+                    fetch(`${SCRIPT_URL}?action=getAliasTerceros`).catch(() => null)
+                ]);
+                const data = await resB.json();
                 if (!data.ok) throw new Error(data.message || 'No se pudo leer la hoja BANCOS.');
+                try {
+                    const dataA = resA ? await resA.json() : null;
+                    asociacionesGuardadas = (dataA && dataA.ok && dataA.alias) ? dataA.alias : [];
+                } catch (_) { asociacionesGuardadas = []; }
 
                 const bancosTodos = (data.filas || []).map(x => ({
                     fila: Number(x.fila) || 0,
@@ -2813,34 +3213,8 @@
                 })).filter(b => b.valorBanco > 0 && b.fecha);
 
                 estadoConciliacion('Conciliando...', 'info');
-                const r = conciliarBancosVsContabilidad(bancosTodos, movimientos, allData.clientes || []);
-                // En el reporte quedan los movimientos del periodo y los de los días
-                // de margen solo si se usaron para cuadrar algo.
-                r.bancos = r.bancos.filter(b => (b.fecha >= desde && b.fecha <= hasta) || b.asignados.length);
-
-                conciliacionLibro = construirExcelConciliacion(XLSX, r, { archivo: archivo.name, cuenta, desde, hasta });
-                conciliacionNombre = `Conciliacion_bancos_${desde}_a_${hasta}.xlsx`;
-
-                const contar = (lista, fn) => lista.filter(fn).length;
-                const okB = contar(r.bancos, b => /^OK/.test(b.estado));
-                const ingresosC = r.contab.filter(m => m.debe > 0);
-                const okC = contar(ingresosC, m => /^OK/.test(m.estado));
-                const filaRes = (t, v, cls = '') => `<div class="flex justify-between gap-3 ${cls}"><span>${t}</span><b>${v}</b></div>`;
-                conciliacionResumen.innerHTML =
-                    `<div class="font-semibold text-gray-900 mb-1">${escHtml(cuenta || archivo.name)}</div>` +
-                    filaRes('Periodo', `${formatDate(desde)} a ${formatDate(hasta)}`) +
-                    `<div class="pt-2 font-semibold">Hoja BANCOS (${r.bancos.length} movimientos)</div>` +
-                    filaRes('✅ Cuadran con contabilidad', okB, 'text-green-700') +
-                    filaRes('⚠️ Con diferencia', contar(r.bancos, b => b.estado === 'DIFERENCIA'), 'text-amber-700') +
-                    filaRes('❌ No están en contabilidad', contar(r.bancos, b => b.estado === 'NO ESTÁ EN CONTABILIDAD'), 'text-red-700') +
-                    filaRes('⏳ Sin tercero relacionado', contar(r.bancos, b => b.estado === 'SIN RELACIONAR EN BANCOS'), 'text-gray-600') +
-                    `<div class="pt-2 font-semibold">Contabilidad (${ingresosC.length} ingresos)</div>` +
-                    filaRes('✅ Encontrados en BANCOS', okC, 'text-green-700') +
-                    filaRes('❌ No están en BANCOS', contar(ingresosC, m => m.estado === 'NO ESTÁ EN BANCOS'), 'text-red-700');
-                conciliacionResumen.classList.remove('hidden');
-                btnDescargarConciliacion.disabled = false;
-                estadoConciliacion('Conciliación lista. Se descargó el Excel; la hoja POR REVISAR tiene lo que no cuadra.', 'ok');
-                descargarConciliacion();
+                conciliacionDatos = { movimientos, cuenta, bancosTodos, desde, hasta, archivo: archivo.name };
+                ejecutarConciliacion(true);
             } catch (err) {
                 console.error(err);
                 estadoConciliacion(err.message || 'No se pudo hacer la conciliación.', 'error');
