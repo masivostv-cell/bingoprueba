@@ -30,7 +30,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxgUhWV92V-jSnHbrWSwcIyAJufT-8k-d4qtd3DOIMWdgdirbDw6NnYo-CIFDiUyD9l/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8yspeXUC9E3-VT9_NURXDHWa5eNjuRpODmRHucjrf3NWqf3L5eM4twjcvl0LNJVfv/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -1360,6 +1360,10 @@
                     body: JSON.stringify({ action: 'cargarCarteraTNS', filas: carteraPreparada.filas })
                 });
                 const data = await res.json();
+                if (data.status === 'duplicate' || (data.status === 'success' && data.filas === undefined)) {
+                    // El Apps Script no reconoció la acción y la trató como un pago.
+                    throw new Error('Tu Apps Script todavía no tiene la función para cargar la cartera (cargarCarteraTNS). Pégala, publica una nueva versión y vuelve a intentarlo. No se modificó ninguna hoja');
+                }
                 if (!res.ok || data.status !== 'success') throw new Error(data.message || 'El servidor no confirmó la carga.');
                 estadoCargaCartera(`Cartera reemplazada: ${data.filas || carteraPreparada.filas.length} filas escritas. Actualizando datos del sistema...`, 'ok');
                 showToast('¡Cartera cargada correctamente!', 'success');
@@ -3313,7 +3317,7 @@
                         <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${inv.factura}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(inv.fecha)}</td>
                         <td class="px-4 py-3 text-sm text-gray-500 truncate max-w-xs" title="${inv.detalle}">${inv.detalle || '-'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-right">${formatCurrency(inv.saldo)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-right">${formatCurrency(inv.saldo)}${(Number(inv.abonadoSistema) || 0) > 0.5 ? `<div class="text-xs font-normal text-green-700">abonada ${formatCurrency(inv.abonadoSistema)} (pendiente en TNS)</div>` : ''}</td>
                     </tr>
                 `;
             });
@@ -4328,6 +4332,9 @@
                 valor: retData.netoBanco,
                 reteFuente: rfValor,
                 anticipoAplicado: anticipoUsado,
+                // Lo que se abonó a cada factura (pago + anticipo), para que el sistema
+                // descuente esas facturas aunque TNS todavía no esté actualizado.
+                abonosFacturas: abonosRealizados.map(a => ({ factura: a.factura, valor: Math.round(a.abonado * 100) / 100 })),
                 anticipoFacturas: abonosRealizados.filter(a => a.deAnticipo > 0.5).map(a => `${a.factura}:${a.deAnticipo}`).join('; '),
                 reteIca: icaValor,
                 valorAbonoBruto: abonoBruto,
@@ -4414,6 +4421,26 @@
                     const filaAnt = (allData.anticiposCartera || []).find(a => String(a.nit || '').trim() === String(clientePago.nit).trim());
                     if (filaAnt) filaAnt.valor = Math.max(0, (Number(filaAnt.valor) || 0) - anticipoUsado);
                     guardarCacheLocalCartera(allData);
+                }
+
+                // Descontar de inmediato las facturas abonadas, para que el siguiente
+                // pago de este cliente siga con la factura que viene (ej.: septiembre).
+                if (abonosRealizados.length > 0) {
+                    const nitPago = String(clientePago.nit || '').trim();
+                    abonosRealizados.forEach(a => {
+                        const fac = (allData.cartera || []).find(f => String(f.nit || '').trim() === nitPago && f.factura === a.factura);
+                        if (!fac) return;
+                        if (fac.saldoTNS === undefined) fac.saldoTNS = Number(fac.saldo) || 0;
+                        fac.abonadoSistema = (Number(fac.abonadoSistema) || 0) + a.abonado;
+                        fac.saldo = Math.max(0, (Number(fac.saldo) || 0) - a.abonado);
+                    });
+                    allData.cartera = (allData.cartera || []).filter(f => (Number(f.saldo) || 0) > 0.5);
+                    guardarCacheLocalCartera(allData);
+                    if (currentClient && String(currentClient.nit || '').trim() === nitPago) {
+                        currentInvoices = allData.cartera.filter(f => String(f.nit || '').trim() === nitPago);
+                        selectedInvoices = selectedInvoices.filter(fc => currentInvoices.some(f => f.factura === fc));
+                        renderTable();
+                    }
                 }
 
                 guardarHuellaPagoLocal({
