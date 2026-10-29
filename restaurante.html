@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.26-6';
+const APP_VERSION='2026.10.27-1';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -1058,7 +1058,7 @@ async function pullCloud(manual){
       /* lo de fondo espera su turno (queda pendiente: el pulso no se marca como visto) */
       const tocaFondo = manual || _fondoYa || (Date.now()-_ultFondo)>180000 || VISTAS_FONDO.indexOf(S.view)>=0;
       if(!tocaFondo) listas=listas.filter(c=>COLL_FONDO.indexOf(c)<0);
-      else if(listas.some(c=>COLL_FONDO.indexOf(c)>=0)){ _ultFondo=Date.now(); _fondoYa=false; }
+      else { _ultFondo=Date.now(); _fondoYa=false; }
       if(!listas.length){
         S.turno=turnoAbierto(); lastPull=now(); syncErr=0;
         pulling=false; paintSync();
@@ -5496,6 +5496,7 @@ let _invCat='all', _invCerrados={};
    venta, comida de empleados, conteo físico, recálculo…), quién lo hizo,
    el saldo después de cada movimiento y el documento para abrirlo. */
 const ORIGEN_INV={
+  corte:{e:'🧹',n:'Inicio (conteo)',c:'info'},
   compra:{e:'🛒',n:'Compra',c:'ok'}, venta:{e:'🧾',n:'Venta',c:'bad'}, consumo:{e:'🍽️',n:'Comida empleados',c:'warn'},
   ajuste:{e:'⚖️',n:'Conteo físico / ajuste',c:'info'}, recalculo:{e:'🔄',n:'Recalculado',c:'info'},
   inicial:{e:'📥',n:'Saldo inicial',c:''}, importacion:{e:'📥',n:'Importado',c:''}, 'venta-anulada':{e:'↩️',n:'Venta devuelta',c:'ok'}
@@ -5511,7 +5512,7 @@ function docDeMov(m){
 }
 /* movimientos de un ingrediente entre fechas con el saldo corrido */
 function kardexIng(gid,d1,d2){
-  const todos=S.movinv.filter(m=>m.ingredienteId===gid).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+  const todos=movinvVigentes().filter(m=>m.ingredienteId===gid).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
   /* si el historial no arranca desde cero (había existencias antes de que existiera
      el historial), se cuenta hacia atrás desde el stock actual para que cuadre */
   const H=historialIng(gid), g=byId('ingredientes',gid)||{};
@@ -5607,6 +5608,7 @@ function viewInventario(vw){
   let tab='stock', q='';
   const mf={d1:dateAdd(todayISO(),-6), d2:todayISO(), q:'', tipo:'todo', prod:''};
   topact('<button class="btn sm" id="audinv">🩺 Revisar</button>'+(puedeEditar()?'<button class="btn sm" id="recalc">🔄 Recalcular</button>':'')+
+    ((S.user&&(S.user.rol==='admin'||S.user._super))? '<button class="btn sm" id="cortinv" title="Empezar el inventario desde un conteo físico (cuando nunca cuadra)">🧹 Desde conteo</button>':'')+
     '<button class="btn sm" id="aj" title="Si contaste físicamente un ingrediente, pon aquí cuánto hay de verdad">⚖️ Conteo físico</button>'+
     (esComercio()? '' : '<button class="btn pri sm" id="add">+ Ingrediente</button>'));
   vw.innerHTML='<div id="itabs"></div><div id="ibody"></div>';
@@ -5615,6 +5617,7 @@ function viewInventario(vw){
   $('#aj').onclick=()=>mAjuste();
   if($('#audinv')) $('#audinv').onclick=mAuditoriaInv;
   if($('#recalc')) $('#recalc').onclick=hacerRecalculo;
+  if($('#cortinv')) $('#cortinv').onclick=mCorteInventario;
   function paint(){
     $$('#itabs .tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
     if(tab==='mov' || tab==='ajustes'){
@@ -5845,13 +5848,21 @@ function cuadrarValorConStock(gid){
 /* historial de un ingrediente: la suma de todo lo que entró y salió.
    Sirve si arranca con una entrada o un conteo y no hay existencias de antes
    de que existiera el historial (capa "inicial" sin movimiento). */
+/* CORTE DE INVENTARIO: desde un conteo físico el inventario arranca de cero.
+   Todo lo anterior al corte se ignora para los saldos (sigue visible en el
+   historial), así un historial dañado o incompleto (por ejemplo, documentos
+   borrados a mano en Firebase) deja de descuadrar. */
+function corteInv(){ return String(S.cfg.invCorte||''); }
+function movVigente(m){ const c=corteInv(); return !c || String(m.fecha)>=c; }
+function movinvVigentes(){ const c=corteInv(); return c? S.movinv.filter(m=>String(m.fecha)>=c) : S.movinv; }
 function historialIng(gid){
-  const movs=S.movinv.filter(m=>m.ingredienteId===gid)
+  const movs=movinvVigentes().filter(m=>m.ingredienteId===gid)
     .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
-  const inicialSinMov=S.capas.some(c=>c.ingredienteId===gid && c.refTipo==='inicial') &&
+  const conCorte=!!corteInv() && movs.some(m=>m.refTipo==='corte');
+  const inicialSinMov=!conCorte && S.capas.some(c=>c.ingredienteId===gid && c.refTipo==='inicial') &&
     !movs.some(m=>m.refTipo==='inicial' || m.refTipo==='importacion');
   return {movs:movs, hist:round(sum(movs,m=>Number(m.cantidad)||0),4),
-    confiable: movs.length>0 && movs[0].tipo!=='salida' && !inicialSinMov};
+    confiable: conCorte || (movs.length>0 && movs[0].tipo!=='salida' && !inicialSinMov)};
 }
 /* ===================== RECALCULAR TODO =====================
    Botón de arriba (cajero, administrador y superadmin). Revisa y arregla lo
@@ -5999,14 +6010,15 @@ async function recalcularTodo(){
    suma del historial, que es lo mismo en todos los equipos. */
 function historialTodos(){
   const por={};
-  S.movinv.forEach(m=>{ (por[m.ingredienteId]=por[m.ingredienteId]||[]).push(m); });
+  movinvVigentes().forEach(m=>{ (por[m.ingredienteId]=por[m.ingredienteId]||[]).push(m); });
   const iniciales=new Set(S.capas.filter(c=>c.refTipo==='inicial').map(c=>c.ingredienteId));
   const out={};
   Object.keys(por).forEach(gid=>{
     const movs=por[gid].sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
-    const inicialSinMov=iniciales.has(gid) && !movs.some(m=>m.refTipo==='inicial'||m.refTipo==='importacion');
+    const conCorte=!!corteInv() && movs.some(m=>m.refTipo==='corte');
+    const inicialSinMov=!conCorte && iniciales.has(gid) && !movs.some(m=>m.refTipo==='inicial'||m.refTipo==='importacion');
     out[gid]={hist:round(sum(movs,m=>Number(m.cantidad)||0),4),
-      confiable: movs[0].tipo!=='salida' && !inicialSinMov};
+      confiable: conCorte || (movs[0].tipo!=='salida' && !inicialSinMov)};
   });
   return out;
 }
@@ -6074,7 +6086,8 @@ function faltantesDeInventario(desde){
                   : 'Descontó una parte; le faltó lo que se agregó después a la receta o quedó sin ingrediente'};
   };
   const out=[];
-  S.ventas.filter(v=>v.estado!=='anulada' && dISO(v.fecha)>=desde).forEach(v=>{ const r=revisar(v,'ventas','venta'); if(r) out.push(r); });
+  if(corteInv() && dISO(corteInv())>desde) desde=dISO(corteInv());
+  S.ventas.filter(v=>v.estado!=='anulada' && dISO(v.fecha)>=desde && movVigente(v)).forEach(v=>{ const r=revisar(v,'ventas','venta'); if(r) out.push(r); });
   S.otrosdocs.filter(d=>d.tipo==='consumo' && d.estado!=='anulado' && dISO(d.fecha)>=desde).forEach(d=>{ const r=revisar(d,'otrosdocs','consumo'); if(r) out.push(r); });
   out.sort((a,b)=>String(b.doc.fecha).localeCompare(String(a.doc.fecha)));
   return {cargando:false, docs:out};
@@ -6151,6 +6164,47 @@ function mFaltantesInventario(despues){
       pinta();
     }});
 }
+function mCorteInventario(){
+  if(!S.user || (S.user.rol!=='admin' && !S.user._super)) return pedirAlAdmin('empezar el inventario desde un conteo');
+  const gs=S.ingredientes.filter(g=>g.activo!==false).sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));
+  modal({title:'🧹 Empezar el inventario desde un conteo', size:'wide',
+    body:'<div class="card" style="background:var(--warn-soft);margin-bottom:10px"><div class="bd tiny">'+
+        '<b>Úsalo cuando el inventario nunca cuadra</b> (por ejemplo, si se borraron o cambiaron datos a mano en Firebase). '+
+        'Escribe lo que hay de verdad en bodega y el sistema arranca de cero con esos números: '+
+        'lo de antes del corte ya no cuenta para los saldos (se puede seguir viendo). Desde ese momento las compras, ventas y ajustes suman y restan normal.'+
+        '<br><b>Hazlo cuando no se esté vendiendo</b> (antes de abrir o al cerrar).'+
+        (corteInv()? '<br>Último corte: <b>'+fdate(corteInv(),true)+'</b>':'')+'</div></div>'+
+      '<div class="row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap"><input id="ct_q" placeholder="Buscar ingrediente…" style="flex:1;min-width:180px">'+
+        '<button class="btn sm" id="ct_act">Poner el stock que dice el sistema</button><button class="btn sm" id="ct_cero">Todo en 0</button></div>'+
+      '<div style="max-height:52vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px">'+
+        gs.map(g=>'<div class="row" data-ctr="'+esc(normTxt(g.nombre))+'" style="gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);align-items:center">'+
+          '<div style="flex:1;min-width:0"><b>'+esc(g.nombre)+'</b> <span class="tiny muted">sistema: '+num(g.stock,2)+' '+esc(g.unidad||'')+'</span></div>'+
+          '<input type="number" step="any" data-ct="'+g.id+'" value="'+round(Math.max(0,Number(g.stock)||0),3)+'" style="width:120px;text-align:right">'+
+          '<span class="tiny muted" style="width:34px">'+esc(g.unidad||'')+'</span></div>').join('')+'</div>',
+    footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ct_ok">Empezar desde este conteo</button>',
+    onOpen:m=>{
+      $('#ct_q',m).oninput=e=>{ const q=normTxt(e.target.value); $$('[data-ctr]',m).forEach(r=>r.style.display=!q||r.dataset.ctr.indexOf(q)>=0?'':'none'); };
+      $('#ct_act',m).onclick=()=>$$('[data-ct]',m).forEach(i=>{ const g=byId('ingredientes',i.dataset.ct); i.value=round(Math.max(0,Number(g.stock)||0),3); });
+      $('#ct_cero',m).onclick=()=>$$('[data-ct]',m).forEach(i=>i.value=0);
+      $('#ct_ok',m).onclick=()=>confirmar('¿Empezar el inventario desde este conteo? Los saldos quedan exactamente como los escribiste y lo anterior deja de contar.',()=>{
+        const corte=now(); let n=0;
+        $$('[data-ct]',m).forEach(i=>{
+          const g=byId('ingredientes',i.dataset.ct); if(!g) return;
+          const q=round(Math.max(0,toN(i.value)),4), cu=costoProm(g.id)||Number(g.costo)||0;
+          put('movinv',{id:uid('mi'), fecha:corte, ingredienteId:g.id, tipo:'entrada', cantidad:q, costoUnit:cu,
+            costoTotal:round(q*cu,2), refTipo:'corte', refId:'', saldo:q, stockAntes:Number(g.stock)||0,
+            nota:'Inicio del inventario por conteo (antes decía '+num(g.stock,2)+')', usuarioId:S.user?S.user.id:''});
+          g.stock=q; put('ingredientes',g);
+          try{ cuadrarValorConStock(g.id); }catch(e){}
+          n++;
+        });
+        S.cfg.invCorte=corte; saveCfg();
+        if(S.cfg.autoSync) scheduleSync(300);
+        closeModal(); render();
+        toast('🧹 Inventario reiniciado con '+n+' ingredientes. Desde ahora cuadra con compras, ventas y ajustes.','ok',6500);
+      },true);
+    }});
+}
 function hacerRecalculo(){
   if(!exigirCaja('recalcular el inventario')) return;
   if(!puedeEditar()) return pedirAlAdmin('recalcular el inventario');
@@ -6187,6 +6241,8 @@ function mAuditoriaInv(){
         ' productos activos · '+S.movinv.length+' movimientos de inventario</div>'+
         ((A.malValor.length||A.malHist.length||A.negativos.length)? (admin?
           '<button class="btn pri lg blk" id="au_recalc" style="margin-top:12px">🔄 Recalcular inventario</button>'+
+          ((S.user&&(S.user.rol==='admin'||S.user._super))? '<div class="tiny muted" style="margin-top:12px;text-align:center">¿El inventario nunca cuadra aunque recalcules? '+
+            '<a href="#" id="au_corte"><b>🧹 Empezar desde un conteo</b></a></div>':'')+
           '<div class="tiny" style="margin-top:6px">Lo arregla solo: deja cada ingrediente con lo que dicen las compras, ventas y ajustes, '+
           'lo negativo queda en 0 y el valor se cuadra. No tienes que contar nada.</div>'
           : '<div class="tiny" style="margin-top:8px">Pídele al administrador que toque <b>Recalcular inventario</b>.</div>') : '')+
@@ -6250,6 +6306,7 @@ function mAuditoriaInv(){
       $$('[data-aj]',m).forEach(b=>b.onclick=()=>{ closeModal(); mAjuste(b.dataset.aj); });
       if($('#au_recalc',m)) $('#au_recalc',m).onclick=()=>{ closeModal(); hacerRecalculo(); };
       if($('#au_falt',m)) $('#au_falt',m).onclick=()=>{ closeModal(); mFaltantesInventario(); };
+      if($('#au_corte',m)) $('#au_corte',m).onclick=e=>{ e.preventDefault(); closeModal(); mCorteInventario(); };
     }});
 }
 function mAjuste(gid){
@@ -7883,9 +7940,15 @@ function mAbrirCaja(){
     }});
 }
 function mCerrarCaja(){
-  if(S.cfg.fbOn && navigator.onLine && !mCerrarCaja._ya && Date.now()-_ultFondo>15000){
-    mCerrarCaja._ya=true; toast('Trayendo los últimos movimientos…','ok',2000);
-    _fondoYa=true; return pullCloud().catch(()=>{}).then(()=>{ mCerrarCaja._ya=false; mCerrarCaja(); });
+  /* antes de cerrar se trae lo último de la nube UNA vez (máximo 8 s). Antes
+     podía quedarse dando vueltas actualizando y no dejaba cerrar. */
+  if(S.cfg.fbOn && navigator.onLine && !mCerrarCaja._ya && Date.now()-(mCerrarCaja._ult||0)>60000){
+    mCerrarCaja._ya=true; mCerrarCaja._ult=Date.now();
+    toast('Trayendo los últimos movimientos…','ok',2000);
+    _fondoYa=true;
+    const tope=new Promise(r=>setTimeout(r,8000));
+    return Promise.race([pullCloud().catch(()=>{}), tope]).then(()=>{
+      try{ mCerrarCaja(); } finally{ mCerrarCaja._ya=false; } });
   }
   const t=S.turno; if(!t) return;
   const D=detalleTurno(t), esperado=D.esperado;
