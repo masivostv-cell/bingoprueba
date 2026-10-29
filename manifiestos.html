@@ -593,8 +593,11 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 .destino .firma-dest{margin-top:14px;page-break-inside:avoid;}
 .destino .firma-dest img{height:70px;display:block;margin-bottom:-22px;}
 .destino .firma-dest .nombre{font-weight:bold;margin-top:0;}
+.destino .firma-dest{margin-bottom:14px;}
+.destino{display:flex;flex-direction:column;min-height:279.4mm;}
+.destino > *{flex-shrink:0;}
 .destino .pie-dest{
-  margin-top:14px;border-top:2px solid var(--rojo-logo);padding-top:5px;
+  margin-top:auto;border-top:2px solid var(--rojo-logo);padding-top:5px;
   text-align:center;font-size:7.5pt;color:#1d4ed8;line-height:1.5;
 }
 
@@ -621,7 +624,13 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   body.imprimiendo-destino .marco-dest > * > tr > td{border:0;padding:0;text-align:left;font-size:11pt;}
   body.imprimiendo-destino #areaDestino .marco-dest > * > tr{page-break-inside:auto;break-inside:auto;}
   body.imprimiendo-destino .marco-dest .membrete{margin-bottom:4px;}
-  body.imprimiendo-destino .marco-dest .pie-dest{margin-top:8px;}
+  body.imprimiendo-destino #areaDestino .destino{display:block;min-height:0;}
+  body.imprimiendo-destino .pie-espacio{height:24mm;}
+  body.imprimiendo-destino #areaDestino .pie-fijo{
+    position:fixed;left:0;right:0;bottom:0;margin:0;background:#fff;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  body.imprimiendo-destino #areaDestino .destino:not(:first-child) .pie-fijo{display:none;}
   /* Marca de agua fija: se repite en cada página impresa */
   body.imprimiendo-destino #areaDestino .marca-agua{
     position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -4196,12 +4205,12 @@ function periodoDestino(inicio, fin){
   const a = String(inicio).split("-");
   const b = String(fin).split("-");
 
-  if(a[0] === b[0] && a[1] === b[1]){
-    const desde = a[2] === "01" ? "del primero (01)" : "del " + a[2];
-    return desde + " al " + b[2] + " de " +
-           MESES[Number(a[1]) - 1] + " de " + a[0];
-  }
-  return "del " + fechaDiaMes(inicio) + " al " + fechaDiaMes(fin);
+  // Solo el mes: "octubre de 2026"; si abarca varios,
+  // "octubre a diciembre de 2026" o "diciembre de 2025 a enero de 2026".
+  const mesA = MESES[Number(a[1]) - 1], mesB = MESES[Number(b[1]) - 1];
+  if(a[0] === b[0] && a[1] === b[1]) return mesA + " de " + a[0];
+  if(a[0] === b[0]) return mesA + " a " + mesB + " de " + a[0];
+  return mesA + " de " + a[0] + " a " + mesB + " de " + b[0];
 }
 
 // "02 días del mes de febrero de 2026"
@@ -4487,8 +4496,8 @@ function hojaDestino(cliente, consecutivo, inicio, fin, fechaExpedicion){
     <p class="parrafo"><b>LASPATH S.A.S E.S.P</b> identificado con NIT ${NIT_LASPATH},
        certifica que <b>${editable(razon)}</b>${nit}${direccion}, entregó
        para Tratamiento y Disposición Final
-       los Residuos Peligrosos, Hospitalarios y Similares${sede}, entre el periodo
-       comprendido ${editable(periodoDestino(inicio, fin))} los siguientes residuos:</p>
+       los Residuos Peligrosos, Hospitalarios y Similares${sede}, en el periodo
+       de ${editable(periodoDestino(inicio, fin))} los siguientes residuos:</p>
 
     ${bloques}
 
@@ -4726,12 +4735,16 @@ function exportarDestinacionPDF(){
                       "<tbody><tr><td></td></tr></tbody>";
 
     if(membrete) marco.querySelector("thead td").appendChild(membrete);
-    if(pie)      marco.querySelector("tfoot td").appendChild(pie);
+    // El pie va fijo al fondo de la hoja (así no se sube en la última
+    // página); el tfoot solo reserva su espacio para que nada lo tape.
+    marco.querySelector("tfoot td").innerHTML = '<div class="pie-espacio"></div>';
+    if(pie) pie.classList.add("pie-fijo");
 
     const cuerpo = marco.querySelector("tbody td");
     while(hoja.firstChild) cuerpo.appendChild(hoja.firstChild);
     if(marca) hoja.appendChild(marca);
     hoja.appendChild(marco);
+    if(pie) hoja.appendChild(pie);
   });
 
   // Hoja carta con los márgenes laterales del Word (3 cm). Se pone solo
@@ -4773,12 +4786,20 @@ function exportarDestinacionWord(){
   const copia = copiaLimpiaDestino();
   copia.querySelectorAll(".marca-agua").forEach(e => e.remove());
 
+  // Membrete y pie salen del cuerpo: van al encabezado y al pie de página
+  // de Word, que se repiten en cada hoja y el pie queda siempre abajo.
+  copia.querySelectorAll(".membrete, .pie-dest").forEach(e => e.remove());
+  const imgMembrete = document.createElement("img");
+  imgMembrete.setAttribute("src", IMG_LOGO);
+  const cajaMembrete = document.createElement("div");
+  cajaMembrete.appendChild(imgMembrete);
+
   // Las imágenes pasan de data:... a un nombre de archivo, y cada una se
   // adjunta como parte MIME al final del documento.
   const partes = [];
   const vistas = {};
 
-  copia.querySelectorAll("img").forEach(img => {
+  Array.from(copia.querySelectorAll("img")).concat([imgMembrete]).forEach(img => {
     const src = img.getAttribute("src") || "";
     const m = src.match(/^data:(image\/[a-z]+);base64,(.+)$/i);
     if(!m) return;
@@ -4795,7 +4816,11 @@ function exportarDestinacionWord(){
 
   const estilos =
     "<style>" +
-    "@page { size: 21.59cm 27.94cm; margin: 2.5cm 3cm; }" +
+    "@page Section1 { size: 21.59cm 27.94cm; margin: 3.6cm 3cm 3.2cm 3cm;" +
+    "  mso-header-margin: 1cm; mso-footer-margin: 0.8cm;" +
+    "  mso-header: url('" + "file:///C:/certificado/encabezado.htm" + "') h1;" +
+    "  mso-footer: url('" + "file:///C:/certificado/encabezado.htm" + "') f1; }" +
+    "div.Section1 { page: Section1; }" +
     "body { font-family: 'Century Gothic', Arial, sans-serif; font-size: 11pt; }" +
     ".destino { page-break-after: always; }" +
     ".destino:last-child { page-break-after: auto; }" +
@@ -4822,7 +4847,20 @@ function exportarDestinacionWord(){
     'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
     'xmlns="http://www.w3.org/TR/REC-html40">' +
     '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">' +
-    estilos + '</head><body>' + copia.innerHTML + '</body></html>';
+    estilos + '</head><body><div class="Section1">' + copia.innerHTML + '</div></body></html>';
+
+  // Parte aparte con el encabezado (h1) y el pie (f1) de Word
+  const encabezado =
+    '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+    'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
+    'xmlns="http://www.w3.org/TR/REC-html40">' +
+    '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body>' +
+    '<div style="mso-element:header" id="h1"><p class="MsoHeader" style="margin:0">' +
+    '<img width="590" src="' + imgMembrete.getAttribute("src") + '"></p></div>' +
+    '<div style="mso-element:footer" id="f1"><p class="MsoFooter" style="margin:0;' +
+    'border-top:solid #d92525 1.5pt;padding-top:3pt;text-align:center;' +
+    "font-family:'Century Gothic',Arial,sans-serif;font-size:8pt;color:#1d4ed8\">" +
+    PIE_DESTINO + '</p></div></body></html>';
 
   const limite = "----=_NextPart_LASPATH";
   const base   = "file:///C:/certificado/";
@@ -4836,7 +4874,13 @@ function exportarDestinacionWord(){
     "Content-Transfer-Encoding: base64\r\n" +
     "Content-Location: " + base + "documento.html\r\n" +
     "\r\n" +
-    partirEnLineas(base64DeTexto(html)) + "\r\n";
+    partirEnLineas(base64DeTexto(html)) + "\r\n" +
+    "--" + limite + "\r\n" +
+    'Content-Type: text/html; charset="utf-8"\r\n' +
+    "Content-Transfer-Encoding: base64\r\n" +
+    "Content-Location: " + base + "encabezado.htm\r\n" +
+    "\r\n" +
+    partirEnLineas(base64DeTexto(encabezado)) + "\r\n";
 
   partes.forEach(p => {
     mht +=
