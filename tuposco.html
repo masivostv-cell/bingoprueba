@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.27-1';
+const APP_VERSION='2026.10.27-2';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -6456,7 +6456,8 @@ function edCompra(orig){
       '<div class="itbox itscroll"><div class="itin">'+
         '<div class="ithead" id="ihead" style="grid-template-columns:2fr 110px 52px 140px 120px 34px">'+
           '<span>Ingrediente</span><span style="text-align:right">Cantidad</span><span>Unidad</span>'+
-          '<span style="text-align:right">Costo unitario</span><span style="text-align:right">Total</span><span></span></div>'+
+          '<span style="text-align:right">Costo unitario</span><span style="text-align:right">Total de la línea</span><span></span></div>'+
+        '<div class="tiny muted" id="ihint" style="margin:-2px 0 6px">💡 Puedes escribir el <b>total</b> que pagaste por la línea y la cantidad: el costo unitario se calcula solo.</div>'+
         '<div id="rows"></div></div></div>'+
       '<div class="card" style="margin-top:14px;background:var(--panel2)"><div class="bd">'+
         '<div class="tline"><span>Subtotal</span><span class="v" id="tsub">—</span></div>'+
@@ -6466,8 +6467,9 @@ function edCompra(orig){
     footer:'<button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">'+
       (orig?'Guardar cambios':'Registrar compra')+'</button>',
     onOpen:m=>{
+      const totLinea=i=> (i.modo==='total' && i.totalLinea!=null)? Number(i.totalLinea)||0 : (Number(i.cantidad)||0)*(Number(i.costoUnit)||0);
       function calc(){
-        const s=round(sum(items,i=>i.cantidad*i.costoUnit),2);
+        const s=round(sum(items,totLinea),2);
         const iva=toN($('#iv',m).value);
         $('#tsub',m).textContent=money(s); $('#ttot',m).textContent=money(s+iva);
         return {sub:s,iva:iva,total:round(s+iva,2)};
@@ -6480,7 +6482,8 @@ function edCompra(orig){
             '<input data-q type="number" step="any" inputmode="decimal" placeholder="Cant." value="'+r.cantidad+'">'+
             '<span data-u>'+esc(g.unidad||'')+'</span>'+
             '<input data-c type="number" step="any" inputmode="decimal" placeholder="$ c/u" value="'+(r.costoUnit||'')+'">'+
-            '<span class="num b mono" style="font-size:15px" data-tt>'+money(r.cantidad*r.costoUnit)+'</span>'+
+            '<input data-tt type="number" step="any" inputmode="decimal" placeholder="$ total" title="Total pagado por esta línea: el costo unitario se calcula solo" '+
+              'value="'+(round(totLinea(r),2)||'')+'" style="text-align:right;font-weight:700">'+
             '<button class="btn ghost sm" data-x2>✕</button></div>';
         }).join('') : '<div class="hintx" style="text-align:center;padding:8px">La compra está vacía. Agrega lo que llegó.'+
           '<button class="btn-add grande vacio" data-addi>➕ Añadir el primer ingrediente</button></div>';
@@ -6488,7 +6491,12 @@ function edCompra(orig){
         $('#addi',m).classList.toggle('vacio',!items.length);
         const ba=$('[data-addi]',m); if(ba) ba.onclick=()=>$('#addi',m).click();
         $$('[data-i]',$('#rows',m)).forEach(row=>{ const i=+row.dataset.i;
-          const tot=()=>{ $('[data-tt]',row).textContent=money(items[i].cantidad*items[i].costoUnit); calc(); };
+          /* unitario × cantidad = total, o total ÷ cantidad = unitario (según lo último que se escribió) */
+          const tot=()=>{ const it=items[i];
+            if(it.modo==='total'){ it.costoUnit= it.cantidad>0? round((Number(it.totalLinea)||0)/it.cantidad,6) : 0;
+              if(document.activeElement!==$('[data-c]',row)) $('[data-c]',row).value= it.costoUnit? round(it.costoUnit,2) : ''; }
+            else { const t=$('[data-tt]',row); if(document.activeElement!==t) t.value=round(it.cantidad*it.costoUnit,2)||''; }
+            calc(); };
           combo($('[data-g]',row),{lista:S.ingredientes.filter(x=>x.activo!==false), valor:items[i].ingredienteId,
             placeholder:esComercio()?'Buscar producto o código…':'Buscar ingrediente…',
             sub:x=>{ const pr=x.productoId? byId('productos',x.productoId):null;
@@ -6500,7 +6508,8 @@ function edCompra(orig){
               if(obj && !items[i].costoUnit && obj.costo){ items[i].costoUnit=obj.costo; $('[data-c]',row).value=obj.costo; }
               tot(); }});
           $('[data-q]',row).oninput=e=>{items[i].cantidad=toN(e.target.value);tot();};
-          $('[data-c]',row).oninput=e=>{items[i].costoUnit=toN(e.target.value);tot();};
+          $('[data-c]',row).oninput=e=>{items[i].costoUnit=toN(e.target.value); items[i].modo='unit'; tot();};
+          $('[data-tt]',row).oninput=e=>{items[i].totalLinea=toN(e.target.value); items[i].modo='total'; tot();};
           $('[data-x2]',row).onclick=()=>{items.splice(i,1);paintRows();calc();};
         });
       }
