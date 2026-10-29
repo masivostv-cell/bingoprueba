@@ -178,6 +178,43 @@ tbody tr:nth-child(even){background:#f8fafc;}
 
 .total{font-size:25px;color:var(--azul);font-weight:bold;}
 
+/* ---------- Carrito de recolección (nuevo manifiesto) ---------- */
+.carrito-tipos{display:flex;flex-wrap:wrap;gap:8px;margin:10px 5px 4px;}
+.carrito-tipo{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:9px 14px;min-width:150px;border:2px solid var(--borde,#cbd5e1);
+  border-radius:10px;background:#fff;color:#0f172a;font-size:15px;cursor:pointer;
+  text-align:left;font-family:inherit;
+}
+.carrito-tipo:hover{background:#e9fbf8;}
+.carrito-tipo.activo{border-color:var(--verde-oscuro);background:#e9fbf8;box-shadow:0 0 0 2px var(--verde-logo);}
+.carrito-tipo .sub{font-size:12px;color:#64748b;}
+.carrito-tipo.con-peso .sub{color:var(--verde-oscuro);font-weight:bold;}
+.carrito-entrada{display:flex;flex-wrap:wrap;align-items:center;gap:4px;}
+.carrito-entrada input{font-size:17px;}
+.carrito-agregar{margin:5px;}
+.carrito-aviso{min-height:18px;margin:0 8px;font-size:13px;color:#b91c1c;}
+.carrito-lista{margin:4px 5px 0;max-width:640px;}
+.carrito-vacio{padding:12px;border:2px dashed #cbd5e1;border-radius:10px;color:#64748b;text-align:center;font-size:14px;}
+.carrito-item{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:6px;
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;
+}
+.carrito-item .num{color:#94a3b8;font-size:13px;min-width:22px;}
+.carrito-item .tipo{flex:1;}
+.carrito-item .kg{font-weight:bold;white-space:nowrap;}
+.carrito-item button{border:0;background:none;cursor:pointer;font-size:17px;padding:2px 6px;border-radius:6px;}
+.carrito-item button:hover{background:#fee2e2;}
+.carrito-item.nuevo{animation:carritoNuevo .8s ease;}
+@keyframes carritoNuevo{from{background:#bbf7d0;}to{background:#f8fafc;}}
+.carrito-pie{display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:13px;color:#64748b;}
+.carrito-pie button{border:0;background:none;color:#b91c1c;cursor:pointer;font-size:13px;text-decoration:underline;}
+@media (max-width:600px){
+  .carrito-tipo{min-width:0;flex:1 1 calc(50% - 8px);font-size:14px;padding:9px 10px;}
+  .carrito-tipo span{overflow-wrap:anywhere;}
+  .carrito-entrada input{flex:1;min-width:0;}
+}
+
 .tabla-historial td.frecuencia{white-space:nowrap;color:#334155;}
 .calculada{color:#64748b;}
 .calculada small{
@@ -665,16 +702,6 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 }
 .firma-lienzo.falta{border-color:var(--rojo-logo);background:#fff4f4;}
 .firma-botones{margin-top:6px;}
-.wa-guardar{
-  display:flex;align-items:center;gap:8px;
-  margin:6px 5px;font-size:14px;color:#334155;cursor:pointer;
-}
-.wa-guardar input{width:auto;margin:0;flex-shrink:0;transform:scale(1.3);}
-.wa-resumen{
-  background:#f8fafc;border:1px solid var(--borde);border-radius:10px;
-  padding:12px;margin-top:10px;white-space:pre-wrap;
-  font-size:13px;max-height:220px;overflow:auto;
-}
 
 /* ===========================================================
    << v7 >>  CELULAR
@@ -847,13 +874,30 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         <input type="number" step="1" min="0" id="bolsas" placeholder="Total bolsas">
 
         <h3>Cantidades (KG)</h3>
-        <input type="number" step="0.01" min="0" id="biosanitarios"       placeholder="Biosanitarios"      oninput="sumar()">
-        <input type="number" step="0.01" min="0" id="cortopunzantes"      placeholder="Cortopunzantes"     oninput="sumar()">
-        <input type="number" step="0.01" min="0" id="anatomopatologicos"  placeholder="Anatomopatológicos" oninput="sumar()">
-        <input type="number" step="0.01" min="0" id="farmaceuticos"       placeholder="Farmacéuticos"      oninput="sumar()">
-        <input type="number" step="0.01" min="0" id="liquido"             placeholder="Líquido"            oninput="sumar()">
-        <input type="number" step="0.01" min="0" id="medicamentos"        placeholder="Medicamentos"       oninput="sumar()">
-        <input type="number" step="0.01" min="0" id="otros"               placeholder="Otros"              oninput="sumar()">
+        <span class="ayuda">Toque el tipo de residuo, escriba los kilos y presione «Agregar».
+          Puede agregar el mismo tipo varias veces (una por bolsa o por pesada).</span>
+
+        <!-- Carrito de recolección: se va llenando con lo que se recoge -->
+        <div id="carritoTipos" class="carrito-tipos"></div>
+
+        <div class="carrito-entrada">
+          <input type="text" id="carritoKg" inputmode="decimal" autocomplete="off"
+                 placeholder="Kilos" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarAlCarrito();}">
+          <button type="button" class="btn-pro btn-guardar carrito-agregar"
+                  onclick="agregarAlCarrito()">➕ Agregar</button>
+        </div>
+        <div id="carritoAviso" class="carrito-aviso"></div>
+
+        <div id="carritoLista" class="carrito-lista"></div>
+
+        <!-- Lo que se guarda: el carrito suma aquí cada tipo de residuo -->
+        <input type="hidden" id="biosanitarios">
+        <input type="hidden" id="cortopunzantes">
+        <input type="hidden" id="anatomopatologicos">
+        <input type="hidden" id="farmaceuticos">
+        <input type="hidden" id="liquido">
+        <input type="hidden" id="medicamentos">
+        <input type="hidden" id="otros">
 
         <h2 class="total">TOTAL: <span id="total">0.00</span></h2>
 
@@ -1294,30 +1338,6 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
   </div>
 </div>
 
-<!-- ================= WHATSAPP AL CLIENTE  (<< v5 >>) ================= -->
-<div id="modalWhatsApp" class="modal">
-  <div class="modal-contenido">
-    <h2>Enviarle la constancia al cliente</h2>
-    <p class="ayuda">Se abre WhatsApp con el mensaje ya escrito: usted solo oprime enviar.</p>
-
-    <input id="waTelefono" type="tel" inputmode="numeric"
-           placeholder="Celular del cliente (ej. 3001234567)"
-           oninput="revisarCasillaTelefono()">
-
-    <label class="wa-guardar">
-      <input type="checkbox" id="waGuardar" onchange="this.dataset.tocada='1'">
-      <span id="waGuardarTexto">Guardar este número en la ficha del cliente</span>
-    </label>
-
-    <p id="estadoWhatsApp" class="estado"></p>
-
-    <div class="wa-resumen" id="waResumen"></div>
-    <br>
-    <button type="button" class="btn-pro btn-guardar"   onclick="enviarWhatsApp()">📲 Abrir WhatsApp</button>
-    <button type="button" class="btn-pro btn-consultar" onclick="cerrarWhatsApp()">No enviar</button>
-  </div>
-</div>
-
 <!-- ================= VER UNA FIRMA GUARDADA  (<< v5 >>) ================= -->
 <div id="modalFirma" class="modal">
   <div class="modal-contenido">
@@ -1456,10 +1476,6 @@ function mensaje(id, texto, esError){
 }
 
 /* ---------------- << v5 >> acceso: sesión y perfiles ---------------- */
-
-/* Nombre con el que sale la empresa en el WhatsApp del cliente.
-   CÁMBIELO por el nombre real del negocio. */
-const EMPRESA = "Recolección de residuos";
 
 /* Poner en false si alguna vez se necesita guardar sin firma. */
 const EXIGIR_FIRMA = true;
@@ -1808,160 +1824,6 @@ function cerrarFirmaVista(){
 }
 
 
-/* ---------------- << v5 >> aviso al cliente por WhatsApp ----------------
-
-   Apps Script no puede mandar un WhatsApp por su cuenta: para eso hace
-   falta la API de WhatsApp Business de Meta, con empresa verificada,
-   plantillas aprobadas y pago por mensaje. Lo que sí se puede, y no cuesta
-   nada, es abrir WhatsApp con el mensaje y el número ya puestos para que el
-   conductor solo oprima enviar. */
-
-let envioWhatsApp   = null;   // datos del último manifiesto guardado
-let clienteWhatsApp = null;   // << v8 >> ficha del cliente de ese manifiesto
-
-function prepararWhatsApp(datos, telefono, ficha){
-
-  envioWhatsApp   = datos;
-  clienteWhatsApp = ficha || null;
-
-  $("waTelefono").value = soloDigitos(telefono);
-  $("waResumen").textContent = textoWhatsApp(datos);
-  mensaje("estadoWhatsApp", "");
-
-  // << v8 >> La casilla se marca sola cuando hay algo nuevo que guardar: si
-  // el cliente no tenía número, o si el conductor escribe uno distinto.
-  const casilla = $("waGuardar");
-  casilla.dataset.tocada = "";
-  casilla.parentElement.style.display = clienteWhatsApp ? "flex" : "none";
-
-  $("waGuardarTexto").textContent = soloDigitos(telefono)
-    ? "Actualizar el número en la ficha del cliente"
-    : "Guardar este número en la ficha del cliente";
-
-  revisarCasillaTelefono();
-
-  $("modalWhatsApp").classList.add("mostrar");
-}
-
-/**
- * << v8 >> Marca o desmarca la casilla sola según lo que se vaya escribiendo.
- * Si el operario la toca a mano, se respeta su decisión y no se vuelve a
- * mover.
- */
-function revisarCasillaTelefono(){
-
-  const casilla = $("waGuardar");
-  if(!casilla || !clienteWhatsApp) return;
-  if(casilla.dataset.tocada === "1") return;
-
-  const nuevo    = soloDigitos($("waTelefono").value);
-  const guardado = soloDigitos(clienteWhatsApp.telefono);
-
-  casilla.checked = nuevo.length >= 10 && nuevo !== guardado;
-}
-
-
-/**
- * << v8 >> Manda el celular a la ficha del cliente, por la cola, para que
- * también funcione sin señal. Solo si la casilla está marcada y el número
- * cambió: repetir la misma escritura en cada manifiesto no aporta nada.
- */
-function guardarTelefonoCliente(){
-
-  const casilla = $("waGuardar");
-  if(!casilla || !casilla.checked || !clienteWhatsApp) return;
-
-  const nuevo = soloDigitos($("waTelefono").value);
-
-  if(nuevo.length < 10) return;
-  if(nuevo === soloDigitos(clienteWhatsApp.telefono)) return;
-
-  encolar({
-    accion:"guardarTelefono",
-    fila:     clienteWhatsApp.fila || "",
-    codigo:   clienteWhatsApp.codigo || "",
-    nombre:   clienteWhatsApp.nombre || "",
-    telefono: nuevo
-  }, "Teléfono de " + (clienteWhatsApp.nombre || "cliente"), "telefono");
-
-  // La copia que tiene el celular se actualiza de una vez: si al mismo
-  // cliente se le recoge otra vez, el número ya sale puesto sin esperar a
-  // que alguien recargue la lista.
-  clienteWhatsApp.telefono = nuevo;
-
-  const ficha = clientes.find(c => c.fila === clienteWhatsApp.fila);
-  if(ficha) ficha.telefono = nuevo;
-
-  guardarCache("clientes_cache", JSON.stringify(clientes));
-}
-
-function cerrarWhatsApp(guardar){
-
-  // Con la tecla Escape se cierra sin guardar nada; con los botones sí.
-  if(guardar !== false) guardarTelefonoCliente();
-
-  $("modalWhatsApp").classList.remove("mostrar");
-  envioWhatsApp = null;
-  clienteWhatsApp = null;
-  const buscador = $("buscar");
-  if(buscador) buscador.focus();
-}
-
-function soloDigitos(valor){
-  return String(valor || "").replace(/[^0-9]/g, "");
-}
-
-/**
- * Colombia: los celulares son 10 dígitos que empiezan por 3 y WhatsApp los
- * necesita con el indicativo 57 adelante. Si el número ya viene con
- * indicativo, se respeta.
- */
-function telefonoWhatsApp(valor){
-
-  let n = soloDigitos(valor);
-
-  if(n.length === 10 && n.charAt(0) === "3") n = "57" + n;
-  else if(n.length === 12 && n.slice(0, 2) === "57") { /* ya lo trae */ }
-  else if(n.length === 13 && n.slice(0, 3) === "573") n = n.slice(1);
-
-  return n;
-}
-
-function textoWhatsApp(d){
-
-  const lineas = [];
-
-  lineas.push(EMPRESA);
-  lineas.push("Constancia de recolección de residuos");
-  lineas.push("");
-  lineas.push("Cliente: " + d.cliente);
-  lineas.push("Manifiesto N° " + d.manifiesto);
-  lineas.push("Fecha: " + fechaDiaMes(d.fecha));
-  lineas.push("");
-
-  CAMPOS_CANTIDAD.forEach(id => {
-    const valor = Number(d[id]) || 0;
-    if(valor > 0) lineas.push("- " + etiquetaResiduo(id) + ": " + dosDecimales(valor) + " KG");
-  });
-
-  lineas.push("");
-  lineas.push("TOTAL RECOLECTADO: " + dosDecimales(d.total) + " KG");
-  if(Number(d.bolsas) > 0) lineas.push("Bolsas: " + d.bolsas);
-  lineas.push("Móvil: " + d.movil);
-
-  // << v9 >> El abono va en el mensaje: le queda al cliente la constancia
-  // de lo que entregó, que es justo lo que se pierde con un pago en efectivo.
-  if(Number(d.abono) > 0){
-    lineas.push("");
-    lineas.push("ABONO RECIBIDO: " + pesos(d.abono) +
-                " (" + (d.formaPago || "Efectivo") + ")");
-  }
-  lineas.push("");
-  lineas.push("Gracias por su gestión ambiental.");
-
-  return lineas.join("\n");
-}
-
 /* << v9 >> La forma de pago solo estorba si no hay abono. */
 function mostrarFormaPago(){
   const hay = Number($("abono").value) > 0;
@@ -1982,27 +1844,6 @@ function etiquetaResiduo(id){
   };
   return nombres[id] || id;
 }
-
-function enviarWhatsApp(){
-
-  if(!envioWhatsApp) return;
-
-  const numero = telefonoWhatsApp($("waTelefono").value);
-
-  if(numero.length < 10){
-    mensaje("estadoWhatsApp", "Revise el número: faltan dígitos.", true);
-    $("waTelefono").focus();
-    return;
-  }
-
-  const url = "https://wa.me/" + numero +
-              "?text=" + encodeURIComponent(textoWhatsApp(envioWhatsApp));
-
-  guardarTelefonoCliente();            // << v8 >> antes de cerrar
-  window.open(url, "_blank");
-  cerrarWhatsApp(false);
-}
-
 
 /* ---------------- << v6 >> número de manifiesto automático ----------------
 
@@ -2357,7 +2198,7 @@ function buscarCliente(){
 function seleccionar(indice){
   const c = resultadosBusqueda[indice];
   if(!c) return;
-  clienteSeleccionado = c;          // << v5 >> de aquí sale el celular para el WhatsApp
+  clienteSeleccionado = c;
   $("cliente").value = c.nombre || "";
   $("ruta").value    = c.ruta || "";
   $("buscar").value  = c.nombre || "";
@@ -3158,6 +2999,126 @@ function sumar(){
   $("total").textContent = suma.toFixed(2);
 }
 
+/* ================= CARRITO DE RECOLECCIÓN ================= */
+/*
+ * En vez de siete casillas, el operario va agregando lo que recoge: elige el
+ * tipo, escribe los kilos y lo añade a la lista. Puede repetir el mismo tipo
+ * (una pesada por bolsa) y quitar lo que se equivocó. Cada vez que cambia la
+ * lista se suman los kilos por tipo en los campos ocultos #biosanitarios,
+ * #cortopunzantes..., que son los que lee guardar(): así el envío a la hoja,
+ * y el total siguen funcionando igual que antes.
+ */
+let carrito      = [];               // [{ id, clave, kg }]
+let carritoTipo  = "biosanitarios";  // tipo elegido para la próxima pesada
+let carritoSeq   = 0;
+let carritoUltimo = 0;               // para resaltar lo recién agregado
+
+function kgCarrito(n){
+  return (Number(n) || 0).toFixed(2).replace(".", ",");
+}
+
+// Totales por tipo, a partir de las líneas del carrito
+function subtotalesCarrito(){
+  const t = {};
+  CAMPOS_CANTIDAD.forEach(id => { t[id] = 0; });
+  carrito.forEach(x => { t[x.clave] += x.kg; });
+  return t;
+}
+
+function pintarTiposCarrito(){
+  const sub = subtotalesCarrito();
+  $("carritoTipos").innerHTML = CAMPOS_CANTIDAD.map(id => `
+    <button type="button" class="carrito-tipo${id === carritoTipo ? " activo" : ""}${sub[id] > 0 ? " con-peso" : ""}"
+            onclick="elegirTipoCarrito('${id}')">
+      <span>${esc(etiquetaResiduo(id))}</span>
+      <span class="sub">${sub[id] > 0 ? kgCarrito(sub[id]) + " kg" : "—"}</span>
+    </button>`).join("");
+
+  $("carritoKg").placeholder = "Kilos de " + etiquetaResiduo(carritoTipo).toLowerCase();
+}
+
+function pintarListaCarrito(){
+  const lista = $("carritoLista");
+
+  if(carrito.length === 0){
+    lista.innerHTML = `<div class="carrito-vacio">🛒 Aún no ha agregado residuos.</div>`;
+    return;
+  }
+
+  lista.innerHTML = carrito.map((x, i) => `
+    <div class="carrito-item${x.id === carritoUltimo ? " nuevo" : ""}">
+      <span class="num">${i + 1}.</span>
+      <span class="tipo">${esc(etiquetaResiduo(x.clave))}</span>
+      <span class="kg">${kgCarrito(x.kg)} kg</span>
+      <button type="button" title="Quitar" onclick="quitarDelCarrito(${x.id})">🗑️</button>
+    </div>`).join("") + `
+    <div class="carrito-pie">
+      <span>${carrito.length} ${carrito.length === 1 ? "pesada" : "pesadas"}</span>
+      <button type="button" onclick="vaciarCarrito()">Vaciar todo</button>
+    </div>`;
+}
+
+// Pasa los subtotales a los campos ocultos y actualiza todo lo visible
+function sincronizarCarrito(){
+  const sub = subtotalesCarrito();
+  CAMPOS_CANTIDAD.forEach(id => {
+    $(id).value = sub[id] > 0 ? (Math.round(sub[id] * 100) / 100).toFixed(2) : "";
+  });
+  sumar();
+  pintarTiposCarrito();
+  pintarListaCarrito();
+}
+
+function elegirTipoCarrito(clave){
+  carritoTipo = clave;
+  $("carritoAviso").textContent = "";
+  pintarTiposCarrito();
+  $("carritoKg").focus();
+}
+
+function agregarAlCarrito(){
+  // Acepta coma o punto: en el celular el teclado suele traer la coma.
+  const texto = String($("carritoKg").value).trim().replace(",", ".");
+  const kg = Number(texto);
+
+  if(!texto || !isFinite(kg) || kg <= 0){
+    $("carritoAviso").textContent = "Escriba los kilos (por ejemplo 12,5).";
+    $("carritoKg").focus();
+    return;
+  }
+
+  carritoSeq++;
+  carritoUltimo = carritoSeq;
+  carrito.push({ id: carritoSeq, clave: carritoTipo, kg: Math.round(kg * 100) / 100 });
+
+  $("carritoKg").value = "";
+  $("carritoAviso").textContent = "";
+  sincronizarCarrito();
+  $("carritoKg").focus();       // listo para la siguiente pesada
+}
+
+function quitarDelCarrito(id){
+  carrito = carrito.filter(x => x.id !== id);
+  carritoUltimo = 0;
+  sincronizarCarrito();
+}
+
+function vaciarCarrito(){
+  if(carrito.length && !confirm("¿Quitar todos los residuos agregados?")) return;
+  reiniciarCarrito();
+}
+
+function reiniciarCarrito(){
+  carrito = [];
+  carritoUltimo = 0;
+  carritoTipo = "biosanitarios";
+  $("carritoKg").value = "";
+  $("carritoAviso").textContent = "";
+  sincronizarCarrito();
+}
+
+reiniciarCarrito();
+
 // Ni el móvil ni la fecha se limpian: en una misma jornada se repiten y
 // así el operario no tiene que volver a ponerlos en cada manifiesto.
 function limpiarManifiesto(){
@@ -3172,6 +3133,7 @@ function limpiarManifiesto(){
   $("observacionesManifiesto").value = "";
   CAMPOS_CANTIDAD.forEach(id => { $(id).value = ""; });
   $("total").textContent = "0.00";
+  reiniciarCarrito();
   clienteSeleccionado = null;
   limpiarFirma();                    // << v5 >>
 }
@@ -3236,12 +3198,6 @@ function guardar(){
   };
   CAMPOS_CANTIDAD.forEach(id => { datos[id] = $(id).value || "0"; });
 
-  // << v5 >> Copia para el WhatsApp: hay que tomarla ANTES de limpiar la
-  // pantalla, que es lo siguiente que pasa.
-  const paraCliente     = Object.assign({}, datos);
-  const fichaCliente    = clienteSeleccionado;
-  const telefonoCliente = (clienteSeleccionado && clienteSeleccionado.telefono) || "";
-
   const abonado = Number($("abono").value) || 0;
 
   const resumen = "Manifiesto " + numero + " · " +
@@ -3257,9 +3213,6 @@ function guardar(){
 
   limpiarManifiesto();
   consumirNumero(numero);            // << v6 >> deja listo el siguiente
-
-  // << v5 >> Ahora se le ofrece mandarle la constancia al cliente.
-  prepararWhatsApp(paraCliente, telefonoCliente, fichaCliente);
 }
 
 /* ---------------- historial ---------------- */
@@ -6290,7 +6243,6 @@ document.addEventListener("keydown", e => {
   if(e.key === "Escape"){
     cerrarFormularioCliente();
     cerrarObservaciones();
-    cerrarWhatsApp(false);     // << v5 >> se cierra sin guardar el teléfono
     cerrarFirmaVista();        // << v5 >>
   }
 });
@@ -6298,9 +6250,6 @@ document.addEventListener("keydown", e => {
 // << v5 >> Entrar con la tecla Enter, que en el celular es lo natural.
 ["accUsuario","accClave"].forEach(id => {
   $(id).addEventListener("keydown", e => { if(e.key === "Enter") entrar(); });
-});
-$("waTelefono").addEventListener("keydown", e => {
-  if(e.key === "Enter") enviarWhatsApp();
 });
 
 $("movil").addEventListener("change", () => marcarFalta("movil", !$("movil").value));
