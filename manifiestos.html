@@ -178,6 +178,83 @@ tbody tr:nth-child(even){background:#f8fafc;}
 
 .total{font-size:25px;color:var(--azul);font-weight:bold;}
 
+/* ---------- << v11 >> Carrito de residuos ---------- */
+.carrito-lineas{margin:10px 5px 4px;max-width:900px;}
+.linea-res{
+  display:grid;grid-template-columns:28px minmax(180px,2fr) minmax(90px,1fr) minmax(80px,.8fr) minmax(140px,1.4fr) 40px;
+  gap:8px;align-items:end;padding:10px;margin-bottom:8px;background:#f8fafc;
+  border:1px solid #e2e8f0;border-radius:10px;
+}
+.linea-res .lr-num{color:#94a3b8;font-size:13px;padding-bottom:12px;}
+.linea-res label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#64748b;min-width:0;}
+.linea-res select,.linea-res input{width:100%;margin:0;box-sizing:border-box;font-size:15px;}
+.linea-res .lr-quitar{border:0;background:none;cursor:pointer;font-size:18px;padding:8px 4px;border-radius:6px;}
+.linea-res .lr-quitar:hover{background:#fee2e2;}
+.linea-res.incompleta{border-color:#fca5a5;background:#fff7f7;}
+.lr-nuevo{
+  grid-column:2 / -1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  padding:8px;border:1px dashed var(--verde-oscuro);border-radius:8px;background:#effcf9;
+}
+.lr-nuevo input,.lr-nuevo select{width:auto;flex:1 1 160px;margin:0;}
+.lr-nuevo b{flex-basis:100%;font-size:13px;color:#0f172a;}
+.carrito-insertar{margin:4px 5px;}
+.carrito-resumen{margin:6px 5px 0;font-size:14px;color:#334155;max-width:900px;}
+.carrito-resumen .chip{display:inline-block;margin:3px 4px 3px 0;padding:4px 10px;border-radius:999px;background:#e9fbf8;border:1px solid #99e2d6;}
+.carrito-resumen .chip.cont{background:#eef2ff;border-color:#c7d2fe;}
+@media (max-width:700px){
+  .linea-res{grid-template-columns:1fr 1fr;}
+  .linea-res .lr-num{display:none;}
+  .linea-res .lr-tipo,.linea-res .lr-cont{grid-column:1 / -1;}
+  .linea-res .lr-quitar{grid-column:1 / -1;justify-self:end;padding:2px 6px;}
+  .lr-nuevo{grid-column:1 / -1;}
+}
+
+/* ---------- << v11 >> Ruta del día ---------- */
+.ruta-card{margin:10px 0 14px;padding:12px;border:1px solid #99e2d6;background:#f0fdfa;border-radius:12px;}
+.ruta-card h3{margin:0 0 6px;font-size:16px;}
+.ruta-card .ruta-sub{font-size:13px;color:#475569;margin-bottom:8px;}
+.ruta-paradas{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;}
+.ruta-parada{
+  display:flex;gap:10px;align-items:center;text-align:left;width:100%;padding:8px 10px;
+  border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:14px;color:#0f172a;
+}
+.ruta-parada:hover{background:#ecfeff;}
+.ruta-parada .num{color:#94a3b8;min-width:22px;}
+.ruta-parada .info{flex:1;min-width:0;}
+.ruta-parada .info small{display:block;color:#64748b;}
+.ruta-parada .est{font-size:12px;font-weight:bold;white-space:nowrap;padding:3px 8px;border-radius:999px;background:#fef3c7;color:#92400e;}
+.ruta-parada.recogido{opacity:.75;}
+.ruta-parada.recogido .est{background:#dcfce7;color:#166534;}
+.ruta-parada.agregado .est{background:#e0e7ff;color:#3730a3;}
+.ruta-acciones{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.aviso-fuera-ruta{margin:6px 5px;padding:6px 10px;border-radius:8px;background:#e0e7ff;color:#3730a3;font-size:13px;}
+.ruta-card.modo-fuera{border-color:#a5b4fc;background:#eef2ff;}
+
+/* ---------- << v11 >> Importe de rutas ---------- */
+.rutas-filtros{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 8px;}
+.rutas-filtros label{display:flex;flex-direction:column;font-size:13px;color:#475569;gap:2px;}
+.rutas-fuentes{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0;}
+.rutas-archivo{cursor:pointer;}
+#rutBuscar{width:100%;max-width:520px;box-sizing:border-box;}
+.rut-tabla{margin:10px 0;overflow-x:auto;}
+.rut-tabla table td,.rut-tabla table th{padding:6px 8px;font-size:13px;}
+.rut-tabla .falta-cli{color:#b45309;font-size:12px;}
+.rut-tabla button{border:0;background:none;cursor:pointer;font-size:15px;padding:2px 4px;}
+.rut-resumen-item{border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;}
+.rut-resumen-item .barra{height:8px;border-radius:99px;background:#e2e8f0;overflow:hidden;margin:6px 0;}
+.rut-resumen-item .barra span{display:block;height:100%;background:var(--verde-oscuro);}
+
+/* ---------- << v11 >> Descarga ---------- */
+.desc-vehiculos{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;}
+.desc-vehiculo{border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#fff;}
+.desc-vehiculo h3{margin:0;font-size:18px;}
+.desc-vehiculo .sub{font-size:12px;color:#64748b;margin:2px 0 8px;}
+.desc-vehiculo table td,.desc-vehiculo table th{padding:5px 7px;font-size:13px;}
+.desc-vehiculo td.num{text-align:right;white-space:nowrap;}
+.desc-vehiculo tr.tot td{font-weight:bold;}
+.desc-vehiculo .btn-pro{width:100%;margin-top:10px;}
+.desc-vacio{padding:16px;border:2px dashed #cbd5e1;border-radius:10px;color:#64748b;text-align:center;}
+
 /* ---------- Carrito de recolección (nuevo manifiesto) ---------- */
 .carrito-tipos{display:flex;flex-wrap:wrap;gap:8px;margin:10px 5px 4px;}
 .carrito-tipo{
@@ -556,6 +633,8 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 }
 
 .destino table{width:100%;border-collapse:collapse;margin-bottom:8px;}
+/* Sin el rayado de filas de las tablas de la app: tapaba la marca de agua */
+.destino tr,.destino tbody tr:nth-child(even),.destino td,.destino th{background:transparent!important;}
 .destino th,.destino td{
   border:1px solid #000;padding:2px 4px;font-size:8pt;text-align:center;vertical-align:middle;
 }
@@ -613,35 +692,36 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   body.imprimiendo-destino #areaDestino{
     display:block!important;background:#fff;padding:0;margin:0;
   }
-  body.imprimiendo-destino #areaDestino .destino{
-    width:auto;margin:0;box-shadow:none;padding:0;background:transparent;
-    page-break-after:always;
-  }
-  /* Membrete y pie repetidos en cada hoja, como el encabezado del Word */
-  body.imprimiendo-destino .marco-dest{width:100%;border-collapse:collapse;}
-  body.imprimiendo-destino .marco-dest > thead{display:table-header-group;}
-  body.imprimiendo-destino .marco-dest > tfoot{display:table-footer-group;}
-  body.imprimiendo-destino .marco-dest > * > tr > td{border:0;padding:0;text-align:left;font-size:11pt;}
-  body.imprimiendo-destino #areaDestino .marco-dest > * > tr{page-break-inside:auto;break-inside:auto;}
-  body.imprimiendo-destino .marco-dest .membrete{margin-bottom:4px;}
-  body.imprimiendo-destino #areaDestino .destino{display:block;min-height:0;}
-  body.imprimiendo-destino .pie-espacio{height:24mm;}
-  body.imprimiendo-destino #areaDestino .pie-fijo{
-    position:fixed;left:0;right:0;bottom:0;margin:0;background:#fff;
-    -webkit-print-color-adjust:exact;print-color-adjust:exact;
-  }
-  body.imprimiendo-destino #areaDestino .destino:not(:first-child) .pie-fijo{display:none;}
-  /* Marca de agua fija: se repite en cada página impresa */
-  body.imprimiendo-destino #areaDestino .marca-agua{
-    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-    width:150mm;z-index:-1;-webkit-print-color-adjust:exact;print-color-adjust:exact;
-  }
-  body.imprimiendo-destino #areaDestino .destino:not(:first-child) .marca-agua{display:none;}
-  body.imprimiendo-destino #areaDestino .destino:last-child{page-break-after:auto;}
+  /* Hojas armadas por paginarCertificado(): cada .pagina-dest es una hoja */
+  @page{size:letter;margin:0;}
   body.imprimiendo-destino #areaDestino .no-imprimir{display:none!important;}
-  body.imprimiendo-destino #areaDestino tr{page-break-inside:avoid;}
-  body.imprimiendo-destino #areaDestino thead{display:table-header-group;}
 }
+
+/* ---- Hojas del PDF de destinación (se arman a mano, una por página) ----
+   Antes el pie dependía de position:fixed / tfoot repetido, y en varios
+   navegadores con muchos certificados se perdía. Ahora cada hoja lleva su
+   propio membrete, marca de agua y pie, siempre pegado abajo. */
+#areaDestino .destino-imp{
+  width:auto;margin:0;padding:0;min-height:0;display:block;
+  box-shadow:none;background:transparent;
+}
+#areaDestino .pagina-dest{
+  width:215.9mm;height:279mm;box-sizing:border-box;padding:12mm 30mm 10mm;
+  position:relative;overflow:hidden;display:flex;flex-direction:column;
+  page-break-after:always;break-after:page;background:#fff;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
+#areaDestino .destino-imp:last-child .pagina-dest:last-child{page-break-after:auto;break-after:auto;}
+#areaDestino .pagina-dest > *{position:relative;z-index:1;flex-shrink:0;}
+#areaDestino .pagina-dest .membrete{width:100%;height:auto;aspect-ratio:1280/200;margin:0 0 6px;}
+#areaDestino .pagina-dest .cuerpo-pag{flex:1 1 auto;min-height:0;overflow:hidden;display:flow-root;}
+#areaDestino .pagina-dest .pie-dest{margin-top:6px;}
+#areaDestino .pagina-dest .marca-agua{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:150mm;z-index:0;
+}
+#areaDestino .cuerpo-pag > .tabla-total-dest:first-child{margin-top:0;}
+#areaDestino .cuerpo-pag > .legal:first-child{margin-top:0;}
 .modal{
   display:none;position:fixed;inset:0;
   background:rgba(0,0,0,.45);z-index:2000;
@@ -843,6 +923,8 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
     <button type="button" data-seccion="certificados" data-solo-admin onclick="mostrar('certificados')">🧾 Certificados</button>
     <button type="button" data-seccion="destinacion" data-solo-admin onclick="mostrar('destinacion')">📜 Certificados de destinación</button>
     <button type="button" data-seccion="reportes"  data-solo-admin onclick="mostrar('reportes')">📊 Reportes</button>
+    <button type="button" data-seccion="rutas"     data-solo-admin onclick="mostrar('rutas')">🗺️ Importe de rutas</button>
+    <button type="button" data-seccion="descarga"  data-solo-admin onclick="mostrar('descarga')">🚚 Descarga</button>
   </nav>
 
   <main class="contenido">
@@ -855,19 +937,23 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         <h2>Nuevo manifiesto</h2>
         <p id="estado" class="estado">Cargando clientes...</p>
 
+        <!-- << v11 >> Ruta del día del conductor -->
+        <div id="rutaCard" class="ruta-card" hidden></div>
+
         <div class="buscador">
           <input id="buscar" placeholder="Buscar cliente, código, ruta..." autocomplete="off" oninput="buscarCliente()">
           <div id="lista" class="lista"></div>
         </div>
 
         <br>
+        <div id="avisoFueraRuta" class="aviso-fuera-ruta" hidden>➕ Cliente fuera de ruta: quedará agregado a la ruta de hoy.</div>
         <input id="cliente" readonly placeholder="Cliente">
         <input id="ruta" readonly placeholder="Ruta">
         <br>
         <label class="etiqueta">Fecha de la recolección</label>
         <span class="ayuda">Por defecto hoy. Cámbiela si registra una recolección de otro día.</span>
         <br>
-        <input type="date" id="manFecha" title="Fecha de la recolección">
+        <input type="date" id="manFecha" title="Fecha de la recolección" onchange="cargarRutaDelDia()">
         <button type="button" class="btn-mini" onclick="fechaManifiestoHoy()">Hoy</button>
         <br>
         <input id="manifiesto" placeholder="Número manifiesto (obligatorio)"
@@ -877,27 +963,22 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         <br>
         <span class="ayuda" id="estadoNumero"></span>
         <br>
-        <select id="movil" title="Móvil (obligatorio)">
+        <select id="movil" title="Móvil (obligatorio)" onchange="cambioMovil()">
           <option value="">Móvil (obligatorio)</option>
         </select>
-        <input type="number" step="1" min="0" id="bolsas" placeholder="Total bolsas">
+        <!-- << v11 >> El total de contenedores sale del carrito -->
+        <input type="hidden" id="bolsas">
 
-        <h3>Cantidades (KG)</h3>
-        <span class="ayuda">Toque el tipo de residuo, escriba los kilos y presione «Agregar».
-          Puede agregar el mismo tipo varias veces (una por bolsa o por pesada).</span>
+        <h3>Residuos recogidos</h3>
+        <span class="ayuda">Presione «Insertar residuo» por cada cosa que recoja: tipo de residuo,
+          kilos y cuántos contenedores (bolsas, guardianes, sacos…). Si el tipo no está en la
+          lista, elija «Otro» y escríbalo: queda guardado para la próxima vez.</span>
 
-        <!-- Carrito de recolección: se va llenando con lo que se recoge -->
-        <div id="carritoTipos" class="carrito-tipos"></div>
-
-        <div class="carrito-entrada">
-          <input type="text" id="carritoKg" inputmode="decimal" autocomplete="off"
-                 placeholder="Kilos" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarAlCarrito();}">
-          <button type="button" class="btn-pro btn-guardar carrito-agregar"
-                  onclick="agregarAlCarrito()">➕ Agregar</button>
-        </div>
+        <!-- << v11 >> Carrito: una línea por residuo -->
+        <div id="carritoLineas" class="carrito-lineas"></div>
+        <button type="button" class="btn-pro btn-guardar carrito-insertar" onclick="insertarLinea(true)">➕ Insertar residuo</button>
         <div id="carritoAviso" class="carrito-aviso"></div>
-
-        <div id="carritoLista" class="carrito-lista"></div>
+        <div id="carritoResumen" class="carrito-resumen"></div>
 
         <!-- Lo que se guarda: el carrito suma aquí cada tipo de residuo -->
         <input type="hidden" id="biosanitarios">
@@ -1248,6 +1329,68 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
     </section>
 
     <!-- ================= REPORTES ================= -->
+    <!-- ================= << v11 >> IMPORTE DE RUTAS ================= -->
+    <section id="rutas" class="seccion">
+      <div class="card">
+        <h2>Importe de rutas</h2>
+        <p class="ayuda" style="margin-left:0">Cargue los clientes que recorre un móvil en el día. El conductor que
+          elija ese móvil en el formulario verá esos clientes y solo podrá registrar manifiestos de ellos
+          (y de los que agregue como «fuera de ruta»).</p>
+
+        <div class="rutas-filtros">
+          <label>Fecha<input type="date" id="rutFecha" onchange="cargarRutasFecha()"></label>
+          <label>Móvil<select id="rutMovil"><option value="">Elija el móvil</option></select></label>
+        </div>
+
+        <h3>Clientes de la ruta</h3>
+        <div class="rutas-fuentes">
+          <button type="button" class="btn-mini" onclick="descargarPlantillaRutas()">📥 Descargar plantilla de Excel</button>
+          <label class="btn-mini rutas-archivo">📂 Importar Excel o CSV
+            <input type="file" id="rutArchivo" accept=".xlsx,.xls,.csv" hidden onchange="importarArchivoRuta(this)">
+          </label>
+          <span class="rutas-por-numero">
+            <input id="rutNumero" placeholder="N.º de ruta" style="width:110px">
+            <button type="button" class="btn-mini" onclick="agregarPorNumeroRuta()">➕ Agregar los clientes de esa ruta</button>
+          </span>
+        </div>
+        <div class="buscador">
+          <input id="rutBuscar" placeholder="Buscar un cliente para agregarlo…" autocomplete="off" oninput="buscarClienteRuta()">
+          <div id="rutLista" class="lista"></div>
+        </div>
+        <span class="ayuda" style="margin-left:0">Use la plantilla: una fila por cliente, en el orden de la ruta. Solo
+          CLIENTE es obligatorio; ORDEN, CODIGO, RUTA y DIRECCION son opcionales. Escriba el nombre del cliente
+          igual que en la hoja CLIENTES para que lo reconozca.</span>
+
+        <div id="rutTabla" class="rut-tabla"></div>
+
+        <button type="button" class="btn-pro btn-guardar" onclick="guardarRuta()">💾 Guardar ruta</button>
+        <button type="button" class="btn-mini" onclick="vaciarBorradorRuta()">🧽 Vaciar lista</button>
+        <p id="estadoRutas" class="estado"></p>
+      </div>
+
+      <div class="card">
+        <h2>Rutas guardadas para la fecha</h2>
+        <div id="rutResumen"><p class="ayuda" style="margin-left:0">Elija una fecha.</p></div>
+      </div>
+    </section>
+
+    <!-- ================= << v11 >> DESCARGA DE VEHÍCULOS ================= -->
+    <section id="descarga" class="seccion">
+      <div class="card">
+        <button type="button" class="btn-pro btn-actualizar" onclick="cargarDescarga()">🔄 Actualizar</button>
+        <h2>Descarga de vehículos</h2>
+        <p class="ayuda" style="margin-left:0">Lo que lleva cada móvil desde su última descarga. Al generar la descarga
+          se crea el informe y el móvil queda en cero para empezar otro recorrido.</p>
+        <p id="estadoDescarga" class="estado"></p>
+        <div id="descVehiculos" class="desc-vehiculos"></div>
+      </div>
+
+      <div class="card">
+        <h2>Descargas anteriores</h2>
+        <div id="descHistorial"></div>
+      </div>
+    </section>
+
     <section id="reportes" class="seccion">
       <div class="card">
         <h2>Reportes</h2>
@@ -1363,7 +1506,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbwMvFkL6QzCm6hqPdcmJvrgLYZf5qSDLXQ63meuItyanjRWNyvUg1wBPdKoxSwfXd_a/exec";
+const API = "https://script.google.com/macros/s/AKfycbw3VYeOJlxAhuDrjDKeFvbdvcBetQU7V85rgcD7CHl2bh4VamD6tqzCEQZtYlwFGV8h/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -1652,7 +1795,10 @@ function arrancarApp(){
   mostrar("nuevo");
   cargarClientes(false);
   cargarMoviles();
+  cargarTipos();          // << v11 >> tipos de residuo y de contenedor
   procesarCola();
+  if(!$("manFecha").value) fechaManifiestoHoy();
+  cargarRutaDelDia();     // << v11 >> ruta del conductor
 
   // << v6 >> Números de manifiesto apartados para poder trabajar sin señal.
   cargarReserva();
@@ -1986,6 +2132,8 @@ function mostrar(id){
   if(id === "destinacion"){
     prepararDestinacion();
   }
+  if(id === "rutas")    prepararRutas();      // << v11 >>
+  if(id === "descarga") cargarDescarga();     // << v11 >>
 }
 
 function fechaISO(f){
@@ -2057,6 +2205,13 @@ function pintarMoviles(lista){
 
   // Conserva lo que el usuario ya había escogido
   if(lista.indexOf(seleccionado) !== -1) $("movil").value = seleccionado;
+  // << v12 >> El conductor no tiene que volver a elegir su móvil cada vez
+  const movilGuardado = leerCache("movil_conductor");
+  if(!$("movil").value && movilGuardado && lista.indexOf(movilGuardado) !== -1 && !esAdmin()){
+    $("movil").value = movilGuardado;
+    if(sesion.token) cargarRutaDelDia();
+  }
+  pintarMovilesRuta(lista);                    // << v11 >>
   if(lista.indexOf(filtro) !== -1)       $("histMovil").value = filtro;
 }
 
@@ -2178,10 +2333,15 @@ function buscarCliente(){
     return;
   }
 
-  resultadosBusqueda = filtrarPorTexto(texto).slice(0, 15);
+  // << v11 >> El conductor solo busca entre los clientes de su ruta
+  resultadosBusqueda = restringirARuta(filtrarPorTexto(texto)).slice(0, 15);
 
   if(resultadosBusqueda.length === 0){
-    lista.innerHTML = '<div class="item vacio">Sin coincidencias</div>';
+    lista.innerHTML = (!esAdmin() && !modoFueraRuta)
+      ? ($("movil").value
+          ? '<div class="item vacio">No está en la ruta de hoy. Use «Cliente fuera de ruta».</div>'
+          : '<div class="item vacio">Elija primero su móvil para ver los clientes de la ruta.</div>')
+      : '<div class="item vacio">Sin coincidencias</div>';
     lista.classList.add("abierta");
     return;
   }
@@ -2207,7 +2367,14 @@ function buscarCliente(){
 function seleccionar(indice){
   const c = resultadosBusqueda[indice];
   if(!c) return;
+  usarCliente(c);
+}
+
+// << v11 >> Pone el cliente en el formulario (desde la búsqueda o la ruta)
+function usarCliente(c){
   clienteSeleccionado = c;
+  clienteFueraDeRuta = !esAdmin() && !enRuta(c.nombre);
+  $("avisoFueraRuta").hidden = !clienteFueraDeRuta;
   $("cliente").value = c.nombre || "";
   $("ruta").value    = c.ruta || "";
   $("buscar").value  = c.nombre || "";
@@ -3008,125 +3175,506 @@ function sumar(){
   $("total").textContent = suma.toFixed(2);
 }
 
-/* ================= CARRITO DE RECOLECCIÓN ================= */
+/* ================= << v11 >> CARRITO DE RESIDUOS ================= */
 /*
- * En vez de siete casillas, el operario va agregando lo que recoge: elige el
- * tipo, escribe los kilos y lo añade a la lista. Puede repetir el mismo tipo
- * (una pesada por bolsa) y quitar lo que se equivocó. Cada vez que cambia la
- * lista se suman los kilos por tipo en los campos ocultos #biosanitarios,
- * #cortopunzantes..., que son los que lee guardar(): así el envío a la hoja,
- * y el total siguen funcionando igual que antes.
+ * Cada línea es un residuo recogido: tipo (de la hoja TIPO DE RESIDUOS),
+ * kilos, cantidad y tipo de contenedor (hoja TIPO DE CONTENEDOR). Si el
+ * tipo no existe se escribe a mano y queda creado para la próxima vez.
+ * Las líneas se suman por DESIGNACIÓN en los campos ocultos #biosanitarios,
+ * #cortopunzantes..., así las columnas de DATOS y los certificados siguen
+ * igual; además las líneas viajan completas para el detalle y la descarga.
  */
-let carrito      = [];               // [{ id, clave, kg }]
-let carritoTipo  = "biosanitarios";  // tipo elegido para la próxima pesada
-let carritoSeq   = 0;
-let carritoUltimo = 0;               // para resaltar lo recién agregado
+const DESIGNACIONES_RES = [
+  ["biosanitarios","Biosanitario"], ["cortopunzantes","Cortopunzante"],
+  ["anatomopatologicos","Anatomopatológico"], ["farmaceuticos","Farmacéutico"],
+  ["liquido","Líquido"], ["medicamentos","Medicamentos"], ["otros","Otros"]
+];
+
+// Si no hay señal la primera vez, se trabaja con estos.
+const TIPOS_RESIDUO_BASE = [
+  { nombre:"BIOSANITARIOS",         designacion:"biosanitarios",      tratamiento:"AUTOCLAVE",    corriente:"Y1.2 - A4020.2" },
+  { nombre:"CORTOPUNZANTES",        designacion:"cortopunzantes",     tratamiento:"INCINERACIÓN", corriente:"Y1.3 - A4020.2" },
+  { nombre:"ANATOMOPATOLÓGICOS",    designacion:"anatomopatologicos", tratamiento:"INCINERACIÓN", corriente:"Y1.1 - A4020.2" },
+  { nombre:"FARMACOS",              designacion:"farmaceuticos",      tratamiento:"INCINERACIÓN", corriente:"Y3 - A4020.2" },
+  { nombre:"LIQUIDO REVELADOR",     designacion:"liquido",            tratamiento:"DISPOSICIÓN DE LIQUIDOS CON NEUTRALIZACIÓN", corriente:"Y16 - A4140" },
+  { nombre:"MEDICAMENTOS VENCIDOS", designacion:"medicamentos",       tratamiento:"INCINERACIÓN", corriente:"Y3 - A4020.2" },
+  { nombre:"OTROS",                 designacion:"otros",              tratamiento:"INCINERACIÓN", corriente:"" }
+];
+const CONTENEDORES_BASE = ["BOLSA", "GUARDIÁN", "SACO", "CANECA", "GALÓN"];
+
+let tiposResiduo    = TIPOS_RESIDUO_BASE.slice();
+let tiposContenedor = CONTENEDORES_BASE.slice();
+
+let carrito         = [];      // [{ id, tipo, kg, cantidad, contenedor }]
+let carritoSeq      = 0;
+let carritoEditando = null;    // { id, campo:"tipo"|"contenedor" }
+
+const claveNombre = t => normalizar(t).replace(/[^a-z0-9]/g, "");
+
+function tipoPorNombre(nombre){
+  const k = claveNombre(nombre);
+  return tiposResiduo.find(t => claveNombre(t.nombre) === k) || null;
+}
+
+function nombreDesignacion(d){
+  const x = DESIGNACIONES_RES.find(p => p[0] === d);
+  return x ? x[1] : d;
+}
+
+/* ----- tipos desde el servidor (con copia en el equipo) ----- */
+function cargarTipos(){
+  const unir = (base, extra, clave) => {
+    const vistos = new Set(base.map(clave));
+    extra.forEach(x => { if(!vistos.has(clave(x))){ base.push(x); vistos.add(clave(x)); } });
+    return base;
+  };
+
+  try{
+    const r = JSON.parse(leerCache("tipos_residuo_cache") || "null");
+    if(Array.isArray(r) && r.length) tiposResiduo = r;
+    const c = JSON.parse(leerCache("tipos_contenedor_cache") || "null");
+    if(Array.isArray(c) && c.length) tiposContenedor = c;
+  }catch(e){ console.warn("Caché de tipos dañada", e); }
+  pintarCarrito();
+
+  pedir(API + "?accion=tiposResiduo").then(lista => {
+    if(!Array.isArray(lista) || !lista.length) return;
+    // Lo creado aquí que aún no llega al servidor no se pierde
+    tiposResiduo = unir(lista, tiposResiduo, t => claveNombre(t.nombre));
+    guardarCache("tipos_residuo_cache", JSON.stringify(tiposResiduo));
+    pintarCarrito();
+  }).catch(e => console.warn("No se pudieron cargar los tipos de residuo:", e));
+
+  pedir(API + "?accion=tiposContenedor").then(lista => {
+    if(!Array.isArray(lista) || !lista.length) return;
+    tiposContenedor = unir(lista, tiposContenedor, claveNombre);
+    guardarCache("tipos_contenedor_cache", JSON.stringify(tiposContenedor));
+    pintarCarrito();
+  }).catch(e => console.warn("No se pudieron cargar los contenedores:", e));
+}
+
+/* ----- líneas ----- */
+function insertarLinea(enfocar){
+  carritoSeq++;
+  carrito.push({ id:carritoSeq, tipo:"", kg:"", cantidad:"", contenedor:"" });
+  pintarCarrito();
+  if(enfocar){
+    const sel = document.querySelector(`.linea-res[data-id="${carritoSeq}"] select`);
+    if(sel) sel.focus();
+  }
+}
+
+function lineaCarrito(id){ return carrito.find(x => x.id === id); }
+
+function quitarLinea(id){
+  carrito = carrito.filter(x => x.id !== id);
+  if(carritoEditando && carritoEditando.id === id) carritoEditando = null;
+  if(!carrito.length) insertarLinea(false);
+  else pintarCarrito();
+}
+
+// Kilos y cantidad: no se repinta (perdería el cursor), solo se suma.
+function cambiarLinea(id, campo, valor){
+  const l = lineaCarrito(id);
+  if(!l) return;
+  l[campo] = valor;
+  const fila = document.querySelector(`.linea-res[data-id="${id}"]`);
+  if(fila) fila.classList.remove("incompleta");
+  sincronizarCarrito();
+}
+
+function elegirTipoLinea(id, valor){
+  const l = lineaCarrito(id);
+  if(!l) return;
+  if(valor === "__nuevo"){ carritoEditando = { id:id, campo:"tipo" }; pintarCarrito(); enfocarNuevo(id); return; }
+  l.tipo = valor;
+  sincronizarCarrito();
+  pintarCarrito();
+}
+
+function elegirContenedorLinea(id, valor){
+  const l = lineaCarrito(id);
+  if(!l) return;
+  if(valor === "__nuevo"){ carritoEditando = { id:id, campo:"contenedor" }; pintarCarrito(); enfocarNuevo(id); return; }
+  l.contenedor = valor;
+  sincronizarCarrito();
+  pintarCarrito();
+}
+
+function enfocarNuevo(id){
+  const el = document.querySelector(`.linea-res[data-id="${id}"] .lr-nuevo input`);
+  if(el) el.focus();
+}
+
+function cancelarNuevo(){
+  carritoEditando = null;
+  pintarCarrito();
+}
+
+function guardarNuevoTipo(id){
+  const fila   = document.querySelector(`.linea-res[data-id="${id}"]`);
+  const nombre = String(fila.querySelector(".nt-nombre").value || "").trim().toUpperCase();
+  const desig  = fila.querySelector(".nt-desig").value;
+  const trat   = String(fila.querySelector(".nt-trat").value || "").trim().toUpperCase();
+  const corr   = String(fila.querySelector(".nt-corr").value || "").trim().toUpperCase();
+
+  if(!nombre){ alert("Escriba el nombre del tipo de residuo"); return; }
+  if(!desig){ alert("Elija la designación (a qué columna suma este residuo)"); return; }
+
+  let tipo = tipoPorNombre(nombre);
+  if(!tipo){
+    tipo = { nombre:nombre, designacion:desig, tratamiento:trat, corriente:corr };
+    tiposResiduo.push(tipo);
+    guardarCache("tipos_residuo_cache", JSON.stringify(tiposResiduo));
+    // Va por la cola: si no hay señal, se crea en la hoja al reconectar.
+    encolar({ accion:"guardarTipoResiduo", nombre:nombre, designacion:desig,
+              tratamiento:trat, corriente:corr },
+            "Nuevo tipo de residuo: " + nombre, "tipo");
+  }
+
+  lineaCarrito(id).tipo = tipo.nombre;
+  carritoEditando = null;
+  sincronizarCarrito();
+  pintarCarrito();
+}
+
+function guardarNuevoContenedor(id){
+  const fila   = document.querySelector(`.linea-res[data-id="${id}"]`);
+  const nombre = String(fila.querySelector(".nc-nombre").value || "").trim().toUpperCase();
+  if(!nombre){ alert("Escriba el nombre del contenedor"); return; }
+
+  if(!tiposContenedor.some(c => claveNombre(c) === claveNombre(nombre))){
+    tiposContenedor.push(nombre);
+    guardarCache("tipos_contenedor_cache", JSON.stringify(tiposContenedor));
+    encolar({ accion:"guardarTipoContenedor", nombre:nombre },
+            "Nuevo tipo de contenedor: " + nombre, "tipo");
+  }
+
+  const elegido = tiposContenedor.find(c => claveNombre(c) === claveNombre(nombre)) || nombre;
+  lineaCarrito(id).contenedor = elegido;
+  carritoEditando = null;
+  sincronizarCarrito();
+  pintarCarrito();
+}
+
+function pintarCarrito(){
+  const caja = $("carritoLineas");
+  if(!caja) return;
+
+  const opcionesTipo = (actual) =>
+    '<option value="">Elija el residuo…</option>' +
+    tiposResiduo.map(t => `<option value="${esc(t.nombre)}"${claveNombre(t.nombre) === claveNombre(actual) ? " selected" : ""}>${esc(t.nombre)}</option>`).join("") +
+    // Un tipo de una línea que ya no está en la lista se conserva
+    (actual && !tipoPorNombre(actual) ? `<option value="${esc(actual)}" selected>${esc(actual)}</option>` : "") +
+    '<option value="__nuevo">✏️ Otro (escribir)…</option>';
+
+  const opcionesCont = (actual) =>
+    '<option value="">—</option>' +
+    tiposContenedor.map(c => `<option value="${esc(c)}"${claveNombre(c) === claveNombre(actual) ? " selected" : ""}>${esc(c)}</option>`).join("") +
+    (actual && !tiposContenedor.some(c => claveNombre(c) === claveNombre(actual)) ? `<option value="${esc(actual)}" selected>${esc(actual)}</option>` : "") +
+    '<option value="__nuevo">✏️ Otro (escribir)…</option>';
+
+  caja.innerHTML = carrito.map((l, i) => {
+    const editaTipo = carritoEditando && carritoEditando.id === l.id && carritoEditando.campo === "tipo";
+    const editaCont = carritoEditando && carritoEditando.id === l.id && carritoEditando.campo === "contenedor";
+
+    const nuevoTipo = editaTipo ? `
+      <div class="lr-nuevo">
+        <b>Nuevo tipo de residuo</b>
+        <input class="nt-nombre" placeholder="Nombre (ej. QUÍMICOS)">
+        <select class="nt-desig">
+          <option value="">Designación…</option>
+          ${DESIGNACIONES_RES.map(d => `<option value="${d[0]}">${d[1]}</option>`).join("")}
+        </select>
+        <input class="nt-trat" placeholder="Tratamiento (opcional)">
+        <input class="nt-corr" placeholder="Corriente (opcional)">
+        <button type="button" class="btn-mini" onclick="guardarNuevoTipo(${l.id})">💾 Crear tipo</button>
+        <button type="button" class="btn-mini" onclick="cancelarNuevo()">Cancelar</button>
+      </div>` : "";
+
+    const nuevoCont = editaCont ? `
+      <div class="lr-nuevo">
+        <b>Nuevo tipo de contenedor</b>
+        <input class="nc-nombre" placeholder="Nombre (ej. BOLSA ROJA)"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();guardarNuevoContenedor(${l.id});}">
+        <button type="button" class="btn-mini" onclick="guardarNuevoContenedor(${l.id})">💾 Crear contenedor</button>
+        <button type="button" class="btn-mini" onclick="cancelarNuevo()">Cancelar</button>
+      </div>` : "";
+
+    return `
+    <div class="linea-res" data-id="${l.id}">
+      <span class="lr-num">${i + 1}.</span>
+      <label class="lr-tipo">Tipo de residuo
+        <select onchange="elegirTipoLinea(${l.id}, this.value)">${opcionesTipo(l.tipo)}</select>
+      </label>
+      <label class="lr-kg">Kilos
+        <input type="text" inputmode="decimal" autocomplete="off" placeholder="0,00"
+               value="${esc(l.kg)}" oninput="cambiarLinea(${l.id}, 'kg', this.value)">
+      </label>
+      <label class="lr-cant">Cantidad
+        <input type="text" inputmode="numeric" autocomplete="off" placeholder="0"
+               value="${esc(l.cantidad)}" oninput="cambiarLinea(${l.id}, 'cantidad', this.value)">
+      </label>
+      <label class="lr-cont">Contenedor
+        <select onchange="elegirContenedorLinea(${l.id}, this.value)">${opcionesCont(l.contenedor)}</select>
+      </label>
+      <button type="button" class="lr-quitar" title="Quitar esta línea" onclick="quitarLinea(${l.id})">🗑️</button>
+      ${nuevoTipo}${nuevoCont}
+    </div>`;
+  }).join("");
+}
+
+const numeroCarrito = v => {
+  const n = Number(String(v === undefined || v === null ? "" : v).trim().replace(",", "."));
+  return isFinite(n) ? n : 0;
+};
 
 function kgCarrito(n){
   return (Number(n) || 0).toFixed(2).replace(".", ",");
 }
 
-// Totales por tipo, a partir de las líneas del carrito
-function subtotalesCarrito(){
-  const t = {};
-  CAMPOS_CANTIDAD.forEach(id => { t[id] = 0; });
-  carrito.forEach(x => { t[x.clave] += x.kg; });
-  return t;
-}
-
-function pintarTiposCarrito(){
-  const sub = subtotalesCarrito();
-  $("carritoTipos").innerHTML = CAMPOS_CANTIDAD.map(id => `
-    <button type="button" class="carrito-tipo${id === carritoTipo ? " activo" : ""}${sub[id] > 0 ? " con-peso" : ""}"
-            onclick="elegirTipoCarrito('${id}')">
-      <span>${esc(etiquetaResiduo(id))}</span>
-      <span class="sub">${sub[id] > 0 ? kgCarrito(sub[id]) + " kg" : "—"}</span>
-    </button>`).join("");
-
-  $("carritoKg").placeholder = "Kilos de " + etiquetaResiduo(carritoTipo).toLowerCase();
-}
-
-function pintarListaCarrito(){
-  const lista = $("carritoLista");
-
-  if(carrito.length === 0){
-    lista.innerHTML = `<div class="carrito-vacio">🛒 Aún no ha agregado residuos.</div>`;
-    return;
-  }
-
-  lista.innerHTML = carrito.map((x, i) => `
-    <div class="carrito-item${x.id === carritoUltimo ? " nuevo" : ""}">
-      <span class="num">${i + 1}.</span>
-      <span class="tipo">${esc(etiquetaResiduo(x.clave))}</span>
-      <span class="kg">${kgCarrito(x.kg)} kg</span>
-      <button type="button" title="Quitar" onclick="quitarDelCarrito(${x.id})">🗑️</button>
-    </div>`).join("") + `
-    <div class="carrito-pie">
-      <span>${carrito.length} ${carrito.length === 1 ? "pesada" : "pesadas"}</span>
-      <button type="button" onclick="vaciarCarrito()">Vaciar todo</button>
-    </div>`;
-}
-
-// Pasa los subtotales a los campos ocultos y actualiza todo lo visible
+// Suma por designación en los campos ocultos y pinta el resumen
 function sincronizarCarrito(){
-  const sub = subtotalesCarrito();
-  CAMPOS_CANTIDAD.forEach(id => {
-    $(id).value = sub[id] > 0 ? (Math.round(sub[id] * 100) / 100).toFixed(2) : "";
+  const sumas = {};
+  CAMPOS_CANTIDAD.forEach(id => { sumas[id] = 0; });
+  const porTipo = {}, porCont = {};
+  let contenedores = 0;
+
+  carrito.forEach(l => {
+    const kg = numeroCarrito(l.kg);
+    const cant = Math.max(0, Math.round(numeroCarrito(l.cantidad)));
+    const tipo = tipoPorNombre(l.tipo);
+    const desig = tipo ? tipo.designacion : (l.tipo ? "otros" : "");
+    if(kg > 0 && desig && sumas[desig] !== undefined) sumas[desig] += kg;
+    if(kg > 0 && l.tipo) porTipo[l.tipo] = (porTipo[l.tipo] || 0) + kg;
+    if(cant > 0){
+      contenedores += cant;
+      const c = l.contenedor || "SIN CONTENEDOR";
+      porCont[c] = (porCont[c] || 0) + cant;
+    }
   });
+
+  CAMPOS_CANTIDAD.forEach(id => {
+    $(id).value = sumas[id] > 0 ? (Math.round(sumas[id] * 100) / 100).toFixed(2) : "";
+  });
+  $("bolsas").value = contenedores > 0 ? String(contenedores) : "";
   sumar();
-  pintarTiposCarrito();
-  pintarListaCarrito();
+
+  const chips = Object.keys(porTipo).map(t => `<span class="chip">${esc(t)}: <b>${kgCarrito(porTipo[t])} kg</b></span>`)
+    .concat(Object.keys(porCont).map(c => `<span class="chip cont">${porCont[c]} ${esc(c)}</span>`));
+  $("carritoResumen").innerHTML = chips.join("");
 }
 
-function elegirTipoCarrito(clave){
-  carritoTipo = clave;
-  $("carritoAviso").textContent = "";
-  pintarTiposCarrito();
-  $("carritoKg").focus();
-}
+/**
+ * Líneas listas para enviar. Revisa que cada línea con algo escrito esté
+ * completa; las totalmente vacías se ignoran.
+ */
+function lineasDelCarrito(){
+  const lineas = [];
+  let error = "";
 
-function agregarAlCarrito(){
-  // Acepta coma o punto: en el celular el teclado suele traer la coma.
-  const texto = String($("carritoKg").value).trim().replace(",", ".");
-  const kg = Number(texto);
+  document.querySelectorAll(".linea-res").forEach(f => f.classList.remove("incompleta"));
 
-  if(!texto || !isFinite(kg) || kg <= 0){
-    $("carritoAviso").textContent = "Escriba los kilos (por ejemplo 12,5).";
-    $("carritoKg").focus();
-    return;
-  }
+  carrito.forEach((l, i) => {
+    const kg = numeroCarrito(l.kg);
+    const cant = Math.max(0, Math.round(numeroCarrito(l.cantidad)));
+    const vacia = !l.tipo && !(kg > 0) && !(cant > 0) && !l.contenedor;
+    if(vacia) return;
 
-  carritoSeq++;
-  carritoUltimo = carritoSeq;
-  carrito.push({ id: carritoSeq, clave: carritoTipo, kg: Math.round(kg * 100) / 100 });
+    let falta = "";
+    if(!l.tipo)                       falta = "elija el tipo de residuo";
+    else if(!(kg > 0))                falta = "escriba los kilos";
+    else if(cant > 0 && !l.contenedor) falta = "elija el tipo de contenedor";
+    else if(l.contenedor && !(cant > 0)) falta = "escriba la cantidad de " + l.contenedor.toLowerCase();
 
-  $("carritoKg").value = "";
-  $("carritoAviso").textContent = "";
-  sincronizarCarrito();
-  $("carritoKg").focus();       // listo para la siguiente pesada
-}
+    if(falta){
+      if(!error) error = "Línea " + (i + 1) + ": " + falta + ".";
+      const f = document.querySelector(`.linea-res[data-id="${l.id}"]`);
+      if(f) f.classList.add("incompleta");
+      return;
+    }
 
-function quitarDelCarrito(id){
-  carrito = carrito.filter(x => x.id !== id);
-  carritoUltimo = 0;
-  sincronizarCarrito();
-}
+    const tipo = tipoPorNombre(l.tipo) || { designacion:"otros", tratamiento:"", corriente:"" };
+    lineas.push({
+      tipo: String(l.tipo).toUpperCase(),
+      designacion: tipo.designacion,
+      tratamiento: tipo.tratamiento || "",
+      corriente: tipo.corriente || "",
+      kg: Math.round(kg * 100) / 100,
+      cantidad: cant,
+      contenedor: l.contenedor || ""
+    });
+  });
 
-function vaciarCarrito(){
-  if(carrito.length && !confirm("¿Quitar todos los residuos agregados?")) return;
-  reiniciarCarrito();
+  if(!error && !lineas.length) error = "Agregue al menos un residuo con sus kilos.";
+  return { lineas:lineas, error:error };
 }
 
 function reiniciarCarrito(){
   carrito = [];
-  carritoUltimo = 0;
-  carritoTipo = "biosanitarios";
-  $("carritoKg").value = "";
-  $("carritoAviso").textContent = "";
+  carritoEditando = null;
+  if($("carritoAviso")) $("carritoAviso").textContent = "";
+  insertarLinea(false);
   sincronizarCarrito();
 }
 
 reiniciarCarrito();
+
+
+/* ================= << v11 >> RUTA DEL DÍA (conductor) ================= */
+/*
+ * Administración carga la ruta en «Importe de rutas». El conductor ve aquí
+ * sus clientes del día, toca uno para llenar el formulario y solo puede
+ * registrar manifiestos de esa lista. Un cliente aparte lo agrega con
+ * «Cliente fuera de ruta»: el servidor lo suma a la ruta al guardar.
+ */
+let rutaHoy = { fecha:"", movil:"", paradas:[], cargada:false };
+let modoFueraRuta = false;
+let clienteFueraDeRuta = false;
+
+function claveRuta(fecha, movil){ return "ruta_" + (movil || "") + "_" + fecha; }
+
+function enRuta(nombre){
+  const k = claveNombre(nombre);
+  return rutaHoy.paradas.some(p => claveNombre(p.cliente) === k);
+}
+
+function cargarRutaDelDia(){
+  const card = $("rutaCard");
+  if(!card) return;
+
+  if(!sesion.token || esAdmin()){ card.hidden = true; rutaHoy = { fecha:"", movil:"", paradas:[], cargada:false }; return; }
+
+  const fecha = $("manFecha").value || fechaISO(new Date());
+  const movil = $("movil").value;
+
+  // La ruta es del MÓVIL: sin móvil elegido no hay ruta que mostrar
+  if(!movil){
+    rutaHoy = { fecha:fecha, movil:"", paradas:[], cargada:false };
+    pintarRuta();
+    return;
+  }
+
+  // Primero lo guardado en el equipo: el conductor puede estar sin señal
+  try{
+    const c = JSON.parse(leerCache(claveRuta(fecha, movil)) || "null");
+    rutaHoy = c && c.fecha === fecha ? c : { fecha:fecha, movil:movil, paradas:[], cargada:false };
+  }catch(e){ rutaHoy = { fecha:fecha, movil:movil, paradas:[], cargada:false }; }
+  rutaHoy.movil = movil;
+  pintarRuta();
+
+  pedir(API + "?accion=rutaDelDia&fecha=" + encodeURIComponent(fecha) + "&movil=" + encodeURIComponent(movil))
+    .then(r => {
+      if(!r || r.estado === "error") throw new Error((r && r.mensaje) || "Sin respuesta");
+      // cambió la fecha o el móvil mientras tanto
+      if(($("manFecha").value || fechaISO(new Date())) !== fecha || $("movil").value !== movil) return;
+
+      // Lo marcado en el equipo (manifiestos aún en la cola) se conserva
+      const locales = {};
+      rutaHoy.paradas.forEach(p => { locales[claveNombre(p.cliente)] = p; });
+
+      const paradas = (r.paradas || []).map(p => {
+        const l = locales[claveNombre(p.cliente)];
+        if(l && l.estado === "RECOGIDO" && p.estado !== "RECOGIDO"){
+          return Object.assign({}, p, { estado:"RECOGIDO", manifiesto:l.manifiesto });
+        }
+        return p;
+      });
+      rutaHoy.paradas.forEach(p => {
+        if(p.origen === "AGREGADO EN RUTA" && !paradas.some(x => claveNombre(x.cliente) === claveNombre(p.cliente))){
+          paradas.push(p);
+        }
+      });
+
+      rutaHoy = { fecha:fecha, movil:movil, paradas:paradas, cargada:true };
+      guardarCache(claveRuta(fecha, movil), JSON.stringify(rutaHoy));
+      pintarRuta();
+    })
+    .catch(e => {
+      console.warn("No se pudo cargar la ruta:", e);
+      pintarRuta(rutaHoy.cargada ? "" : "Sin conexión: se muestra la última ruta guardada en el equipo.");
+    });
+}
+
+function pintarRuta(aviso){
+  const card = $("rutaCard");
+  if(!card) return;
+  card.hidden = esAdmin();
+  if(esAdmin()) return;
+
+  const total = rutaHoy.paradas.length;
+  const hechas = rutaHoy.paradas.filter(p => p.estado === "RECOGIDO").length;
+
+  card.classList.toggle("modo-fuera", modoFueraRuta);
+  card.innerHTML = `
+    <h3>🗺️ Mi ruta del ${esc(fechaDiaMes(rutaHoy.fecha) || rutaHoy.fecha)}</h3>
+    <div class="ruta-sub">
+      ${rutaHoy.movil ? "Móvil " + esc(rutaHoy.movil) + " · " : ""}
+      ${total ? hechas + " de " + total + " recogidos" : "Sin clientes asignados"}
+      ${aviso ? "<br>" + esc(aviso) : ""}
+    </div>
+    ${total ? `<div class="ruta-paradas">${rutaHoy.paradas.map((p, i) => `
+      <button type="button" class="ruta-parada${p.estado === "RECOGIDO" ? " recogido" : ""}${p.origen === "AGREGADO EN RUTA" ? " agregado" : ""}"
+              onclick="elegirParada(${i})">
+        <span class="num">${i + 1}.</span>
+        <span class="info"><b>${esc(p.cliente)}</b><small>${esc(p.direccion || "")}${p.ruta ? " · Ruta " + esc(p.ruta) : ""}</small></span>
+        <span class="est">${p.estado === "RECOGIDO" ? "✔ Recogido" + (p.manifiesto ? " " + esc(p.manifiesto) : "") : (p.origen === "AGREGADO EN RUTA" ? "Agregado" : "Pendiente")}</span>
+      </button>`).join("")}</div>`
+      : (rutaHoy.movil
+          ? `<p class="ayuda" style="margin-left:0">El móvil ${esc(rutaHoy.movil)} no tiene ruta cargada para esta fecha. Si va a recoger a un cliente, use «Cliente fuera de ruta».</p>`
+          : `<p class="ayuda" style="margin-left:0">👉 Elija su <b>móvil</b> en el formulario para ver la ruta del día.</p>`)}
+    <div class="ruta-acciones">
+      <button type="button" class="btn-mini" onclick="alternarFueraRuta()">${modoFueraRuta ? "✖ Cancelar cliente fuera de ruta" : "➕ Cliente fuera de ruta"}</button>
+      <button type="button" class="btn-mini" onclick="cargarRutaDelDia()">🔄 Actualizar ruta</button>
+    </div>
+    ${modoFueraRuta ? `<p class="ayuda" style="margin-left:0">Busque el cliente en la casilla de búsqueda (o créelo en Clientes si no existe). Quedará agregado a su ruta de hoy.</p>` : ""}`;
+}
+
+// << v12 >> Al cambiar de móvil se carga la ruta de ese móvil
+function cambioMovil(){
+  if(!esAdmin()) guardarCache("movil_conductor", $("movil").value);
+  cargarRutaDelDia();
+}
+
+function alternarFueraRuta(){
+  modoFueraRuta = !modoFueraRuta;
+  pintarRuta();
+  if(modoFueraRuta){ $("buscar").value = ""; $("buscar").focus(); }
+}
+
+function elegirParada(i){
+  const p = rutaHoy.paradas[i];
+  if(!p) return;
+  const k = claveNombre(p.cliente);
+  const c = (p.codigo && clientes.find(x => String(x.codigo || "").trim() === p.codigo)) ||
+            clientes.find(x => claveNombre(x.nombre) === k) ||
+            { nombre:p.cliente, ruta:p.ruta, direccion:p.direccion, codigo:p.codigo };
+  usarCliente(c);
+  $("manifiesto").scrollIntoView({ block:"center", behavior:"smooth" });
+}
+
+/* Conductor: la búsqueda solo muestra clientes de la ruta, salvo en
+   «Cliente fuera de ruta». Administración ve todos. */
+function restringirARuta(lista){
+  if(esAdmin() || modoFueraRuta) return lista;
+  return lista.filter(c => enRuta(c.nombre));
+}
+
+function marcarParadaLocal(nombre, manifiesto, fuera, c){
+  const k = claveNombre(nombre);
+  const p = rutaHoy.paradas.find(x => claveNombre(x.cliente) === k && x.estado !== "RECOGIDO") ||
+            rutaHoy.paradas.find(x => claveNombre(x.cliente) === k);
+  if(p){
+    p.estado = "RECOGIDO";
+    p.manifiesto = manifiesto;
+  }else if(fuera){
+    rutaHoy.paradas.push({ cliente:nombre, codigo:(c && c.codigo) || "", ruta:(c && c.ruta) || "",
+                           direccion:(c && c.direccion) || "", estado:"RECOGIDO",
+                           manifiesto:manifiesto, origen:"AGREGADO EN RUTA" });
+  }
+  if(rutaHoy.fecha && rutaHoy.movil) guardarCache(claveRuta(rutaHoy.fecha, rutaHoy.movil), JSON.stringify(rutaHoy));
+  pintarRuta();
+}
 
 // Ni el móvil ni la fecha se limpian: en una misma jornada se repiten y
 // así el operario no tiene que volver a ponerlos en cada manifiesto.
@@ -3144,6 +3692,8 @@ function limpiarManifiesto(){
   $("total").textContent = "0.00";
   reiniciarCarrito();
   clienteSeleccionado = null;
+  clienteFueraDeRuta = false;                 // << v11 >>
+  $("avisoFueraRuta").hidden = true;
   limpiarFirma();                    // << v5 >>
 }
 
@@ -3175,6 +3725,22 @@ function guardar(){
   if(!movil){ alert("Seleccione el móvil"); $("movil").focus(); return; }
   if(!fecha){ alert("Indique la fecha de la recolección"); $("manFecha").focus(); return; }
 
+  // << v11 >> El conductor solo registra clientes de su ruta, salvo que los
+  // haya agregado como «fuera de ruta».
+  if(!esAdmin() && clienteFueraDeRuta && !modoFueraRuta){
+    alert("Ese cliente no está en su ruta de hoy. Use «Cliente fuera de ruta» para agregarlo.");
+    return;
+  }
+
+  // << v11 >> Residuos del carrito
+  const carritoListo = lineasDelCarrito();
+  if(carritoListo.error){
+    $("carritoAviso").textContent = carritoListo.error;
+    $("carritoLineas").scrollIntoView({ block:"center", behavior:"smooth" });
+    alert(carritoListo.error);
+    return;
+  }
+
   // << v5 >> La firma del cliente es la constancia de que se le recogió.
   if(EXIGIR_FIRMA && !hayFirma()){
     const lienzo = $("firmaLienzo");
@@ -3203,7 +3769,11 @@ function guardar(){
     total:$("total").textContent,
     firma:firmaComoTexto(),           // << v5 >> el trazo, como texto
     abono:$("abono").value || "0",    // << v9 >>
-    formaPago:$("formaPago").value
+    formaPago:$("formaPago").value,
+    lineas:carritoListo.lineas,       // << v11 >> detalle del carrito
+    fueraDeRuta:clienteFueraDeRuta,
+    codigo:(clienteSeleccionado && clienteSeleccionado.codigo) || "",
+    direccion:(clienteSeleccionado && clienteSeleccionado.direccion) || ""
   };
   CAMPOS_CANTIDAD.forEach(id => { datos[id] = $(id).value || "0"; });
 
@@ -3220,9 +3790,502 @@ function guardar(){
     "✔ Manifiesto " + numero + " guardado" +
     (navigator.onLine ? ". Enviándose en segundo plano." : " sin conexión: se enviará al reconectar."));
 
+  // << v11 >> La parada queda marcada en la ruta del equipo
+  if(!esAdmin()){
+    marcarParadaLocal(datos.cliente, numero, clienteFueraDeRuta, clienteSeleccionado);
+    modoFueraRuta = false;
+  }
+
   limpiarManifiesto();
   consumirNumero(numero);            // << v6 >> deja listo el siguiente
+  if(!esAdmin()) pintarRuta();
 }
+
+/* ================= << v11 >> IMPORTE DE RUTAS (administración) ================= */
+
+let rutaBorrador = [];          // [{ cliente, codigo, ruta, direccion, enClientes }]
+let rutaResultados = [];
+
+function pintarMovilesRuta(lista){
+  const sel = $("rutMovil");
+  if(!sel) return;
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">Elija el móvil</option>' +
+    lista.map(m => `<option value="${esc(m)}">Móvil ${esc(m)}</option>`).join("");
+  if(lista.indexOf(actual) !== -1) sel.value = actual;
+}
+
+function prepararRutas(){
+  if(!$("rutFecha").value) $("rutFecha").value = fechaISO(new Date());
+  pintarMovilesRuta(moviles || []);
+  pintarBorradorRuta();
+  cargarRutasFecha();
+}
+
+/* Plantilla de Excel para subir rutas. Una hoja RUTA con los títulos y dos
+   filas de ejemplo, y una hoja INSTRUCCIONES. */
+function descargarPlantillaRutas(){
+  const titulos = ["ORDEN", "CLIENTE", "CODIGO", "RUTA", "DIRECCION"];
+  const ejemplo = [
+    [1, "NOMBRE DEL CLIENTE COMO ESTÁ EN CLIENTES", "", "3", "CALLE 10 # 5-20"],
+    [2, "OTRO CLIENTE DE LA RUTA", "", "3", ""]
+  ];
+
+  if(typeof XLSX === "undefined"){
+    // Sin la librería (sin internet) sale en CSV, que Excel también abre.
+    const csv = [titulos].concat(ejemplo)
+      .map(f => f.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(";")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type:"text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = "plantilla_rutas.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    return;
+  }
+
+  const libro = XLSX.utils.book_new();
+
+  const hoja = XLSX.utils.aoa_to_sheet([titulos].concat(ejemplo));
+  hoja["!cols"] = [{ wch:8 }, { wch:48 }, { wch:12 }, { wch:8 }, { wch:36 }];
+  XLSX.utils.book_append_sheet(libro, hoja, "RUTA");
+
+  const ayuda = XLSX.utils.aoa_to_sheet([
+    ["CÓMO LLENAR LA PLANTILLA DE RUTAS"],
+    [""],
+    ["1. Una fila por cliente, en el orden en que el móvil los va a recoger."],
+    ["2. CLIENTE es obligatorio: escríbalo igual que en la hoja CLIENTES."],
+    ["3. ORDEN, CODIGO, RUTA y DIRECCION son opcionales."],
+    ["4. Borre las dos filas de ejemplo antes de subir el archivo."],
+    ["5. En la aplicación elija la fecha y el móvil, y suba el archivo con «Importar Excel o CSV»."],
+    ["6. Revise la lista: los clientes marcados con ⚠️ no se encontraron en CLIENTES."]
+  ]);
+  ayuda["!cols"] = [{ wch:95 }];
+  XLSX.utils.book_append_sheet(libro, ayuda, "INSTRUCCIONES");
+
+  XLSX.writeFile(libro, "plantilla_rutas.xlsx");
+}
+
+function clienteDeLista(nombre, codigo){
+  const k = claveNombre(nombre);
+  return (codigo && clientes.find(c => String(c.codigo || "").trim() === String(codigo).trim())) ||
+         clientes.find(c => claveNombre(c.nombre) === k) || null;
+}
+
+function agregarABorrador(p){
+  const nombre = String(p.cliente || "").trim();
+  if(!nombre) return false;
+  if(rutaBorrador.some(x => claveNombre(x.cliente) === claveNombre(nombre))) return false;
+  const c = clienteDeLista(nombre, p.codigo);
+  rutaBorrador.push({
+    cliente: c ? c.nombre : nombre,
+    codigo: String(p.codigo || (c && c.codigo) || "").trim(),
+    ruta: String(p.ruta || (c && c.ruta) || "").trim(),
+    direccion: String(p.direccion || (c && c.direccion) || "").trim(),
+    enClientes: !!c
+  });
+  return true;
+}
+
+function pintarBorradorRuta(){
+  const caja = $("rutTabla");
+  if(!caja) return;
+  if(!rutaBorrador.length){
+    caja.innerHTML = '<div class="desc-vacio">Todavía no hay clientes en la ruta. Importe un archivo, agregue un número de ruta o busque clientes.</div>';
+    return;
+  }
+  const faltan = rutaBorrador.filter(x => !x.enClientes).length;
+  caja.innerHTML = `
+    <p class="ayuda" style="margin-left:0">${rutaBorrador.length} cliente(s)${faltan ? " · ⚠️ " + faltan + " no está(n) en CLIENTES (se guardan igual)" : ""}</p>
+    <table>
+      <thead><tr><th>#</th><th>Cliente</th><th>Código</th><th>Ruta</th><th>Dirección</th><th></th></tr></thead>
+      <tbody>${rutaBorrador.map((x, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${esc(x.cliente)}${x.enClientes ? "" : '<br><span class="falta-cli">⚠️ No está en CLIENTES</span>'}</td>
+          <td>${esc(x.codigo)}</td><td>${esc(x.ruta)}</td><td>${esc(x.direccion)}</td>
+          <td style="white-space:nowrap">
+            <button type="button" title="Subir" onclick="moverParadaBorrador(${i}, -1)">⬆️</button>
+            <button type="button" title="Bajar" onclick="moverParadaBorrador(${i}, 1)">⬇️</button>
+            <button type="button" title="Quitar" onclick="quitarParadaBorrador(${i})">🗑️</button>
+          </td>
+        </tr>`).join("")}</tbody>
+    </table>`;
+}
+
+function moverParadaBorrador(i, d){
+  const j = i + d;
+  if(j < 0 || j >= rutaBorrador.length) return;
+  const t = rutaBorrador[i]; rutaBorrador[i] = rutaBorrador[j]; rutaBorrador[j] = t;
+  pintarBorradorRuta();
+}
+
+function quitarParadaBorrador(i){
+  rutaBorrador.splice(i, 1);
+  pintarBorradorRuta();
+}
+
+function vaciarBorradorRuta(){
+  if(rutaBorrador.length && !confirm("¿Vaciar la lista de clientes de la ruta?")) return;
+  rutaBorrador = [];
+  pintarBorradorRuta();
+}
+
+function agregarPorNumeroRuta(){
+  const n = String($("rutNumero").value || "").trim();
+  if(!n){ alert("Escriba el número de ruta"); return; }
+  const k = normalizar(n);
+  const lista = clientes.filter(c => normalizar(String(c.ruta || "").trim()) === k);
+  let nuevos = 0;
+  lista.forEach(c => { if(agregarABorrador({ cliente:c.nombre, codigo:c.codigo, ruta:c.ruta, direccion:c.direccion })) nuevos++; });
+  mensaje("estadoRutas", lista.length
+    ? nuevos + " cliente(s) de la ruta " + n + " agregados."
+    : "No hay clientes con la ruta " + n + " en la hoja CLIENTES.", !lista.length);
+  pintarBorradorRuta();
+}
+
+function buscarClienteRuta(){
+  const texto = $("rutBuscar").value;
+  const lista = $("rutLista");
+  if(!texto.trim()){ lista.innerHTML = ""; lista.classList.remove("abierta"); return; }
+  rutaResultados = filtrarPorTexto(texto).slice(0, 12);
+  lista.innerHTML = rutaResultados.length
+    ? rutaResultados.map((c, i) => `
+      <div class="item" onclick="agregarClienteBuscadoRuta(${i})">
+        <b>${esc(c.nombre)}</b><br>
+        <span class="item-dato">${esc(c.direccion) || "Sin dirección"}</span>
+        ${c.ruta ? `<span class="item-ruta">Ruta ${esc(c.ruta)}</span>` : ""}
+      </div>`).join("")
+    : '<div class="item vacio">Sin coincidencias</div>';
+  lista.classList.add("abierta");
+}
+
+function agregarClienteBuscadoRuta(i){
+  const c = rutaResultados[i];
+  if(!c) return;
+  if(!agregarABorrador({ cliente:c.nombre, codigo:c.codigo, ruta:c.ruta, direccion:c.direccion })){
+    mensaje("estadoRutas", c.nombre + " ya está en la lista.", true);
+  }
+  $("rutBuscar").value = "";
+  $("rutLista").innerHTML = "";
+  $("rutLista").classList.remove("abierta");
+  pintarBorradorRuta();
+}
+
+/* Excel o CSV: busca la fila de títulos y toma CLIENTE/NOMBRE, CODIGO,
+   RUTA y DIRECCION. */
+function importarArchivoRuta(input){
+  const archivo = input.files && input.files[0];
+  input.value = "";
+  if(!archivo) return;
+  if(typeof XLSX === "undefined"){
+    mensaje("estadoRutas", "No cargó la librería de Excel (necesita internet).", true);
+    return;
+  }
+
+  const lector = new FileReader();
+  lector.onload = e => {
+    try{
+      const libro = XLSX.read(new Uint8Array(e.target.result), { type:"array" });
+      const hoja = libro.Sheets[libro.SheetNames[0]];
+      const filas = XLSX.utils.sheet_to_json(hoja, { header:1, defval:"", raw:false });
+
+      const titulo = t => normalizar(t).replace(/[^a-z0-9]/g, "");
+      const esCliente = t => ["cliente","nombre","nombrecliente","razonsocial"].indexOf(titulo(t)) !== -1;
+
+      const fTitulos = filas.findIndex(f => f.some(esCliente));
+      if(fTitulos === -1){
+        mensaje("estadoRutas", "El archivo no tiene una columna CLIENTE o NOMBRE.", true);
+        return;
+      }
+
+      const t = filas[fTitulos].map(titulo);
+      const col = (...nombres) => t.findIndex(x => nombres.indexOf(x) !== -1);
+      const cCli = t.findIndex(x => ["cliente","nombre","nombrecliente","razonsocial"].indexOf(x) !== -1);
+      const cCod = col("codigo","cod","codigocliente");
+      const cRut = col("ruta");
+      const cDir = col("direccion");
+      const cOrd = col("orden", "no", "numero");
+
+      // Si trae ORDEN, se respeta; si no, el orden de las filas
+      let cuerpo = filas.slice(fTitulos + 1);
+      if(cOrd >= 0){
+        cuerpo = cuerpo.map((f, i) => ({ f:f, i:i, o:Number(String(f[cOrd]).replace(",", ".")) }))
+          .sort((a, b) => ((isFinite(a.o) && a.o > 0 ? a.o : 1e9 + a.i) - (isFinite(b.o) && b.o > 0 ? b.o : 1e9 + b.i)))
+          .map(x => x.f);
+      }
+
+      let nuevos = 0, repetidos = 0;
+      cuerpo.forEach(f => {
+        const nombre = String(f[cCli] || "").trim();
+        if(!nombre) return;
+        const ok = agregarABorrador({
+          cliente: nombre,
+          codigo: cCod >= 0 ? f[cCod] : "",
+          ruta: cRut >= 0 ? f[cRut] : "",
+          direccion: cDir >= 0 ? f[cDir] : ""
+        });
+        if(ok) nuevos++; else repetidos++;
+      });
+
+      mensaje("estadoRutas", "Archivo leído: " + nuevos + " cliente(s) agregados" +
+                             (repetidos ? ", " + repetidos + " repetido(s) omitidos" : "") + ".");
+      pintarBorradorRuta();
+    }catch(err){
+      mensaje("estadoRutas", "No se pudo leer el archivo: " + err.message, true);
+    }
+  };
+  lector.readAsArrayBuffer(archivo);
+}
+
+function guardarRuta(){
+  const fecha = $("rutFecha").value;
+  const movil = $("rutMovil").value;
+
+  if(!fecha){ alert("Elija la fecha de la ruta"); return; }
+  if(!movil){ alert("Elija el móvil"); return; }
+  if(!rutaBorrador.length){ alert("La ruta no tiene clientes"); return; }
+
+  mensaje("estadoRutas", "Guardando ruta…");
+  enviar({
+    accion:"importarRutas", fecha:fecha, movil:movil,
+    paradas: rutaBorrador.map(x => ({ cliente:x.cliente, codigo:x.codigo, ruta:x.ruta, direccion:x.direccion }))
+  }).then(r => {
+    mensaje("estadoRutas", "✔ " + (r.mensaje || "Ruta guardada") +
+            (r.conservadas ? ". Se conservaron " + r.conservadas + " ya recogido(s)." : ""));
+    rutaBorrador = [];
+    pintarBorradorRuta();
+    cargarRutasFecha();
+  }).catch(e => mensaje("estadoRutas", "No se guardó la ruta: " + e.message, true));
+}
+
+let rutasDeLaFecha = [];
+
+function cargarRutasFecha(){
+  const fecha = $("rutFecha").value;
+  const caja = $("rutResumen");
+  if(!fecha){ caja.innerHTML = ""; return; }
+  caja.innerHTML = '<p class="ayuda" style="margin-left:0">Cargando…</p>';
+
+  pedir(API + "?accion=rutasFecha&fecha=" + encodeURIComponent(fecha)).then(r => {
+    rutasDeLaFecha = (r && r.rutas) || [];
+    if(!rutasDeLaFecha.length){
+      caja.innerHTML = '<div class="desc-vacio">No hay rutas guardadas para el ' + esc(fechaDiaMes(fecha) || fecha) + '.</div>';
+      return;
+    }
+    caja.innerHTML = rutasDeLaFecha.map((g, i) => {
+      const pct = g.total ? Math.round(g.recogidos * 100 / g.total) : 0;
+      return `
+      <div class="rut-resumen-item">
+        <b>Móvil ${esc(g.movil)}</b>
+        <div class="barra"><span style="width:${pct}%"></span></div>
+        <small>${g.recogidos} de ${g.total} recogidos${g.agregados ? " · " + g.agregados + " agregado(s) en ruta" : ""}</small>
+        <div style="margin-top:6px">
+          <button type="button" class="btn-mini" onclick="editarRutaGuardada(${i})">✏️ Editar esta ruta</button>
+        </div>
+      </div>`;
+    }).join("");
+  }).catch(e => { caja.innerHTML = '<p class="estado error">No se pudieron cargar las rutas: ' + esc(e.message) + '</p>'; });
+}
+
+function editarRutaGuardada(i){
+  const g = rutasDeLaFecha[i];
+  if(!g) return;
+  if(rutaBorrador.length && !confirm("Se reemplazará la lista que está armando. ¿Continuar?")) return;
+  rutaBorrador = [];
+  g.paradas.filter(p => p.estado !== "RECOGIDO").forEach(p => agregarABorrador(p));
+  $("rutMovil").value = g.movil;
+  pintarBorradorRuta();
+  mensaje("estadoRutas", "Editando la ruta del móvil " + g.movil + ". Las paradas ya recogidas no se tocan.");
+  $("rutTabla").scrollIntoView({ block:"start", behavior:"smooth" });
+}
+
+
+/* ================= << v11 >> DESCARGA DE VEHÍCULOS ================= */
+
+let vehiculosCarga = [];
+
+function textoConts(c){
+  return Object.keys(c || {}).map(k => c[k] + " " + k).join(", ");
+}
+
+/* "Failed to fetch" no dice nada. Casi siempre es que el Apps Script no
+   alcanza a responder (no está publicada la versión nueva o el código quedó
+   con un error y Google contesta con una página de error). */
+function explicarErrorV11(e){
+  const m = String((e && e.message) || e || "");
+  if(/failed to fetch|networkerror|load failed|fallo de red/i.test(m)){
+    return navigator.onLine
+      ? "el servidor no respondió. Abra " + API + " en el navegador: debe decir versión v11. " +
+        "Si dice otra versión, falta publicar (Implementar → Administrar implementaciones → Nueva versión); " +
+        "si sale una página de error, el código del Apps Script quedó con un error al pegarlo."
+      : "no hay conexión a internet.";
+  }
+  if(/acci[oó]n desconocida/i.test(m)){
+    return m + ". El Apps Script todavía no tiene el módulo v11: revise que el archivo Modulos esté pegado y publique una nueva versión.";
+  }
+  return m;
+}
+
+function cargarDescarga(){
+  mensaje("estadoDescarga", "Sumando lo que lleva cada móvil…");
+  $("descVehiculos").innerHTML = "";
+
+  pedir(API + "?accion=cargaVehiculos").then(r => {
+    if(!r || r.estado === "error" || !Array.isArray(r.vehiculos)) throw new Error((r && r.mensaje) || "Respuesta inesperada del servidor");
+    vehiculosCarga = r.vehiculos;
+    mensaje("estadoDescarga", vehiculosCarga.length
+      ? vehiculosCarga.length + " móvil(es) con residuos por descargar."
+      : "");
+    $("descVehiculos").innerHTML = vehiculosCarga.length
+      ? vehiculosCarga.map((v, i) => `
+        <div class="desc-vehiculo">
+          <h3>🚚 Móvil ${esc(v.movil)}</h3>
+          <div class="sub">${v.manifiestos.length} manifiesto(s) · del ${esc(fechaDiaMes(v.desde) || v.desde)} al ${esc(fechaDiaMes(v.hasta) || v.hasta)}</div>
+          <table>
+            <thead><tr><th>Residuo</th><th>Contenedores</th><th>Kg</th></tr></thead>
+            <tbody>
+              ${v.items.map(t => `<tr><td>${esc(t.tipo)}</td><td>${esc(textoConts(t.contenedores)) || "—"}</td><td class="num">${kgCarrito(t.kg)}</td></tr>`).join("")}
+              <tr class="tot"><td>TOTAL</td><td>${v.totalContenedores || "—"}</td><td class="num">${kgCarrito(v.totalKg)}</td></tr>
+            </tbody>
+          </table>
+          <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i})">📦 Generar descarga e informe</button>
+        </div>`).join("")
+      : '<div class="desc-vacio">Ningún móvil tiene residuos pendientes por descargar.</div>';
+  }).catch(e => {
+    mensaje("estadoDescarga", "No se pudo consultar la carga: " + explicarErrorV11(e), true);
+  });
+
+  cargarHistorialDescargas();
+}
+
+function generarDescargaMovil(i){
+  const v = vehiculosCarga[i];
+  if(!v) return;
+  if(!confirm("¿Generar la descarga del móvil " + v.movil + " (" + kgCarrito(v.totalKg) + " kg)?\n\n" +
+              "El móvil quedará en cero para empezar otro recorrido.")) return;
+
+  // La ventana se abre YA (en el toque), si no el navegador la bloquea
+  const ventana = window.open("", "_blank");
+  if(ventana) ventana.document.write("<p style='font-family:Arial;padding:20px'>Generando informe de descarga…</p>");
+
+  mensaje("estadoDescarga", "Generando la descarga del móvil " + v.movil + "…");
+  enviar({ accion:"generarDescarga", movil:v.movil }).then(r => {
+    mensaje("estadoDescarga", "✔ " + (r.mensaje || "Descarga generada"));
+    mostrarInformeDescarga(r, ventana);
+    cargarDescarga();
+  }).catch(e => {
+    if(ventana) ventana.close();
+    mensaje("estadoDescarga", "No se generó la descarga: " + e.message, true);
+  });
+}
+
+function cargarHistorialDescargas(){
+  const caja = $("descHistorial");
+  pedir(API + "?accion=descargas").then(lista => {
+    if(lista && lista.estado === "error") throw new Error(lista.mensaje);
+    if(!Array.isArray(lista) || !lista.length){
+      caja.innerHTML = '<p class="ayuda" style="margin-left:0">Todavía no hay descargas.</p>';
+      return;
+    }
+    caja.innerHTML = `<div style="overflow-x:auto"><table>
+      <thead><tr><th>Consecutivo</th><th>Fecha</th><th>Móvil</th><th>Kg</th><th>Manifiestos</th><th>Generó</th><th></th></tr></thead>
+      <tbody>${lista.map(d => `
+        <tr><td>${esc(d.consecutivo)}</td><td>${esc(d.fecha)}</td><td>${esc(d.movil)}</td>
+            <td>${kgCarrito(d.kg)}</td><td>${d.manifiestos}</td><td>${esc(d.generadoPor)}</td>
+            <td><button type="button" class="btn-mini" onclick="reimprimirDescarga('${esc(d.consecutivo)}')">🖨️ Informe</button></td></tr>`).join("")}
+      </tbody></table></div>`;
+  }).catch(e => { caja.innerHTML = '<p class="estado error">' + esc(explicarErrorV11(e)) + '</p>'; });
+}
+
+function reimprimirDescarga(consecutivo){
+  const ventana = window.open("", "_blank");
+  if(ventana) ventana.document.write("<p style='font-family:Arial;padding:20px'>Cargando informe…</p>");
+  pedir(API + "?accion=informeDescarga&consecutivo=" + encodeURIComponent(consecutivo)).then(r => {
+    if(!r || r.estado === "error") throw new Error((r && r.mensaje) || "No se encontró");
+    mostrarInformeDescarga(r, ventana);
+  }).catch(e => {
+    if(ventana) ventana.close();
+    alert("No se pudo cargar el informe: " + e.message);
+  });
+}
+
+/* Informe de descarga en una ventana aparte, listo para imprimir o
+   guardar en PDF. */
+function mostrarInformeDescarga(r, ventana){
+  const tipos = {};
+  (r.tipos || tiposResiduo).forEach(t => { tipos[claveNombre(t.nombre)] = t; });
+
+  const filasTipos = (r.items || []).map(t => {
+    const info = tipos[claveNombre(t.tipo)] || {};
+    return `<tr><td>${esc(t.tipo)}</td><td>${esc(info.tratamiento || "")}</td><td>${esc(info.corriente || "")}</td>
+                <td>${esc(textoConts(t.contenedores)) || "—"}</td><td class="n">${kgCarrito(t.kg)}</td></tr>`;
+  }).join("");
+
+  const filasMan = (r.manifiestos || []).map((m, i) =>
+    `<tr><td>${i + 1}</td><td>${esc(fechaCortaDest(m.fecha))}</td><td>${esc(m.manifiesto)}</td><td>${esc(m.cliente)}</td><td class="n">${kgCarrito(m.kg)}</td></tr>`
+  ).join("");
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Descarga ${esc(r.consecutivo)} - Móvil ${esc(r.movil)}</title>
+<style>
+  @page{size:letter;margin:12mm 15mm;}
+  body{font-family:"Century Gothic",Arial,sans-serif;color:#000;margin:0 auto;max-width:190mm;padding:10px;font-size:11pt;}
+  img.membrete{width:100%;display:block;margin-bottom:8px;}
+  h1{font-size:14pt;text-align:center;margin:10px 0 2px;}
+  .cons{text-align:right;font-weight:bold;}
+  .datos{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin:10px 0;font-size:10.5pt;}
+  table{width:100%;border-collapse:collapse;margin:6px 0 14px;}
+  th,td{border:1px solid #000;padding:4px 6px;font-size:9pt;text-align:left;vertical-align:middle;}
+  th{background:#f1f5f9;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  td.n{text-align:right;white-space:nowrap;}
+  tr.tot td{font-weight:bold;}
+  h2{font-size:11pt;margin:14px 0 4px;}
+  .firmas{display:flex;gap:40px;margin-top:50px;}
+  .firmas div{flex:1;border-top:1px solid #000;padding-top:4px;text-align:center;font-size:10pt;}
+  .pie{margin-top:24px;border-top:2px solid #d92525;padding-top:4px;text-align:center;font-size:8pt;color:#1d4ed8;}
+  .acciones{text-align:center;margin:10px 0;}
+  .acciones button{font-size:15px;padding:10px 18px;border-radius:8px;border:0;background:#0f766e;color:#fff;cursor:pointer;}
+  @media print{.acciones{display:none;}}
+</style></head><body>
+  <div class="acciones"><button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button></div>
+  <img class="membrete" src="${IMG_LOGO}" alt="">
+  <div class="cons">${esc(r.consecutivo)}</div>
+  <h1>INFORME DE DESCARGA DE RESIDUOS</h1>
+  <div class="datos">
+    <div><b>Móvil:</b> ${esc(r.movil)}</div>
+    <div><b>Fecha de descarga:</b> ${esc(r.fecha)}</div>
+    <div><b>Conductor(es):</b> ${esc((r.conductores || []).join(", ")) || "—"}</div>
+    <div><b>Generado por:</b> ${esc(r.generadoPor || sesion.usuario || "")}</div>
+    <div><b>Manifiestos:</b> ${(r.manifiestos || []).length}</div>
+    <div><b>Total contenedores:</b> ${r.totalContenedores || 0}</div>
+  </div>
+
+  <h2>Resumen por tipo de residuo</h2>
+  <table>
+    <thead><tr><th>Tipo de residuo</th><th>Tratamiento</th><th>Corriente</th><th>Contenedores</th><th>Kg</th></tr></thead>
+    <tbody>${filasTipos}
+      <tr class="tot"><td colspan="3">TOTAL</td><td>${r.totalContenedores || 0}</td><td class="n">${kgCarrito(r.totalKg)}</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Manifiestos incluidos</h2>
+  <table>
+    <thead><tr><th>#</th><th>Fecha</th><th>Manifiesto</th><th>Cliente</th><th>Kg</th></tr></thead>
+    <tbody>${filasMan}</tbody>
+  </table>
+
+  <div class="firmas"><div>Entregó (conductor)</div><div>Recibió</div></div>
+  <div class="pie">${PIE_DESTINO}</div>
+</body></html>`;
+
+  const w = ventana || window.open("", "_blank");
+  if(!w){ alert("El navegador bloqueó la ventana del informe. Permita las ventanas emergentes para esta página."); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
 
 /* ---------------- historial ---------------- */
 
@@ -4712,48 +5775,184 @@ function copiaLimpiaDestino(){
 }
 
 /**
+ * Reparte un certificado en hojas carta. Cada hoja lleva membrete arriba,
+ * marca de agua y pie de página abajo; el contenido se va metiendo bloque a
+ * bloque y, cuando ya no cabe, pasa a la hoja siguiente. Las tablas se
+ * parten por manifiesto (nunca se separa la fecha de sus filas) y repiten
+ * el encabezado de columnas en la hoja nueva.
+ */
+function paginarCertificado(hoja){
+
+  const membrete = hoja.querySelector(".membrete");
+  const pie      = hoja.querySelector(".pie-dest");
+  const marca    = hoja.querySelector(".marca-agua");
+  [membrete, pie, marca].forEach(e => { if(e) e.remove(); });
+
+  // Bloques en orden; el texto legal se reparte párrafo por párrafo.
+  const bloques = [];
+  Array.from(hoja.children).forEach(el => {
+    if(el.classList.contains("legal")){
+      Array.from(el.children).forEach(p => bloques.push({ el:p, legal:true }));
+    }else{
+      bloques.push({ el:el });
+    }
+  });
+
+  hoja.innerHTML = "";
+  hoja.className = "destino destino-imp";
+
+  // Elementos que no deben quedar solos al final de una hoja
+  const PEGADOS = ["uba", "mes", "expide", "lic-titulo"];
+  const esPegado = el => !!el && PEGADOS.some(c => el.classList.contains(c));
+
+  let cuerpo = null;
+
+  function nuevaPagina(){
+    const pag = document.createElement("div");
+    pag.className = "pagina-dest";
+    if(marca)    pag.appendChild(marca.cloneNode(true));
+    if(membrete) pag.appendChild(membrete.cloneNode(true));
+    cuerpo = document.createElement("div");
+    cuerpo.className = "cuerpo-pag";
+    pag.appendChild(cuerpo);
+    if(pie) pag.appendChild(pie.cloneNode(true));
+    hoja.appendChild(pag);
+  }
+
+  const cabe  = () => cuerpo.scrollHeight <= cuerpo.clientHeight + 1;
+  const vacio = () => cuerpo.childElementCount === 0;
+
+  // Contenedor donde va el bloque (el propio cuerpo o el .legal de la hoja)
+  function padreDe(b){
+    if(!b.legal) return cuerpo;
+    let w = cuerpo.lastElementChild;
+    if(!w || !w.classList.contains("legal")){
+      w = document.createElement("div");
+      w.className = "legal";
+      cuerpo.appendChild(w);
+    }
+    return w;
+  }
+
+  // Saca de la hoja actual los títulos que quedarían huérfanos al final
+  function arrastrarPegados(padre){
+    const lista = [];
+    while(esPegado(padre.lastElementChild)) lista.unshift(padre.lastElementChild.parentNode.removeChild(padre.lastElementChild));
+    if(padre !== cuerpo && padre.childElementCount === 0) padre.remove();
+    return lista;
+  }
+
+  function colocar(b){
+    let padre = padreDe(b);
+    padre.appendChild(b.el);
+    if(cabe()) return;
+
+    b.el.remove();
+    const pegados = arrastrarPegados(padre);
+    if(padre !== cuerpo && padre.parentNode && padre.childElementCount === 0) padre.remove();
+
+    if(vacio()){                       // no cabe ni en hoja vacía: se deja
+      padre = padreDe(b);
+      pegados.forEach(p => padre.appendChild(p));
+      padre.appendChild(b.el);
+      return;
+    }
+
+    nuevaPagina();
+    padre = padreDe(b);
+    pegados.forEach(p => padre.appendChild(p));
+    padre.appendChild(b.el);
+  }
+
+  function colocarTabla(tabla){
+    const filas = Array.from(tabla.tBodies[0].rows);
+
+    // Grupos: la fila de un manifiesto con sus filas de continuación
+    const grupos = [];
+    filas.forEach(tr => {
+      if(!tr.classList.contains("cont") || !grupos.length) grupos.push([tr]);
+      else grupos[grupos.length - 1].push(tr);
+    });
+
+    const cascaron = () => {
+      const t = tabla.cloneNode(false);
+      Array.from(tabla.children).forEach(ch => {
+        if(ch.tagName !== "TBODY") t.appendChild(ch.cloneNode(true));
+      });
+      t.appendChild(document.createElement("tbody"));
+      return t;
+    };
+
+    let actual = null;
+    const cuerpoTabla = () => {
+      if(!actual || actual.parentNode !== cuerpo){
+        actual = cascaron();
+        cuerpo.appendChild(actual);
+      }
+      return actual.tBodies[0];
+    };
+
+    grupos.forEach(g => {
+      let tb = cuerpoTabla();
+      g.forEach(tr => tb.appendChild(tr));
+      if(cabe()) return;
+
+      g.forEach(tr => tr.remove());
+      let pegados = [];
+      if(actual.tBodies[0].rows.length === 0){
+        actual.remove();
+        actual = null;
+        pegados = arrastrarPegados(cuerpo);
+      }
+
+      if(vacio()){
+        pegados.forEach(p => cuerpo.appendChild(p));
+        tb = cuerpoTabla();
+        g.forEach(tr => tb.appendChild(tr));
+        return;
+      }
+
+      nuevaPagina();
+      pegados.forEach(p => cuerpo.appendChild(p));
+      actual = null;
+      tb = cuerpoTabla();
+      g.forEach(tr => tb.appendChild(tr));
+    });
+  }
+
+  nuevaPagina();
+  bloques.forEach(b => {
+    const el = b.el;
+    if(el.tagName === "TABLE" && el.tHead && el.tBodies.length && el.tBodies[0].rows.length){
+      colocarTabla(el);
+    }else{
+      colocar(b);
+    }
+  });
+}
+
+/**
  * La vista previa está dentro de .layout y la hoja de impresión oculta ese
  * contenedor entero, así que imprimirla directamente daba una hoja en blanco.
  * Se vuelca una copia en #areaDestino, que vive fuera del layout.
  */
-function exportarDestinacionPDF(){
+async function exportarDestinacionPDF(){
   if(!hayCertificados()) return;
 
-  $("areaDestino").innerHTML = copiaLimpiaDestino().innerHTML;
+  const area = $("areaDestino");
+  area.innerHTML = copiaLimpiaDestino().innerHTML;
 
-  // Como en el Word, el membrete y el pie salen en TODAS las páginas: se
-  // ponen en el thead/tfoot de una tabla que envuelve cada certificado.
-  $("areaDestino").querySelectorAll(".destino").forEach(hoja => {
-    const membrete = hoja.querySelector(".membrete");
-    const pie      = hoja.querySelector(".pie-dest");
-    const marca    = hoja.querySelector(".marca-agua");
+  // Se arma fuera de la vista pero visible para el navegador, para poder
+  // medir cuánto cabe en cada hoja.
+  area.style.cssText = "display:block;position:absolute;left:-10000px;top:0;visibility:hidden;";
 
-    const marco = document.createElement("table");
-    marco.className = "marco-dest";
-    marco.innerHTML = "<thead><tr><td></td></tr></thead>" +
-                      "<tfoot><tr><td></td></tr></tfoot>" +
-                      "<tbody><tr><td></td></tr></tbody>";
+  // Hay que medir con las imágenes y las fuentes ya cargadas.
+  await Promise.all(Array.from(area.querySelectorAll("img"))
+    .map(img => img.decode ? img.decode().catch(() => {}) : null));
+  if(document.fonts && document.fonts.ready) await document.fonts.ready;
 
-    if(membrete) marco.querySelector("thead td").appendChild(membrete);
-    // El pie va fijo al fondo de la hoja (así no se sube en la última
-    // página); el tfoot solo reserva su espacio para que nada lo tape.
-    marco.querySelector("tfoot td").innerHTML = '<div class="pie-espacio"></div>';
-    if(pie) pie.classList.add("pie-fijo");
-
-    const cuerpo = marco.querySelector("tbody td");
-    while(hoja.firstChild) cuerpo.appendChild(hoja.firstChild);
-    if(marca) hoja.appendChild(marca);
-    hoja.appendChild(marco);
-    if(pie) hoja.appendChild(pie);
-  });
-
-  // Hoja carta con los márgenes laterales del Word (3 cm). Se pone solo
-  // mientras se imprime para no cambiar el tamaño de los otros certificados.
-  // (Una página con nombre, "page: carta", impedía que se repitiera el pie.)
-  const pagina = document.createElement("style");
-  pagina.id = "paginaDestino";
-  pagina.textContent = "@page{size:letter;margin:12mm 30mm 10mm;}";
-  document.head.appendChild(pagina);
+  area.querySelectorAll(".destino").forEach(paginarCertificado);
+  area.style.cssText = "";
 
   const tituloOriginal = document.title;
   document.title = nombreArchivoDest();
@@ -4762,7 +5961,6 @@ function exportarDestinacionPDF(){
   window.addEventListener("afterprint", function restaurar(){
     document.body.classList.remove("imprimiendo-destino");
     document.title = tituloOriginal;
-    pagina.remove();
     $("areaDestino").innerHTML = "";
     window.removeEventListener("afterprint", restaurar);
   });
