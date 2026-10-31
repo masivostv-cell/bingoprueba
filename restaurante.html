@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.27-3';
+const APP_VERSION='2026.10.31-2';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -1660,14 +1660,18 @@ function movInv(ingredienteId,tipo,cantidad,costoUnit,refTipo,refId,nota){
 }
 
 /* consume la receta de cada línea y devuelve el costo REAL de esa venta */
+let _sinDescontar=[];
 function consumirItems(items,refTipo,refId){
-  const consumo=[]; let total=0;
+  const consumo=[]; let total=0; _sinDescontar=[];
   items.forEach(it=>{
     const p=byId('productos',it.productoId);
     let costoIt=0;
+    const recetaOk= p && (p.receta||[]).some(r=>r.ingredienteId && Number(r.cantidad)>0 && byId('ingredientes',r.ingredienteId));
+    if(p && !recetaOk && !p.noInventario) _sinDescontar.push(it.nombre+((p.receta||[]).length?' (su receta tiene un ingrediente que ya no existe)':' (no tiene receta)'));
     if(p && p.receta && p.receta.length){
       p.receta.forEach(r=>{
         const q=round((Number(r.cantidad)||0)*it.cant,4); if(!q) return;
+        if(!byId('ingredientes',r.ingredienteId)){ if(recetaOk) _sinDescontar.push(it.nombre+' (un ingrediente de su receta ya no existe)'); return; }
         const m=movInv(r.ingredienteId,'salida',q,null,refTypeSafe(refTipo),refId,'Consumo por venta');
         const cm=m? (m.costoMov||0):0;
         costoIt+=cm;
@@ -1678,6 +1682,10 @@ function consumirItems(items,refTipo,refId){
     it.costo=round(costoIt/(it.cant||1),4);
     total+=costoIt;
   });
+  if(_sinDescontar.length){
+    const l=_sinDescontar.filter((x,i,a)=>a.indexOf(x)===i);
+    setTimeout(()=>toast('⚠ No bajó del inventario: '+l.join(', ')+'. Arréglalo en Productos (receta) o márcalo como "no lleva inventario".','warn',9000),600);
+  }
   return {total:round(total,2), consumo:consumo};
 }
 function refTypeSafe(t){ return t||'venta'; }
@@ -5436,6 +5444,8 @@ function edProducto(p){
         '<label class="row tiny" style="margin-top:10px;gap:7px"><input type="checkbox" id="ac" '+(ed.activo?'checked':'')+'> Activo (visible en el POS)</label>'+
         '<label class="row tiny" style="margin-top:7px;gap:7px"><input type="checkbox" id="sc" '+(ed.sinComanda?'checked':'')+
           '> Este producto NO va a la comanda de cocina</label>'+
+        '<label class="row tiny" style="margin-top:7px;gap:7px"><input type="checkbox" id="ninv" '+(ed.noInventario?'checked':'')+
+          '> No lleva inventario (servicio, domicilio, propina…): no avisar que no tiene receta</label>'+
       '</div>'+
       '<div>'+
         '<div class="row" style="margin-bottom:8px"><b>Receta (descuenta inventario)</b><span class="spacer"></span>'+
@@ -5492,6 +5502,7 @@ function edProducto(p){
         ed.emoji=$('#em',m).value.trim()||'🍽️'; ed.categoriaId=cbCt.valor();
         ed.precio=toN($('#pr',m).value); ed.costoManual=toN($('#cm',m).value); ed.activo=$('#ac',m).checked;
         ed.sinComanda=$('#sc',m)? $('#sc',m).checked : !!ed.sinComanda;
+        ed.noInventario=$('#ninv',m)? $('#ninv',m).checked : !!ed.noInventario;
         ed.orden=Math.max(0,toN($('#or',m).value));
         ed.receta=ed.receta.filter(r=>r.ingredienteId&&r.cantidad>0);
         put('productos',ed); closeModal(); render(); toast('Producto guardado','ok');
@@ -5547,16 +5558,20 @@ function kardexIng(gid,d1,d2){
   /* si el historial no arranca desde cero (había existencias antes de que existiera
      el historial), se cuenta hacia atrás desde el stock actual para que cuadre */
   const H=historialIng(gid), g=byId('ingredientes',gid)||{};
-  const base=H.confiable? 0 : round((Number(g.stock)||0)-sum(todos,m=>Number(m.cantidad)||0),4);
+  const base=H.confiable? 0 : (baseDe(g)!=null? baseDe(g) : round((Number(g.stock)||0)-sum(todos,m=>Number(m.cantidad)||0),4));
   let saldo=base, inicial=base; const filas=[];
+  const pre={compras:0, ventas:0, otrasEnt:0, otrasSal:0, n:0};
   todos.forEach(m=>{
     const q=Number(m.cantidad)||0, d=dISO(m.fecha);
-    if(d1 && d<d1){ saldo+=q; inicial=saldo; return; }
+    if(d1 && d<d1){ saldo+=q; inicial=saldo; pre.n++;
+      if(m.refTipo==='compra') pre.compras+=q; else if(m.refTipo==='venta'||m.refTipo==='consumo') pre.ventas-=q;
+      else if(q>0) pre.otrasEnt+=q; else pre.otrasSal-=q;
+      return; }
     if(d2 && d>d2) return;
     saldo=round(saldo+q,4);
     filas.push({m:m, ent:q>0?q:0, sal:q<0?-q:0, saldo:saldo});
   });
-  const r={filas:filas, inicial:round(inicial,4), final:round(saldo,4), confiable:H.confiable};
+  const r={filas:filas, inicial:round(inicial,4), final:round(saldo,4), confiable:H.confiable, base:base, pre:pre};
   const por=k=>round(sum(filas.filter(f=>f.m.refTipo===k),f=>Number(f.m.cantidad)||0),4);
   r.compras=por('compra'); r.ventas=-por('venta'); r.consumo=-por('consumo'); r.devuelto=por('venta-anulada');
   r.ajustes=round(sum(filas.filter(f=>f.m.tipo==='ajuste'||f.m.refTipo==='ajuste'||f.m.refTipo==='recalculo'),f=>Number(f.m.cantidad)||0),4);
@@ -5597,6 +5612,18 @@ function mKardex(gid,rango){
             kpi('Ajustes y conteos',(K.ajustes>0?'+':'')+num(K.ajustes,2)+' '+u,K.ajustes<0?'faltante':K.ajustes>0?'sobrante':'','info')+
             kpi('Quedó',num(K.final,2)+' '+u,fdate(d2),'brand')+
           '</div>'+
+          ((K.inicial<-0.0001 || K.filas.some(f=>f.saldo<-0.0001))? '<div class="card" style="background:var(--warn-soft);margin-bottom:10px"><div class="bd tiny">'+
+            '<b>¿Por qué sale en negativo?</b> No es que haya habido inventario negativo en la bodega: es que, según lo registrado, '+
+            '<b>se vendió más de lo que se registró como comprado</b>. '+
+            (K.pre.n? 'Antes del '+fdate(d1)+' se registraron '+num(K.pre.compras,2)+' '+u+' en compras y salieron '+num(K.pre.ventas,2)+' '+u+' por ventas'+
+              (K.pre.otrasEnt||K.pre.otrasSal? ' (ajustes: +'+num(K.pre.otrasEnt,2)+' / −'+num(K.pre.otrasSal,2)+')':'')+'. ' : '')+
+            (!K.confiable && Math.abs(K.base)>0.0001? 'Además, el stock guardado no coincide con el historial (diferencia de '+num(Math.abs(K.base),2)+' '+u+'), '+
+              'lo que pasa cuando hubo existencias sin compra registrada o se cambiaron datos a mano. ' : '')+
+            'Casi siempre es una <b>compra que no se registró</b> (o se borró), o el producto se vendió antes de cargar su inventario. '+
+            'Lo que cuenta es lo que hay de verdad: haz un conteo y el sistema se corrige.'+
+            '<div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">'+
+              '<button class="btn sm pri" id="kxcont">⚖️ Contar este ingrediente ahora</button>'+
+              '<button class="btn sm" id="kxtodo">Ver todo el historial</button></div></div></div>':'')+
           (K.confiable && Math.abs(difHoy)>0.0001 && d2>=todayISO()? '<div class="card" style="background:var(--warn-soft);margin-bottom:10px"><div class="bd tiny">'+
             '⚠ El stock guardado ('+num(g.stock,2)+') no es igual a la suma del historial ('+num(K.final,2)+'). '+
             'En Inventario ▸ 🩺 Revisar ▸ Recalcular se cuadra.</div></div>':'')+
@@ -5612,6 +5639,8 @@ function mKardex(gid,rango){
             {t:'Detalle',f:f=>esc(f.m.nota||'')+(f.m.stockAntes!=null? '<div class="tiny muted">antes '+num(f.m.stockAntes,2)+'</div>':'')},
             {t:'Usuario',f:f=>esc(nameOf('usuarios',f.m.usuarioId))}
           ].filter(Boolean),fs,{empty:'Sin movimientos en estas fechas',icon:'📜'})+'</div></div>';
+        if($('#kxcont',m)) $('#kxcont',m).onclick=()=>{ closeModal(); mAjuste(gid); };
+        if($('#kxtodo',m)) $('#kxtodo',m).onclick=()=>$('[data-kr="todo"]',m).click();
         $$('[data-kd]',m).forEach(b=>b.onclick=()=>{ const mv=byId('movinv',b.dataset.kd); const d=mv&&docDeMov(mv);
           if(d){ closeModal(); d.abrir(); } });
       };
@@ -5838,7 +5867,7 @@ function auditarInventario(){
       usado: S.productos.some(p=>p.activo!==false && (p.receta||[]).some(r=>r.ingredienteId===g.id))};
   });
   const activos=S.productos.filter(p=>p.activo!==false);
-  const sinReceta=activos.filter(p=>!(p.receta||[]).some(r=>r.ingredienteId && Number(r.cantidad)>0));
+  const sinReceta=activos.filter(p=>!p.noInventario && !(p.receta||[]).some(r=>r.ingredienteId && Number(r.cantidad)>0));
   const recetaRota=[];
   activos.forEach(p=>(p.receta||[]).forEach(r=>{
     const g=r.ingredienteId? byId('ingredientes',r.ingredienteId):null;
@@ -6053,13 +6082,32 @@ function historialTodos(){
   });
   return out;
 }
+/* ANCLA. Cuando dos equipos venden al tiempo, el que guarda de último puede
+   pisar el stock que dejó el otro (y "no descuenta"). Por eso el stock no se
+   confía en el número guardado sino en el historial: compras − ventas ± ajustes.
+   Los ingredientes que tenían existencias antes de que existiera el historial
+   (o que se vendieron antes de cargarles inventario) guardan una sola vez su
+   "base": lo que había por fuera del historial. Desde ahí, stock = base + historial,
+   igual en todos los equipos, y ninguna venta se pierde. */
+function baseDe(g){ return (g && g.baseHist!=null && String(g.baseCorte||'')===corteInv())? Number(g.baseHist)||0 : null; }
+function stockObjetivo(g,h){
+  if(!h) return null;
+  if(h.confiable) return h.hist;
+  const b=baseDe(g); return b==null? null : round(b+h.hist,4);
+}
 function reconciliarStock(){
   if(S.meta.pullInc && S.meta.pullInc.movinv) return 0;   // el historial todavía no termina de bajar
   const H=historialTodos(); let n=0;
   S.ingredientes.forEach(g=>{
-    const h=H[g.id]; if(!h || !h.confiable) return;
-    if(Math.abs(h.hist-(Number(g.stock)||0))>0.0001){
-      g.stock=h.hist; put('ingredientes',g);
+    const h=H[g.id]; if(!h) return;
+    if(!h.confiable && baseDe(g)==null){
+      /* primera vez: se anota la base con lo que hay hoy (no cambia el stock) */
+      if(S.outbox.length) return;                         // con cambios propios sin subir, mejor esperar
+      g.baseHist=round((Number(g.stock)||0)-h.hist,4); g.baseCorte=corteInv(); put('ingredientes',g); return;
+    }
+    const obj=stockObjetivo(g,h); if(obj==null) return;
+    if(Math.abs(obj-(Number(g.stock)||0))>0.0001){
+      g.stock=obj; put('ingredientes',g);
       try{ cuadrarValorConStock(g.id); }catch(e){}
       n++;
     }
@@ -6069,7 +6117,8 @@ function reconciliarStock(){
 function recalcularInventario(){
   const cambios=[];
   S.ingredientes.forEach(g=>{
-    const H=historialIng(g.id), hist=H.hist;
+    const H0=historialIng(g.id), b=H0.confiable? 0 : baseDe(g);
+    const H={hist:round(H0.hist+(b||0),4), confiable:H0.confiable || b!=null}, hist=H.hist;
     const confiable=H.confiable && !(S.meta.pullInc && S.meta.pullInc.movinv);   // sin historial completo no se toca
     const antes=round(Number(g.stock)||0,4);
     let objetivo=confiable? hist : antes, porque=confiable? 'según compras, ventas y ajustes' : '';
@@ -6078,7 +6127,7 @@ function recalcularInventario(){
       const m=movInv(g.id,'ajuste',objetivo,null,'recalculo','','Recalculado: '+porque);
       /* el movimiento registra lo que le faltaba al HISTORIAL para llegar a lo real,
          así historial y stock quedan iguales de aquí en adelante */
-      if(m){ m.cantidad=round(objetivo-hist,4); m.stockAntes=antes; m.nota+=' (estaba en '+num(antes,2)+', quedó en '+num(objetivo,2)+')'; delete m.costoMov; put('movinv',m); }
+      if(m){ m.cantidad=round(objetivo-hist,4); m.stockAntes=antes; if(!H0.confiable && b!=null){ g.baseHist=round(b,4); put('ingredientes',g); } m.nota+=' (estaba en '+num(antes,2)+', quedó en '+num(objetivo,2)+')'; delete m.costoMov; put('movinv',m); }
       cambios.push({g:g, antes:antes, ahora:objetivo, porque:porque});
     } else {
       const enCapas=round(sum(capasDe(g.id),c=>Number(c.restante)||0),4);
@@ -6225,7 +6274,7 @@ function mCorteInventario(){
           put('movinv',{id:uid('mi'), fecha:corte, ingredienteId:g.id, tipo:'entrada', cantidad:q, costoUnit:cu,
             costoTotal:round(q*cu,2), refTipo:'corte', refId:'', saldo:q, stockAntes:Number(g.stock)||0,
             nota:'Inicio del inventario por conteo (antes decía '+num(g.stock,2)+')', usuarioId:S.user?S.user.id:''});
-          g.stock=q; put('ingredientes',g);
+          g.stock=q; g.baseHist=0; g.baseCorte=corte; put('ingredientes',g);
           try{ cuadrarValorConStock(g.id); }catch(e){}
           n++;
         });
@@ -6357,6 +6406,7 @@ function mAjuste(gid){
       const upd=()=>{ const g=byId('ingredientes',cbG.valor());
         $('#ac',m).value=g? num(g.stock,3)+' '+g.unidad:''; $('#nv',m).value=g?g.stock:0; };
       upd();
+      if(typeof gid==='string' && gid) setTimeout(()=>{ const n=$('#nv',m); if(n){ n.focus(); n.select(); } },80);
       $('#ok',m).onclick=()=>{ const g=byId('ingredientes',cbG.valor()); if(!g) return toast('Elige el ingrediente','warn');
         movInv(g.id,'ajuste',toN($('#nv',m).value),g.costo,'ajuste','',$('#mo',m).value||'Ajuste manual');
         closeModal(); render(); toast('Inventario ajustado','ok'); };
