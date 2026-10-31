@@ -253,6 +253,11 @@ tbody tr:nth-child(even){background:#f8fafc;}
 .desc-vehiculo td.num{text-align:right;white-space:nowrap;}
 .desc-vehiculo tr.tot td{font-weight:bold;}
 .desc-vehiculo .btn-pro{width:100%;margin-top:10px;}
+.desc-grupo{border-top:1px solid #e2e8f0;padding-top:8px;margin-top:8px;}
+.desc-grupo h4{margin:0 0 4px;font-size:14px;}
+.desc-imsalud{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:8px;}
+.desc-imsalud h4{color:#075985;}
+.desc-todo{display:block;margin:8px auto 0;}
 .desc-vacio{padding:16px;border:2px dashed #cbd5e1;border-radius:10px;color:#64748b;text-align:center;}
 
 /* ---------- Carrito de recolección (nuevo manifiesto) ---------- */
@@ -1506,7 +1511,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbw3VYeOJlxAhuDrjDKeFvbdvcBetQU7V85rgcD7CHl2bh4VamD6tqzCEQZtYlwFGV8h/exec";
+const API = "https://script.google.com/macros/s/AKfycbwAdF0LEAu95szdNjbAef5VviG29a-OHpIp4wf4b8nVIVxSPJ5z52ikzw3vBIK2KMcL/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -4137,19 +4142,7 @@ function cargarDescarga(){
       ? vehiculosCarga.length + " móvil(es) con residuos por descargar."
       : "");
     $("descVehiculos").innerHTML = vehiculosCarga.length
-      ? vehiculosCarga.map((v, i) => `
-        <div class="desc-vehiculo">
-          <h3>🚚 Móvil ${esc(v.movil)}</h3>
-          <div class="sub">${v.manifiestos.length} manifiesto(s) · del ${esc(fechaDiaMes(v.desde) || v.desde)} al ${esc(fechaDiaMes(v.hasta) || v.hasta)}</div>
-          <table>
-            <thead><tr><th>Residuo</th><th>Contenedores</th><th>Kg</th></tr></thead>
-            <tbody>
-              ${v.items.map(t => `<tr><td>${esc(t.tipo)}</td><td>${esc(textoConts(t.contenedores)) || "—"}</td><td class="num">${kgCarrito(t.kg)}</td></tr>`).join("")}
-              <tr class="tot"><td>TOTAL</td><td>${v.totalContenedores || "—"}</td><td class="num">${kgCarrito(v.totalKg)}</td></tr>
-            </tbody>
-          </table>
-          <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i})">📦 Generar descarga e informe</button>
-        </div>`).join("")
+      ? vehiculosCarga.map((v, i) => tarjetaVehiculo(v, i)).join("")
       : '<div class="desc-vacio">Ningún móvil tiene residuos pendientes por descargar.</div>';
   }).catch(e => {
     mensaje("estadoDescarga", "No se pudo consultar la carga: " + explicarErrorV11(e), true);
@@ -4158,18 +4151,71 @@ function cargarDescarga(){
   cargarHistorialDescargas();
 }
 
-function generarDescargaMovil(i){
+/* << v13 >> Tabla de residuos de un grupo (todo, IMSALUD o el resto) */
+function tablaCargaDescarga(r){
+  return `<table>
+    <thead><tr><th>Residuo</th><th>Contenedores</th><th>Kg</th></tr></thead>
+    <tbody>
+      ${r.items.map(t => `<tr><td>${esc(t.tipo)}</td><td>${esc(textoConts(t.contenedores)) || "—"}</td><td class="num">${kgCarrito(t.kg)}</td></tr>`).join("")}
+      <tr class="tot"><td>TOTAL</td><td>${r.totalContenedores || "—"}</td><td class="num">${kgCarrito(r.totalKg)}</td></tr>
+    </tbody>
+  </table>`;
+}
+
+function tarjetaVehiculo(v, i){
+  const cabeza = `
+    <h3>🚚 Móvil ${esc(v.movil)}</h3>
+    <div class="sub">${v.manifiestos.length} manifiesto(s) · del ${esc(fechaDiaMes(v.desde) || v.desde)} al ${esc(fechaDiaMes(v.hasta) || v.hasta)} · ${kgCarrito(v.totalKg)} kg en total</div>`;
+
+  // Sin IMSALUD: una sola tabla y un botón, como antes
+  if(!v.imsalud){
+    return `<div class="desc-vehiculo">${cabeza}
+      ${tablaCargaDescarga(v)}
+      <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i}, '')">📦 Generar descarga e informe</button>
+    </div>`;
+  }
+
+  // Con IMSALUD: va aparte para certificarlo por separado
+  return `<div class="desc-vehiculo">${cabeza}
+    <div class="desc-grupo desc-imsalud">
+      <h4>🏥 IMSALUD · ${v.imsalud.manifiestos.length} manifiesto(s)</h4>
+      ${tablaCargaDescarga(v.imsalud)}
+      <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i}, 'IMSALUD')">🏥 Descarga solo IMSALUD</button>
+    </div>
+    ${v.general ? `
+    <div class="desc-grupo">
+      <h4>Otros clientes · ${v.general.manifiestos.length} manifiesto(s)</h4>
+      ${tablaCargaDescarga(v.general)}
+      <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i}, 'GENERAL')">📦 Descarga sin IMSALUD</button>
+    </div>` : ""}
+    ${v.general ? `<button type="button" class="btn-mini desc-todo" onclick="generarDescargaMovil(${i}, '')">Descargar todo junto en un solo informe</button>` : ""}
+  </div>`;
+}
+
+const NOMBRE_GRUPO_DESC = { IMSALUD:"IMSALUD", GENERAL:"SIN IMSALUD", TODO:"", "":"" };
+
+function generarDescargaMovil(i, grupo){
   const v = vehiculosCarga[i];
   if(!v) return;
-  if(!confirm("¿Generar la descarga del móvil " + v.movil + " (" + kgCarrito(v.totalKg) + " kg)?\n\n" +
-              "El móvil quedará en cero para empezar otro recorrido.")) return;
+  grupo = grupo || "";
+  const parte = grupo === "IMSALUD" ? v.imsalud : grupo === "GENERAL" ? v.general : v;
+  if(!parte) return;
+
+  const que = grupo === "IMSALUD" ? "solo lo de IMSALUD"
+            : grupo === "GENERAL" ? "todo menos IMSALUD"
+            : "todo lo que lleva";
+  const queda = grupo ? "Lo demás sigue cargado en el móvil hasta que lo descargue."
+                      : "El móvil quedará en cero para empezar otro recorrido.";
+
+  if(!confirm("¿Generar la descarga del móvil " + v.movil + " con " + que +
+              " (" + kgCarrito(parte.totalKg) + " kg)?\n\n" + queda)) return;
 
   // La ventana se abre YA (en el toque), si no el navegador la bloquea
   const ventana = window.open("", "_blank");
   if(ventana) ventana.document.write("<p style='font-family:Arial;padding:20px'>Generando informe de descarga…</p>");
 
   mensaje("estadoDescarga", "Generando la descarga del móvil " + v.movil + "…");
-  enviar({ accion:"generarDescarga", movil:v.movil }).then(r => {
+  enviar({ accion:"generarDescarga", movil:v.movil, grupo:grupo }).then(r => {
     mensaje("estadoDescarga", "✔ " + (r.mensaje || "Descarga generada"));
     mostrarInformeDescarga(r, ventana);
     cargarDescarga();
@@ -4188,9 +4234,10 @@ function cargarHistorialDescargas(){
       return;
     }
     caja.innerHTML = `<div style="overflow-x:auto"><table>
-      <thead><tr><th>Consecutivo</th><th>Fecha</th><th>Móvil</th><th>Kg</th><th>Manifiestos</th><th>Generó</th><th></th></tr></thead>
+      <thead><tr><th>Consecutivo</th><th>Fecha</th><th>Móvil</th><th>Grupo</th><th>Kg</th><th>Manifiestos</th><th>Generó</th><th></th></tr></thead>
       <tbody>${lista.map(d => `
         <tr><td>${esc(d.consecutivo)}</td><td>${esc(d.fecha)}</td><td>${esc(d.movil)}</td>
+            <td>${d.grupo === "IMSALUD" ? "🏥 IMSALUD" : d.grupo === "GENERAL" ? "Sin IMSALUD" : "Todo"}</td>
             <td>${kgCarrito(d.kg)}</td><td>${d.manifiestos}</td><td>${esc(d.generadoPor)}</td>
             <td><button type="button" class="btn-mini" onclick="reimprimirDescarga('${esc(d.consecutivo)}')">🖨️ Informe</button></td></tr>`).join("")}
       </tbody></table></div>`;
@@ -4227,7 +4274,7 @@ function mostrarInformeDescarga(r, ventana){
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Descarga ${esc(r.consecutivo)} - Móvil ${esc(r.movil)}</title>
+<title>Descarga ${esc(r.consecutivo)}${r.grupo === "IMSALUD" ? " IMSALUD" : ""} - Móvil ${esc(r.movil)}</title>
 <style>
   @page{size:letter;margin:12mm 15mm;}
   body{font-family:"Century Gothic",Arial,sans-serif;color:#000;margin:0 auto;max-width:190mm;padding:10px;font-size:11pt;}
@@ -4251,7 +4298,8 @@ function mostrarInformeDescarga(r, ventana){
   <div class="acciones"><button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button></div>
   <img class="membrete" src="${IMG_LOGO}" alt="">
   <div class="cons">${esc(r.consecutivo)}</div>
-  <h1>INFORME DE DESCARGA DE RESIDUOS</h1>
+  <h1>INFORME DE DESCARGA DE RESIDUOS${NOMBRE_GRUPO_DESC[r.grupo || ""] ? " — " + NOMBRE_GRUPO_DESC[r.grupo] : ""}</h1>
+  ${r.grupo === "IMSALUD" ? `<p style="text-align:center;margin:2px 0 0"><b>EMPRESA SOCIAL DEL ESTADO E.S.E IMSALUD</b></p>` : ""}
   <div class="datos">
     <div><b>Móvil:</b> ${esc(r.movil)}</div>
     <div><b>Fecha de descarga:</b> ${esc(r.fecha)}</div>
@@ -4271,7 +4319,7 @@ function mostrarInformeDescarga(r, ventana){
 
   <h2>Manifiestos incluidos</h2>
   <table>
-    <thead><tr><th>#</th><th>Fecha</th><th>Manifiesto</th><th>Cliente</th><th>Kg</th></tr></thead>
+    <thead><tr><th>#</th><th>Fecha</th><th>Manifiesto</th><th>${r.grupo === "IMSALUD" ? "IPS / sede" : "Cliente"}</th><th>Kg</th></tr></thead>
     <tbody>${filasMan}</tbody>
   </table>
 
