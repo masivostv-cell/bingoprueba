@@ -258,6 +258,11 @@ tbody tr:nth-child(even){background:#f8fafc;}
 .desc-imsalud{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:8px;}
 .desc-imsalud h4{color:#075985;}
 .desc-todo{display:block;margin:8px auto 0;}
+.registro-dest{font-size:13px;margin:4px 0;padding:6px 10px;border-radius:8px;}
+.registro-dest:empty{display:none;}
+.registro-dest.pendiente{background:#fef3c7;color:#92400e;}
+.registro-dest.listo{background:#dcfce7;color:#166534;}
+.cert-anulado td{color:#94a3b8;text-decoration:line-through;}
 .desc-vacio{padding:16px;border:2px dashed #cbd5e1;border-radius:10px;color:#64748b;text-align:center;}
 
 /* ---------- Carrito de recolección (nuevo manifiesto) ---------- */
@@ -1254,7 +1259,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 
         <br>
         <label class="etiqueta">Consecutivo</label>
-        <span id="destConsecutivoAyuda" class="ayuda">Número del primer certificado; si genera varios, va aumentando.</span>
+        <span id="destConsecutivoAyuda" class="ayuda">Siguiente número según la hoja. Es provisional: el definitivo se asigna al guardar.</span>
         <br>
         <span class="prefijo-crg">CRG-</span>
         <input type="number" step="1" min="1" id="destConsecutivo" style="width:120px" title="Número consecutivo">
@@ -1343,13 +1348,28 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
           y borre con 🗑️ las filas que no correspondan. Lo que quede en pantalla es
           exactamente lo que se exporta.
         </p>
+        <button type="button" class="btn-pro btn-guardar"   onclick="guardarCertificadosDestino()">💾 Guardar y asignar consecutivo</button>
         <button type="button" class="btn-pro btn-guardar"   onclick="exportarDestinacionPDF()">🖨️ PDF</button>
         <button type="button" class="btn-pro btn-neutro"    onclick="exportarDestinacionExcel()">📥 Excel</button>
         <button type="button" class="btn-pro btn-neutro"    onclick="exportarDestinacionWord()">📝 Word</button>
         <button type="button" class="btn-pro btn-consultar" onclick="recalcularTotalesDest()">🔢 Recalcular totales</button>
         <p id="estadoDestExport" class="estado"></p>
+        <p id="estadoDestRegistro" class="registro-dest"></p>
 
         <div id="destVista" class="vista-previa"></div>
+      </div>
+
+      <!-- << v16 >> Certificados ya guardados -->
+      <div class="card">
+        <h2>Certificados guardados</h2>
+        <p class="ayuda" style="margin-left:0">Cada certificado que guarda o exporta queda en la hoja
+          CERTIFICADOS DESTINACION con su consecutivo. Si exporta otra vez el mismo certificado (mismo
+          cliente y mismos manifiestos) conserva su número.</p>
+        <input id="certGuardBuscar" placeholder="Buscar cliente, CRG o manifiesto…" style="width:280px"
+               onkeydown="if(event.key==='Enter') cargarCertificadosGuardados()">
+        <button type="button" class="btn-pro btn-consultar" onclick="cargarCertificadosGuardados()">🔄 Consultar</button>
+        <p id="estadoCertGuard" class="estado"></p>
+        <div id="certGuardLista" class="tabla-scroll"></div>
       </div>
     </section>
 
@@ -1570,7 +1590,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbzxv61HX9JDk41hdeUo01shHvWuY6x2kp0fal-V0Ai8Wos1-Pm0h7JL-iHxYOLWHD33/exec";
+const API = "https://script.google.com/macros/s/AKfycbxcJGDPJMlrKZttCGNFchABjM9PZj5pacnDwT9EXJuXfkv-JO0vqw9y6hhMg9ZGKbHC/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -1860,6 +1880,7 @@ function arrancarApp(){
   cargarClientes(false);
   cargarMoviles();
   cargarTipos();          // << v11 >> tipos de residuo y de contenedor
+  cargarPreciosImsalud(); // << v17 >> precios por kilo de IMSALUD
   procesarCola();
   if(!$("manFecha").value) fechaManifiestoHoy();
   cargarRutaDelDia();     // << v11 >> ruta del conductor
@@ -2190,6 +2211,7 @@ function mostrar(id){
     entrarHistorial();   // << v8 >> muestra lo guardado y actualiza solo
   }
   if(id === "certificados"){
+    cargarPreciosImsalud();          // << v17 >>
     describirTipoCert();
     prepararFechasCertificado();
   }
@@ -5362,6 +5384,7 @@ function prepararDestinacion(){
   }
 
   if(!$("destConsecutivo").value) pedirConsecutivo();
+  cargarCertificadosGuardados();      // << v16 >>
 }
 
 /**
@@ -5378,7 +5401,7 @@ function pedirConsecutivo(){
     .then(r => {
       if(!r || typeof r.siguiente === "undefined") throw new Error("sin soporte");
       $("destConsecutivo").value = r.siguiente;
-      ayuda.textContent = "Siguiente según la hoja. Si genera varios, va aumentando.";
+      ayuda.textContent = "Siguiente según la hoja. Es provisional: el definitivo se asigna al guardar.";
     })
     .catch(() => {
       ayuda.textContent = "La hoja aún no lleva el consecutivo: escríbalo a mano.";
@@ -5946,10 +5969,14 @@ function hojaDestino(cliente, consecutivo, inicio, fin, fechaExpedicion){
   ).join("");
 
   return `
-  <div class="destino" data-cliente="${esc(cliente.nombre)}">
+  <div class="destino" data-cliente="${esc(cliente.nombre)}"
+       data-nit="${esc(imsalud ? IMSALUD_NIT : (cliente.nit || ""))}"
+       data-inicio="${esc(inicio)}" data-fin="${esc(fin)}"
+       data-total="${esc(String(cliente.total || 0))}" data-imsalud="${imsalud ? "1" : ""}"
+       data-manifiestos="${esc(cliente.manifiestos.map(m => String(m.manifiesto || "").trim()).filter(Boolean).join(","))}">
     <img class="marca-agua" src="${IMG_MARCA}" alt="">
     <img class="membrete" src="${IMG_LOGO}" alt="">
-    <p class="consecutivo">CRG-${editable(String(consecutivo).padStart(3, "0"))}-${esc(anio)}</p>
+    <p class="consecutivo">CRG-${editable(String(consecutivo).padStart(3, "0"), "num-crg")}-<span class="anio-crg">${esc(anio)}</span></p>
 
     <p class="titulo-dest">${TITULO_DESTINO}</p>
 
@@ -6110,12 +6137,13 @@ function generarDestinacion(){
   const sinNit = grupos.filter(g => !g.nit).length;
 
   let aviso = grupos.length + (grupos.length === 1 ? " certificado generado" : " certificados generados") +
-              " (CRG-" + consecutivo + " a CRG-" + (consecutivo + grupos.length - 1) + ")" +
-              " con " + elegidos.length + " manifiesto(s).";
+              " con " + elegidos.length + " manifiesto(s). Números provisionales CRG-" + consecutivo +
+              " a CRG-" + (consecutivo + grupos.length - 1) + ": el definitivo se asigna al exportar o al guardar.";
   if(sinNit) aviso += "  ⚠️ " + sinNit + " sin NIT: escríbalo en el recuadro rojo.";
 
   mensaje("estadoDestGenerar", aviso, sinNit > 0);
   mensaje("estadoDestExport","");
+  pintarEstadoRegistroDest();
 
   $("destCard").scrollIntoView({ behavior:"smooth", block:"start" });
 }
@@ -6142,6 +6170,131 @@ function grupoDestino(nombreCliente, manifiestos){
 
 function hojasDestino(){
   return Array.from($("destVista").querySelectorAll(".destino"));
+}
+
+/* ================= << v16 >> GUARDAR LOS CERTIFICADOS ================= */
+/*
+ * La vista previa lleva números provisionales. Al guardar (o al exportar a
+ * PDF, Word o Excel) se registran en la hoja CERTIFICADOS DESTINACION y el
+ * servidor asigna el consecutivo definitivo, que se pone en cada hoja. Si el
+ * certificado ya estaba guardado (mismo cliente, mismos manifiestos) se
+ * reutiliza su número: reimprimir no gasta consecutivos.
+ */
+function pintarEstadoRegistroDest(){
+  const p = $("estadoDestRegistro");
+  if(!p) return;
+  const hojas = hojasDestino();
+  if(!hojas.length){ p.textContent = ""; p.className = "registro-dest"; return; }
+  const faltan = hojas.filter(h => h.dataset.registrado !== "1").length;
+  if(faltan){
+    p.textContent = "⏳ " + faltan + " certificado(s) sin guardar: tienen número provisional. " +
+                    "Se guardan con «Guardar y asignar consecutivo» o al exportar.";
+    p.className = "registro-dest pendiente";
+  }else{
+    const nums = hojas.map(h => h.dataset.crg).filter(Boolean);
+    p.textContent = "✅ Guardados: " + (nums.length > 3 ? nums[0] + " … " + nums[nums.length - 1] : nums.join(", "));
+    p.className = "registro-dest listo";
+  }
+}
+
+async function registrarHojasDestino(){
+  const pendientes = hojasDestino().filter(h => h.dataset.registrado !== "1");
+  if(!pendientes.length) return { ok:true };
+
+  const fecha = $("destFecha").value;
+  if(!fecha) return { ok:false, error:"Indique la fecha de expedición" };
+
+  const certificados = pendientes.map(h => ({
+    cliente: h.dataset.cliente,
+    nit: h.dataset.nit || "",
+    inicio: h.dataset.inicio || "",
+    fin: h.dataset.fin || "",
+    total: Number(h.dataset.total) || 0,
+    imsalud: h.dataset.imsalud === "1",
+    manifiestos: String(h.dataset.manifiestos || "").split(",").filter(Boolean)
+  }));
+
+  try{
+    const r = await enviar({ accion:"registrarCertificadosDestino", fecha:fecha, certificados:certificados });
+    if(!r || !Array.isArray(r.certificados) || r.certificados.length !== pendientes.length){
+      throw new Error((r && r.mensaje) || "Respuesta inesperada del servidor");
+    }
+    r.certificados.forEach((c, i) => {
+      const h = pendientes[i];
+      const num = h.querySelector(".consecutivo .num-crg");
+      const anio = h.querySelector(".consecutivo .anio-crg");
+      const partes = String(c.certificado || "").split("-");      // CRG-095-2026
+      if(num) num.textContent = partes[1] || String(c.consecutivo).padStart(3, "0");
+      if(anio && partes[2]) anio.textContent = partes[2];
+      h.dataset.registrado = "1";
+      h.dataset.crg = c.certificado;
+    });
+    if(r.siguiente) $("destConsecutivo").value = r.siguiente;
+    pintarEstadoRegistroDest();
+    cargarCertificadosGuardados();
+    return { ok:true, mensaje:r.mensaje };
+  }catch(e){
+    return { ok:false, error:explicarErrorV11(e) };
+  }
+}
+
+async function guardarCertificadosDestino(){
+  if(!hayCertificados()) return;
+  mensaje("estadoDestExport", "Guardando certificados y asignando consecutivo…");
+  const r = await registrarHojasDestino();
+  mensaje("estadoDestExport", r.ok ? "✔ " + (r.mensaje || "Certificados guardados.") : "No se guardaron: " + r.error, !r.ok);
+}
+
+// Antes de exportar: si hay certificados sin guardar, se guardan.
+async function registrarAntesDeExportar(){
+  if(!hojasDestino().some(h => h.dataset.registrado !== "1")) return true;
+  mensaje("estadoDestExport", "Guardando certificados y asignando consecutivo…");
+  const r = await registrarHojasDestino();
+  if(r.ok){ mensaje("estadoDestExport", "✔ " + (r.mensaje || "Certificados guardados.")); return true; }
+  return confirm("No se pudieron guardar los certificados (" + r.error + ").\n\n" +
+                 "¿Exportar de todos modos con el número PROVISIONAL? Ese número no queda registrado.");
+}
+
+function cargarCertificadosGuardados(){
+  const caja = $("certGuardLista");
+  if(!caja) return;
+  const buscar = ($("certGuardBuscar").value || "").trim();
+  mensaje("estadoCertGuard", "Consultando…");
+  pedir(API + "?accion=certificadosDestino&limite=200" + (buscar ? "&buscar=" + encodeURIComponent(buscar) : ""))
+    .then(lista => {
+      if(lista && lista.estado === "error") throw new Error(lista.mensaje);
+      if(!Array.isArray(lista) || !lista.length){
+        mensaje("estadoCertGuard", buscar ? "Sin resultados." : "Todavía no hay certificados guardados.");
+        caja.innerHTML = "";
+        return;
+      }
+      mensaje("estadoCertGuard", lista.length + " certificado(s)" + (lista.length >= 200 ? " (los 200 más recientes)" : "") + ".");
+      caja.innerHTML = `<table>
+        <thead><tr><th>Certificado</th><th>Expedición</th><th>Cliente</th><th>Periodo</th>
+          <th>Manifiestos</th><th>Total KG</th><th>Estado</th><th>Generó</th><th></th></tr></thead>
+        <tbody>${lista.map(c => `
+          <tr class="${c.estado === "ANULADO" ? "cert-anulado" : ""}">
+            <td><b>${esc(c.certificado)}</b>${c.imsalud ? " 🏥" : ""}</td>
+            <td>${esc(fechaCortaDest(c.expedicion))}</td>
+            <td style="white-space:normal;min-width:220px">${esc(c.cliente)}</td>
+            <td>${esc(fechaCortaDest(c.desde))} – ${esc(fechaCortaDest(c.hasta))}</td>
+            <td style="white-space:normal;max-width:220px;font-size:12px">${esc(c.manifiestos)}</td>
+            <td class="num">${kgCarrito(c.total)}</td>
+            <td>${esc(c.estado)}</td>
+            <td>${esc(c.generadoPor)}</td>
+            <td>${c.estado === "ANULADO" ? "" :
+              `<button type="button" class="btn-mini btn-borrar-man" onclick="anularCertificadoDest(${c.consecutivo}, '${esc(c.certificado)}')">🚫 Anular</button>`}</td>
+          </tr>`).join("")}</tbody></table>`;
+    })
+    .catch(e => mensaje("estadoCertGuard", "No se pudo consultar: " + explicarErrorV11(e), true));
+}
+
+function anularCertificadoDest(consecutivo, crg){
+  if(!confirm("¿Anular el certificado " + crg + "?\n\nQueda en la hoja como ANULADO y su número no se vuelve a usar. " +
+              "Si genera de nuevo ese certificado, recibirá un número nuevo.")) return;
+  enviar({ accion:"anularCertificadoDestino", consecutivo:consecutivo })
+    .then(r => { mensaje("estadoCertGuard", "✔ " + (r.mensaje || "Anulado")); cargarCertificadosGuardados(); })
+    .catch(e => mensaje("estadoCertGuard", "No se anuló: " + explicarErrorV11(e), true));
 }
 
 function hayCertificados(){
@@ -6335,6 +6488,7 @@ function paginarCertificado(hoja){
  */
 async function exportarDestinacionPDF(){
   if(!hayCertificados()) return;
+  if(!(await registrarAntesDeExportar())) return;     // << v16 >>
 
   const area = $("areaDestino");
   area.innerHTML = copiaLimpiaDestino().innerHTML;
@@ -6381,8 +6535,9 @@ async function exportarDestinacionPDF(){
  * como una parte MIME aparte referenciada por su Content-Location. Word abre
  * este formato sin problema y el documento queda editable.
  */
-function exportarDestinacionWord(){
+async function exportarDestinacionWord(){
   if(!hayCertificados()) return;
+  if(!(await registrarAntesDeExportar())) return;     // << v16 >>
 
   const copia = copiaLimpiaDestino();
   copia.querySelectorAll(".marca-agua").forEach(e => e.remove());
@@ -6530,8 +6685,9 @@ function descargarArchivo(contenido, nombre, tipo){
  * Lee lo que hay en pantalla (ya editado) y arma el Excel. Una hoja por
  * certificado, con la misma estructura que el documento.
  */
-function exportarDestinacionExcel(){
+async function exportarDestinacionExcel(){
   if(!hayCertificados()) return;
+  if(!(await registrarAntesDeExportar())) return;     // << v16 >>
 
   if(typeof XLSX === "undefined"){
     mensaje("estadoDestExport",
@@ -6913,10 +7069,93 @@ function tarifaDeCliente(nombreEnManifiesto){
 
   if(tarifaPorCliente[clave] === undefined){
     const ficha = emparejarCliente(clave);
-    tarifaPorCliente[clave] = ficha ? String(ficha.tarifa || "").trim() : "";
+    let tarifa = ficha ? String(ficha.tarifa || "").trim() : "";
+    // << v17 >> IMSALUD: precio por kilo según la hoja de precios
+    if(!tarifa && tipoDeCliente(clave) === "imsalud"){
+      tarifa = tarifaImsalud(clave, ficha) || "";
+    }
+    tarifaPorCliente[clave] = tarifa;
   }
 
   return tarifaPorCliente[clave];
+}
+
+
+/* ================= << v17 >> PRECIOS DE IMSALUD ================= */
+/*
+ * La hoja «tabla precios imsalud» trae, por cada centro de atención, el
+ * precio por KILO de cada tipo de residuo (urbana y rural cobran distinto).
+ * El valor de un manifiesto de IMSALUD = kilos de cada tipo × su precio.
+ * Medicamentos no tiene columna en la hoja: se cobra como Farmacéuticos.
+ */
+let preciosImsalud   = [];      // [{ centro, identificacion, precios:{biosanitarios:...} }]
+let preciosPorTarifa = {};      // texto de la tarifa -> precios por kilo
+
+const ETIQUETA_PRECIO = {
+  biosanitarios:"Bios.", cortopunzantes:"Corto.", anatomopatologicos:"Anato.",
+  farmaceuticos:"Farma.", liquido:"Líq.", medicamentos:"Medic.", otros:"Otros"
+};
+
+const claveCentro = t => normalizar(t).replace(/[^a-z0-9]+/g, " ").trim();
+
+function centroImsalud(nombreEnManifiesto, ficha){
+  if(!preciosImsalud.length) return null;
+  const candidatos = [ficha && ficha.nombre, nombreEnManifiesto].filter(Boolean).map(claveCentro);
+  // Primero el nombre exacto; después "centro + algo más" (dirección pegada)
+  for(const c of candidatos){
+    const x = preciosImsalud.find(p => claveCentro(p.centro) === c);
+    if(x) return x;
+  }
+  const ordenados = preciosImsalud.slice().sort((a, b) => b.centro.length - a.centro.length);
+  for(const c of candidatos){
+    const x = ordenados.find(p => c.indexOf(claveCentro(p.centro) + " ") === 0);
+    if(x) return x;
+  }
+  return null;
+}
+
+// Texto corto de la tarifa, agrupando los tipos que valen lo mismo:
+// "IMSALUD URBANA $/kg: Bios.-Corto. $2.400 · Anato.-Farma.-Líq.-Medic.-Otros $2.700"
+function textoTarifaImsalud(c){
+  const grupos = {};
+  CAMPOS_CANTIDAD.forEach(k => {
+    const v = Number(c.precios[k]) || 0;
+    (grupos[v] = grupos[v] || []).push(ETIQUETA_PRECIO[k] || k);
+  });
+  const partes = Object.keys(grupos).map(Number).sort((a, b) => a - b)
+    .map(v => grupos[v].join("-") + " " + pesos(v));
+  return "IMSALUD " + (c.identificacion || "").toUpperCase() + " $/kg: " + partes.join(" · ");
+}
+
+function tarifaImsalud(nombreEnManifiesto, ficha){
+  const c = centroImsalud(nombreEnManifiesto, ficha);
+  if(!c) return "";
+  const texto = textoTarifaImsalud(c);
+  preciosPorTarifa[texto] = c.precios;
+  return texto;
+}
+
+function cargarPreciosImsalud(){
+  const aplicar = lista => {
+    if(!Array.isArray(lista)) return;
+    preciosImsalud = lista;
+    preciosPorTarifa = {};
+    tarifaPorCliente = {};
+    // Si ya hay clientes en Certificados, se recalculan sus valores
+    if(typeof certManifiestos !== "undefined" && certManifiestos.length){
+      agruparClientesCertificado();
+      if(typeof pintarClientesCertificado === "function") pintarClientesCertificado();
+    }
+  };
+
+  try{ aplicar(JSON.parse(leerCache("precios_imsalud") || "null")); }catch(e){}
+
+  if(!esAdmin()) return;
+  pedir(API + "?accion=preciosImsalud").then(r => {
+    if(!r || r.estado === "error" || !Array.isArray(r.centros)) return;
+    guardarCache("precios_imsalud", JSON.stringify(r.centros));
+    aplicar(r.centros);
+  }).catch(e => console.warn("No se pudieron cargar los precios de IMSALUD:", e));
 }
 
 /**
@@ -6969,6 +7208,11 @@ function kilosExtra(total, limite){
 
 // Valor a facturar de un manifiesto: base + kilos extra x valor del kilo.
 function valorManifiesto(m, tarifa){
+  // << v17 >> IMSALUD: kilos de cada tipo × su precio por kilo
+  const porKilo = preciosPorTarifa[tarifa];
+  if(porKilo){
+    return Math.round(CAMPOS_CANTIDAD.reduce((s, k) => s + (Number(m[k]) || 0) * (Number(porKilo[k]) || 0), 0));
+  }
   const t = parsearTarifa(tarifa);
   return t.base + kilosExtra(m.total, t.limite) * t.extra;
 }
