@@ -977,7 +977,8 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         <h3>Residuos recogidos</h3>
         <span class="ayuda">Presione «Insertar residuo» por cada cosa que recoja: tipo de residuo,
           kilos y cuántos contenedores (bolsas, guardianes, sacos…). Si el tipo no está en la
-          lista, elija «Otro» y escríbalo: queda guardado para la próxima vez.</span>
+          lista, elija «Otro» y escríbalo: queda guardado para la próxima vez. Si no recogió nada,
+          deje los residuos vacíos y guarde: el manifiesto queda en cero.</span>
 
         <!-- << v11 >> Carrito: una línea por residuo -->
         <div id="carritoLineas" class="carrito-lineas"></div>
@@ -1511,7 +1512,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 <script>
 "use strict";
 
-const API = "https://script.google.com/macros/s/AKfycbwAdF0LEAu95szdNjbAef5VviG29a-OHpIp4wf4b8nVIVxSPJ5z52ikzw3vBIK2KMcL/exec";
+const API = "https://script.google.com/macros/s/AKfycbzuB8FecLR8ba53ldFj4LhSfVF8Ct824ll0erRNQRNsxOM4cegTiiVsbjv8WxXLtYjD/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -3483,7 +3484,12 @@ function lineasDelCarrito(){
   carrito.forEach((l, i) => {
     const kg = numeroCarrito(l.kg);
     const cant = Math.max(0, Math.round(numeroCarrito(l.cantidad)));
-    const vacia = !l.tipo && !(kg > 0) && !(cant > 0) && !l.contenedor;
+    // << v14 >> Sin contenedores y sin kilos, o con el tipo elegido y los
+    // kilos escritos en 0, la línea no cuenta (visita en cero). Si eligió el
+    // tipo pero dejó los kilos en blanco, se le avisa, para que no se pierda.
+    const kgEscrito = String(l.kg === undefined || l.kg === null ? "" : l.kg).trim() !== "";
+    const vacia = !(cant > 0) && !l.contenedor &&
+                  (l.tipo ? (kgEscrito && !(kg > 0)) : !(kg > 0));
     if(vacia) return;
 
     let falta = "";
@@ -3511,8 +3517,9 @@ function lineasDelCarrito(){
     });
   });
 
-  if(!error && !lineas.length) error = "Agregue al menos un residuo con sus kilos.";
-  return { lineas:lineas, error:error };
+  // << v14 >> Sin líneas no es error: puede ser una visita en cero.
+  // guardar() pide confirmarlo.
+  return { lineas:lineas, error:error, enCero:!error && !lineas.length };
 }
 
 function reiniciarCarrito(){
@@ -3744,6 +3751,17 @@ function guardar(){
     $("carritoLineas").scrollIntoView({ block:"center", behavior:"smooth" });
     alert(carritoListo.error);
     return;
+  }
+
+  // << v14 >> Visita sin residuos: se guarda el manifiesto en cero, con
+  // constancia en las observaciones.
+  if(carritoListo.enCero){
+    if(!confirm("No agregó residuos.\n\n¿Guardar este manifiesto EN CERO (visita sin recolección)?")) return;
+    const obs = $("observacionesManifiesto");
+    if(!/sin residuos|en cero/i.test(obs.value)){
+      obs.value = ("VISITA SIN RESIDUOS (MANIFIESTO EN CERO). " + obs.value).trim();
+    }
+    $("carritoAviso").textContent = "";
   }
 
   // << v5 >> La firma del cliente es la constancia de que se le recogió.
