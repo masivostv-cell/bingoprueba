@@ -514,10 +514,10 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 .marco .membrete{margin-bottom:6px;}
 .marco .pie{margin-top:6px;}
 
-/* Un certificado por fila: el salto de página entre filas es fiable
-   en todos los navegadores. */
-.marco > tbody > tr{page-break-after:always;}
-.marco > tbody > tr:last-child{page-break-after:auto;}
+/* Un certificado por fila, cada uno en hoja nueva. El salto va ANTES de cada
+   fila (no después): con "page-break-after" Chrome dejaba de repetir el pie
+   (tfoot) en las páginas intermedias. */
+.marco > tbody > tr + tr{break-before:page;page-break-before:always;}
 
 .hoja{
   background:#fff;color:#000;
@@ -536,10 +536,12 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 .hoja .datos-cliente{margin-bottom:10px;font-size:10pt;line-height:1.6;}
 .hoja .datos-cliente b{display:inline-block;min-width:70px;}
 
-.hoja table{width:100%;border-collapse:collapse;margin-bottom:10px;}
-.hoja th,.hoja td{border:1px solid #444;padding:3px 4px;font-size:8pt;text-align:right;}
-.hoja th{background:#dbeafe;color:#000;text-align:center;font-weight:bold;}
-.hoja td.texto{text-align:left;width:24%;}
+/* 2px menos que la hoja: con el 100% exacto el borde derecho caía justo en
+   el límite del área de impresión y Chrome lo cortaba. */
+.hoja table{width:calc(100% - 2px);border-collapse:collapse;margin-bottom:10px;table-layout:fixed;}
+.hoja th,.hoja td{border:1px solid #444;padding:3px 3px;font-size:7.5pt;text-align:right;overflow-wrap:anywhere;}
+.hoja th{background:#dbeafe;color:#000;text-align:center;font-weight:bold;font-size:6.8pt;overflow-wrap:normal;hyphens:manual;}
+.hoja td.texto{text-align:left;}
 .hoja td.centro{text-align:center;white-space:nowrap;}
 .hoja td.tarifa-cert{text-align:center;font-size:7.5pt;}
 .hoja td.valor-cert{text-align:right;white-space:nowrap;font-weight:bold;}
@@ -547,7 +549,11 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
 .hoja tr.fila-total td{font-weight:bold;background:#f1f5f9;}
 
 .hoja .gran-total{font-weight:bold;font-size:10pt;margin:6px 0 14px;}
-.hoja .procedimiento{font-size:8.5pt;line-height:1.5;margin-bottom:auto;}
+/* El procedimiento y la firma van justo después de los totales; el espacio
+   que sobra queda debajo de la firma, y el pie sigue al fondo de la hoja. */
+.hoja .cierre-cert{margin-top:18px;page-break-inside:avoid;break-inside:avoid;}
+.hoja::after{content:"";flex:1 1 auto;}
+.hoja .procedimiento{font-size:8.5pt;line-height:1.5;}
 .hoja .procedimiento b{display:block;margin-bottom:3px;}
 
 .hoja .firma{margin-top:20px;text-align:left;page-break-inside:avoid;}
@@ -697,8 +703,10 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   body.imprimiendo-destino #areaDestino{
     display:block!important;background:#fff;padding:0;margin:0;
   }
-  /* Hojas armadas por paginarCertificado(): cada .pagina-dest es una hoja */
-  @page{size:letter;margin:0;}
+  /* Hojas armadas por paginarCertificado(): cada .pagina-dest es una hoja.
+     El @page de margen 0 lo pone exportarDestinacionPDF() solo mientras
+     imprime: si quedara fijo aquí, los demás certificados saldrían sin
+     márgenes (tabla pegada al borde y firma corrida). */
   body.imprimiendo-destino #areaDestino .no-imprimir{display:none!important;}
 }
 
@@ -739,6 +747,16 @@ td.fecha-mala{background:#fff4f4;color:var(--rojo-logo);font-weight:600;cursor:h
   box-shadow:0 10px 30px rgba(0,0,0,.35);
 }
 .modal-contenido textarea{width:100%;}
+/* << v14 >> corregir manifiesto */
+.modal-ancho{width:920px;}
+.ed-aviso{padding:8px 10px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;}
+.ed-lineas{width:100%;min-width:640px;}
+.ed-lineas td,.ed-lineas th{padding:4px 5px;font-size:13px;}
+.ed-lineas input,.ed-lineas select{width:100%;margin:0;box-sizing:border-box;}
+.ed-lineas td.n input{text-align:right;}
+.ed-lineas button{border:0;background:none;cursor:pointer;font-size:16px;}
+.ed-total{font-size:15px;margin:8px 0;}
+.btn-borrar-man:hover{background:#fee2e2;}
 
 /* Formulario de cliente: cada dato con su nombre encima */
 .form-cliente{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
@@ -1140,6 +1158,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
                 <th>Total KG</th><th title="Kilos incluidos en la tarifa">Límite</th>
                 <th>Tarifa</th><th>Observaciones</th>
                 <th title="Firma que dejó el cliente al recibir la recolección">Firma</th>
+                <th title="Corregir o borrar el manifiesto en todas las hojas">Acciones</th>
               </tr>
             </thead>
             <tbody id="tablaHistorial"></tbody>
@@ -1493,6 +1512,45 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
     <button type="button" class="btn-pro btn-consultar" onclick="cerrarObservaciones()">❌ Cerrar</button>
     <hr>
     <div id="listaObservaciones"></div>
+  </div>
+</div>
+
+<!-- ================= << v14 >> CORREGIR UN MANIFIESTO ================= -->
+<div id="modalEditarMan" class="modal">
+  <div class="modal-contenido modal-ancho">
+    <h2>Corregir manifiesto <span id="edTitulo"></span></h2>
+    <p class="ayuda" style="margin-left:0">Lo que cambie aquí se corrige en todas las hojas: DATOS, detalle,
+      abonos, ruta del día y, si ya se descargó, el resumen de la descarga.</p>
+    <p id="edAviso" class="ed-aviso" hidden></p>
+
+    <div class="form-cliente">
+      <div class="campo"><label>Fecha</label><input type="date" id="edFecha"></div>
+      <div class="campo"><label>Número de manifiesto</label><input id="edNumero"></div>
+      <div class="campo ancho"><label>Cliente</label><input id="edCliente" list="edListaClientes" autocomplete="off"></div>
+      <div class="campo"><label>Ruta</label><input id="edRuta"></div>
+      <div class="campo"><label>Móvil</label><select id="edMovil"></select></div>
+      <div class="campo"><label>Abono ($)</label><input id="edAbono" inputmode="numeric" placeholder="0"></div>
+      <div class="campo"><label>Forma de pago</label>
+        <select id="edFormaPago"><option>Efectivo</option><option>Transferencia</option><option>Otro</option></select></div>
+      <div class="campo ancho"><label>Observaciones</label><textarea id="edObs" rows="2"></textarea></div>
+      <div class="seccion-form">Residuos</div>
+    </div>
+    <datalist id="edListaClientes"></datalist>
+    <datalist id="edListaTipos"></datalist>
+    <datalist id="edListaCont"></datalist>
+
+    <div class="tabla-scroll">
+      <table class="ed-lineas">
+        <thead><tr><th>Tipo de residuo</th><th>Designación</th><th>Kg</th><th>Cant.</th><th>Contenedor</th><th></th></tr></thead>
+        <tbody id="edLineas"></tbody>
+      </table>
+    </div>
+    <button type="button" class="btn-mini" onclick="edAgregarLinea()">➕ Agregar residuo</button>
+    <p class="ed-total">TOTAL: <b id="edTotal">0,00</b> kg · <span id="edConts">0</span> contenedor(es)</p>
+
+    <p id="estadoEdicion" class="estado"></p>
+    <button type="button" class="btn-pro btn-guardar" id="btnGuardarEdicion" onclick="guardarEdicionManifiesto()">💾 Guardar corrección</button>
+    <button type="button" class="btn-pro btn-consultar" onclick="cerrarEdicionManifiesto()">Cancelar</button>
   </div>
 </div>
 
@@ -4123,6 +4181,202 @@ function editarRutaGuardada(i){
 }
 
 
+/* ================= << v14 >> CORREGIR Y BORRAR MANIFIESTOS ================= */
+/*
+ * Solo administración. El servidor aplica el cambio en todas las hojas
+ * donde vive el manifiesto (DATOS, DETALLE, ABONOS, RUTAS, DESCARGAS).
+ * Después el historial se recarga entero, porque cambió por dentro.
+ */
+let edicion = null;            // { original, lineas:[{tipo,designacion,kg,cantidad,contenedor}] }
+
+function tipoBasePorDesignacion(d){
+  const t = tiposResiduo.find(x => x.designacion === d);
+  return t ? t.nombre : nombreDesignacion(d).toUpperCase();
+}
+
+function abrirEdicionManifiesto(numeroMan){
+  if(!esAdmin()) return;
+  edicion = null;
+  $("edTitulo").textContent = numeroMan;
+  $("edAviso").hidden = true;
+  $("edLineas").innerHTML = '<tr><td colspan="6">Cargando…</td></tr>';
+  mensaje("estadoEdicion", "");
+  $("modalEditarMan").classList.add("mostrar");
+
+  // Listas de apoyo
+  $("edListaClientes").innerHTML = clientes.slice(0, 3000)
+    .map(c => `<option value="${esc(c.nombre)}">`).join("");
+  $("edListaTipos").innerHTML = tiposResiduo.map(t => `<option value="${esc(t.nombre)}">`).join("");
+  $("edListaCont").innerHTML  = tiposContenedor.map(c => `<option value="${esc(c)}">`).join("");
+  $("edMovil").innerHTML = (moviles || []).map(m => `<option value="${esc(m)}">Móvil ${esc(m)}</option>`).join("");
+
+  pedir(API + "?accion=manifiestoCompleto&manifiesto=" + encodeURIComponent(numeroMan)).then(m => {
+    if(!m || m.estado === "error") throw new Error((m && m.mensaje) || "No se encontró");
+
+    $("edFecha").value   = fechaComparable(m.fecha);
+    $("edNumero").value  = m.manifiesto;
+    $("edCliente").value = m.cliente;
+    $("edRuta").value    = m.ruta;
+    if(m.movil && !Array.from($("edMovil").options).some(o => o.value === m.movil)){
+      $("edMovil").insertAdjacentHTML("beforeend", `<option value="${esc(m.movil)}">Móvil ${esc(m.movil)}</option>`);
+    }
+    $("edMovil").value   = m.movil;
+    $("edAbono").value   = m.abono > 0 ? String(m.abono) : "";
+    $("edFormaPago").value = m.formaPago || "Efectivo";
+    $("edObs").value     = m.observaciones || "";
+
+    let lineas = (m.lineas || []).map(l => Object.assign({}, l));
+    // Manifiesto de antes del carrito: las líneas salen de las columnas
+    if(!m.tieneDetalle){
+      lineas = CAMPOS_CANTIDAD
+        .filter(d => Number(m[d]) > 0)
+        .map(d => ({ tipo:tipoBasePorDesignacion(d), designacion:d, kg:Number(m[d]), cantidad:"", contenedor:"" }));
+    }
+
+    const avisos = [];
+    if(m.descarga) avisos.push("⚠️ Este manifiesto ya está en la descarga " + m.descarga +
+                               ". Al guardar, ese informe se actualiza con los kilos nuevos.");
+    if(!m.tieneDetalle) avisos.push("Este manifiesto es de antes del carrito: los residuos salen de las columnas de DATOS.");
+    if(avisos.length){ $("edAviso").innerHTML = avisos.map(esc).join("<br>"); $("edAviso").hidden = false; }
+
+    edicion = { original:m.manifiesto, lineas:lineas };
+    pintarLineasEdicion();
+  }).catch(e => {
+    $("edLineas").innerHTML = "";
+    mensaje("estadoEdicion", "No se pudo cargar el manifiesto: " + explicarErrorV11(e), true);
+  });
+}
+
+function cerrarEdicionManifiesto(){
+  $("modalEditarMan").classList.remove("mostrar");
+  edicion = null;
+}
+
+function pintarLineasEdicion(){
+  if(!edicion) return;
+  $("edLineas").innerHTML = edicion.lineas.map((l, i) => `
+    <tr>
+      <td><input list="edListaTipos" value="${esc(l.tipo)}" oninput="edCambiar(${i}, 'tipo', this.value)" onchange="edTipoElegido(${i})"></td>
+      <td><select onchange="edCambiar(${i}, 'designacion', this.value)">
+        ${DESIGNACIONES_RES.map(d => `<option value="${d[0]}"${d[0] === l.designacion ? " selected" : ""}>${d[1]}</option>`).join("")}
+      </select></td>
+      <td class="n"><input inputmode="decimal" value="${esc(l.kg)}" oninput="edCambiar(${i}, 'kg', this.value)"></td>
+      <td class="n"><input inputmode="numeric" value="${esc(l.cantidad)}" oninput="edCambiar(${i}, 'cantidad', this.value)"></td>
+      <td><input list="edListaCont" value="${esc(l.contenedor)}" oninput="edCambiar(${i}, 'contenedor', this.value)"></td>
+      <td><button type="button" title="Quitar" onclick="edQuitarLinea(${i})">🗑️</button></td>
+    </tr>`).join("") || '<tr><td colspan="6" class="ayuda">Sin residuos: el manifiesto queda en cero.</td></tr>';
+  edTotales();
+}
+
+function edCambiar(i, campo, valor){
+  if(!edicion || !edicion.lineas[i]) return;
+  edicion.lineas[i][campo] = valor;
+  edTotales();
+}
+
+// Al escoger un tipo conocido, su designación se pone sola
+function edTipoElegido(i){
+  const l = edicion && edicion.lineas[i];
+  if(!l) return;
+  l.tipo = String(l.tipo || "").trim().toUpperCase();
+  const t = tipoPorNombre(l.tipo);
+  if(t) l.designacion = t.designacion;
+  pintarLineasEdicion();
+}
+
+function edAgregarLinea(){
+  if(!edicion) return;
+  edicion.lineas.push({ tipo:"", designacion:"biosanitarios", kg:"", cantidad:"", contenedor:"" });
+  pintarLineasEdicion();
+}
+
+function edQuitarLinea(i){
+  if(!edicion) return;
+  edicion.lineas.splice(i, 1);
+  pintarLineasEdicion();
+}
+
+function edTotales(){
+  let kg = 0, cont = 0;
+  (edicion ? edicion.lineas : []).forEach(l => {
+    kg += Math.max(0, numeroCarrito(l.kg));
+    cont += Math.max(0, Math.round(numeroCarrito(l.cantidad)));
+  });
+  $("edTotal").textContent = kgCarrito(kg);
+  $("edConts").textContent = cont;
+}
+
+function guardarEdicionManifiesto(){
+  if(!edicion) return;
+
+  const lineas = [];
+  for(let i = 0; i < edicion.lineas.length; i++){
+    const l = edicion.lineas[i];
+    const kg = numeroCarrito(l.kg), cant = Math.max(0, Math.round(numeroCarrito(l.cantidad)));
+    const tipo = String(l.tipo || "").trim().toUpperCase();
+    const contenedor = String(l.contenedor || "").trim().toUpperCase();
+    if(!tipo && !(kg > 0) && !cant && !contenedor) continue;          // fila vacía
+    if(!tipo){ alert("Residuo " + (i + 1) + ": escriba el tipo."); return; }
+    if(!(kg > 0)){ alert("Residuo " + (i + 1) + " (" + tipo + "): escriba los kilos o quite la línea."); return; }
+    if(cant > 0 && !contenedor){ alert("Residuo " + (i + 1) + ": escriba el tipo de contenedor."); return; }
+    if(contenedor && !(cant > 0)){ alert("Residuo " + (i + 1) + ": escriba cuántos " + contenedor.toLowerCase() + "."); return; }
+    const t = tipoPorNombre(tipo);
+    lineas.push({ tipo:tipo, designacion:l.designacion || (t && t.designacion) || "otros",
+                  tratamiento:(t && t.tratamiento) || "", corriente:(t && t.corriente) || "",
+                  kg:Math.round(kg * 100) / 100, cantidad:cant, contenedor:contenedor });
+  }
+
+  const datos = {
+    accion:"editarManifiesto",
+    original: edicion.original,
+    manifiesto: $("edNumero").value.trim(),
+    fecha: $("edFecha").value,
+    cliente: $("edCliente").value.trim(),
+    ruta: $("edRuta").value.trim(),
+    movil: $("edMovil").value,
+    observaciones: $("edObs").value.trim(),
+    abono: String($("edAbono").value || "0").replace(/[^\d]/g, "") || "0",
+    formaPago: $("edFormaPago").value,
+    lineas: lineas
+  };
+
+  if(!datos.manifiesto){ alert("Escriba el número de manifiesto"); return; }
+  if(!datos.fecha){ alert("Escriba la fecha"); return; }
+  if(!datos.cliente){ alert("Escriba el cliente"); return; }
+  if(!lineas.length && !confirm("El manifiesto quedará EN CERO (sin residuos). ¿Continuar?")) return;
+
+  ocupado("btnGuardarEdicion", "Guardando...");
+  mensaje("estadoEdicion", "Corrigiendo en todas las hojas…");
+  enviar(datos).then(r => {
+    ocupado("btnGuardarEdicion", null);
+    cerrarEdicionManifiesto();
+    mensaje("estadoHistorial", "✔ " + (r.mensaje || "Manifiesto corregido"));
+    sincronizarHistorial();        // trae el cambio (recarga completa)
+  }).catch(e => {
+    ocupado("btnGuardarEdicion", null);
+    mensaje("estadoEdicion", "No se guardó: " + explicarErrorV11(e), true);
+  });
+}
+
+function borrarManifiestoAdmin(numeroMan){
+  if(!esAdmin()) return;
+  if(!confirm("¿Borrar el manifiesto " + numeroMan + "?\n\nSe quita de DATOS, del detalle, de abonos, " +
+              "de la ruta del día y, si ya se descargó, del informe de descarga.\nNo se puede deshacer.")) return;
+  const escrito = prompt("Para confirmar, escriba el número del manifiesto:");
+  if(escrito === null) return;
+  if(String(escrito).trim() !== String(numeroMan).trim()){ alert("El número no coincide. No se borró nada."); return; }
+
+  mensaje("estadoHistorial", "Borrando el manifiesto " + numeroMan + "…");
+  enviar({ accion:"borrarManifiesto", manifiesto:numeroMan }).then(r => {
+    mensaje("estadoHistorial", "✔ " + (r.mensaje || "Manifiesto borrado"));
+    // Se quita de la vista enseguida; la recarga trae el resto
+    historialDatos = historialDatos.filter(x => String(x.manifiesto).trim() !== String(numeroMan).trim());
+    filtrarHistorial();
+    sincronizarHistorial();
+  }).catch(e => mensaje("estadoHistorial", "No se borró: " + explicarErrorV11(e), true));
+}
+
+
 /* ================= << v11 >> DESCARGA DE VEHÍCULOS ================= */
 
 let vehiculosCarga = [];
@@ -4206,7 +4460,7 @@ function tarjetaVehiculo(v, i){
       ${tablaCargaDescarga(v.general)}
       <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i}, 'GENERAL')">📦 Descarga sin IMSALUD</button>
     </div>` : ""}
-    ${v.general ? `<button type="button" class="btn-mini desc-todo" onclick="generarDescargaMovil(${i}, '')">Descargar todo junto en un solo informe</button>` : ""}
+    ${v.general ? `<button type="button" class="btn-pro btn-consultar desc-todo" onclick="generarDescargaMovil(${i}, '')">📋 Descarga total (IMSALUD y otros por aparte, en un solo informe)</button>` : ""}
   </div>`;
 }
 
@@ -4221,7 +4475,7 @@ function generarDescargaMovil(i, grupo){
 
   const que = grupo === "IMSALUD" ? "solo lo de IMSALUD"
             : grupo === "GENERAL" ? "todo menos IMSALUD"
-            : "todo lo que lleva";
+            : (v.imsalud && v.general ? "todo (IMSALUD y otros clientes por aparte en el mismo informe)" : "todo lo que lleva");
   const queda = grupo ? "Lo demás sigue cargado en el móvil hasta que lo descargue."
                       : "El móvil quedará en cero para empezar otro recorrido.";
 
@@ -4257,9 +4511,22 @@ function cargarHistorialDescargas(){
         <tr><td>${esc(d.consecutivo)}</td><td>${esc(d.fecha)}</td><td>${esc(d.movil)}</td>
             <td>${d.grupo === "IMSALUD" ? "🏥 IMSALUD" : d.grupo === "GENERAL" ? "Sin IMSALUD" : "Todo"}</td>
             <td>${kgCarrito(d.kg)}</td><td>${d.manifiestos}</td><td>${esc(d.generadoPor)}</td>
-            <td><button type="button" class="btn-mini" onclick="reimprimirDescarga('${esc(d.consecutivo)}')">🖨️ Informe</button></td></tr>`).join("")}
+            <td style="white-space:nowrap"><button type="button" class="btn-mini" onclick="reimprimirDescarga('${esc(d.consecutivo)}')">🖨️ Informe</button>
+                <button type="button" class="btn-mini btn-borrar-man" title="Anular: los residuos vuelven al móvil" onclick="anularDescargaAdmin('${esc(d.consecutivo)}')">🚫 Anular</button></td></tr>`).join("")}
       </tbody></table></div>`;
   }).catch(e => { caja.innerHTML = '<p class="estado error">' + esc(explicarErrorV11(e)) + '</p>'; });
+}
+
+// << v14 >> Anular una descarga: sus residuos vuelven a quedar cargados en el
+// móvil para generarla de nuevo corregida.
+function anularDescargaAdmin(consecutivo){
+  if(!confirm("¿Anular la descarga " + consecutivo + "?\n\nSus residuos vuelven a quedar cargados en el móvil " +
+              "y podrá generarla de nuevo (con otro consecutivo). El informe " + consecutivo + " deja de existir.")) return;
+  mensaje("estadoDescarga", "Anulando " + consecutivo + "…");
+  enviar({ accion:"anularDescarga", consecutivo:consecutivo }).then(r => {
+    mensaje("estadoDescarga", "✔ " + (r.mensaje || "Descarga anulada"));
+    cargarDescarga();
+  }).catch(e => mensaje("estadoDescarga", "No se anuló: " + explicarErrorV11(e), true));
 }
 
 function reimprimirDescarga(consecutivo){
@@ -4280,15 +4547,67 @@ function mostrarInformeDescarga(r, ventana){
   const tipos = {};
   (r.tipos || tiposResiduo).forEach(t => { tipos[claveNombre(t.nombre)] = t; });
 
-  const filasTipos = (r.items || []).map(t => {
-    const info = tipos[claveNombre(t.tipo)] || {};
-    return `<tr><td>${esc(t.tipo)}</td><td>${esc(info.tratamiento || "")}</td><td>${esc(info.corriente || "")}</td>
-                <td>${esc(textoConts(t.contenedores)) || "—"}</td><td class="n">${kgCarrito(t.kg)}</td></tr>`;
-  }).join("");
+  // Tablas de un grupo de residuos (todo, IMSALUD u otros clientes)
+  const tablaTipos = (g, titulo) => `
+  <table>
+    <thead><tr><th>Tipo de residuo</th><th>Tratamiento</th><th>Corriente</th><th>Contenedores</th><th>Kg</th></tr></thead>
+    <tbody>${(g.items || []).map(t => {
+      const info = tipos[claveNombre(t.tipo)] || {};
+      return `<tr><td>${esc(t.tipo)}</td><td>${esc(info.tratamiento || "")}</td><td>${esc(info.corriente || "")}</td>
+                  <td>${esc(textoConts(t.contenedores)) || "—"}</td><td class="n">${kgCarrito(t.kg)}</td></tr>`;
+    }).join("")}
+      <tr class="tot"><td colspan="3">${esc(titulo)}</td><td>${g.totalContenedores || 0}</td><td class="n">${kgCarrito(g.totalKg)}</td></tr>
+    </tbody>
+  </table>`;
 
-  const filasMan = (r.manifiestos || []).map((m, i) =>
-    `<tr><td>${i + 1}</td><td>${esc(fechaCortaDest(m.fecha))}</td><td>${esc(m.manifiesto)}</td><td>${esc(m.cliente)}</td><td class="n">${kgCarrito(m.kg)}</td></tr>`
-  ).join("");
+  const tablaMan = (g, columnaCliente) => `
+  <table>
+    <thead><tr><th>#</th><th>Fecha</th><th>Manifiesto</th><th>${columnaCliente}</th><th>Kg</th></tr></thead>
+    <tbody>${(g.manifiestos || []).map((m, i) =>
+      `<tr><td>${i + 1}</td><td>${esc(fechaCortaDest(m.fecha))}</td><td>${esc(m.manifiesto)}</td><td>${esc(m.cliente)}</td><td class="n">${kgCarrito(m.kg)}</td></tr>`
+    ).join("")}</tbody>
+  </table>`;
+
+  // << v15 >> Descarga total con IMSALUD y otros clientes: un solo informe,
+  // cada grupo por aparte y al final el total general.
+  const sec = r.secciones || {};
+  const porAparte = !r.grupo || r.grupo === "TODO" ? !!(sec.imsalud && sec.general) : false;
+
+  const cuerpo = porAparte ? `
+  <div class="seccion ims">
+    <h2>1. IMSALUD — EMPRESA SOCIAL DEL ESTADO E.S.E IMSALUD</h2>
+    <h3>Resumen por tipo de residuo</h3>
+    ${tablaTipos(sec.imsalud, "TOTAL IMSALUD")}
+    <h3>Manifiestos IMSALUD (${sec.imsalud.manifiestos.length})</h3>
+    ${tablaMan(sec.imsalud, "IPS / sede")}
+  </div>
+
+  <div class="seccion">
+    <h2>2. OTROS CLIENTES</h2>
+    <h3>Resumen por tipo de residuo</h3>
+    ${tablaTipos(sec.general, "TOTAL OTROS CLIENTES")}
+    <h3>Manifiestos otros clientes (${sec.general.manifiestos.length})</h3>
+    ${tablaMan(sec.general, "Cliente")}
+  </div>
+
+  <div class="seccion">
+    <h2>TOTAL GENERAL DE LA DESCARGA</h2>
+    <table>
+      <thead><tr><th>Grupo</th><th>Manifiestos</th><th>Contenedores</th><th>Kg</th></tr></thead>
+      <tbody>
+        <tr><td>IMSALUD</td><td>${sec.imsalud.manifiestos.length}</td><td>${sec.imsalud.totalContenedores || 0}</td><td class="n">${kgCarrito(sec.imsalud.totalKg)}</td></tr>
+        <tr><td>Otros clientes</td><td>${sec.general.manifiestos.length}</td><td>${sec.general.totalContenedores || 0}</td><td class="n">${kgCarrito(sec.general.totalKg)}</td></tr>
+        <tr class="tot"><td>TOTAL</td><td>${(r.manifiestos || []).length}</td><td>${r.totalContenedores || 0}</td><td class="n">${kgCarrito(r.totalKg)}</td></tr>
+      </tbody>
+    </table>
+    <h3>Total por tipo de residuo</h3>
+    ${tablaTipos(r, "TOTAL GENERAL")}
+  </div>` : `
+  <h2>Resumen por tipo de residuo</h2>
+  ${tablaTipos(r, "TOTAL")}
+
+  <h2>Manifiestos incluidos</h2>
+  ${tablaMan(r, r.grupo === "IMSALUD" ? "IPS / sede" : "Cliente")}`;
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -4306,6 +4625,9 @@ function mostrarInformeDescarga(r, ventana){
   td.n{text-align:right;white-space:nowrap;}
   tr.tot td{font-weight:bold;}
   h2{font-size:11pt;margin:14px 0 4px;}
+  h3{font-size:10pt;margin:8px 0 2px;}
+  .seccion{border-top:2px solid #0f766e;margin-top:14px;padding-top:4px;}
+  .seccion.ims h2{color:#075985;}
   .firmas{display:flex;gap:40px;margin-top:50px;}
   .firmas div{flex:1;border-top:1px solid #000;padding-top:4px;text-align:center;font-size:10pt;}
   .pie{margin-top:24px;border-top:2px solid #d92525;padding-top:4px;text-align:center;font-size:8pt;color:#1d4ed8;}
@@ -4327,19 +4649,7 @@ function mostrarInformeDescarga(r, ventana){
     <div><b>Total contenedores:</b> ${r.totalContenedores || 0}</div>
   </div>
 
-  <h2>Resumen por tipo de residuo</h2>
-  <table>
-    <thead><tr><th>Tipo de residuo</th><th>Tratamiento</th><th>Corriente</th><th>Contenedores</th><th>Kg</th></tr></thead>
-    <tbody>${filasTipos}
-      <tr class="tot"><td colspan="3">TOTAL</td><td>${r.totalContenedores || 0}</td><td class="n">${kgCarrito(r.totalKg)}</td></tr>
-    </tbody>
-  </table>
-
-  <h2>Manifiestos incluidos</h2>
-  <table>
-    <thead><tr><th>#</th><th>Fecha</th><th>Manifiesto</th><th>${r.grupo === "IMSALUD" ? "IPS / sede" : "Cliente"}</th><th>Kg</th></tr></thead>
-    <tbody>${filasMan}</tbody>
-  </table>
+  ${cuerpo}
 
   <div class="firmas"><div>Entregó (conductor)</div><div>Recibió</div></div>
   <div class="pie">${PIE_DESTINO}</div>
@@ -4565,7 +4875,7 @@ function entrarHistorial(){
       filtrarHistorial();
     }
     if(!cache.filas.length && !historialSincronizando){
-      $("tablaHistorial").innerHTML = '<tr><td colspan="20">Descargando el historial por primera vez...</td></tr>';
+      $("tablaHistorial").innerHTML = '<tr><td colspan="21">Descargando el historial por primera vez...</td></tr>';
     }
     if(Date.now() - historialUltimaSync > 30000) sincronizarHistorial();
   });
@@ -4605,6 +4915,9 @@ function sincronizarHistorial(opciones){
     let desde   = recargaTotal ? 2  : (cache.siguiente || 2);
     let control = recargaTotal ? "" : (cache.control || "");
     let nuevos  = 0;
+    // << v14 >> Versión de los datos: cambia cuando administración edita o
+    // borra un manifiesto. Si no coincide con la guardada, se recarga todo.
+    let versionConocida = cache.versionDatos === undefined ? null : String(cache.versionDatos);
 
     // Si ya hay algo guardado y se está recargando todo, la tabla sigue
     // mostrando lo guardado hasta que termine: no se vacía a medio camino.
@@ -4632,6 +4945,17 @@ function sincronizarHistorial(opciones){
           base = []; nuevos = 0; recargaTotal = true;
         }
 
+        if(data.versionDatos !== undefined){
+          const v = String(data.versionDatos);
+          if(!recargaTotal && versionConocida !== null && v !== versionConocida){
+            versionConocida = v;
+            base = []; desde = 2; control = ""; nuevos = 0; recargaTotal = true;
+            avisoSync("🔄 Hubo correcciones en manifiestos: actualizando todo el historial...", "trabajando");
+            return paso();
+          }
+          versionConocida = v;
+        }
+
         base    = base.concat(data.filas);
         nuevos += data.filas.length;
         desde   = data.siguiente;
@@ -4640,6 +4964,7 @@ function sincronizarHistorial(opciones){
         const progresivo = !recargaTotal || !hayCopia;
         const estado = {
           api:API, filas:base, siguiente:desde, control:control,
+          versionDatos: versionConocida,
           actualizado: Date.now(),
           completo: (recargaTotal && data.fin) ? Date.now() : (recargaTotal ? 0 : cache.completo)
         };
@@ -4693,7 +5018,7 @@ function sincronizarHistorial(opciones){
                 "guardada" + (c && c.actualizado ? " del " + fechaHoraCorta(c.actualizado) : "") +
                 ". Pulse \"Consultar manifiestos\" para reintentar.", "alerta");
     }else{
-      $("tablaHistorial").innerHTML = '<tr><td colspan="20">Error cargando información</td></tr>';
+      $("tablaHistorial").innerHTML = '<tr><td colspan="21">Error cargando información</td></tr>';
       avisoSync("⚠️ No se pudo consultar el servidor: " + (error.message || error), "alerta");
     }
   });
@@ -4883,6 +5208,12 @@ function filaHistorialHTML(x){
                      title="Ver la firma del cliente"
                      onclick="verFirma(event, this.dataset.man)">✍ Ver</button>`
           : "—"}</td>
+        <td class="acciones-man" style="white-space:nowrap">
+          <button type="button" class="btn-mini" data-man="${esc(x.manifiesto)}" title="Corregir este manifiesto"
+                  onclick="event.stopPropagation(); abrirEdicionManifiesto(this.dataset.man)">✏️</button>
+          <button type="button" class="btn-mini btn-borrar-man" data-man="${esc(x.manifiesto)}" title="Borrar este manifiesto de todas las hojas"
+                  onclick="event.stopPropagation(); borrarManifiestoAdmin(this.dataset.man)">🗑️</button>
+        </td>
       </tr>`;
 }
 
@@ -4917,7 +5248,7 @@ function mostrarHistorial(datos){
   historialPintadas = 0;
 
   if(historialVisible.length === 0){
-    cuerpo.innerHTML = '<tr><td colspan="20">Sin registros</td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="21">Sin registros</td></tr>';
   }else{
     cuerpo.innerHTML = "";
     pintarFilasHistorial(HIST_PAGINA);
@@ -6020,6 +6351,11 @@ async function exportarDestinacionPDF(){
   area.querySelectorAll(".destino").forEach(paginarCertificado);
   area.style.cssText = "";
 
+  const pagina = document.createElement("style");
+  pagina.id = "paginaDestino";
+  pagina.textContent = "@page{size:letter;margin:0;}";
+  document.head.appendChild(pagina);
+
   const tituloOriginal = document.title;
   document.title = nombreArchivoDest();
   document.body.classList.add("imprimiendo-destino");
@@ -6027,6 +6363,7 @@ async function exportarDestinacionPDF(){
   window.addEventListener("afterprint", function restaurar(){
     document.body.classList.remove("imprimiendo-destino");
     document.title = tituloOriginal;
+    pagina.remove();
     $("areaDestino").innerHTML = "";
     window.removeEventListener("afterprint", restaurar);
   });
@@ -6291,13 +6628,15 @@ const MESES = ["enero","febrero","marzo","abril","mayo","junio",
 // plantilla original, pero sin ella la suma de columnas no cuadra con el
 // total del manifiesto.
 const COLUMNAS_RESIDUOS = [
-  { clave:"biosanitarios",      titulo:"Biosanitarios" },
-  { clave:"cortopunzantes",     titulo:"Cortopunzantes" },
-  { clave:"anatomopatologicos", titulo:"Anatomopatológicos" },
-  { clave:"farmaceuticos",      titulo:"Farmaceuticos" },
-  { clave:"liquido",            titulo:"Liquidos" },
-  { clave:"medicamentos",       titulo:"Medicamentos" },
-  { clave:"otros",              titulo:"Otros" }
+  // "th": título para el PDF, con guiones suaves (&shy;) para que las
+  // palabras largas se partan por sílabas y quepan en la columna.
+  { clave:"biosanitarios",      titulo:"Biosanitarios",      th:"Bio&shy;sani&shy;tarios" },
+  { clave:"cortopunzantes",     titulo:"Cortopunzantes",     th:"Corto&shy;pun&shy;zantes" },
+  { clave:"anatomopatologicos", titulo:"Anatomopatológicos", th:"Anato&shy;mo&shy;pato&shy;lógicos" },
+  { clave:"farmaceuticos",      titulo:"Farmaceuticos",      th:"Farma&shy;céu&shy;ticos" },
+  { clave:"liquido",            titulo:"Liquidos",           th:"Líqui&shy;dos" },
+  { clave:"medicamentos",       titulo:"Medicamentos",       th:"Medica&shy;mentos" },
+  { clave:"otros",              titulo:"Otros",              th:"Otros" }
 ];
 
 let certManifiestos = [];   // manifiestos del rango consultado
@@ -6904,12 +7243,20 @@ function periodoTexto(inicio, fin){
 
 // El logo y la franja de contacto NO van aquí: viven en el marco que los
 // repite en todas las páginas. Cada hoja solo aporta su contenido.
+// Anchos fijos de las columnas (en %): la tabla nunca se sale de la hoja
+function colgroupCert(anchos){
+  return "<colgroup>" + anchos.map(w => `<col style="width:${w.toFixed(2)}%">`).join("") + "</colgroup>";
+}
+
 function encabezadoHoja(fecha){
   return `<p class="ciudad">${CIUDAD}, ${fechaLarga(fecha)}</p>`;
 }
 
 function pieHoja(){
+  // Procedimiento y firma van juntos: si no caben, pasan los dos a la hoja
+  // siguiente, nunca la firma sola.
   return `
+    <div class="cierre-cert">
     <div class="procedimiento">
       <b>El procedimiento de tratamiento es el siguiente:</b>
       Desactivación de Alta Eficiencia Autoclave: para los residuos Biosanitarios<br>
@@ -6922,6 +7269,7 @@ function pieHoja(){
       <img src="${IMG_FIRMA}" alt="">
       <div class="nombre">${FIRMANTE}</div>
       <div class="cargo">${CARGO}</div>
+    </div>
     </div>`;
 }
 
@@ -6995,6 +7343,8 @@ function hojaUnitaria(cliente, inicio, fin, fecha, valores){
       </div>
 
       <table>
+        ${colgroupCert(valores ? [8.5, 9].concat(Array(COLUMNAS_RESIDUOS.length).fill(59.5 / COLUMNAS_RESIDUOS.length), [7.2, 6.6, 9.2])
+                               : [10, 11].concat(Array(COLUMNAS_RESIDUOS.length).fill(67.2 / COLUMNAS_RESIDUOS.length), [11.8]))}
         <thead>
           <tr>
             <th colspan="2"></th>
@@ -7003,7 +7353,7 @@ function hojaUnitaria(cliente, inicio, fin, fecha, valores){
           </tr>
           <tr>
             <th>Fecha</th><th>Manifiesto</th>
-            ${COLUMNAS_RESIDUOS.map(c => `<th>${c.titulo}</th>`).join("")}
+            ${COLUMNAS_RESIDUOS.map(c => `<th>${c.th || c.titulo}</th>`).join("")}
             <th>Totales</th>
             ${valores ? `<th>KG extra</th><th>Valor</th>` : ""}
           </tr>
@@ -7086,6 +7436,8 @@ function hojaMensual(listaClientes, inicio, fin, fecha, valores){
       ${destinatarioHoja(listaClientes)}
 
       <table>
+        ${colgroupCert(valores ? [3.5, 20.5, 9, 4.5].concat(Array(COLUMNAS_RESIDUOS.length).fill(46.2 / COLUMNAS_RESIDUOS.length), [6.3, 10])
+                               : [4, 33].concat(Array(COLUMNAS_RESIDUOS.length).fill(53.2 / COLUMNAS_RESIDUOS.length), [9.8]))}
         <thead>
           <tr>
             <th colspan="${colsCliente}">CLIENTE</th>
@@ -7095,7 +7447,7 @@ function hojaMensual(listaClientes, inicio, fin, fecha, valores){
           <tr>
             <th>ITEM</th><th>CLIENTE</th>
             ${valores ? `<th>TARIFA</th><th>Recol.</th>` : ""}
-            ${COLUMNAS_RESIDUOS.map(c => `<th>${c.titulo}</th>`).join("")}
+            ${COLUMNAS_RESIDUOS.map(c => `<th>${c.th || c.titulo}</th>`).join("")}
             <th>Totales</th>
           </tr>
         </thead>
