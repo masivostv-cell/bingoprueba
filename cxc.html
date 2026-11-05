@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d2b4f">
+<title>Cuentas de cobro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --surface-2:#f6f8fb; --line:#d8dde6;
+  --ink:#16213d; --ink-2:#55607a; --ink-3:#8a93a8;
+  --brand:#1d2b4f; --brand-ink:#ffffff; --accent:#2c54d6; --accent-soft:#e3e9fb;
+  --money:#0d7a52; --danger:#b42318; --danger-soft:#fdecea;
+  --radius:14px; --radius-sm:10px;
+  --font:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1524; --surface:#18203a; --surface-2:#1e2745; --line:#2c375a;
+    --ink:#e8ecf6; --ink-2:#a9b2c9; --ink-3:#727c97;
+    --brand:#2a3a69; --brand-ink:#ffffff; --accent:#7f9cff; --accent-soft:#25306a;
+    --money:#4fd1a0; --danger:#ff8a80; --danger-soft:#3a1d22;
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none !important}
+
+/* ---------- Login ---------- */
+#login{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px}
+.login-card{width:100%;max-width:380px;text-align:center}
+.login-paper{background:#fff;color:#111;border-radius:6px;padding:28px 22px 22px;margin:0 auto 28px;width:220px;box-shadow:0 18px 40px -18px rgba(22,33,61,.45);transform:rotate(-3deg);font-family:Arial,Helvetica,sans-serif;text-align:left}
+.login-paper b{display:block;text-align:center;text-decoration:underline;font-size:13px;margin-bottom:10px}
+.login-paper i{display:block;height:5px;background:#e3e6ec;border-radius:3px;margin:6px 0}
+.login-paper .amt{font-weight:700;font-size:11px;margin:12px 0 6px;color:#111}
+h1{font-size:30px;line-height:1.1;margin:0 0 8px;letter-spacing:-.02em;font-weight:800}
+.lead{color:var(--ink-2);margin:0 0 26px}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px 18px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:600;cursor:pointer}
+.btn-google:active{transform:scale(.98)}
+.err{color:var(--danger);font-size:14px;margin-top:14px;min-height:1em}
+
+/* ---------- Shell ---------- */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--brand);color:var(--brand-ink);padding:12px 16px;display:flex;align-items:center;gap:12px}
+body.app::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--brand)}
+header.top .title{font-weight:800;font-size:18px;letter-spacing:-.01em;flex:1}
+header.top img{width:32px;height:32px;border-radius:50%}
+header.top .icon-btn{color:var(--brand-ink)}
+main{max-width:1080px;margin:0 auto;padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+nav.tabs button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:12px;font-weight:600;color:var(--ink-3);cursor:pointer;border-radius:10px}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button[aria-selected="true"]{color:var(--accent)}
+@media (min-width:900px){
+  nav.tabs{position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px);bottom:auto;max-width:1080px;margin:0 auto;border:0;background:transparent;grid-template-columns:repeat(4,auto);justify-content:start;gap:4px;padding:12px 16px 0}
+  nav.tabs button{flex-direction:row;gap:8px;padding:8px 14px;font-size:14px}
+  nav.tabs button[aria-selected="true"]{background:var(--accent-soft)}
+  main{padding-bottom:40px}
+}
+h2{font-size:22px;margin:4px 0 14px;letter-spacing:-.01em}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.section-head h2{margin:0}
+
+/* ---------- Form ---------- */
+.nueva{display:grid;gap:18px}
+@media (min-width:900px){.nueva{grid-template-columns:1fr 420px;align-items:start}.preview-wrap{position:sticky;top:130px}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+label,.label{font-size:14px;font-weight:600;color:var(--ink-2)}
+.hint{font-size:13px;color:var(--ink-3);font-weight:400}
+input[type=text],input[type=number],input[type=date],input[type=search],input[type=email],select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);font-size:16px;outline:none;-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
+textarea{min-height:76px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row-num{display:grid;grid-template-columns:110px 1fr;gap:12px}
+.money-input{position:relative}
+.money-input span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-weight:600}
+.money-input input{padding-left:30px;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--money)}
+.letras{font-size:14px;color:var(--ink-2);min-height:1.2em}
+.inline-link{background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:14px;cursor:pointer}
+.check{display:flex;gap:10px;align-items:center;font-size:15px;font-weight:500;color:var(--ink)}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:700;cursor:pointer;text-decoration:none;color:var(--ink)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme: dark){.btn-primary{color:#0f1524}}
+.btn-danger{color:var(--danger)}
+.btn-sm{padding:8px 14px;font-size:14px}
+.btn-block{width:100%}
+.btn[disabled]{opacity:.55;pointer-events:none}
+.icon-btn{background:none;border:0;padding:8px;border-radius:10px;cursor:pointer;color:var(--ink-2);display:inline-grid;place-items:center}
+.icon-btn svg{width:20px;height:20px}
+.actions-bar{display:flex;gap:10px;margin-top:4px}
+.actions-bar .btn-primary{flex:1;padding:15px 18px;font-size:17px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- Paper preview (mirrors the PDF) ---------- */
+.paper-scale{width:100%;overflow:hidden;border-radius:6px;box-shadow:0 14px 34px -20px rgba(22,33,61,.55)}
+.paper{width:612px;height:792px;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:12pt;padding:71px 85px;transform-origin:top left;line-height:1.2}
+.paper .t{text-align:center;font-weight:700;font-size:18pt;text-decoration:underline;margin:0 0 30px}
+.paper .c{text-align:center}
+.paper .b{font-weight:700}
+.paper p{margin:0}
+.paper .gap{height:20px}
+.paper ul{margin:4px 0 0;padding-left:28px}
+.paper .firma{height:56px;margin-top:22px;display:flex;align-items:flex-end}
+.paper .firma img{max-height:56px;max-width:180px}
+.preview-cap{font-size:13px;color:var(--ink-3);margin:8px 2px 0}
+
+/* ---------- Lists ---------- */
+.list{display:grid;gap:10px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px;display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:start}
+.item .name{font-weight:700;line-height:1.25}
+.item .meta{color:var(--ink-2);font-size:14px;grid-column:1/2}
+.item .amount{font-weight:800;color:var(--money);font-variant-numeric:tabular-nums;white-space:nowrap}
+.item .tools{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.num-tag{display:inline-block;font-weight:700;font-size:13px;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:1px 7px;margin-right:6px;font-variant-numeric:tabular-nums}
+.empty{text-align:center;padding:36px 18px;color:var(--ink-2);background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius)}
+.empty p{margin:0 0 14px}
+.sig-thumb{height:34px;max-width:120px;object-fit:contain;background:#fff;border-radius:6px;padding:2px 6px;border:1px solid var(--line)}
+
+/* ---------- Dialogs ---------- */
+dialog{border:0;padding:0;border-radius:20px 20px 0 0;width:100%;max-width:560px;margin:auto auto 0;background:var(--surface);color:var(--ink);max-height:92dvh}
+@media (min-width:600px){dialog{border-radius:20px;margin:auto}}
+dialog::backdrop{background:rgba(10,16,32,.55)}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 4px}
+.dlg-head h3{margin:0;font-size:19px}
+.dlg-body{padding:12px 18px 8px;overflow:auto}
+.dlg-foot{display:flex;gap:10px;padding:12px 18px calc(18px + env(safe-area-inset-bottom,0px))}
+.dlg-foot .btn{flex:1}
+.sig-box{border:1px dashed var(--line);border-radius:var(--radius-sm);background:#fff;min-height:90px;display:grid;place-items:center;padding:10px}
+.sig-box img{max-height:80px;max-width:100%}
+.sig-box span{color:#8a93a8;font-size:14px}
+.done-icon{width:56px;height:56px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin:4px auto 12px}
+.done-icon svg{width:28px;height:28px}
+
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:100;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.loading{display:grid;place-items:center;min-height:60vh;color:var(--ink-3)}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+
+<div id="boot" class="loading">Cargando…</div>
+
+<!-- ============ LOGIN ============ -->
+<section id="login" class="hidden">
+  <div class="login-card">
+    <div class="login-paper" aria-hidden="true">
+      <b>CUENTA DE COBRO #024</b>
+      <i style="width:70%;margin-left:15%"></i><i style="width:40%;margin-left:30%"></i>
+      <div class="amt">LA SUMA DE: $ 1.750.000</div>
+      <i></i><i style="width:80%"></i><i style="width:55%"></i>
+    </div>
+    <h1>Cuentas de cobro</h1>
+    <p class="lead">Haz la cuenta desde el celular y descarga el PDF listo para enviar.</p>
+    <button class="btn-google" id="btnLogin">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      Entrar con Google
+    </button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <header class="top">
+    <span class="title">Cuentas de cobro</span>
+    <img id="avatar" alt="" referrerpolicy="no-referrer">
+    <button class="icon-btn" id="btnLogout" title="Cerrar sesión" aria-label="Cerrar sesión">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+    </button>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="nueva" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M12 12v6M9 15h6"/></svg>
+      Nueva
+    </button>
+    <button role="tab" data-tab="historial" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+      Historial
+    </button>
+    <button role="tab" data-tab="empresas" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-5h6v5"/><path d="M9 10h.01M15 10h.01"/></svg>
+      Empresas
+    </button>
+    <button role="tab" data-tab="perfiles" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg>
+      Quién cobra
+    </button>
+  </nav>
+
+  <main>
+    <!-- ---------- NUEVA ---------- -->
+    <section data-panel="nueva">
+      <div id="seedBox" class="empty hidden" style="margin-bottom:18px">
+        <p>Todavía no tienes personas ni empresas guardadas. Puedo cargar las que venían en tus documentos (Jorge, Mafer, Ricardo y sus 6 empresas, con las firmas).</p>
+        <button class="btn btn-primary" id="btnSeed">Cargar datos de mis documentos</button>
+      </div>
+
+      <div class="nueva">
+        <form id="form" class="card" autocomplete="off" novalidate>
+          <div class="field">
+            <label for="fPerfil">Quién cobra</label>
+            <select id="fPerfil" required></select>
+          </div>
+
+          <div class="row-num">
+            <div class="field">
+              <label for="fNumero">Número</label>
+              <input type="number" id="fNumero" inputmode="numeric" min="1">
+            </div>
+            <div class="field">
+              <label for="fFecha">Fecha</label>
+              <input type="date" id="fFecha" required>
+            </div>
+          </div>
+
+          <div class="field">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <label for="fEmpresa">Empresa</label>
+              <button type="button" class="inline-link" id="btnQuickEmpresa">Agregar empresa</button>
+            </div>
+            <select id="fEmpresa" required></select>
+          </div>
+
+          <div class="field">
+            <label for="fValor">Valor</label>
+            <div class="money-input"><span>$</span><input type="text" id="fValor" inputmode="numeric" placeholder="0"></div>
+            <div class="letras" id="fLetras"></div>
+          </div>
+
+          <div class="field">
+            <label for="fConcepto">Por concepto de</label>
+            <textarea id="fConcepto" placeholder="Asesoría contable."></textarea>
+            <label class="check" style="margin-top:4px"><input type="checkbox" id="fRetencion"> Pedir retención del 10% por servicios</label>
+          </div>
+
+          <div class="field">
+            <label for="fPago">Sírvase consignar a la cuenta <span class="hint">(una por línea)</span></label>
+            <textarea id="fPago" placeholder="Nequi 3204491926"></textarea>
+          </div>
+
+          <div class="actions-bar">
+            <button type="submit" class="btn btn-primary" id="btnGenerar">Guardar y crear PDF</button>
+          </div>
+        </form>
+
+        <div class="preview-wrap">
+          <div class="paper-scale" id="paperScale"><div class="paper" id="paper"></div></div>
+          <p class="preview-cap">Así va a quedar el PDF.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- HISTORIAL ---------- -->
+    <section data-panel="historial" class="hidden">
+      <div class="section-head"><h2>Historial</h2></div>
+      <div class="field"><input type="search" id="histSearch" placeholder="Buscar por empresa, número o persona"></div>
+      <div class="list" id="histList"></div>
+    </section>
+
+    <!-- ---------- EMPRESAS ---------- -->
+    <section data-panel="empresas" class="hidden">
+      <div class="section-head"><h2>Empresas</h2><button class="btn btn-sm btn-primary" id="btnNewEmpresa">Agregar empresa</button></div>
+      <div class="list" id="empList"></div>
+    </section>
+
+    <!-- ---------- PERFILES ---------- -->
+    <section data-panel="perfiles" class="hidden">
+      <div class="section-head"><h2>Quién cobra</h2><button class="btn btn-sm btn-primary" id="btnNewPerfil">Agregar persona</button></div>
+      <div class="list" id="perList"></div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ DIALOG: EMPRESA ============ -->
+<dialog id="dlgEmpresa">
+  <form method="dialog" id="formEmpresa">
+    <div class="dlg-head"><h3 id="dlgEmpresaTitle">Empresa</h3><button class="icon-btn" value="cancel" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="dlg-body">
+      <div class="field"><label for="eNombre">Nombre o razón social</label><input type="text" id="eNombre" placeholder="ALEADOS REKOA S.A.S"></div>
+      <div class="field"><label for="eNit">NIT <span class="hint">(opcional)</span></label><input type="text" id="eNit" placeholder="901597137-0"></div>
+      <div class="field"><label for="eConcepto">Concepto que le cobras normalmente</label><textarea id="eConcepto" placeholder="Asesoría contable."></textarea></div>
+      <div class="field"><label for="eValor">Valor que le cobras normalmente</label><div class="money-input"><span>$</span><input type="text" id="eValor" inputmode="numeric" placeholder="0"></div></div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-danger hidden" id="btnDelEmpresa">Eliminar</button>
+      <button type="button" class="btn btn-primary" id="btnSaveEmpresa">Guardar empresa</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ DIALOG: PERFIL ============ -->
+<dialog id="dlgPerfil">
+  <form method="dialog" id="formPerfil">
+    <div class="dlg-head"><h3 id="dlgPerfilTitle">Persona</h3><button class="icon-btn" value="cancel" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="dlg-body">
+      <div class="field"><label for="pNombre">Nombre completo <span class="hint">(como va en “Debe a”)</span></label><input type="text" id="pNombre" placeholder="JORGE MANUEL PEÑA CONTRERAS"></div>
+      <div class="field"><label for="pFirmaNombre">Nombre en la firma</label><input type="text" id="pFirmaNombre" placeholder="Jorge Manuel Peña Contreras"></div>
+      <div class="row">
+        <div class="field"><label for="pCC">Cédula</label><input type="text" id="pCC" inputmode="numeric"></div>
+        <div class="field"><label for="pSiguiente">Próximo número</label><input type="number" id="pSiguiente" inputmode="numeric" min="1"></div>
+      </div>
+      <div class="field"><label for="pCiudad">Ciudad</label><input type="text" id="pCiudad" placeholder="San José de Cúcuta"></div>
+      <div class="field"><label for="pPago">Cuentas para consignar <span class="hint">(una por línea)</span></label><textarea id="pPago" placeholder="Nequi 3204491926"></textarea></div>
+      <div class="field">
+        <span class="label">Firma</span>
+        <div class="sig-box" id="pFirmaBox"><span>Sin firma</span></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+          <label class="btn btn-sm" for="pFirmaFile" style="color:var(--ink)">Subir foto de la firma</label>
+          <input type="file" id="pFirmaFile" accept="image/*" class="hidden">
+          <button type="button" class="btn btn-sm btn-danger hidden" id="btnQuitarFirma">Quitar firma</button>
+        </div>
+        <span class="hint">Firma en una hoja blanca con lapicero oscuro y tómale foto. El fondo blanco se quita solo.</span>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-danger hidden" id="btnDelPerfil">Eliminar</button>
+      <button type="button" class="btn btn-primary" id="btnSavePerfil">Guardar persona</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ DIALOG: PDF LISTO ============ -->
+<dialog id="dlgDone">
+  <div class="dlg-body" style="text-align:center;padding-top:24px">
+    <div class="done-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <h3 style="margin:0 0 6px;font-size:20px" id="doneTitle">PDF listo</h3>
+    <p style="margin:0;color:var(--ink-2)" id="doneText"></p>
+  </div>
+  <div class="dlg-foot" style="flex-direction:column">
+    <button class="btn btn-primary btn-block" id="btnShare">Compartir PDF</button>
+    <button class="btn btn-block" id="btnDownload">Descargar PDF</button>
+    <button class="btn btn-block" id="btnDoneClose" style="border:0">Cerrar</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+/* =========================================================
+   FIREBASE
+   ========================================================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, collection, doc, getDocs, addDoc, setDoc, updateDoc, deleteDoc, query, orderBy, limit, serverTimestamp, writeBatch }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBlfF4dCICYeqO9EgxQyIUuVvA4AkgxmHc",
+  authDomain: "videospublicidad.firebaseapp.com",
+  projectId: "videospublicidad",
+  storageBucket: "videospublicidad.firebasestorage.app",
+  messagingSenderId: "47970121625",
+  appId: "1:47970121625:web:6ea535ecbaa9cb28ad4508"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+auth.languageCode = "es";
+let db;
+try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache() }); }
+catch { db = initializeFirestore(fbApp, {}); }
+
+/* =========================================================
+   ESTADO
+   ========================================================= */
+let user = null;
+let empresas = [];   // {id, nombre, nit, concepto, valor}
+let perfiles = [];   // {id, nombre, firmaNombre, cc, siguiente, ciudad, pago, firma, firmaW, firmaH}
+let cuentas  = [];   // historial
+const $ = s => document.querySelector(s);
+const col = name => collection(db, "users", user.uid, name);
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const fmtMoney = n => new Intl.NumberFormat("es-CO").format(n || 0);
+const parseMoney = s => parseInt(String(s || "").replace(/\D/g, ""), 10) || 0;
+const pad = n => String(n).padStart(3, "0");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const hoyISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+function fechaLarga(iso){
+  if (!iso) return "";
+  const [y,m,d] = iso.split("-").map(Number);
+  return `${String(d).padStart(2,"0")} de ${MESES[m-1]} de ${y}`;
+}
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2600);
+}
+function bindMoneyInput(el, onChange){
+  el.addEventListener("input", () => {
+    const v = parseMoney(el.value);
+    el.value = v ? fmtMoney(v) : "";
+    onChange && onChange(v);
+  });
+}
+
+/* ---------- Número a letras (pesos colombianos) ---------- */
+const UNI = ["","uno","dos","tres","cuatro","cinco","seis","siete","ocho","nueve","diez","once","doce","trece","catorce","quince","dieciséis","diecisiete","dieciocho","diecinueve","veinte","veintiuno","veintidós","veintitrés","veinticuatro","veinticinco","veintiséis","veintisiete","veintiocho","veintinueve"];
+const DEC = ["","","","treinta","cuarenta","cincuenta","sesenta","setenta","ochenta","noventa"];
+const CEN = ["","ciento","doscientos","trescientos","cuatrocientos","quinientos","seiscientos","setecientos","ochocientos","novecientos"];
+const apocope = s => s.replace(/veintiuno$/, "veintiún").replace(/uno$/, "un");
+function cientos(n){
+  if (n === 0) return "";
+  if (n === 100) return "cien";
+  const c = Math.floor(n/100), r = n % 100;
+  let s = CEN[c];
+  if (r) s += (s ? " " : "") + (r < 30 ? UNI[r] : DEC[Math.floor(r/10)] + (r % 10 ? " y " + UNI[r % 10] : ""));
+  return s;
+}
+function miles(n){
+  const m = Math.floor(n/1000), r = n % 1000;
+  let s = "";
+  if (m) s = m === 1 ? "mil" : apocope(cientos(m)) + " mil";
+  if (r) s += (s ? " " : "") + cientos(r);
+  return s;
+}
+function numeroALetras(n){
+  n = Math.floor(n || 0);
+  if (n === 0) return "Cero pesos";
+  const mill = Math.floor(n/1e6), r = n % 1e6;
+  let s = "";
+  if (mill) s = mill === 1 ? "un millón" : apocope(miles(mill)) + " millones";
+  if (r) s += (s ? " " : "") + miles(r);
+  s = apocope(s);
+  if (mill && !r) s += " de";
+  s += " pesos";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/* =========================================================
+   AUTENTICACIÓN
+   ========================================================= */
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: "select_account" });
+
+$("#btnLogin").addEventListener("click", async () => {
+  $("#loginErr").textContent = "";
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    if (["auth/popup-blocked","auth/operation-not-supported-in-this-environment","auth/cancelled-popup-request"].includes(e.code)) {
+      await signInWithRedirect(auth, provider);
+    } else if (e.code === "auth/unauthorized-domain") {
+      $("#loginErr").textContent = `Este dominio (${location.hostname}) no está autorizado. Agrégalo en Firebase → Authentication → Settings → Authorized domains.`;
+    } else if (e.code !== "auth/popup-closed-by-user") {
+      $("#loginErr").textContent = "No se pudo entrar: " + (e.code || e.message);
+    }
+  }
+});
+getRedirectResult(auth).catch(e => { $("#loginErr").textContent = "No se pudo entrar: " + (e.code || e.message); });
+$("#btnLogout").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, async u => {
+  user = u;
+  $("#boot").classList.add("hidden");
+  if (!u) {
+    document.body.classList.remove("app");
+    $("#app").classList.add("hidden");
+    $("#login").classList.remove("hidden");
+    return;
+  }
+  document.body.classList.add("app");
+  $("#login").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  $("#avatar").src = u.photoURL || "";
+  $("#avatar").classList.toggle("hidden", !u.photoURL);
+  $("#fFecha").value = hoyISO();
+  await cargarTodo();
+});
+
+/* =========================================================
+   DATOS
+   ========================================================= */
+async function cargarTodo(){
+  try {
+    const [e, p] = await Promise.all([getDocs(col("empresas")), getDocs(col("perfiles"))]);
+    empresas = e.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => a.nombre.localeCompare(b.nombre, "es"));
+    perfiles = p.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => a.nombre.localeCompare(b.nombre, "es"));
+    renderSelects(); renderEmpresas(); renderPerfiles();
+    $("#seedBox").classList.toggle("hidden", empresas.length > 0 || perfiles.length > 0);
+    await cargarHistorial();
+  } catch (err) {
+    console.error(err);
+    toast(err.code === "permission-denied" ? "Firestore bloqueó el acceso. Revisa las reglas." : "No se pudieron cargar los datos.");
+  }
+}
+async function cargarHistorial(){
+  const q = query(col("cuentas"), orderBy("creado", "desc"), limit(200));
+  const s = await getDocs(q);
+  cuentas = s.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderHistorial();
+}
+
+/* =========================================================
+   FORMULARIO NUEVA CUENTA
+   ========================================================= */
+function renderSelects(){
+  const selP = $("#fPerfil"), selE = $("#fEmpresa");
+  const prevP = selP.value, prevE = selE.value;
+  selP.innerHTML = perfiles.length
+    ? perfiles.map(p => `<option value="${p.id}">${esc(p.firmaNombre || p.nombre)}</option>`).join("")
+    : `<option value="">Primero agrega quién cobra</option>`;
+  selE.innerHTML = `<option value="">Elige una empresa</option>` + empresas.map(e => `<option value="${e.id}">${esc(e.nombre)}</option>`).join("");
+  if (perfiles.some(p => p.id === prevP)) selP.value = prevP; else if (perfiles[0]) { selP.value = perfiles[0].id; aplicarPerfil(); }
+  if (empresas.some(e => e.id === prevE)) selE.value = prevE;
+  renderPreview();
+}
+const perfilActual = () => perfiles.find(p => p.id === $("#fPerfil").value);
+const empresaActual = () => empresas.find(e => e.id === $("#fEmpresa").value);
+
+function aplicarPerfil(){
+  const p = perfilActual(); if (!p) return;
+  $("#fNumero").value = p.siguiente || 1;
+  $("#fPago").value = p.pago || "";
+  renderPreview();
+}
+function aplicarEmpresa(){
+  const e = empresaActual(); if (!e) { renderPreview(); return; }
+  if (e.concepto) $("#fConcepto").value = e.concepto;
+  if (e.valor) { $("#fValor").value = fmtMoney(e.valor); }
+  actualizarLetras();
+  renderPreview();
+}
+function actualizarLetras(){
+  const v = parseMoney($("#fValor").value);
+  $("#fLetras").textContent = v ? numeroALetras(v) : "";
+}
+$("#fPerfil").addEventListener("change", aplicarPerfil);
+$("#fEmpresa").addEventListener("change", aplicarEmpresa);
+bindMoneyInput($("#fValor"), () => { actualizarLetras(); renderPreview(); });
+["#fNumero","#fFecha","#fConcepto","#fPago","#fRetencion"].forEach(s => $(s).addEventListener("input", renderPreview));
+$("#fRetencion").addEventListener("change", renderPreview);
+
+const NOTA_RET = "Aplicar retención del 10% por concepto de servicios.";
+function conceptoFinal(){
+  let c = $("#fConcepto").value.trim();
+  if ($("#fRetencion").checked && !/retenci/i.test(c)) c = (c ? c.replace(/\.?$/, ".") + " " : "") + NOTA_RET;
+  return c;
+}
+
+/* Datos que necesita el documento */
+function datosDelFormulario(){
+  const p = perfilActual() || {}, e = empresaActual() || {};
+  const valor = parseMoney($("#fValor").value);
+  return {
+    numero: parseInt($("#fNumero").value, 10) || 0,
+    fecha: $("#fFecha").value,
+    empresaId: e.id || "", empresaNombre: e.nombre || "", empresaNit: e.nit || "",
+    perfilId: p.id || "", nombre: p.nombre || "", firmaNombre: p.firmaNombre || p.nombre || "",
+    cc: p.cc || "", ciudad: p.ciudad || "San José de Cúcuta",
+    valor, letras: valor ? numeroALetras(valor) : "",
+    concepto: conceptoFinal(),
+    pago: $("#fPago").value.split("\n").map(s => s.trim()).filter(Boolean)
+  };
+}
+
+/* ---------- Vista previa ---------- */
+function htmlPapel(d, firma){
+  return `
+    <p class="t">CUENTA DE COBRO #${pad(d.numero || 0)}</p>
+    <p class="c b">${esc(d.empresaNombre || "EMPRESA")}</p>
+    ${d.empresaNit ? `<p class="c b">NIT ${esc(d.empresaNit)}</p>` : ""}
+    <div class="gap"></div>
+    <p class="c">DEBE A:</p>
+    <div class="gap"></div>
+    <p class="c">${esc(d.nombre || "NOMBRE")}</p>
+    <p class="c b">C.C: ${esc(d.cc)}</p>
+    <div class="gap"></div>
+    <p class="b">LA SUMA DE: $ ${fmtMoney(d.valor)} ${esc(d.letras)}</p>
+    <div class="gap"></div>
+    <p>Por concepto de: ${esc(d.concepto)}</p>
+    <div class="gap"></div>
+    <p>Sírvase consignar a la cuenta</p>
+    <ul>${d.pago.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    <div class="gap"></div><div class="gap"></div>
+    <p>${esc(d.ciudad)}, ${fechaLarga(d.fecha)}</p>
+    <div class="gap"></div><div class="gap"></div>
+    <p>ATENTAMENTE,</p>
+    <div class="firma">${firma ? `<img src="${firma}" alt="">` : ""}</div>
+    <p>${esc(d.firmaNombre)}</p>
+    <p>c.c ${esc(d.cc)}</p>`;
+}
+function renderPreview(){
+  const d = datosDelFormulario();
+  $("#paper").innerHTML = htmlPapel(d, perfilActual()?.firma);
+  escalarPapel();
+}
+function escalarPapel(){
+  const wrap = $("#paperScale"), paper = $("#paper");
+  const s = wrap.clientWidth / 612;
+  paper.style.transform = `scale(${s})`;
+  wrap.style.height = (792 * s) + "px";
+}
+window.addEventListener("resize", escalarPapel);
+
+/* =========================================================
+   PDF (jsPDF, tamaño carta, márgenes como el Word original)
+   ========================================================= */
+function crearPDF(d, perfil){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: "mm", format: "letter" });
+  const W = pdf.internal.pageSize.getWidth();
+  const L = 30, R = 30, CW = W - L - R, CX = W / 2;
+  const LH = 5.6; // alto de línea para 12pt
+  let y = 30;
+
+  const centro = (txt, bold = false, size = 12) => {
+    pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
+    pdf.splitTextToSize(txt, CW).forEach(line => { pdf.text(line, CX, y, { align: "center" }); y += LH; });
+  };
+  const parrafo = (txt, bold = false) => {
+    pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(12);
+    pdf.splitTextToSize(txt, CW).forEach(line => { pdf.text(line, L, y); y += LH; });
+  };
+
+  // Título subrayado
+  const titulo = `CUENTA DE COBRO #${pad(d.numero)}`;
+  pdf.setFont("helvetica", "bold"); pdf.setFontSize(18);
+  pdf.text(titulo, CX, y, { align: "center" });
+  const tw = pdf.getTextWidth(titulo);
+  pdf.setLineWidth(0.4); pdf.line(CX - tw/2, y + 1.3, CX + tw/2, y + 1.3);
+  y += 16;
+
+  centro(d.empresaNombre, true);
+  if (d.empresaNit) centro(`NIT ${d.empresaNit}`, true);
+  y += 7;
+  centro("DEBE A:");
+  y += 7;
+  centro(d.nombre);
+  centro(`C.C: ${d.cc}`, true);
+  y += 8;
+  parrafo(`LA SUMA DE: $ ${fmtMoney(d.valor)} ${d.letras}`, true);
+  y += 6;
+  parrafo(`Por concepto de: ${d.concepto}`);
+  y += 6;
+  parrafo("Sírvase consignar a la cuenta");
+  pdf.setFont("helvetica", "normal");
+  d.pago.forEach(line => {
+    y += 1;
+    pdf.circle(L + 6, y - 1.4, 0.7, "F");
+    pdf.splitTextToSize(line, CW - 12).forEach(l => { pdf.text(l, L + 11, y); y += LH; });
+  });
+  y += 14;
+  parrafo(`${d.ciudad}, ${fechaLarga(d.fecha)}`);
+  y += 14;
+  parrafo("ATENTAMENTE,");
+
+  // Firma
+  const firma = perfil?.firma;
+  if (firma) {
+    const maxW = 60, maxH = 28;
+    let w = maxW, h = maxW * ((perfil.firmaH || 1) / (perfil.firmaW || 1));
+    if (h > maxH) { h = maxH; w = maxH * ((perfil.firmaW || 1) / (perfil.firmaH || 1)); }
+    y += 4;
+    try { pdf.addImage(firma, "PNG", L, y, w, h); } catch (e) { console.warn("firma", e); }
+    y += h + 4;
+  } else {
+    y += 24;
+  }
+  parrafo(d.firmaNombre);
+  parrafo(`c.c ${d.cc}`);
+  return pdf;
+}
+const nombreArchivo = d =>
+  `Cuenta_de_cobro_${pad(d.numero)}_${(d.empresaNombre || "empresa").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,40)}.pdf`;
+
+let pdfActual = null; // {blob, name}
+function mostrarPDF(d, perfil){
+  const pdf = crearPDF(d, perfil);
+  const blob = pdf.output("blob");
+  pdfActual = { blob, name: nombreArchivo(d) };
+  $("#doneTitle").textContent = `Cuenta #${pad(d.numero)} lista`;
+  $("#doneText").textContent = `${d.empresaNombre} · $ ${fmtMoney(d.valor)}`;
+  const puedeCompartir = !!(navigator.canShare && navigator.canShare({ files: [new File([blob], pdfActual.name, { type: "application/pdf" })] }));
+  $("#btnShare").classList.toggle("hidden", !puedeCompartir);
+  $("#btnDownload").classList.toggle("btn-primary", !puedeCompartir);
+  $("#dlgDone").showModal();
+}
+$("#btnShare").addEventListener("click", async () => {
+  if (!pdfActual) return;
+  const file = new File([pdfActual.blob], pdfActual.name, { type: "application/pdf" });
+  try { await navigator.share({ files: [file], title: pdfActual.name }); }
+  catch (e) { if (e.name !== "AbortError") toast("No se pudo compartir. Usa Descargar."); }
+});
+$("#btnDownload").addEventListener("click", () => {
+  if (!pdfActual) return;
+  const url = URL.createObjectURL(pdfActual.blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = pdfActual.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+});
+$("#btnDoneClose").addEventListener("click", () => $("#dlgDone").close());
+
+/* ---------- Guardar y generar ---------- */
+$("#form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const d = datosDelFormulario();
+  const p = perfilActual();
+  if (!p) return toast("Agrega primero quién cobra.");
+  if (!d.empresaId) return toast("Elige la empresa.");
+  if (!d.numero) return toast("Escribe el número de la cuenta.");
+  if (!d.valor) return toast("Escribe el valor.");
+  if (!d.concepto) return toast("Escribe el concepto.");
+  const btn = $("#btnGenerar"); btn.disabled = true; btn.textContent = "Guardando…";
+  try {
+    // El PDF se genera primero para que funcione aunque no haya señal
+    mostrarPDF(d, p);
+    await addDoc(col("cuentas"), { ...d, creado: serverTimestamp() });
+    if (d.numero >= (p.siguiente || 0)) {
+      p.siguiente = d.numero + 1;
+      await updateDoc(doc(db, "users", user.uid, "perfiles", p.id), { siguiente: p.siguiente });
+      renderPerfiles();
+    }
+    // Recordar el valor y concepto para la próxima vez con esta empresa
+    const e = empresaActual();
+    if (e && (e.valor !== d.valor || e.concepto !== $("#fConcepto").value.trim())) {
+      e.valor = d.valor; e.concepto = $("#fConcepto").value.trim();
+      updateDoc(doc(db, "users", user.uid, "empresas", e.id), { valor: e.valor, concepto: e.concepto }).catch(() => {});
+      renderEmpresas();
+    }
+    $("#fNumero").value = p.siguiente;
+    $("#fRetencion").checked = false;
+    renderPreview();
+    cargarHistorial();
+  } catch (err) {
+    console.error(err);
+    toast("El PDF se creó, pero no se pudo guardar en el historial.");
+  } finally {
+    btn.disabled = false; btn.textContent = "Guardar y crear PDF";
+  }
+});
+
+/* =========================================================
+   HISTORIAL
+   ========================================================= */
+function renderHistorial(){
+  const q = $("#histSearch").value.trim().toLowerCase();
+  const list = cuentas.filter(c => !q ||
+    [c.empresaNombre, c.firmaNombre, c.nombre, pad(c.numero), String(c.numero), c.concepto].join(" ").toLowerCase().includes(q));
+  const el = $("#histList");
+  if (!cuentas.length) { el.innerHTML = `<div class="empty"><p>Aquí van a aparecer las cuentas que hagas.</p></div>`; return; }
+  if (!list.length) { el.innerHTML = `<div class="empty"><p>Nada coincide con “${esc(q)}”.</p></div>`; return; }
+  el.innerHTML = list.map(c => `
+    <div class="item">
+      <div class="name"><span class="num-tag">#${pad(c.numero)}</span>${esc(c.empresaNombre)}</div>
+      <div class="amount">$ ${fmtMoney(c.valor)}</div>
+      <div class="meta">${esc(c.firmaNombre)} · ${fechaLarga(c.fecha)}</div>
+      <div class="tools">
+        <button class="btn btn-sm" data-pdf="${c.id}">Ver PDF</button>
+        <button class="btn btn-sm" data-dup="${c.id}">Usar de base</button>
+        <button class="btn btn-sm btn-danger" data-del="${c.id}">Borrar</button>
+      </div>
+    </div>`).join("");
+}
+$("#histSearch").addEventListener("input", renderHistorial);
+$("#histList").addEventListener("click", async ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  const c = cuentas.find(x => x.id === (b.dataset.pdf || b.dataset.dup || b.dataset.del)); if (!c) return;
+  if (b.dataset.pdf) {
+    mostrarPDF(c, perfiles.find(p => p.id === c.perfilId));
+  } else if (b.dataset.dup) {
+    if (perfiles.some(p => p.id === c.perfilId)) { $("#fPerfil").value = c.perfilId; aplicarPerfil(); }
+    if (empresas.some(e => e.id === c.empresaId)) $("#fEmpresa").value = c.empresaId;
+    $("#fValor").value = fmtMoney(c.valor);
+    $("#fConcepto").value = c.concepto.replace(" " + NOTA_RET, "");
+    $("#fRetencion").checked = c.concepto.includes(NOTA_RET);
+    $("#fPago").value = (c.pago || []).join("\n");
+    $("#fFecha").value = hoyISO();
+    actualizarLetras(); renderPreview(); irA("nueva");
+    toast("Cargada como base. Revisa y genera.");
+  } else if (b.dataset.del) {
+    if (!confirm(`¿Borrar la cuenta #${pad(c.numero)} de ${c.empresaNombre} del historial?`)) return;
+    await deleteDoc(doc(db, "users", user.uid, "cuentas", c.id));
+    cuentas = cuentas.filter(x => x.id !== c.id); renderHistorial(); toast("Cuenta borrada.");
+  }
+});
+
+/* =========================================================
+   EMPRESAS
+   ========================================================= */
+let empEditando = null;
+function renderEmpresas(){
+  const el = $("#empList");
+  if (!empresas.length) { el.innerHTML = `<div class="empty"><p>Guarda las empresas a las que les cobras y no tendrás que escribirlas otra vez.</p></div>`; return; }
+  el.innerHTML = empresas.map(e => `
+    <div class="item" data-id="${e.id}" style="cursor:pointer">
+      <div class="name">${esc(e.nombre)}</div>
+      <div class="amount">${e.valor ? "$ " + fmtMoney(e.valor) : ""}</div>
+      <div class="meta">${e.nit ? "NIT " + esc(e.nit) : "Sin NIT"}${e.concepto ? " · " + esc(e.concepto) : ""}</div>
+    </div>`).join("");
+}
+$("#empList").addEventListener("click", ev => { const it = ev.target.closest(".item"); if (it) abrirEmpresa(empresas.find(e => e.id === it.dataset.id)); });
+bindMoneyInput($("#eValor"));
+function abrirEmpresa(e){
+  empEditando = e || null;
+  $("#dlgEmpresaTitle").textContent = e ? "Editar empresa" : "Nueva empresa";
+  $("#eNombre").value = e?.nombre || ""; $("#eNit").value = e?.nit || "";
+  $("#eConcepto").value = e?.concepto || ""; $("#eValor").value = e?.valor ? fmtMoney(e.valor) : "";
+  $("#btnDelEmpresa").classList.toggle("hidden", !e);
+  $("#dlgEmpresa").showModal();
+}
+$("#btnNewEmpresa").addEventListener("click", () => abrirEmpresa());
+$("#btnQuickEmpresa").addEventListener("click", () => abrirEmpresa());
+$("#btnSaveEmpresa").addEventListener("click", async () => {
+  const data = { nombre: $("#eNombre").value.trim().toUpperCase(), nit: $("#eNit").value.trim(), concepto: $("#eConcepto").value.trim(), valor: parseMoney($("#eValor").value) };
+  if (!data.nombre) return toast("Escribe el nombre de la empresa.");
+  try {
+    if (empEditando) { await setDoc(doc(db, "users", user.uid, "empresas", empEditando.id), data); Object.assign(empEditando, data); }
+    else { const r = await addDoc(col("empresas"), data); empresas.push({ id: r.id, ...data }); $("#fEmpresa").dataset.nueva = r.id; }
+    empresas.sort((a,b) => a.nombre.localeCompare(b.nombre, "es"));
+    renderEmpresas(); renderSelects();
+    if ($("#fEmpresa").dataset.nueva) { $("#fEmpresa").value = $("#fEmpresa").dataset.nueva; delete $("#fEmpresa").dataset.nueva; aplicarEmpresa(); }
+    $("#seedBox").classList.add("hidden");
+    $("#dlgEmpresa").close(); toast("Empresa guardada.");
+  } catch (err) { console.error(err); toast("No se pudo guardar la empresa."); }
+});
+$("#btnDelEmpresa").addEventListener("click", async () => {
+  if (!empEditando || !confirm(`¿Eliminar ${empEditando.nombre}? Las cuentas ya hechas no se borran.`)) return;
+  await deleteDoc(doc(db, "users", user.uid, "empresas", empEditando.id));
+  empresas = empresas.filter(e => e.id !== empEditando.id);
+  renderEmpresas(); renderSelects(); $("#dlgEmpresa").close(); toast("Empresa eliminada.");
+});
+
+/* =========================================================
+   PERFILES (quién cobra)
+   ========================================================= */
+let perEditando = null, firmaTmp = null; // {data, w, h}
+function renderPerfiles(){
+  const el = $("#perList");
+  if (!perfiles.length) { el.innerHTML = `<div class="empty"><p>Agrega a la persona que firma la cuenta: nombre, cédula, Nequi y firma.</p></div>`; return; }
+  el.innerHTML = perfiles.map(p => `
+    <div class="item" data-id="${p.id}" style="cursor:pointer">
+      <div class="name">${esc(p.firmaNombre || p.nombre)}</div>
+      <div>${p.firma ? `<img class="sig-thumb" src="${p.firma}" alt="Firma">` : ""}</div>
+      <div class="meta">C.C ${esc(p.cc)} · Próxima: <b>#${pad(p.siguiente || 1)}</b></div>
+    </div>`).join("");
+}
+$("#perList").addEventListener("click", ev => { const it = ev.target.closest(".item"); if (it) abrirPerfil(perfiles.find(p => p.id === it.dataset.id)); });
+function pintarFirma(){
+  $("#pFirmaBox").innerHTML = firmaTmp?.data ? `<img src="${firmaTmp.data}" alt="Firma">` : `<span>Sin firma</span>`;
+  $("#btnQuitarFirma").classList.toggle("hidden", !firmaTmp?.data);
+}
+function abrirPerfil(p){
+  perEditando = p || null;
+  $("#dlgPerfilTitle").textContent = p ? "Editar persona" : "Nueva persona";
+  $("#pNombre").value = p?.nombre || ""; $("#pFirmaNombre").value = p?.firmaNombre || "";
+  $("#pCC").value = p?.cc || ""; $("#pSiguiente").value = p?.siguiente || 1;
+  $("#pCiudad").value = p?.ciudad || "San José de Cúcuta"; $("#pPago").value = p?.pago || "";
+  firmaTmp = p?.firma ? { data: p.firma, w: p.firmaW, h: p.firmaH } : null;
+  pintarFirma();
+  $("#btnDelPerfil").classList.toggle("hidden", !p);
+  $("#dlgPerfil").showModal();
+}
+$("#btnNewPerfil").addEventListener("click", () => abrirPerfil());
+$("#btnQuitarFirma").addEventListener("click", () => { firmaTmp = null; pintarFirma(); });
+
+/* Procesa la foto de la firma: reduce tamaño, quita el fondo blanco y recorta */
+$("#pFirmaFile").addEventListener("change", async ev => {
+  const file = ev.target.files[0]; ev.target.value = "";
+  if (!file) return;
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+    const scale = Math.min(1, 900 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    const id = ctx.getImageData(0, 0, c.width, c.height), px = id.data;
+    // umbral adaptativo: promedio de brillo menos un margen
+    let sum = 0; for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i+1] + px[i+2]) / 3;
+    const thr = Math.min(200, (sum / (px.length / 4)) - 45);
+    let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+      const i = (y * c.width + x) * 4, b = (px[i] + px[i+1] + px[i+2]) / 3;
+      if (px[i+3] < 40 || b > thr) { px[i+3] = 0; }
+      else { px[i] = px[i+1] = px[i+2] = Math.max(0, b - 60); px[i+3] = 255;
+             if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+    }
+    if (maxX < 0) return toast("No se encontró la firma en la foto. Prueba con más luz.");
+    ctx.putImageData(id, 0, 0);
+    const w = maxX - minX + 1, h = maxY - minY + 1;
+    const out = document.createElement("canvas");
+    const s2 = Math.min(1, 500 / w); out.width = Math.round(w * s2); out.height = Math.round(h * s2);
+    out.getContext("2d").drawImage(c, minX, minY, w, h, 0, 0, out.width, out.height);
+    firmaTmp = { data: out.toDataURL("image/png"), w: out.width, h: out.height };
+    pintarFirma();
+  } catch (e) { console.error(e); toast("No se pudo leer la imagen."); }
+});
+
+$("#btnSavePerfil").addEventListener("click", async () => {
+  const data = {
+    nombre: $("#pNombre").value.trim().toUpperCase(),
+    firmaNombre: $("#pFirmaNombre").value.trim(),
+    cc: $("#pCC").value.trim(),
+    siguiente: parseInt($("#pSiguiente").value, 10) || 1,
+    ciudad: $("#pCiudad").value.trim() || "San José de Cúcuta",
+    pago: $("#pPago").value.trim(),
+    firma: firmaTmp?.data || "", firmaW: firmaTmp?.w || 0, firmaH: firmaTmp?.h || 0
+  };
+  if (!data.nombre || !data.cc) return toast("Faltan el nombre o la cédula.");
+  if (!data.firmaNombre) data.firmaNombre = data.nombre.toLowerCase().replace(/(^|\s)\S/g, m => m.toUpperCase());
+  try {
+    if (perEditando) { await setDoc(doc(db, "users", user.uid, "perfiles", perEditando.id), data); Object.assign(perEditando, data); }
+    else { const r = await addDoc(col("perfiles"), data); perfiles.push({ id: r.id, ...data }); }
+    perfiles.sort((a,b) => a.nombre.localeCompare(b.nombre, "es"));
+    renderPerfiles(); renderSelects();
+    if (perEditando && perEditando.id === $("#fPerfil").value) aplicarPerfil();
+    $("#seedBox").classList.add("hidden");
+    $("#dlgPerfil").close(); toast("Persona guardada.");
+  } catch (err) { console.error(err); toast("No se pudo guardar."); }
+});
+$("#btnDelPerfil").addEventListener("click", async () => {
+  if (!perEditando || !confirm(`¿Eliminar a ${perEditando.firmaNombre || perEditando.nombre}? Las cuentas ya hechas no se borran.`)) return;
+  await deleteDoc(doc(db, "users", user.uid, "perfiles", perEditando.id));
+  perfiles = perfiles.filter(p => p.id !== perEditando.id);
+  renderPerfiles(); renderSelects(); $("#dlgPerfil").close(); toast("Persona eliminada.");
+});
+
+/* =========================================================
+   DATOS INICIALES (sacados de tus documentos)
+   ========================================================= */
+const FIRMA_JORGE = "data:image/png;base64,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";
+const FIRMA_MAFER = "data:image/png;base64,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";
+const SEED = {
+  perfiles: [
+    { nombre: "JORGE MANUEL PEÑA CONTRERAS", firmaNombre: "Jorge Manuel Peña Contreras", cc: "1090445448", siguiente: 24, ciudad: "San José de Cúcuta", pago: "Nequi 3204491926", firma: FIRMA_JORGE, firmaW: 422, firmaH: 275 },
+    { nombre: "MARIA FERNANDA ALVAREZ PEREZ", firmaNombre: "Maria Fernanda Alvarez", cc: "1090457831", siguiente: 9, ciudad: "San José de Cúcuta", pago: "Nequi 3204491926", firma: FIRMA_MAFER, firmaW: 402, firmaH: 108 },
+    { nombre: "RICARDO PEÑA SAYAGO", firmaNombre: "Ricardo Peña Sayago", cc: "13468348", siguiente: 1, ciudad: "San José de Cúcuta", pago: "Nequi 3204491926", firma: "", firmaW: 0, firmaH: 0 }
+  ],
+  empresas: [
+    { nombre: "ALEADOS REKOA S.A.S", nit: "901597137-0", concepto: "Asesoría contable (Revisoría Fiscal).", valor: 1750000 },
+    { nombre: "ANIMAL PRO", nit: "901445812-2", concepto: "Asesoría contable.", valor: 500000 },
+    { nombre: "ASOCIACION PRO ENCUENTROS MATRIMONIALES", nit: "860059218-3", concepto: "Servicio de animación y presentación Bingo Virtual EMM 2026.", valor: 1400000 },
+    { nombre: "CLICK SEGURO", nit: "", concepto: "Elaboración de renta persona natural.", valor: 750000 },
+    { nombre: "COOMETAL", nit: "900783900-8", concepto: "Asesoría contable (Revisoría Fiscal).", valor: 1000000 },
+    { nombre: "LATINOAMERICA SOLUCIONES PATOGENAS S.A.S E.S.P", nit: "900619794-2", concepto: "Servicio de asesoría administrativa.", valor: 350000 }
+  ]
+};
+$("#btnSeed").addEventListener("click", async () => {
+  const b = $("#btnSeed"); b.disabled = true; b.textContent = "Cargando…";
+  try {
+    const batch = writeBatch(db);
+    SEED.perfiles.forEach(p => batch.set(doc(col("perfiles")), p));
+    SEED.empresas.forEach(e => batch.set(doc(col("empresas")), e));
+    await batch.commit();
+    await cargarTodo();
+    toast("Listo, ya tienes tus personas y empresas.");
+  } catch (err) { console.error(err); toast("No se pudo cargar. Revisa las reglas de Firestore."); b.disabled = false; b.textContent = "Cargar datos de mis documentos"; }
+});
+
+/* =========================================================
+   NAVEGACIÓN
+   ========================================================= */
+function irA(tab){
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  document.querySelectorAll("[data-panel]").forEach(p => p.classList.toggle("hidden", p.dataset.panel !== tab));
+  if (tab === "nueva") requestAnimationFrame(escalarPapel);
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => irA(b.dataset.tab)));
+</script>
+</body>
+</html>
