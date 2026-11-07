@@ -691,7 +691,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.10.31-2';
+const APP_VERSION='2026.11.07-1';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -770,10 +770,17 @@ function saveCfg(){ S.cfg.id='cfg'; S.cfg.upd=now(); idbPut('config',S.cfg); enq
 function saveMeta(){ S.meta.id='meta'; idbPut('meta',S.meta); }
 
 /* consecutivos */
+/* El consecutivo se guardaba solo en cada equipo: al cambiar de equipo o de
+   base, o con dos equipos en la misma letra, se repetían números (dos C-A-00011).
+   Ahora arranca después del número más alto que ya exista con esa serie. */
 function nextNo(key,prefix){
   S.meta.cons=S.meta.cons||{};
-  const n=(S.meta.cons[key]||0)+1; S.meta.cons[key]=n; saveMeta();
-  return (prefix||'')+(S.cfg.terminal||'A')+'-'+String(n).padStart(5,'0');
+  const serie=(prefix||'')+(S.cfg.terminal||'A')+'-';
+  let max=S.meta.cons[key]||0;
+  try{ ['ventas','compras','otrosdocs','abonos','turnos','comandas'].forEach(k=>(S[k]||[]).forEach(d=>{
+    const no=d&&d.no; if(typeof no==='string' && no.indexOf(serie)===0){ const n=parseInt(no.slice(serie.length),10); if(n>max) max=n; } })); }catch(e){}
+  const n=max+1; S.meta.cons[key]=n; saveMeta();
+  return serie+String(n).padStart(5,'0');
 }
 
 /* ===================== NUBE · Firebase (REST, sin SDK) ================
@@ -5558,23 +5565,27 @@ function kardexIng(gid,d1,d2){
   /* si el historial no arranca desde cero (había existencias antes de que existiera
      el historial), se cuenta hacia atrás desde el stock actual para que cuadre */
   const H=historialIng(gid), g=byId('ingredientes',gid)||{};
-  const base=H.confiable? 0 : (baseDe(g)!=null? baseDe(g) : round((Number(g.stock)||0)-sum(todos,m=>Number(m.cantidad)||0),4));
+  const base=(H.confiable||H.ancla!=null)? 0 : (baseDe(g)!=null? baseDe(g) : round((Number(g.stock)||0)-sum(todos,m=>Number(m.cantidad)||0),4));
   let saldo=base, inicial=base; const filas=[];
   const pre={compras:0, ventas:0, otrasEnt:0, otrasSal:0, n:0};
   todos.forEach(m=>{
     const q=Number(m.cantidad)||0, d=dISO(m.fecha);
-    if(d1 && d<d1){ saldo+=q; inicial=saldo; pre.n++;
+    const esConteo=(m.refTipo==='ajuste'||m.refTipo==='corte') && m.saldo!=null && isFinite(Number(m.saldo));
+    if(d1 && d<d1){ saldo= esConteo? Number(m.saldo) : saldo+q; inicial=saldo; pre.n++;
       if(m.refTipo==='compra') pre.compras+=q; else if(m.refTipo==='venta'||m.refTipo==='consumo') pre.ventas-=q;
       else if(q>0) pre.otrasEnt+=q; else pre.otrasSal-=q;
       return; }
     if(d2 && d>d2) return;
+    if(esConteo){ const dq=round(Number(m.saldo)-saldo,4); saldo=round(Number(m.saldo),4);
+      filas.push({m:m, ent:dq>0?dq:0, sal:dq<0?-dq:0, saldo:saldo}); return; }
     saldo=round(saldo+q,4);
     filas.push({m:m, ent:q>0?q:0, sal:q<0?-q:0, saldo:saldo});
   });
-  const r={filas:filas, inicial:round(inicial,4), final:round(saldo,4), confiable:H.confiable, base:base, pre:pre};
+  const r={filas:filas, inicial:round(inicial,4), final:round(saldo,4), confiable:H.confiable||H.ancla!=null, base:base, pre:pre};
   const por=k=>round(sum(filas.filter(f=>f.m.refTipo===k),f=>Number(f.m.cantidad)||0),4);
   r.compras=por('compra'); r.ventas=-por('venta'); r.consumo=-por('consumo'); r.devuelto=por('venta-anulada');
-  r.ajustes=round(sum(filas.filter(f=>f.m.tipo==='ajuste'||f.m.refTipo==='ajuste'||f.m.refTipo==='recalculo'),f=>Number(f.m.cantidad)||0),4);
+  r.ajustes=round(sum(filas.filter(f=>f.m.tipo==='ajuste'||f.m.refTipo==='ajuste'||f.m.refTipo==='recalculo'||f.m.refTipo==='corte'),f=>f.ent-f.sal),4);
+  if(filas.some(f=>f.m.refTipo==='corte')) r.compras=round(r.compras,4);
   r.otros=round(r.final-r.inicial-r.compras+r.ventas+r.consumo-r.devuelto-r.ajustes,4);
   return r;
 }
@@ -5859,7 +5870,7 @@ function auditarInventario(){
   const ings=S.ingredientes.map(g=>{
     const stock=round(Number(g.stock)||0,3);
     const capas=round(sum(capasDe(g.id),c=>Number(c.restante)||0),3);
-    const H=historialIng(g.id), hist=round(H.hist,3), tieneHist=H.confiable;
+    const H=historialIng(g.id), obj=stockObjetivo(g,H), hist=round(obj==null? H.hist : obj,3), tieneHist=obj!=null;
     return {g:g, stock:stock, capas:capas, hist:hist,
       descuadreValor: !ok(Math.max(0,stock)-capas),
       descuadreHist: tieneHist && !ok(stock-hist),
@@ -5915,13 +5926,25 @@ function cuadrarValorConStock(gid){
 function corteInv(){ return String(S.cfg.invCorte||''); }
 function movVigente(m){ const c=corteInv(); return !c || String(m.fecha)>=c; }
 function movinvVigentes(){ const c=corteInv(); return c? S.movinv.filter(m=>String(m.fecha)>=c) : S.movinv; }
+/* ÚLTIMO CONTEO = VERDAD. Un conteo físico (o el inicio por conteo) dice
+   cuánto había DE VERDAD en ese momento. Desde ahí solo se suman las compras
+   y se restan las ventas que vinieron después. Así el stock no depende de un
+   número que otro equipo pudo pisar, ni de lo que pasó antes del conteo. */
+function anclaDe(movs){
+  for(let i=movs.length-1;i>=0;i--){ const m=movs[i];
+    if((m.refTipo==='ajuste'||m.refTipo==='corte') && m.saldo!=null && isFinite(Number(m.saldo))){
+      let v=Number(m.saldo); for(let j=i+1;j<movs.length;j++) v+=Number(movs[j].cantidad)||0;
+      return {valor:round(v,4), m:m}; } }
+  return null;
+}
 function historialIng(gid){
   const movs=movinvVigentes().filter(m=>m.ingredienteId===gid)
     .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
   const conCorte=!!corteInv() && movs.some(m=>m.refTipo==='corte');
   const inicialSinMov=!conCorte && S.capas.some(c=>c.ingredienteId===gid && c.refTipo==='inicial') &&
     !movs.some(m=>m.refTipo==='inicial' || m.refTipo==='importacion');
-  return {movs:movs, hist:round(sum(movs,m=>Number(m.cantidad)||0),4),
+  const an=anclaDe(movs);
+  return {movs:movs, hist:round(sum(movs,m=>Number(m.cantidad)||0),4), ancla:an? an.valor : null,
     confiable: conCorte || (movs.length>0 && movs[0].tipo!=='salida' && !inicialSinMov)};
 }
 /* ===================== RECALCULAR TODO =====================
@@ -6077,7 +6100,8 @@ function historialTodos(){
     const movs=por[gid].sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
     const conCorte=!!corteInv() && movs.some(m=>m.refTipo==='corte');
     const inicialSinMov=!conCorte && iniciales.has(gid) && !movs.some(m=>m.refTipo==='inicial'||m.refTipo==='importacion');
-    out[gid]={hist:round(sum(movs,m=>Number(m.cantidad)||0),4),
+    const an=anclaDe(movs);
+    out[gid]={hist:round(sum(movs,m=>Number(m.cantidad)||0),4), ancla:an? an.valor : null,
       confiable: conCorte || (movs[0].tipo!=='salida' && !inicialSinMov)};
   });
   return out;
@@ -6092,6 +6116,7 @@ function historialTodos(){
 function baseDe(g){ return (g && g.baseHist!=null && String(g.baseCorte||'')===corteInv())? Number(g.baseHist)||0 : null; }
 function stockObjetivo(g,h){
   if(!h) return null;
+  if(h.ancla!=null) return h.ancla;                    // hubo conteo: manda el conteo
   if(h.confiable) return h.hist;
   const b=baseDe(g); return b==null? null : round(b+h.hist,4);
 }
@@ -6100,7 +6125,7 @@ function reconciliarStock(){
   const H=historialTodos(); let n=0;
   S.ingredientes.forEach(g=>{
     const h=H[g.id]; if(!h) return;
-    if(!h.confiable && baseDe(g)==null){
+    if(h.ancla==null && !h.confiable && baseDe(g)==null){
       /* primera vez: se anota la base con lo que hay hoy (no cambia el stock) */
       if(S.outbox.length) return;                         // con cambios propios sin subir, mejor esperar
       g.baseHist=round((Number(g.stock)||0)-h.hist,4); g.baseCorte=corteInv(); put('ingredientes',g); return;
@@ -6118,16 +6143,17 @@ function recalcularInventario(){
   const cambios=[];
   S.ingredientes.forEach(g=>{
     const H0=historialIng(g.id), b=H0.confiable? 0 : baseDe(g);
-    const H={hist:round(H0.hist+(b||0),4), confiable:H0.confiable || b!=null}, hist=H.hist;
-    const confiable=H.confiable && !(S.meta.pullInc && S.meta.pullInc.movinv);   // sin historial completo no se toca
+    const tgt=stockObjetivo(g,H0);
+    const hist=tgt==null? H0.hist : tgt;
+    const confiable=tgt!=null && !(S.meta.pullInc && S.meta.pullInc.movinv);   // sin historial completo no se toca
     const antes=round(Number(g.stock)||0,4);
-    let objetivo=confiable? hist : antes, porque=confiable? 'según compras, ventas y ajustes' : '';
+    let objetivo=confiable? hist : antes, porque=confiable? (H0.ancla!=null?'según el último conteo físico, compras y ventas':'según compras, ventas y ajustes') : '';
     if(objetivo<0){ objetivo=0; porque='estaba en negativo (falta registrar una compra)'; }
     if(Math.abs(objetivo-antes)>0.0001){
       const m=movInv(g.id,'ajuste',objetivo,null,'recalculo','','Recalculado: '+porque);
       /* el movimiento registra lo que le faltaba al HISTORIAL para llegar a lo real,
          así historial y stock quedan iguales de aquí en adelante */
-      if(m){ m.cantidad=round(objetivo-hist,4); m.stockAntes=antes; if(!H0.confiable && b!=null){ g.baseHist=round(b,4); put('ingredientes',g); } m.nota+=' (estaba en '+num(antes,2)+', quedó en '+num(objetivo,2)+')'; delete m.costoMov; put('movinv',m); }
+      if(m){ m.cantidad=round(objetivo-(tgt==null? antes : tgt),4); m.stockAntes=antes; if(H0.ancla==null && !H0.confiable && b!=null){ g.baseHist=round(b,4); put('ingredientes',g); } m.nota+=' (estaba en '+num(antes,2)+', quedó en '+num(objetivo,2)+')'; delete m.costoMov; put('movinv',m); }
       cambios.push({g:g, antes:antes, ahora:objetivo, porque:porque});
     } else {
       const enCapas=round(sum(capasDe(g.id),c=>Number(c.restante)||0),4);
