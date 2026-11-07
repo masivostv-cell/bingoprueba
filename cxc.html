@@ -139,9 +139,29 @@ dialog::backdrop{background:rgba(10,16,32,.55)}
 .dlg-body{padding:12px 18px 8px;overflow:auto}
 .dlg-foot{display:flex;gap:10px;padding:12px 18px calc(18px + env(safe-area-inset-bottom,0px))}
 .dlg-foot .btn{flex:1}
+dialog .dlg-foot{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line)}
 .sig-box{border:1px dashed var(--line);border-radius:var(--radius-sm);background:#fff;min-height:90px;display:grid;place-items:center;padding:10px}
 .sig-box img{max-height:80px;max-width:100%}
 .sig-box span{color:#8a93a8;font-size:14px}
+.pad-wrap{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+#padCanvas{display:block;width:100%;height:220px;touch-action:none;cursor:crosshair}
+.pad-line{position:absolute;left:24px;right:24px;bottom:52px;border-top:1px solid #c9cfda;pointer-events:none}
+.pad-hint{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:13px;color:#8a93a8;pointer-events:none}
+@media (orientation:landscape) and (max-height:500px){#padCanvas{height:55vh}}
+.lote-tools{display:flex;gap:8px;align-items:center;margin:2px 0 10px;flex-wrap:wrap}
+.lote-tools .grow{flex:1;font-size:14px;color:var(--ink-2)}
+.lote-list{display:grid;gap:10px}
+.lote-row{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;background:var(--surface-2)}
+.lote-row.off{opacity:.55}
+.lote-row .top{display:flex;gap:10px;align-items:center;font-weight:700;line-height:1.25;cursor:pointer}
+.lote-row .top input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
+.lote-row .inputs{display:grid;grid-template-columns:130px 1fr;gap:8px;margin-top:8px}
+.lote-row .inputs input{padding:9px 11px;font-size:15px;background:var(--surface)}
+.lote-row .money-input input{font-size:15px;padding-left:24px}
+.lote-row .money-input span{left:10px}
+.lote-total{font-weight:800;color:var(--money);font-variant-numeric:tabular-nums}
+.hist-tools{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:420px){.lote-row .inputs{grid-template-columns:1fr}}
 .done-icon{width:56px;height:56px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin:4px auto 12px}
 .done-icon svg{width:28px;height:28px}
 
@@ -211,6 +231,10 @@ dialog::backdrop{background:rgba(10,16,32,.55)}
         <button class="btn btn-primary" id="btnSeed">Cargar datos de mis documentos</button>
       </div>
 
+      <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:12px 16px">
+        <div style="flex:1;font-size:15px;color:var(--ink-2)">¿Varias empresas a la vez? Crea todas las cuentas del mes en un solo PDF.</div>
+        <button type="button" class="btn btn-sm" id="btnAbrirLote">Generar en lote</button>
+      </div>
       <div class="nueva">
         <form id="form" class="card" autocomplete="off" novalidate>
           <div class="field">
@@ -268,7 +292,12 @@ dialog::backdrop{background:rgba(10,16,32,.55)}
 
     <!-- ---------- HISTORIAL ---------- -->
     <section data-panel="historial" class="hidden">
-      <div class="section-head"><h2>Historial</h2></div>
+      <div class="section-head"><h2>Historial</h2>
+        <div class="hist-tools">
+          <button class="btn btn-sm" id="btnActualizarFirmas">Actualizar firmas</button>
+          <button class="btn btn-sm btn-primary" id="btnPdfLoteHist">PDF de todas</button>
+        </div>
+      </div>
       <div class="field"><input type="search" id="histSearch" placeholder="Buscar por empresa, número o persona"></div>
       <div class="list" id="histList"></div>
     </section>
@@ -321,11 +350,12 @@ dialog::backdrop{background:rgba(10,16,32,.55)}
         <span class="label">Firma</span>
         <div class="sig-box" id="pFirmaBox"><span>Sin firma</span></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
-          <label class="btn btn-sm" for="pFirmaFile" style="color:var(--ink)">Subir foto de la firma</label>
+          <button type="button" class="btn btn-sm btn-primary" id="btnDibujarFirma">Dibujar firma</button>
+          <label class="btn btn-sm" for="pFirmaFile" style="color:var(--ink)">Subir foto</label>
           <input type="file" id="pFirmaFile" accept="image/*" class="hidden">
           <button type="button" class="btn btn-sm btn-danger hidden" id="btnQuitarFirma">Quitar firma</button>
         </div>
-        <span class="hint">Firma en una hoja blanca con lapicero oscuro y tómale foto. El fondo blanco se quita solo.</span>
+        <span class="hint">Firma con el dedo en la pantalla, o sube una foto de la firma hecha en papel blanco.</span>
       </div>
     </div>
     <div class="dlg-foot">
@@ -333,6 +363,46 @@ dialog::backdrop{background:rgba(10,16,32,.55)}
       <button type="button" class="btn btn-primary" id="btnSavePerfil">Guardar persona</button>
     </div>
   </form>
+</dialog>
+
+<!-- ============ DIALOG: LOTE ============ -->
+<dialog id="dlgLote">
+  <div class="dlg-head"><h3>Generar en lote</h3><button class="icon-btn" id="btnLoteCerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="dlg-body">
+    <div class="field"><label for="lPerfil">Quién cobra</label><select id="lPerfil"></select></div>
+    <div class="row-num">
+      <div class="field"><label for="lNumero">Desde el #</label><input type="number" id="lNumero" inputmode="numeric" min="1"></div>
+      <div class="field"><label for="lFecha">Fecha</label><input type="date" id="lFecha"></div>
+    </div>
+    <div class="field"><label for="lPago">Sírvase consignar a la cuenta <span class="hint">(una por línea)</span></label><textarea id="lPago" style="min-height:56px"></textarea></div>
+    <span class="label">Empresas</span>
+    <div class="lote-tools">
+      <span class="grow" id="loteResumen"></span>
+      <button type="button" class="btn btn-sm" id="btnLoteTodas">Todas</button>
+      <button type="button" class="btn btn-sm" id="btnLoteNinguna">Ninguna</button>
+    </div>
+    <div class="lote-list" id="loteList"></div>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" class="btn btn-primary" id="btnLoteCrear">Crear cuentas</button>
+  </div>
+</dialog>
+
+<!-- ============ DIALOG: DIBUJAR FIRMA ============ -->
+<dialog id="dlgPad">
+  <div class="dlg-head"><h3>Dibuja la firma</h3><button class="icon-btn" id="btnPadCerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="dlg-body">
+    <div class="pad-wrap">
+      <canvas id="padCanvas"></canvas>
+      <div class="pad-line"></div>
+      <div class="pad-hint" id="padHint">Firma aquí con el dedo</div>
+    </div>
+    <p class="hint" style="margin:8px 2px 0">Si queda más cómodo, gira el celular de lado.</p>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" class="btn" id="btnPadBorrar">Borrar</button>
+    <button type="button" class="btn btn-primary" id="btnPadUsar">Usar esta firma</button>
+  </div>
 </dialog>
 
 <!-- ============ DIALOG: PDF LISTO ============ -->
@@ -615,9 +685,10 @@ window.addEventListener("resize", escalarPapel);
 /* =========================================================
    PDF (jsPDF, tamaño carta, márgenes como el Word original)
    ========================================================= */
-function crearPDF(d, perfil){
+function crearPDF(d, perfil, pdfExistente){
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ unit: "mm", format: "letter" });
+  const pdf = pdfExistente || new jsPDF({ unit: "mm", format: "letter" });
+  if (pdfExistente) pdf.addPage("letter");
   const W = pdf.internal.pageSize.getWidth();
   const L = 30, R = 30, CW = W - L - R, CX = W / 2;
   const LH = 5.6; // alto de línea para 12pt
@@ -665,11 +736,13 @@ function crearPDF(d, perfil){
   parrafo("ATENTAMENTE,");
 
   // Firma
-  const firma = perfil?.firma;
+  // Usa la firma guardada en la cuenta; si no tiene, la de la persona
+  const fs = d.firma ? { firma: d.firma, firmaW: d.firmaW, firmaH: d.firmaH } : (perfil || {});
+  const firma = fs.firma;
   if (firma) {
     const maxW = 60, maxH = 28;
-    let w = maxW, h = maxW * ((perfil.firmaH || 1) / (perfil.firmaW || 1));
-    if (h > maxH) { h = maxH; w = maxH * ((perfil.firmaW || 1) / (perfil.firmaH || 1)); }
+    let w = maxW, h = maxW * ((fs.firmaH || 1) / (fs.firmaW || 1));
+    if (h > maxH) { h = maxH; w = maxH * ((fs.firmaW || 1) / (fs.firmaH || 1)); }
     y += 4;
     try { pdf.addImage(firma, "PNG", L, y, w, h); } catch (e) { console.warn("firma", e); }
     y += h + 4;
@@ -685,11 +758,23 @@ const nombreArchivo = d =>
 
 let pdfActual = null; // {blob, name}
 function mostrarPDF(d, perfil){
-  const pdf = crearPDF(d, perfil);
-  const blob = pdf.output("blob");
-  pdfActual = { blob, name: nombreArchivo(d) };
-  $("#doneTitle").textContent = `Cuenta #${pad(d.numero)} lista`;
-  $("#doneText").textContent = `${d.empresaNombre} · $ ${fmtMoney(d.valor)}`;
+  entregarPDF(crearPDF(d, perfil).output("blob"), nombreArchivo(d), `Cuenta #${pad(d.numero)} lista`, `${d.empresaNombre} · $ ${fmtMoney(d.valor)}`);
+}
+/* Varias cuentas, una por página, en un solo PDF */
+function mostrarPDFLote(lista, titulo){
+  if (!lista.length) return toast("No hay cuentas para generar.");
+  lista = [...lista].sort((a,b) => (a.firmaNombre || "").localeCompare(b.firmaNombre || "", "es") || a.numero - b.numero);
+  let pdf = null;
+  for (const c of lista) pdf = crearPDF(c, perfiles.find(p => p.id === c.perfilId), pdf);
+  const total = lista.reduce((s, c) => s + (c.valor || 0), 0);
+  const nums = lista.map(c => c.numero);
+  const nombre = `Cuentas_de_cobro_${pad(Math.min(...nums))}_a_${pad(Math.max(...nums))}.pdf`;
+  entregarPDF(pdf.output("blob"), nombre, titulo || `${lista.length} cuentas en un PDF`, `${lista.length} página${lista.length === 1 ? "" : "s"} · total $ ${fmtMoney(total)}`);
+}
+function entregarPDF(blob, name, titulo, texto){
+  pdfActual = { blob, name };
+  $("#doneTitle").textContent = titulo;
+  $("#doneText").textContent = texto;
   const puedeCompartir = !!(navigator.canShare && navigator.canShare({ files: [new File([blob], pdfActual.name, { type: "application/pdf" })] }));
   $("#btnShare").classList.toggle("hidden", !puedeCompartir);
   $("#btnDownload").classList.toggle("btn-primary", !puedeCompartir);
@@ -724,7 +809,7 @@ $("#form").addEventListener("submit", async ev => {
   try {
     // El PDF se genera primero para que funcione aunque no haya señal
     mostrarPDF(d, p);
-    await addDoc(col("cuentas"), { ...d, creado: serverTimestamp() });
+    await addDoc(col("cuentas"), { ...d, firma: p.firma || "", firmaW: p.firmaW || 0, firmaH: p.firmaH || 0, creado: serverTimestamp() });
     if (d.numero >= (p.siguiente || 0)) {
       p.siguiente = d.numero + 1;
       await updateDoc(doc(db, "users", user.uid, "perfiles", p.id), { siguiente: p.siguiente });
@@ -750,12 +835,174 @@ $("#form").addEventListener("submit", async ev => {
 });
 
 /* =========================================================
+   GENERAR EN LOTE
+   ========================================================= */
+let loteSel = new Set();
+function abrirLote(){
+  if (!perfiles.length) return toast("Agrega primero quién cobra.");
+  if (!empresas.length) return toast("Agrega primero tus empresas.");
+  $("#lPerfil").innerHTML = perfiles.map(p => `<option value="${p.id}">${esc(p.firmaNombre || p.nombre)}</option>`).join("");
+  $("#lPerfil").value = $("#fPerfil").value || perfiles[0].id;
+  $("#lFecha").value = $("#fFecha").value || hoyISO();
+  aplicarPerfilLote();
+  loteSel = new Set(empresas.filter(e => e.valor).map(e => e.id));
+  $("#loteList").innerHTML = empresas.map(e => `
+    <div class="lote-row" data-id="${e.id}">
+      <label class="top"><input type="checkbox" data-sel> <span>${esc(e.nombre)}</span></label>
+      <div class="inputs">
+        <div class="money-input"><span>$</span><input type="text" inputmode="numeric" data-valor value="${e.valor ? fmtMoney(e.valor) : ""}" placeholder="Valor" aria-label="Valor para ${esc(e.nombre)}"></div>
+        <input type="text" data-concepto value="${esc(e.concepto || "")}" placeholder="Por concepto de…" aria-label="Concepto para ${esc(e.nombre)}">
+      </div>
+    </div>`).join("");
+  $("#loteList").querySelectorAll("[data-valor]").forEach(el => bindMoneyInput(el, resumenLote));
+  pintarSeleccionLote();
+  $("#dlgLote").showModal();
+}
+function aplicarPerfilLote(){
+  const p = perfiles.find(x => x.id === $("#lPerfil").value); if (!p) return;
+  $("#lNumero").value = p.siguiente || 1;
+  $("#lPago").value = p.pago || "";
+  resumenLote();
+}
+function pintarSeleccionLote(){
+  $("#loteList").querySelectorAll(".lote-row").forEach(row => {
+    const on = loteSel.has(row.dataset.id);
+    row.querySelector("[data-sel]").checked = on;
+    row.classList.toggle("off", !on);
+  });
+  resumenLote();
+}
+function filasLote(){
+  return [...$("#loteList").querySelectorAll(".lote-row")].filter(r => loteSel.has(r.dataset.id)).map(r => ({
+    empresa: empresas.find(e => e.id === r.dataset.id),
+    valor: parseMoney(r.querySelector("[data-valor]").value),
+    concepto: r.querySelector("[data-concepto]").value.trim()
+  }));
+}
+function resumenLote(){
+  if (!$("#dlgLote").open && !$("#loteList").children.length) return;
+  const f = filasLote(), n = f.length, ini = parseInt($("#lNumero").value, 10) || 1;
+  const total = f.reduce((s, x) => s + x.valor, 0);
+  $("#loteResumen").innerHTML = n ? `${n} cuenta${n === 1 ? "" : "s"}, #${pad(ini)} a #${pad(ini + n - 1)} · <span class="lote-total">$ ${fmtMoney(total)}</span>` : "Ninguna empresa elegida";
+  $("#btnLoteCrear").textContent = n ? `Crear ${n} cuenta${n === 1 ? "" : "s"} y PDF` : "Crear cuentas";
+  $("#btnLoteCrear").disabled = !n;
+}
+$("#btnAbrirLote").addEventListener("click", abrirLote);
+$("#btnLoteCerrar").addEventListener("click", () => $("#dlgLote").close());
+$("#lPerfil").addEventListener("change", aplicarPerfilLote);
+$("#lNumero").addEventListener("input", resumenLote);
+$("#btnLoteTodas").addEventListener("click", () => { loteSel = new Set(empresas.map(e => e.id)); pintarSeleccionLote(); });
+$("#btnLoteNinguna").addEventListener("click", () => { loteSel.clear(); pintarSeleccionLote(); });
+$("#loteList").addEventListener("change", ev => {
+  const cb = ev.target.closest("[data-sel]"); if (!cb) return;
+  const id = cb.closest(".lote-row").dataset.id;
+  cb.checked ? loteSel.add(id) : loteSel.delete(id);
+  pintarSeleccionLote();
+});
+$("#loteList").addEventListener("focusin", ev => { // al escribir en una empresa, queda elegida
+  const row = ev.target.closest(".lote-row");
+  if (row && !ev.target.matches("[data-sel]") && !loteSel.has(row.dataset.id)) { loteSel.add(row.dataset.id); pintarSeleccionLote(); }
+});
+
+$("#btnLoteCrear").addEventListener("click", async () => {
+  const p = perfiles.find(x => x.id === $("#lPerfil").value);
+  const filas = filasLote();
+  const ini = parseInt($("#lNumero").value, 10);
+  const fecha = $("#lFecha").value;
+  if (!p) return toast("Elige quién cobra.");
+  if (!ini) return toast("Escribe el número inicial.");
+  if (!fecha) return toast("Elige la fecha.");
+  const falta = filas.find(f => !f.valor || !f.concepto);
+  if (falta) return toast(`A ${falta.empresa.nombre} le falta el ${!falta.valor ? "valor" : "concepto"}.`);
+  const pago = $("#lPago").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const lista = filas.map((f, i) => ({
+    numero: ini + i, fecha,
+    empresaId: f.empresa.id, empresaNombre: f.empresa.nombre, empresaNit: f.empresa.nit || "",
+    perfilId: p.id, nombre: p.nombre, firmaNombre: p.firmaNombre || p.nombre, cc: p.cc,
+    ciudad: p.ciudad || "San José de Cúcuta",
+    valor: f.valor, letras: numeroALetras(f.valor), concepto: f.concepto, pago,
+    firma: p.firma || "", firmaW: p.firmaW || 0, firmaH: p.firmaH || 0
+  }));
+  const b = $("#btnLoteCrear"); b.disabled = true; b.textContent = "Creando…";
+  try {
+    $("#dlgLote").close();
+    mostrarPDFLote(lista, `${lista.length} cuenta${lista.length === 1 ? "" : "s"} lista${lista.length === 1 ? "" : "s"}`);
+    // Guardar en el historial (por partes, para no pasar el límite de Firestore)
+    for (let i = 0; i < lista.length; i += 100) {
+      const batch = writeBatch(db);
+      lista.slice(i, i + 100).forEach(d => batch.set(doc(col("cuentas")), { ...d, creado: serverTimestamp() }));
+      await batch.commit();
+    }
+    const ultimo = ini + lista.length - 1;
+    const batch = writeBatch(db);
+    if (ultimo >= (p.siguiente || 0)) { p.siguiente = ultimo + 1; batch.update(doc(db, "users", user.uid, "perfiles", p.id), { siguiente: p.siguiente }); }
+    filas.forEach(f => { // recordar valor y concepto de cada empresa
+      if (f.empresa.valor !== f.valor || f.empresa.concepto !== f.concepto) {
+        f.empresa.valor = f.valor; f.empresa.concepto = f.concepto;
+        batch.update(doc(db, "users", user.uid, "empresas", f.empresa.id), { valor: f.valor, concepto: f.concepto });
+      }
+    });
+    await batch.commit();
+    renderPerfiles(); renderEmpresas();
+    if ($("#fPerfil").value === p.id) $("#fNumero").value = p.siguiente;
+    renderPreview();
+    cargarHistorial();
+  } catch (err) {
+    console.error(err);
+    toast("El PDF se creó, pero no se pudo guardar todo en el historial.");
+  } finally { b.disabled = false; resumenLote(); }
+});
+
+/* =========================================================
+   ACTUALIZAR FIRMAS DE LAS CUENTAS YA CREADAS
+   ========================================================= */
+$("#btnActualizarFirmas").addEventListener("click", async () => {
+  if (!perfiles.some(p => p.firma)) return toast("Ninguna persona tiene firma. Agrégala en “Quién cobra”.");
+  if (!confirm("Esto le pone la firma actual de cada persona a todas sus cuentas ya creadas. ¿Continuar?")) return;
+  const b = $("#btnActualizarFirmas"); b.disabled = true; b.textContent = "Actualizando…";
+  try {
+    const todas = (await getDocs(col("cuentas"))).docs.map(d => ({ id: d.id, ...d.data() }));
+    const cambios = []; let sinFirma = 0;
+    for (const c of todas) {
+      // Busca a la persona por su id, o por la cédula si la persona se volvió a crear
+      const p = perfiles.find(x => x.id === c.perfilId) || perfiles.find(x => x.cc && x.cc === c.cc);
+      if (!p?.firma) { sinFirma++; continue; }
+      if (c.firma === p.firma && c.perfilId === p.id) continue;
+      cambios.push({ id: c.id, data: { firma: p.firma, firmaW: p.firmaW || 0, firmaH: p.firmaH || 0, perfilId: p.id } });
+    }
+    for (let i = 0; i < cambios.length; i += 100) {
+      const batch = writeBatch(db);
+      cambios.slice(i, i + 100).forEach(c => batch.update(doc(db, "users", user.uid, "cuentas", c.id), c.data));
+      await batch.commit();
+    }
+    await cargarHistorial();
+    let m = cambios.length ? `Listo, ${cambios.length} cuenta${cambios.length === 1 ? "" : "s"} con firma actualizada.` : "Todas las cuentas ya tenían la firma al día.";
+    if (sinFirma) m += ` ${sinFirma} quedaron sin firma porque esa persona no tiene firma guardada.`;
+    toast(m);
+  } catch (err) { console.error(err); toast("No se pudieron actualizar las firmas."); }
+  finally { b.disabled = false; b.textContent = "Actualizar firmas"; }
+});
+
+/* PDF con todas las cuentas que se ven en el historial (respeta la búsqueda) */
+$("#btnPdfLoteHist").addEventListener("click", () => {
+  const visibles = cuentasFiltradas();
+  if (!visibles.length) return toast("No hay cuentas para generar.");
+  if (visibles.length > 60 && !confirm(`Son ${visibles.length} cuentas. El PDF puede tardar un poco. ¿Continuar?`)) return;
+  mostrarPDFLote(visibles);
+});
+
+/* =========================================================
    HISTORIAL
    ========================================================= */
+function cuentasFiltradas(){
+  const q = $("#histSearch").value.trim().toLowerCase();
+  return cuentas.filter(c => !q ||
+    [c.empresaNombre, c.firmaNombre, c.nombre, pad(c.numero), String(c.numero), c.concepto, fechaLarga(c.fecha)].join(" ").toLowerCase().includes(q));
+}
 function renderHistorial(){
   const q = $("#histSearch").value.trim().toLowerCase();
-  const list = cuentas.filter(c => !q ||
-    [c.empresaNombre, c.firmaNombre, c.nombre, pad(c.numero), String(c.numero), c.concepto].join(" ").toLowerCase().includes(q));
+  const list = cuentasFiltradas();
+  $("#btnPdfLoteHist").textContent = q ? `PDF de estas ${list.length}` : "PDF de todas";
   const el = $("#histList");
   if (!cuentas.length) { el.innerHTML = `<div class="empty"><p>Aquí van a aparecer las cuentas que hagas.</p></div>`; return; }
   if (!list.length) { el.innerHTML = `<div class="empty"><p>Nada coincide con “${esc(q)}”.</p></div>`; return; }
@@ -904,6 +1151,83 @@ $("#pFirmaFile").addEventListener("change", async ev => {
     firmaTmp = { data: out.toDataURL("image/png"), w: out.width, h: out.height };
     pintarFirma();
   } catch (e) { console.error(e); toast("No se pudo leer la imagen."); }
+});
+
+/* ---------- Dibujar la firma con el dedo ---------- */
+const firmaPad = { c: null, ctx: null, dibujando: false, vacio: true, pts: [], dpr: 1 };
+function prepararPad(){
+  const c = $("#padCanvas"), dpr = Math.max(window.devicePixelRatio || 1, 2);
+  const r = c.getBoundingClientRect();
+  c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+  const ctx = c.getContext("2d");
+  ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#111"; ctx.fillStyle = "#111";
+  Object.assign(firmaPad, { c, ctx, dpr, vacio: true, pts: [] });
+  $("#padHint").classList.remove("hidden");
+}
+function puntoPad(ev){
+  const r = firmaPad.c.getBoundingClientRect();
+  return { x: (ev.clientX - r.left) * firmaPad.dpr, y: (ev.clientY - r.top) * firmaPad.dpr, t: performance.now() };
+}
+function anchoTrazo(a, b){ // un poco más delgado cuando el trazo es rápido, como un lapicero
+  const v = Math.hypot(b.x - a.x, b.y - a.y) / Math.max(1, b.t - a.t);
+  return Math.max(1.6, Math.min(3.4, 3.6 - v * 0.9)) * firmaPad.dpr;
+}
+$("#padCanvas").addEventListener("pointerdown", ev => {
+  ev.preventDefault();
+  firmaPad.c.setPointerCapture(ev.pointerId);
+  firmaPad.dibujando = true;
+  const p = puntoPad(ev); firmaPad.pts = [p]; firmaPad.ancho = 2.6 * firmaPad.dpr;
+  firmaPad.ctx.beginPath(); firmaPad.ctx.arc(p.x, p.y, firmaPad.ancho / 2, 0, Math.PI * 2); firmaPad.ctx.fill();
+  if (firmaPad.vacio) { firmaPad.vacio = false; $("#padHint").classList.add("hidden"); }
+});
+$("#padCanvas").addEventListener("pointermove", ev => {
+  if (!firmaPad.dibujando) return;
+  ev.preventDefault();
+  const eventos = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+  for (const e of eventos) {
+    const p = puntoPad(e), pts = firmaPad.pts, a = pts[pts.length - 1];
+    if (Math.hypot(p.x - a.x, p.y - a.y) < 1.5 * firmaPad.dpr) continue;
+    pts.push(p);
+    firmaPad.ancho = firmaPad.ancho * 0.6 + anchoTrazo(a, p) * 0.4;
+    const ctx = firmaPad.ctx;
+    ctx.lineWidth = firmaPad.ancho;
+    ctx.beginPath();
+    if (pts.length > 2) {
+      const b = pts[pts.length - 3];
+      ctx.moveTo((b.x + a.x) / 2, (b.y + a.y) / 2);
+      ctx.quadraticCurveTo(a.x, a.y, (a.x + p.x) / 2, (a.y + p.y) / 2);
+    } else { ctx.moveTo(a.x, a.y); ctx.lineTo(p.x, p.y); }
+    ctx.stroke();
+  }
+});
+["pointerup", "pointercancel", "pointerleave"].forEach(t => $("#padCanvas").addEventListener(t, () => { firmaPad.dibujando = false; }));
+
+$("#btnDibujarFirma").addEventListener("click", () => { $("#dlgPad").showModal(); requestAnimationFrame(prepararPad); });
+$("#btnPadBorrar").addEventListener("click", prepararPad);
+$("#btnPadCerrar").addEventListener("click", () => $("#dlgPad").close());
+window.addEventListener("resize", () => { if ($("#dlgPad").open && firmaPad.vacio) prepararPad(); });
+$("#btnPadUsar").addEventListener("click", () => {
+  if (firmaPad.vacio) return toast("Primero dibuja la firma.");
+  // Recorta el espacio vacío y reduce el tamaño para guardarla liviana
+  const { c } = firmaPad, data = firmaPad.ctx.getImageData(0, 0, c.width, c.height).data;
+  let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
+  for (let y = 0; y < c.height; y += 2) for (let x = 0; x < c.width; x += 2) {
+    if (data[(y * c.width + x) * 4 + 3] > 20) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  }
+  const m = 6 * firmaPad.dpr;
+  minX = Math.max(0, minX - m); minY = Math.max(0, minY - m);
+  maxX = Math.min(c.width - 1, maxX + m); maxY = Math.min(c.height - 1, maxY + m);
+  const w = maxX - minX + 1, h = maxY - minY + 1;
+  const k = Math.min(1, 600 / w, 240 / h);
+  const out = document.createElement("canvas");
+  out.width = Math.max(1, Math.round(w * k)); out.height = Math.max(1, Math.round(h * k));
+  const octx = out.getContext("2d");
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(c, minX, minY, w, h, 0, 0, out.width, out.height);
+  firmaTmp = { data: out.toDataURL("image/png"), w: out.width, h: out.height };
+  pintarFirma();
+  $("#dlgPad").close();
+  toast("Firma lista. Toca “Guardar persona” para guardarla.");
 });
 
 $("#btnSavePerfil").addEventListener("click", async () => {
