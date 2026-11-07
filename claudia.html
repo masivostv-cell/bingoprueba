@@ -83,9 +83,23 @@ main{max-width:760px;margin:0 auto;padding:18px 16px 60px}
 .list-head{display:flex;gap:10px;align-items:center;margin-bottom:14px}
 .list-head input{flex:1}
 .count{font-size:14px;color:var(--ink-3);margin:0 2px 10px}
+.tools-bar{display:flex;justify-content:flex-end;margin:-4px 0 12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .patients{display:grid;gap:10px}
-.patient{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;cursor:pointer;text-align:left;width:100%}
+.patient{display:grid;grid-template-columns:44px 1fr auto auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 8px 10px 14px;cursor:pointer;text-align:left;width:100%}
 .patient:active{background:var(--surface-2)}
+.patient.pres{background:var(--done-soft);border-color:transparent}
+.patient.pres .avatar{background:var(--surface);color:var(--done)}
+.check-btn{width:44px;height:44px;border:0;background:none;border-radius:50%;display:grid;place-items:center;cursor:pointer;padding:0}
+.check-btn span{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;color:transparent;background:var(--surface)}
+.check-btn svg{width:16px;height:16px}
+.check-btn[aria-pressed="true"] span{background:var(--done);border-color:var(--done);color:#fff}
+.pres-tag{display:inline-block;font-size:12px;font-weight:600;color:var(--done);margin-left:2px}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap;margin:-6px 0 18px}
+.btn-pres[aria-pressed="true"]{background:var(--done);border-color:var(--done);color:#fff}
+@media (prefers-color-scheme: dark){.btn-pres[aria-pressed="true"]{color:#0e1a19}}
+@media (max-width:480px){.patient{grid-template-columns:44px 1fr auto}.patient .bar{display:none}}
+.list-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .avatar{width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:16px}
 .patient .n{font-weight:600;line-height:1.25}
 .patient .s{font-size:13px;color:var(--ink-2)}
@@ -197,9 +211,20 @@ dialog::backdrop{background:rgba(8,20,18,.55)}
   <main>
     <!-- Lista -->
     <section id="vLista">
+      <div class="tools-bar">
+        <button class="btn btn-sm" id="btnLimpiarTodo" title="Quita los símbolos de todo lo que ya está guardado">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg>
+          Recalcular y limpiar símbolos
+        </button>
+      </div>
       <div class="list-head">
         <input type="search" id="buscar" placeholder="Buscar paciente" aria-label="Buscar paciente">
         <button class="btn btn-primary" id="btnNuevo">Nuevo paciente</button>
+      </div>
+      <div class="list-filters" id="listFiltros">
+        <button class="chip" data-f="todos" aria-pressed="true">Todos</button>
+        <button class="chip" data-f="pendientes" aria-pressed="false">Por presentar</button>
+        <button class="chip" data-f="presentados" aria-pressed="false">Presentados</button>
       </div>
       <p class="count" id="count"></p>
       <div class="patients" id="lista"></div>
@@ -215,9 +240,14 @@ dialog::backdrop{background:rgba(8,20,18,.55)}
           <h1 id="dNombre"></h1>
           <div class="doc" id="dDoc"></div>
         </div>
-        <button class="icon-btn" id="btnEditarPaciente" aria-label="Editar paciente" title="Editar paciente">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-sm btn-pres" id="btnPresentado" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>Marcar como presentado</span>
         </button>
+        <button class="btn btn-sm" id="btnEditarPaciente">Editar</button>
+        <button class="btn btn-sm btn-danger" id="btnEliminarPaciente">Eliminar</button>
       </div>
 
       <div class="block meta-box">
@@ -276,7 +306,10 @@ dialog::backdrop{background:rgba(8,20,18,.55)}
           <option value="logrado">Logrado</option>
         </select>
       </div>
-      <div class="field"><label for="oFecha">Fecha</label><input type="date" id="oFecha"></div>
+      <div class="row2">
+        <div class="field"><label for="oFecha">Fecha</label><input type="date" id="oFecha"></div>
+        <div class="field"><label for="oHora">Hora</label><input type="time" id="oHora"></div>
+      </div>
       <div class="field"><label for="oObs">Observaciones <span class="hint">(opcional)</span></label><textarea id="oObs"></textarea></div>
     </div>
     <div class="dlg-foot">
@@ -292,7 +325,7 @@ dialog::backdrop{background:rgba(8,20,18,.55)}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp }
+import { initializeFirestore, persistentLocalCache, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -322,8 +355,27 @@ const iniciales = n => (n || "?").trim().split(/\s+/).slice(0,2).map(w => w[0]).
 const hoyISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
 const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const fechaCorta = iso => { if (!iso) return ""; const [y,m,d] = iso.split("-").map(Number); return `${d} ${MESES[m-1]} ${y}`; };
+const horaActual = () => { const d = new Date(); return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0"); };
+function horaBonita(h){
+  const [H, M] = h.split(":").map(Number);
+  return `${H % 12 || 12}:${String(M).padStart(2,"0")} ${H < 12 ? "a. m." : "p. m."}`;
+}
 const ESTADOS = { pendiente: "Pendiente", proceso: "En proceso", logrado: "Logrado" };
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+/* Quita todos los símbolos (#, /, *, guiones, emojis, comillas…).
+   Solo deja letras, números, espacios, saltos de línea, puntos, comas y punto y coma. */
+function limpiarTexto(s){
+  return String(s ?? "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\s+[—–]\s+/g, ", ")              // "palabra — palabra" → "palabra, palabra"
+    .replace(/(\d)\s*%/g, "$1 por ciento")      // 50% → 50 por ciento
+    .replace(/[^\p{L}\p{N}\s.,;]/gu, " ")      // todo lo demás se elimina
+    .replace(/[ \t\u00a0]+/g, " ")             // espacios repetidos
+    .split("\n").map(l => l.trim().replace(/\s+([.,;])/g, "$1")).join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+const limpiarLinea = s => limpiarTexto(s).replace(/\s*\n\s*/g, " ");
 function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2600); }
 
 /* ---------------- Login con correo y contraseña ---------------- */
@@ -408,24 +460,61 @@ function progreso(p){
   const t = p.objetivos.length, l = p.objetivos.filter(o => o.estado === "logrado").length;
   return { t, l, pct: t ? Math.round(l / t * 100) : 0 };
 }
+let filtroLista = "todos";
+const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
 function renderLista(){
   const q = $("#buscar").value.trim().toLowerCase();
-  const lista = pacientes.filter(p => !q || (p.nombre + " " + (p.documento || "")).toLowerCase().includes(q));
-  $("#count").textContent = pacientes.length ? `${pacientes.length} paciente${pacientes.length === 1 ? "" : "s"}` : "";
+  const lista = pacientes.filter(p =>
+    (filtroLista === "todos" || (filtroLista === "presentados" ? p.presentado : !p.presentado)) &&
+    (!q || (p.nombre + " " + (p.documento || "")).toLowerCase().includes(q)));
+  const nPres = pacientes.filter(p => p.presentado).length;
+  $("#count").textContent = pacientes.length ? `${pacientes.length} paciente${pacientes.length === 1 ? "" : "s"}, ${nPres} presentado${nPres === 1 ? "" : "s"}` : "";
+  $("#listFiltros").classList.toggle("hidden", !pacientes.length);
+  document.querySelectorAll("#listFiltros .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.f === filtroLista)));
   const el = $("#lista");
   if (!pacientes.length) { el.innerHTML = `<div class="empty"><p>Aún no tienes pacientes. Crea el primero para empezar a registrar su meta y sus objetivos.</p><button class="btn btn-primary" onclick="document.getElementById('btnNuevo').click()">Nuevo paciente</button></div>`; return; }
-  if (!lista.length) { el.innerHTML = `<div class="empty"><p>Ningún paciente coincide con “${esc(q)}”.</p></div>`; return; }
+  if (!lista.length) {
+    const t = q ? `Ningún paciente coincide con “${esc(q)}”.` : filtroLista === "presentados" ? "Todavía no has marcado ningún paciente como presentado." : "Ya presentaste a todos tus pacientes.";
+    el.innerHTML = `<div class="empty"><p>${t}</p></div>`; return;
+  }
   el.innerHTML = lista.map(p => {
     const g = progreso(p);
-    return `<button class="patient" data-id="${p.id}">
+    return `<div class="patient${p.presentado ? " pres" : ""}" data-id="${p.id}" role="button" tabindex="0">
       <span class="avatar">${esc(iniciales(p.nombre))}</span>
-      <span><span class="n">${esc(p.nombre)}</span><br><span class="s">${g.t ? `${g.l} de ${g.t} objetivos logrados` : "Sin objetivos todavía"}</span></span>
+      <span><span class="n">${esc(p.nombre)}</span><br><span class="s">${p.presentado ? `<span class="pres-tag">Presentado${p.fechaPresentado ? " el " + fechaCorta(p.fechaPresentado) : ""}</span>` : (g.t ? `${g.l} de ${g.t} objetivos logrados` : "Sin objetivos todavía")}</span></span>
       <span class="bar" aria-hidden="true"><i style="width:${g.pct}%"></i></span>
-    </button>`;
+      <button class="check-btn" data-check aria-pressed="${!!p.presentado}" aria-label="${p.presentado ? "Quitar presentado" : "Marcar como presentado"}" title="${p.presentado ? "Quitar presentado" : "Marcar como presentado"}"><span>${CHECK_SVG}</span></button>
+    </div>`;
   }).join("");
 }
 $("#buscar").addEventListener("input", renderLista);
-$("#lista").addEventListener("click", ev => { const b = ev.target.closest(".patient"); if (b) abrirPaciente(b.dataset.id); });
+$("#listFiltros").addEventListener("click", ev => { const c = ev.target.closest(".chip"); if (c) { filtroLista = c.dataset.f; renderLista(); } });
+$("#lista").addEventListener("click", ev => {
+  const row = ev.target.closest(".patient"); if (!row) return;
+  const p = pacientes.find(x => x.id === row.dataset.id);
+  if (ev.target.closest("[data-check]")) togglePresentado(p);
+  else abrirPaciente(row.dataset.id);
+});
+$("#lista").addEventListener("keydown", ev => {
+  if (ev.key !== "Enter" || ev.target.closest("[data-check]")) return;
+  const row = ev.target.closest(".patient"); if (row) abrirPaciente(row.dataset.id);
+});
+
+/* Chulito de presentado */
+async function togglePresentado(p){
+  if (!p) return;
+  const prev = { presentado: !!p.presentado, fechaPresentado: p.fechaPresentado || "" };
+  p.presentado = !prev.presentado;
+  p.fechaPresentado = p.presentado ? hoyISO() : "";
+  renderLista(); if (actual === p) renderDetalle();
+  try {
+    await updateDoc(pacRef(p.id), { presentado: p.presentado, fechaPresentado: p.fechaPresentado, actualizado: serverTimestamp() });
+    toast(p.presentado ? `${p.nombre} quedó como presentado.` : "Se quitó el presentado.");
+  } catch (e) {
+    Object.assign(p, prev); renderLista(); if (actual === p) renderDetalle();
+    toast("No se pudo guardar el cambio.");
+  }
+}
 
 /* ---------------- Navegación ---------------- */
 function mostrarLista(){
@@ -436,6 +525,7 @@ function mostrarLista(){
 function abrirPaciente(id, push = true){
   actual = pacientes.find(p => p.id === id); if (!actual) return;
   filtro = "todos";
+  limpiarGuardado(actual);
   $("#vLista").classList.add("hidden"); $("#vDetalle").classList.remove("hidden");
   renderDetalle();
   $("#dMeta").value = actual.meta || ""; $("#metaState").textContent = "";
@@ -451,6 +541,9 @@ function renderDetalle(){
   $("#dAvatar").textContent = iniciales(p.nombre);
   $("#dNombre").textContent = p.nombre;
   $("#dDoc").textContent = p.documento ? "Documento " + p.documento : "";
+  const bp = $("#btnPresentado");
+  bp.setAttribute("aria-pressed", String(!!p.presentado));
+  bp.querySelector("span").textContent = p.presentado ? `Presentado${p.fechaPresentado ? " el " + fechaCorta(p.fechaPresentado) : ""}` : "Marcar como presentado";
   const g = progreso(p);
   $("#objSummary").innerHTML = g.t
     ? `<div class="bar"><i style="width:${g.pct}%"></i></div><span>${g.l} de ${g.t} logrados</span>` : "";
@@ -459,7 +552,7 @@ function renderDetalle(){
   const orden = { proceso: 0, pendiente: 1, logrado: 2 };
   const objs = p.objetivos
     .filter(o => filtro === "todos" || o.estado === filtro)
-    .sort((a,b) => orden[a.estado] - orden[b.estado] || (b.fecha || "").localeCompare(a.fecha || ""));
+    .sort((a,b) => orden[a.estado] - orden[b.estado] || ((b.fecha || "") + (b.hora || "")).localeCompare((a.fecha || "") + (a.hora || "")));
   const el = $("#objs");
   if (!p.objetivos.length) { el.innerHTML = `<div class="empty"><p>Agrega el primer objetivo de ${esc(p.nombre.split(" ")[0])}.</p></div>`; return; }
   if (!objs.length) { el.innerHTML = `<div class="empty"><p>No hay objetivos en este estado.</p></div>`; return; }
@@ -468,7 +561,7 @@ function renderDetalle(){
       <div class="txt">${esc(o.texto)}</div>
       ${o.obs ? `<div class="obs">${esc(o.obs)}</div>` : ""}
       <div class="foot">
-        <span class="date">${fechaCorta(o.fecha)}</span>
+        <span class="date">${fechaCorta(o.fecha)}${o.hora ? ", " + horaBonita(o.hora) : ""}</span>
         <select class="estado" data-v="${o.estado}" aria-label="Estado del objetivo">
           ${Object.entries(ESTADOS).map(([k,v]) => `<option value="${k}" ${k === o.estado ? "selected" : ""}>${v}</option>`).join("")}
         </select>
@@ -476,6 +569,59 @@ function renderDetalle(){
       </div>
     </div>`).join("");
 }
+/* Si un paciente tiene texto viejo con símbolos, se limpia y se guarda al abrirlo */
+function limpiarGuardado(p){
+  const meta = limpiarTexto(p.meta);
+  const objetivos = p.objetivos.map(o => ({ ...o, texto: limpiarTexto(o.texto), obs: limpiarTexto(o.obs) }));
+  const cambio = meta !== (p.meta || "") || objetivos.some((o, i) => o.texto !== p.objetivos[i].texto || o.obs !== (p.objetivos[i].obs || ""));
+  if (!cambio) return;
+  p.meta = meta; p.objetivos = objetivos;
+  updateDoc(pacRef(p.id), { meta, objetivos, actualizado: serverTimestamp() }).catch(e => console.error(e));
+}
+
+/* Al pegar en cualquier campo de texto, el texto entra ya limpio */
+["#dMeta", "#pMeta", "#oTexto", "#oObs", "#pNombre"].forEach(sel => {
+  $(sel).addEventListener("paste", ev => {
+    const t = ev.clipboardData?.getData("text/plain"); if (t == null) return;
+    ev.preventDefault();
+    const limpio = sel === "#pNombre" ? limpiarLinea(t) : limpiarTexto(t);
+    const el = ev.target, a = el.selectionStart, b = el.selectionEnd;
+    el.setRangeText(limpio, a, b, "end");
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+});
+
+/* Botón "Recalcular": limpia los símbolos de todos los pacientes ya guardados */
+$("#btnLimpiarTodo").addEventListener("click", async () => {
+  if (!pacientes.length) return toast("No hay pacientes todavía.");
+  const b = $("#btnLimpiarTodo"); b.disabled = true;
+  const cambios = [];
+  for (const p of pacientes) {
+    const nombre = limpiarLinea(p.nombre) || p.nombre;
+    const meta = limpiarTexto(p.meta);
+    const objetivos = p.objetivos.map(o => ({ ...o, texto: limpiarTexto(o.texto), obs: limpiarTexto(o.obs) }));
+    const distinto = nombre !== p.nombre || meta !== (p.meta || "") ||
+      objetivos.some((o, i) => o.texto !== p.objetivos[i].texto || o.obs !== (p.objetivos[i].obs || ""));
+    if (distinto) cambios.push({ p, data: { nombre, meta, objetivos } });
+  }
+  if (!cambios.length) { b.disabled = false; return toast("Todo está limpio, no había símbolos."); }
+  try {
+    for (let i = 0; i < cambios.length; i += 400) {   // Firestore permite hasta 500 por lote
+      const batch = writeBatch(db);
+      cambios.slice(i, i + 400).forEach(c => batch.update(pacRef(c.p.id), { ...c.data, actualizado: serverTimestamp() }));
+      await batch.commit();
+    }
+    cambios.forEach(c => Object.assign(c.p, c.data));
+    pacientes.sort((a,b) => a.nombre.localeCompare(b.nombre, "es"));
+    renderLista();
+    toast(`Listo, se limpiaron ${cambios.length} paciente${cambios.length === 1 ? "" : "s"}.`);
+  } catch (e) { console.error(e); toast("No se pudo limpiar. Revisa tu conexión."); }
+  finally { b.disabled = false; }
+});
+
+$("#btnPresentado").addEventListener("click", () => togglePresentado(actual));
+$("#btnEliminarPaciente").addEventListener("click", () => { pacEditando = actual; $("#btnBorrarPaciente").click(); });
+
 $("#filtros").addEventListener("click", ev => { const c = ev.target.closest(".chip"); if (c) { filtro = c.dataset.f; renderDetalle(); } });
 
 async function guardarObjetivos(){
@@ -499,11 +645,14 @@ $("#dMeta").addEventListener("input", () => {
   $("#metaState").textContent = "Escribiendo…";
   clearTimeout(metaTimer); metaTimer = setTimeout(guardarMeta, 900);
 });
-$("#dMeta").addEventListener("blur", () => { if (metaTimer) { clearTimeout(metaTimer); guardarMeta(); } });
+$("#dMeta").addEventListener("blur", async () => {
+  if (metaTimer) { clearTimeout(metaTimer); await guardarMeta(); }
+  const l = limpiarTexto($("#dMeta").value); if ($("#dMeta").value !== l) { $("#dMeta").value = l; guardarMeta(); }
+});
 async function guardarMeta(){
   metaTimer = null;
   if (!actual) return;
-  const v = $("#dMeta").value.trim();
+  const v = limpiarTexto($("#dMeta").value);
   if (v === (actual.meta || "")) { $("#metaState").textContent = "Guardado"; return; }
   $("#metaState").textContent = "Guardando…";
   try { await updateDoc(pacRef(actual.id), { meta: v, actualizado: serverTimestamp() }); actual.meta = v; $("#metaState").textContent = "Guardado"; }
@@ -524,7 +673,7 @@ function abrirPacienteDlg(p){
 $("#btnNuevo").addEventListener("click", () => abrirPacienteDlg());
 $("#btnEditarPaciente").addEventListener("click", () => abrirPacienteDlg(actual));
 $("#btnGuardarPaciente").addEventListener("click", async () => {
-  const nombre = $("#pNombre").value.trim().replace(/\s+/g, " ");
+  const nombre = limpiarLinea($("#pNombre").value);
   const documento = $("#pDoc").value.trim();
   if (!nombre) return toast("Escribe el nombre del paciente.");
   const b = $("#btnGuardarPaciente"); b.disabled = true;
@@ -534,7 +683,7 @@ $("#btnGuardarPaciente").addEventListener("click", async () => {
       Object.assign(pacEditando, { nombre, documento });
       renderDetalle();
     } else {
-      const data = { nombre, documento, meta: $("#pMeta").value.trim(), objetivos: [], creado: serverTimestamp(), actualizado: serverTimestamp() };
+      const data = { nombre, documento, meta: limpiarTexto($("#pMeta").value), objetivos: [], presentado: false, fechaPresentado: "", creado: serverTimestamp(), actualizado: serverTimestamp() };
       const r = await addDoc(collection(db, "users", user.uid, "pacientes"), data);
       pacientes.push({ id: r.id, ...data });
       $("#dlgPaciente").close();
@@ -566,14 +715,14 @@ function abrirObjetivo(o){
   objEditando = o || null;
   $("#dlgObjTitle").textContent = o ? "Editar objetivo" : "Nuevo objetivo";
   $("#oTexto").value = o?.texto || ""; $("#oEstado").value = o?.estado || "pendiente";
-  $("#oFecha").value = o?.fecha || hoyISO(); $("#oObs").value = o?.obs || "";
+  $("#oFecha").value = o?.fecha || hoyISO(); $("#oHora").value = o ? (o.hora || "") : horaActual(); $("#oObs").value = o?.obs || "";
   $("#btnBorrarObj").classList.toggle("hidden", !o);
   $("#dlgObj").showModal();
   setTimeout(() => $("#oTexto").focus(), 50);
 }
 $("#btnNuevoObj").addEventListener("click", () => abrirObjetivo());
 $("#btnGuardarObj").addEventListener("click", async () => {
-  const data = { texto: $("#oTexto").value.trim(), estado: $("#oEstado").value, fecha: $("#oFecha").value, obs: $("#oObs").value.trim() };
+  const data = { texto: limpiarTexto($("#oTexto").value), estado: $("#oEstado").value, fecha: $("#oFecha").value, hora: $("#oHora").value, obs: limpiarTexto($("#oObs").value) };
   if (!data.texto) return toast("Escribe el objetivo.");
   const copia = actual.objetivos.map(o => ({ ...o }));
   if (objEditando) Object.assign(objEditando, data);
