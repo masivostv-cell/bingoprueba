@@ -184,6 +184,7 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
 #login h1{margin:0;font-size:24px;color:var(--mark)}
 #login p{margin:0;color:var(--muted);font-size:14px}
 #login .err{color:var(--red);font-size:14px;min-height:1.2em}
+#login .reg[hidden]{display:none}
 #login .link{background:none;border:0;color:var(--mark);text-decoration:underline;cursor:pointer;padding:0;justify-self:start;font-size:14px}
 .userbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:10px clamp(14px,3vw,32px) 0;font-size:13px;color:var(--muted)}
 .userbar .btn{padding:4px 12px;font-size:13px}
@@ -193,12 +194,16 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
 <div id="login">
   <form id="formLogin" autocomplete="on">
     <h1>Agenda PAD mensual</h1>
-    <p>Ingresa con tu correo y contraseña registrados.</p>
+    <p id="lgSub">Ingresa con tu correo y contraseña.</p>
+    <label class="f reg" hidden>Nombre completo del profesional<input id="rgNombre" autocomplete="name" placeholder="Ej: CLAUDIA STELLA CONTRERAS RAMIREZ"></label>
+    <label class="f reg" hidden>Proceso<input id="rgProceso" list="procesos" placeholder="Ej: FONOAUDIOLOGIA"></label>
     <label class="f">Correo<input id="lgEmail" type="email" autocomplete="username" required></label>
-    <label class="f">Contraseña<input id="lgPass" type="password" autocomplete="current-password" required></label>
+    <label class="f">Contraseña<input id="lgPass" type="password" autocomplete="current-password" required minlength="6"></label>
+    <label class="f reg" hidden>Repite la contraseña<input id="rgPass2" type="password" autocomplete="new-password" minlength="6"></label>
     <div class="err" id="lgErr" role="alert"></div>
     <button class="btn primary" type="submit" id="lgBtn">Ingresar</button>
     <button class="link" type="button" id="lgReset">¿Olvidaste tu contraseña?</button>
+    <p style="border-top:1px solid var(--line);padding-top:12px"><span id="lgPregunta">¿Eres un profesional nuevo?</span> <button class="link" type="button" id="lgModo">Crear cuenta</button></p>
   </form>
 </div>
 <div class="userbar"><span id="userEmail"></span><button class="btn" id="btnSalir">Cerrar sesión</button></div>
@@ -228,6 +233,7 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
   <span class="spacer"></span>
   <span class="sync" id="sync"></span>
   <button class="btn" id="btnGuardar" title="Guarda ya mismo en este navegador y en línea">Guardar</button>
+  <button class="btn" id="btnIcs">Google Calendar</button>
   <button class="btn primary" id="btnExport">Descargar Excel</button>
 </div>
 <div class="legend" id="legend"></div>
@@ -316,6 +322,26 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
   <div class="fp-list" id="fpList"></div>
   <div class="fp-act"><button class="btn" id="fpClear">Borrar filtro</button><span class="spacer"></span><button class="btn" id="fpCancel">Cancelar</button><button class="btn primary" id="fpOk">Aceptar</button></div>
 </div>
+<dialog id="dlgIcs"><div class="dlg">
+  <h2>Descargar para Google Calendar</h2>
+  <p class="hint" id="icsResumen"></p>
+  <div class="grid">
+    <label class="f">Pacientes<select id="icsAlcance"><option value="todos">Todos los pacientes</option><option value="filtro">Solo los que veo con el filtro</option></select></label>
+    <label class="f">Duración de cada cita<select id="icsDur"><option value="40" selected>40 minutos</option><option value="30">30 minutos</option><option value="45">45 minutos</option><option value="60">1 hora</option></select></label>
+    <label class="f">Recordatorio<select id="icsAviso"><option value="0">Sin recordatorio</option><option value="15">15 minutos antes</option><option value="30" selected>30 minutos antes</option><option value="60">1 hora antes</option></select></label>
+    <label class="f">Datos en cada evento<select id="icsDatos"><option value="completo">Dirección, teléfono, empresa y observaciones</option><option value="basico">Solo nombre y dirección</option></select></label>
+  </div>
+  <details style="margin-top:14px;font-size:14px"><summary style="cursor:pointer;font-weight:700">Cómo subirlo a Google Calendar</summary>
+    <ol style="margin:8px 0 0;padding-left:20px;color:var(--muted)">
+      <li>Desde un computador, entra a calendar.google.com.</li>
+      <li>Recomendado: a la izquierda, en "Otros calendarios", presiona + y crea uno llamado "Agenda PAD". Así puedes borrar o reemplazar todo de una vez.</li>
+      <li>Ve a Configuración (rueda arriba a la derecha) → Importar y exportar.</li>
+      <li>Elige el archivo .ics descargado, selecciona el calendario "Agenda PAD" y presiona Importar.</li>
+    </ol>
+    <p style="color:var(--muted);margin:8px 0 0">Si cambias fechas y lo vuelves a importar, los eventos que ya existían se actualizan en vez de duplicarse. Los que quitaste de la agenda debes borrarlos a mano en el calendario (o borrar el calendario "Agenda PAD" e importar de nuevo).</p>
+  </details>
+  <div class="actions"><button class="btn" id="icsCancel">Cancelar</button><button class="btn primary" id="icsOk">Descargar archivo .ics</button></div>
+</div></dialog>
 <dialog id="dlgSubir"><div class="dlg">
   <h2>Subir respaldo a Firebase</h2>
   <p class="hint">Lo que subas queda guardado en línea en tu cuenta y reemplaza la agenda que tengas en Firebase.</p>
@@ -331,7 +357,7 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -876,9 +902,34 @@ function aplicar(s){state=normalizar(s);if(state.ultimoMes){const[y,m]=state.ult
 state=normalizar(SEED);pintarPlantilla();render();
 const adapt=ref=>({set:o=>setDoc(ref,o),get:async()=>{const sn=await getDoc(ref);return{exists:sn.exists(),data:()=>sn.data()}}});
 const mensajesAuth={"auth/invalid-credential":"Correo o contraseña incorrectos.","auth/wrong-password":"Correo o contraseña incorrectos.","auth/user-not-found":"Ese correo no está registrado.","auth/invalid-email":"El correo no es válido.","auth/too-many-requests":"Demasiados intentos. Espera unos minutos.","auth/network-request-failed":"Sin conexión a internet.","auth/user-disabled":"Este usuario está deshabilitado."};
+Object.assign(mensajesAuth,{"auth/email-already-in-use":"Ese correo ya tiene cuenta. Usa \"Ingresar\" o recupera la contraseña.","auth/weak-password":"La contraseña debe tener al menos 6 caracteres.","auth/operation-not-allowed":"El registro con correo no está activo en Firebase (Authentication → Método de acceso)."});
+let modoRegistro=false,registroPendiente=null;
+function ponerModo(reg){
+  modoRegistro=reg;document.querySelectorAll("#login .reg").forEach(l=>l.hidden=!reg);
+  $("#lgSub").textContent=reg?"Crea tu cuenta. Tendrás tu propia agenda, separada de la de los demás profesionales.":"Ingresa con tu correo y contraseña.";
+  $("#lgBtn").textContent=reg?"Crear cuenta":"Ingresar";$("#lgReset").hidden=reg;
+  $("#lgPregunta").textContent=reg?"¿Ya tienes cuenta?":"¿Eres un profesional nuevo?";$("#lgModo").textContent=reg?"Ingresar":"Crear cuenta";
+  $("#lgPass").autocomplete=reg?"new-password":"current-password";$("#lgErr").textContent="";
+  (reg?$("#rgNombre"):$("#lgEmail")).focus();
+}
+$("#lgModo").onclick=()=>ponerModo(!modoRegistro);
 $("#formLogin").addEventListener("submit",async e=>{
-  e.preventDefault();$("#lgErr").textContent="";$("#lgBtn").disabled=true;$("#lgBtn").textContent="Ingresando…";
-  try{await setPersistence(auth,browserLocalPersistence);await signInWithEmailAndPassword(auth,$("#lgEmail").value.trim(),$("#lgPass").value)}
+  e.preventDefault();$("#lgErr").textContent="";
+  const email=$("#lgEmail").value.trim(),pass=$("#lgPass").value;
+  if(modoRegistro){
+    const nombre=$("#rgNombre").value.trim().toUpperCase(),proceso=$("#rgProceso").value.trim().toUpperCase();
+    if(!nombre){$("#lgErr").textContent="Escribe tu nombre completo.";$("#rgNombre").focus();return}
+    if(!proceso){$("#lgErr").textContent="Escribe tu proceso (por ejemplo FONOAUDIOLOGIA).";$("#rgProceso").focus();return}
+    if(pass.length<6){$("#lgErr").textContent=mensajesAuth["auth/weak-password"];return}
+    if(pass!==$("#rgPass2").value){$("#lgErr").textContent="Las contraseñas no coinciden.";$("#rgPass2").focus();return}
+    $("#lgBtn").disabled=true;$("#lgBtn").textContent="Creando cuenta…";
+    registroPendiente={email:email.toLowerCase(),terapeuta:nombre,proceso};
+    try{await setPersistence(auth,browserLocalPersistence);const cred=await createUserWithEmailAndPassword(auth,email,pass);updateProfile(cred.user,{displayName:nombre}).catch(()=>{})}
+    catch(err){registroPendiente=null;$("#lgErr").textContent=mensajesAuth[err.code]||"No se pudo crear la cuenta ("+err.code+")."}
+    $("#lgBtn").disabled=false;$("#lgBtn").textContent="Crear cuenta";return;
+  }
+  $("#lgBtn").disabled=true;$("#lgBtn").textContent="Ingresando…";
+  try{await setPersistence(auth,browserLocalPersistence);await signInWithEmailAndPassword(auth,email,pass)}
   catch(err){$("#lgErr").textContent=mensajesAuth[err.code]||"No se pudo ingresar ("+err.code+")."}
   $("#lgBtn").disabled=false;$("#lgBtn").textContent="Ingresar";
 });
@@ -888,7 +939,7 @@ $("#btnSalir").onclick=async()=>{if(sucio)await guardarYa();await signOut(auth)}
 let primeraVez=true;
 onAuthStateChanged(auth,async user=>{
   if(!user){docRef=tplRef=null;LS_KEY=null;$("#login").hidden=false;$("#userEmail").textContent="";$("#lgPass").value="";state=normalizar(SEED);plantilla=null;render();pintarPlantilla();return}
-  $("#login").hidden=true;$("#userEmail").textContent=user.email;
+  $("#login").hidden=true;$("#userEmail").textContent=(user.displayName?user.displayName+" – ":"")+user.email;
   LS_KEY="agenda-pad-v2-"+user.uid;canWrite=true;
   const local=lsLoad();
   try{const t=localStorage.getItem(LS_KEY+"-tpl");plantilla=t?JSON.parse(t):null}catch(e){plantilla=null}
@@ -901,8 +952,12 @@ onAuthStateChanged(auth,async user=>{
     if(snap.exists&&Array.isArray(snap.data().pacientes)){
       const abierto=$("#dlgMes").open,keep={...cur};aplicar(snap.data());if(abierto)cur=keep;
       lsSave();render();setSync("Datos en línea cargados");marcarSucio(false);
+    }else if(registroPendiente&&registroPendiente.email===String(user.email||"").toLowerCase()){
+      state=normalizar({terapeuta:registroPendiente.terapeuta,proceso:registroPendiente.proceso,pacientes:[],meses:{},ultimoMes:keyMes()});
+      registroPendiente=null;render();await guardarYa();setSync("Cuenta creada: tu agenda está lista");
+      toast("Bienvenido(a). Agrega tus pacientes o importa tu Excel");
     }else if(local&&local.pacientes&&local.pacientes.length){guardar()}
-    else{setSync("Agenda nueva en Firebase: sube tu respaldo");render();if(datosLegado()){if($("#dlgMes").open)$("#dlgMes").close();abrirSubir()}}
+    else{setSync("Agenda nueva en Firebase: sube tu respaldo o agrega pacientes");render();if(datosLegado()){if($("#dlgMes").open)$("#dlgMes").close();abrirSubir()}}
   }catch(e){setSync(e&&e.code==="permission-denied"?"Firebase no dio permiso: revisa las reglas de Firestore":"Sin conexión: los cambios quedan en este equipo")}
 });
 /* Respaldo .json (para pasar datos entre equipos o guardar una copia) */
@@ -911,6 +966,49 @@ $("#btnRespaldo").onclick=()=>{
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"application/json"}));
   a.download="respaldo_agenda_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
   toast("Respaldo descargado");
+};
+/* Archivo .ics para Google Calendar: un evento por cada fecha marcada */
+function citasIcs(alcance){
+  const n=diasDelMes(cur.y,cur.m),marcas=marcasMes(),lista=alcance==="filtro"?filtrar(ordenados()):ordenados(),out=[];let sinHora=0;
+  lista.forEach(p=>{const ds=(marcas[p.id]||[]).filter(d=>d<=n);if(!ds.length)return;if(!SLOTS.includes(p.hora)){sinHora+=ds.length;return}ds.forEach(d=>out.push({p,d}))});
+  return{out,sinHora};
+}
+function resumenIcs(){
+  const {out,sinHora}=citasIcs($("#icsAlcance").value),pacs=new Set(out.map(c=>c.p.nombre)).size;
+  $("#icsResumen").textContent="Se crearán "+out.length+" eventos de "+pacs+" paciente(s) para "+MESES[cur.m].toLowerCase()+" de "+cur.y+"."+(sinHora?" "+sinHora+" fecha(s) quedan por fuera porque el paciente no tiene una hora válida.":"");
+  $("#icsOk").disabled=!out.length;
+}
+$("#btnIcs").onclick=()=>{$("#icsAlcance").value=Object.keys(filtros).some(k=>filtros[k])?"filtro":"todos";resumenIcs();$("#dlgIcs").showModal()};
+$("#icsAlcance").onchange=resumenIcs;
+$("#icsCancel").onclick=()=>$("#dlgIcs").close();
+$("#icsOk").onclick=()=>{
+  const {out}=citasIcs($("#icsAlcance").value),dur=+$("#icsDur").value,aviso=+$("#icsAviso").value,completo=$("#icsDatos").value==="completo";
+  const escI=t=>String(t||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
+  const pad=v=>String(v).padStart(2,"0");
+  const utc=dt=>dt.getUTCFullYear()+pad(dt.getUTCMonth()+1)+pad(dt.getUTCDate())+"T"+pad(dt.getUTCHours())+pad(dt.getUTCMinutes())+"00Z";
+  const plegar=l=>{const enc=new TextEncoder();if(enc.encode(l).length<=75)return l;let res="",linea="";for(const ch of l){if(enc.encode(linea+ch).length>(res?74:75)){res+=(res?"\r\n ":"")+linea;linea=ch}else linea+=ch}return res+"\r\n "+linea};
+  const ahora=utc(new Date()),L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Agenda PAD mensual//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Agenda PAD "+escI(state.terapeuta),"X-WR-TIMEZONE:America/Bogota"];
+  out.forEach(({p,d})=>{
+    const m=360+40*SLOTS.indexOf(p.hora);
+    const ini=new Date(Date.UTC(cur.y,cur.m,d,Math.floor(m/60)+5,m%60)); // Colombia = UTC-5, sin horario de verano
+    const fin=new Date(ini.getTime()+dur*60000);
+    const lugar=[p.direccion,p.barrio,p.comuna].filter(Boolean).join(", ");
+    const desc=(completo?[
+      "Hora: "+p.hora,p.dias?"Días: "+p.dias:"",p.aseguradora?"Empresa: "+p.aseguradora:"",p.telefono?"Teléfono: "+p.telefono:"",
+      p.madrina?"Madrina: "+p.madrina:"",(+p.terapias?"Terapias del mes: "+p.terapias+(p.sigla?" "+p.sigla:""):""),p.obs?"Observaciones: "+p.obs:"",
+      "Profesional: "+state.terapeuta+(state.proceso?" ("+state.proceso+")":"")]:["Hora: "+p.hora]).filter(Boolean).join("\n");
+    L.push("BEGIN:VEVENT","UID:"+p.id+"-"+cur.y+pad(cur.m+1)+pad(d)+"@agenda-pad","DTSTAMP:"+ahora,"DTSTART:"+utc(ini),"DTEND:"+utc(fin),
+      "SUMMARY:"+escI(p.nombre+(state.proceso?" – "+state.proceso:"")));
+    if(lugar)L.push("LOCATION:"+escI(lugar));
+    L.push("DESCRIPTION:"+escI(desc),"STATUS:CONFIRMED","TRANSP:OPAQUE");
+    if(aviso)L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+escI(p.nombre),"TRIGGER:-PT"+aviso+"M","END:VALARM");
+    L.push("END:VEVENT");
+  });
+  L.push("END:VCALENDAR");
+  const blob=new Blob([L.map(plegar).join("\r\n")+"\r\n"],{type:"text/calendar;charset=utf-8"});
+  const nom="agenda_"+MESES[cur.m].toUpperCase()+"_"+cur.y+"_"+(state.terapeuta||"profesional").split(/\s+/).slice(0,2).join("_").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9_]/g,"")+".ics";
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=nom;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+  $("#dlgIcs").close();toast(out.length+" eventos descargados en "+nom);
 };
 /* Subir respaldo: datos guardados en este navegador por la versión anterior, o un archivo .json */
 const LEGACY_KEY="agenda-pad-v2";
