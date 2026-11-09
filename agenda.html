@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Agenda pacientes PAD mensual</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗓️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -177,9 +178,30 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
   .grid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
+#login{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+#login[hidden]{display:none}
+#login form{width:min(380px,100%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 24px;display:grid;gap:14px}
+#login h1{margin:0;font-size:24px;color:var(--mark)}
+#login p{margin:0;color:var(--muted);font-size:14px}
+#login .err{color:var(--red);font-size:14px;min-height:1.2em}
+#login .link{background:none;border:0;color:var(--mark);text-decoration:underline;cursor:pointer;padding:0;justify-self:start;font-size:14px}
+.userbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:10px clamp(14px,3vw,32px) 0;font-size:13px;color:var(--muted)}
+.userbar .btn{padding:4px 12px;font-size:13px}
 </style>
 </head>
 <body>
+<div id="login">
+  <form id="formLogin" autocomplete="on">
+    <h1>Agenda PAD mensual</h1>
+    <p>Ingresa con tu correo y contraseña registrados.</p>
+    <label class="f">Correo<input id="lgEmail" type="email" autocomplete="username" required></label>
+    <label class="f">Contraseña<input id="lgPass" type="password" autocomplete="current-password" required></label>
+    <div class="err" id="lgErr" role="alert"></div>
+    <button class="btn primary" type="submit" id="lgBtn">Ingresar</button>
+    <button class="link" type="button" id="lgReset">¿Olvidaste tu contraseña?</button>
+  </form>
+</div>
+<div class="userbar"><span id="userEmail"></span><button class="btn" id="btnSalir">Cerrar sesión</button></div>
 <header class="top">
   <div class="who">
     <div class="t">Agenda pacientes PAD mensual</div>
@@ -199,6 +221,9 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
   <button class="btn" id="btnImport">Importar Excel</button>
   <input type="file" id="fileImport" accept=".xlsx" hidden>
   <button class="btn" id="btnTpl">Cambiar plantilla</button>
+  <button class="btn" id="btnRespaldo">Descargar respaldo</button>
+  <button class="btn primary" id="btnRestaurar">Subir respaldo a Firebase</button>
+  <input type="file" id="fileRespaldo" accept=".json,application/json" hidden>
   <input type="file" id="fileTpl" accept=".xlsx" hidden>
   <span class="spacer"></span>
   <span class="sync" id="sync"></span>
@@ -291,15 +316,43 @@ label.f.miss input,label.f.miss select{border-color:var(--warn);border-width:2px
   <div class="fp-list" id="fpList"></div>
   <div class="fp-act"><button class="btn" id="fpClear">Borrar filtro</button><span class="spacer"></span><button class="btn" id="fpCancel">Cancelar</button><button class="btn primary" id="fpOk">Aceptar</button></div>
 </div>
+<dialog id="dlgSubir"><div class="dlg">
+  <h2>Subir respaldo a Firebase</h2>
+  <p class="hint">Lo que subas queda guardado en línea en tu cuenta y reemplaza la agenda que tengas en Firebase.</p>
+  <div id="subirLocal" style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px"></div>
+  <div style="border:1px solid var(--line);border-radius:10px;padding:14px">
+    <b>Desde un archivo de respaldo (.json)</b>
+    <p class="hint" style="margin:4px 0 10px">Por ejemplo respaldo_agenda_claudia.json, o uno descargado con "Descargar respaldo".</p>
+    <button class="btn" id="subirArchivo">Elegir archivo…</button>
+  </div>
+  <div class="actions"><button class="btn" id="subirCerrar">Cerrar</button></div>
+</div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyASUME91F2DH3hv8mJs4SnrJKNaq-xH6_c",
+  authDomain: "polla-mundialista-c2577.firebaseapp.com",
+  projectId: "polla-mundialista-c2577",
+  storageBucket: "polla-mundialista-c2577.firebasestorage.app",
+  messagingSenderId: "799244469443",
+  appId: "1:799244469443:web:9971fc46a2506f07014e76",
+  measurementId: "G-2LW8L34X8Q"
+};
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+let fdb; try { fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache() }); } catch (e) { fdb = initializeFirestore(fbApp, {}); }
+
 (function(){
 "use strict";
-const SEED={"terapeuta": "CLAUDIA STELLA CONTRERAS RAMIREZ", "pacientes": [{"id": "p01", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "37241283", "nombre": "AMPARO GALLARDO DE VILLAMIZAR", "direccion": "QUINTA ORIENTAL", "barrio": "QUINTA ORIENTAL", "telefono": "3156884307", "comuna": "", "terapias": 10, "hora": "08:40 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p02", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "41343382", "nombre": "RUTH RODRIGUEZ DE BENCARDINO", "direccion": "AVENIDA 11 # 15 N - 44", "barrio": "ZULIMA", "telefono": "3134072730", "comuna": "", "terapias": 10, "hora": "10:40 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p03", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "17126510", "nombre": "Leandro Galvis Moreno", "direccion": "Av 6AE 10-67 la Riviera", "barrio": "la Riviera", "telefono": "3006151657", "comuna": "", "terapias": 10, "hora": "09:20 a.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p04", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "27783565", "nombre": "Blanca Mary Pérez corredor", "direccion": "AVENIDA 20# 16-42", "barrio": "POPULAR", "telefono": "3186320778", "comuna": "", "terapias": 10, "hora": "08:00 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p05", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "27637581", "nombre": "Eloina Clavijo", "direccion": "Calle 22AN 407 TASAJERO", "barrio": "TASAJERO", "telefono": "3176349939", "comuna": "", "terapias": 10, "hora": "11:20 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p06", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "4299846", "nombre": "Manuel Contreras", "direccion": "MZ 14E lote 16 ciudad jardín", "barrio": "CIUDAD JARDIN", "telefono": "3123208397", "comuna": "", "terapias": 10, "hora": "09:20 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p07", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "27833553", "nombre": "EVANGELINA LEON DE RAMIREZ", "direccion": "AV 9E 3N23 DIRECCION LOS PINOS", "barrio": "LOS PINOS", "telefono": "3133492511", "comuna": "", "terapias": 10, "hora": "04:00 p.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p08", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "27834186", "nombre": "TERESA VELANDIA DE GUTIERREZ", "direccion": "CLL 22 AN # 458", "barrio": "PRADOS NORTE", "telefono": "3164974804", "comuna": "", "terapias": 10, "hora": "01:20 p.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p09", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "5391052", "nombre": "GUILLERMO SOLANO", "direccion": "AVENIDA 12 E  # 9 BN- 28", "barrio": "GUIMARAL", "telefono": "3173321497", "comuna": "", "terapias": 15, "hora": "12:40 p.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p10", "madrina": "GARDENIA", "aseguradora": "COMFAORIENTE", "tipoDoc": "CC", "documento": "37254184", "nombre": "LUZ IVONNE FLOREZ", "direccion": "AVENIDA 9 E # 7-25 TORRES DE LA RIVIERA APTO 301", "barrio": "LA RIVIERA", "telefono": "3125850822", "comuna": "", "terapias": 15, "hora": "10:00 a.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p11", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "60347922", "nombre": "Maribel Arenas Torrado", "direccion": "CALLE 22 # 7-40 EL SALADO", "barrio": "EL SALADO", "telefono": "3124891104", "comuna": "", "terapias": 10, "hora": "04:00 p.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p12", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "37221169", "nombre": "MARIA NORA HERRERA", "direccion": "CALLE 3 A # 4E-78 LA CEIBA", "barrio": "LA CEIBA", "telefono": "3103433435", "comuna": "", "terapias": 10, "hora": "10:40 a.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p13", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "37242895", "nombre": "ELIZABETH PEÑA PEREZ", "direccion": "AVENIDA 3 # 4AN - 11 COLPET", "barrio": "COLPET", "telefono": "3003218102", "comuna": "", "terapias": 10, "hora": "11:20 a.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p14", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "27584062", "nombre": "ANA JOSEFA SANTIAGO DE FLOREZ", "direccion": "AVENIDA 11 E # 4-110 QUINTA ORIENTAL", "barrio": "QUINTA ORIENTAL", "telefono": "3222526242", "comuna": "", "terapias": 10, "hora": "07:20 a.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p15", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "5529704", "nombre": "JOSE FRANCISCO CACUA CARVAJAL", "direccion": "CALLE 8 N # 3E -137", "barrio": "CEIBA II", "telefono": "3112224581", "comuna": "", "terapias": 10, "hora": "07:20 a.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p16", "madrina": "GARDENIA", "aseguradora": "COMFAORIENTE", "tipoDoc": "CC", "documento": "1193440127", "nombre": "WILMER ALFONSO ROJAS BECERRA", "direccion": "TRASVERSAL 19 N # 11 BE - 17", "barrio": "ZULIMA", "telefono": "3102514205", "comuna": "", "terapias": 20, "hora": "12:40 p.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p17", "madrina": "GARDENIA", "aseguradora": "COMFAORIENTE", "tipoDoc": "CC", "documento": "119344128", "nombre": "WILSON DANIEL ROJAS BECERRA", "direccion": "TRASVERSAL 19 N # 11 BE - 17", "barrio": "ZULIMA", "telefono": "3102514205", "comuna": "", "terapias": 20, "hora": "06:40 a.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p18", "madrina": "TANIA", "aseguradora": "ALLIANZ", "tipoDoc": "CC", "documento": "60308220", "nombre": "ROSA ELENA LEAL BARRERA", "direccion": "CALLE 6 BN # 2E - 239", "barrio": "CEIBA II", "telefono": "3102739001", "comuna": "", "terapias": 60, "hora": "6:00 A.M - 6:00 PM", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p19", "madrina": "TANIA", "aseguradora": "ALLIANZ", "tipoDoc": "CC", "documento": "13225428", "nombre": "IVAN DARIO PEÑALOZA VARGAS", "direccion": "CALLE 1 # 1E - 76", "barrio": "QUINTA BOSK", "telefono": "3227743407", "comuna": "", "terapias": 30, "hora": "02:40 p.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p20", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "27587365", "nombre": "NEPOMUCENA BETANCOURT", "direccion": "AVENIDA 12 E # 5-32 COLSAG", "barrio": "COLSAG", "telefono": "3174034471", "comuna": "", "terapias": 10, "hora": "12:00 p.m.", "dias": "L-M-V", "obs": "", "sigla": ""}, {"id": "p21", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "T.I", "documento": "1091993925", "nombre": "JESUS DAVID BARRIOS RODRIGUEZ", "direccion": "AVENIDA 18 E #22 N- 23 NIZA", "barrio": "NIZA", "telefono": "3007078844", "comuna": "", "terapias": 20, "hora": "05:20 p.m.", "dias": "L-S", "obs": "", "sigla": ""}, {"id": "p22", "madrina": "TANIA", "aseguradora": "FOMAG", "tipoDoc": "CC", "documento": "5394432", "nombre": "LUIS ENRIQUE VILLAMIZAR MARTINES", "direccion": "CALLE 7A # 5E-75", "barrio": "POPULAR", "telefono": "3212779484", "comuna": "", "terapias": 10, "hora": "04:40 p.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p23", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "88200117", "nombre": "ARMANDO CELIS CELIS", "direccion": "AVENIDA 0 # 4-50 LLERAS RESTREPO", "barrio": "LLERAS RESTREPO", "telefono": "3172324297", "comuna": "", "terapias": 10, "hora": "03:20 p.m.", "dias": "M-J-S", "obs": "", "sigla": ""}, {"id": "p24", "madrina": "TANIA", "aseguradora": "SANITAS", "tipoDoc": "CC", "documento": "13214781", "nombre": "JORGE CASTRO BARON", "direccion": "CALLE 7N # 3 E -22", "barrio": "CEIBA II", "telefono": "3202755457", "comuna": "", "terapias": 15, "hora": "09:20 a.m.", "dias": "L-S", "obs": "", "sigla": ""}], "proceso": "FONOAUDIOLOGIA", "meses": {}, "ultimoMes": null};
+const SEED={terapeuta:"",proceso:"",pacientes:[],meses:{},ultimoMes:null};
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const INI=["D","L","M","M","J","V","S"];
-const LS_KEY="agenda-pad-v2";
+let LS_KEY=null; // se fija al ingresar; nunca se toca la clave de la versión anterior
 const CUPO=21;
 const $=s=>document.querySelector(s);
 
@@ -381,8 +434,8 @@ function normalizar(s){
     pacientes:agrupar(pacs),
     meses:s.meses&&typeof s.meses==="object"?s.meses:{},ultimoMes:s.ultimoMes||null};
 }
-function lsLoad(){try{const v=localStorage.getItem(LS_KEY);return v?JSON.parse(v):null}catch(e){return null}}
-function lsSave(){try{localStorage.setItem(LS_KEY,JSON.stringify(state))}catch(e){}}
+function lsLoad(){if(!LS_KEY)return null;try{const v=localStorage.getItem(LS_KEY);return v?JSON.parse(v):null}catch(e){return null}}
+function lsSave(){if(!LS_KEY)return;try{localStorage.setItem(LS_KEY,JSON.stringify(state))}catch(e){}}
 let sucio=false;
 const horaAhora=()=>new Date().toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-digit"});
 function marcarSucio(v){sucio=v;const b=$("#btnGuardar");b.classList.toggle("dirty",v);b.textContent=v?"Guardar cambios":"Guardar"}
@@ -818,27 +871,77 @@ $("#fileImport").addEventListener("change",async e=>{
   }catch(err){console.error(err);toast("No se pudo leer el archivo. Verifica que sea .xlsx")}
 });
 
-/* Arranque: datos guardados, o los pacientes precargados del Excel */
+/* Arranque con Firebase: login y datos en Firestore (agendas/{uid}) */
 function aplicar(s){state=normalizar(s);if(state.ultimoMes){const[y,m]=state.ultimoMes.split("-").map(Number);if(y&&m)cur={y,m:m-1}}}
-const local=lsLoad();
-try{const t=localStorage.getItem(LS_KEY+"-tpl");if(t)plantilla=JSON.parse(t)}catch(e){}
-pintarPlantilla();
-aplicar(local||SEED);
-render();setSync(local?"Datos de este navegador":"Pacientes precargados del Excel");
-abrirMes();
-(async()=>{
+state=normalizar(SEED);pintarPlantilla();render();
+const adapt=ref=>({set:o=>setDoc(ref,o),get:async()=>{const sn=await getDoc(ref);return{exists:sn.exists(),data:()=>sn.data()}}});
+const mensajesAuth={"auth/invalid-credential":"Correo o contraseña incorrectos.","auth/wrong-password":"Correo o contraseña incorrectos.","auth/user-not-found":"Ese correo no está registrado.","auth/invalid-email":"El correo no es válido.","auth/too-many-requests":"Demasiados intentos. Espera unos minutos.","auth/network-request-failed":"Sin conexión a internet.","auth/user-disabled":"Este usuario está deshabilitado."};
+$("#formLogin").addEventListener("submit",async e=>{
+  e.preventDefault();$("#lgErr").textContent="";$("#lgBtn").disabled=true;$("#lgBtn").textContent="Ingresando…";
+  try{await setPersistence(auth,browserLocalPersistence);await signInWithEmailAndPassword(auth,$("#lgEmail").value.trim(),$("#lgPass").value)}
+  catch(err){$("#lgErr").textContent=mensajesAuth[err.code]||"No se pudo ingresar ("+err.code+")."}
+  $("#lgBtn").disabled=false;$("#lgBtn").textContent="Ingresar";
+});
+$("#lgReset").onclick=async()=>{const em=$("#lgEmail").value.trim();if(!em){$("#lgErr").textContent="Escribe tu correo y vuelve a presionar.";return}
+  try{await sendPasswordResetEmail(auth,em);$("#lgErr").textContent="Te enviamos un correo para cambiar la contraseña."}catch(err){$("#lgErr").textContent=mensajesAuth[err.code]||"No se pudo enviar ("+err.code+")."}};
+$("#btnSalir").onclick=async()=>{if(sucio)await guardarYa();await signOut(auth)};
+let primeraVez=true;
+onAuthStateChanged(auth,async user=>{
+  if(!user){docRef=tplRef=null;LS_KEY=null;$("#login").hidden=false;$("#userEmail").textContent="";$("#lgPass").value="";state=normalizar(SEED);plantilla=null;render();pintarPlantilla();return}
+  $("#login").hidden=true;$("#userEmail").textContent=user.email;
+  LS_KEY="agenda-pad-v2-"+user.uid;canWrite=true;
+  const local=lsLoad();
+  try{const t=localStorage.getItem(LS_KEY+"-tpl");plantilla=t?JSON.parse(t):null}catch(e){plantilla=null}
+  aplicar(local||SEED);pintarPlantilla();render();setSync("Conectando…");
+  if(primeraVez){abrirMes();primeraVez=false}
+  docRef=adapt(doc(fdb,"agendas",user.uid));tplRef=adapt(doc(fdb,"agendas",user.uid,"extra","plantilla"));
   try{
-    if(!window.claude||!window.claude.use)return;
-    const db=await window.claude.use("db");if(!db){setSync("Guardado en este navegador");return}
-    docRef=db.doc("agenda/estado");tplRef=db.doc("agenda/plantilla");
     tplRef.get().then(t=>{if(t.exists&&t.data().b64){plantilla=t.data();pintarPlantilla();try{localStorage.setItem(LS_KEY+"-tpl",JSON.stringify(plantilla))}catch(e){}}}).catch(()=>{});
     const snap=await docRef.get();
-    if(snap.exists&&Array.isArray(snap.data().pacientes)&&snap.data().pacientes.length){
+    if(snap.exists&&Array.isArray(snap.data().pacientes)){
       const abierto=$("#dlgMes").open,keep={...cur};aplicar(snap.data());if(abierto)cur=keep;
-      lsSave();render();setSync("Datos sincronizados");
-    }else guardar();
-  }catch(e){setSync("Guardado en este navegador")}
-})();
+      lsSave();render();setSync("Datos en línea cargados");marcarSucio(false);
+    }else if(local&&local.pacientes&&local.pacientes.length){guardar()}
+    else{setSync("Agenda nueva en Firebase: sube tu respaldo");render();if(datosLegado()){if($("#dlgMes").open)$("#dlgMes").close();abrirSubir()}}
+  }catch(e){setSync(e&&e.code==="permission-denied"?"Firebase no dio permiso: revisa las reglas de Firestore":"Sin conexión: los cambios quedan en este equipo")}
+});
+/* Respaldo .json (para pasar datos entre equipos o guardar una copia) */
+$("#btnRespaldo").onclick=()=>{
+  const data=JSON.stringify({app:"agenda-pad",version:1,exportado:new Date().toISOString(),estado:state,plantilla:plantilla||null});
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"application/json"}));
+  a.download="respaldo_agenda_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+  toast("Respaldo descargado");
+};
+/* Subir respaldo: datos guardados en este navegador por la versión anterior, o un archivo .json */
+const LEGACY_KEY="agenda-pad-v2";
+function datosLegado(){try{const v=localStorage.getItem(LEGACY_KEY);const d=v?JSON.parse(v):null;return d&&Array.isArray(d.pacientes)&&d.pacientes.length?d:null}catch(e){return null}}
+function plantillaLegado(){try{const v=localStorage.getItem(LEGACY_KEY+"-tpl");const t=v?JSON.parse(v):null;return t&&t.b64?t:null}catch(e){return null}}
+function abrirSubir(){
+  const d=datosLegado(),box=$("#subirLocal");
+  if(d){const meses=Object.keys(d.meses||{}).sort(),marcas=Object.values(d.meses||{}).reduce((a,m)=>a+Object.values(m.marcas||{}).reduce((x,v)=>x+v.length,0),0);
+    box.innerHTML='<b>Datos guardados en este navegador</b><p class="hint" style="margin:4px 0 10px">'+esc(d.terapeuta||"Sin nombre de profesional")+' \u2013 '+d.pacientes.length+' filas de pacientes'+(meses.length?' \u2013 meses: '+esc(meses.join(", ")):'')+' \u2013 '+marcas+' fechas marcadas.</p><button class="btn primary" id="subirLocalBtn">Subir estos datos</button>'}
+  else box.innerHTML='<b>Datos guardados en este navegador</b><p class="hint" style="margin:4px 0 0">No encontré datos de la versión anterior en este navegador. Si los tenías en otro computador o navegador, abre allí la versión anterior y descarga un respaldo, o usa el archivo .json.</p>';
+  $("#dlgSubir").showModal();
+}
+async function subirEstado(est,tpl,origen){
+  if(!docRef){toast("Primero ingresa con tu correo");return false}
+  if(!await confirmar("Subir a Firebase","Se guardará en línea "+origen+" ("+est.pacientes.length+" filas de pacientes) y reemplazará la agenda que tengas en Firebase.","Subir"))return false;
+  aplicar(est);render();
+  if(tpl&&tpl.b64){plantilla=tpl;pintarPlantilla();try{localStorage.setItem(LS_KEY+"-tpl",JSON.stringify(plantilla))}catch(e){};try{await tplRef.set(plantilla)}catch(e){}}
+  lsSave();
+  try{await docRef.set(JSON.parse(JSON.stringify(state)));marcarSucio(false);setSync("Guardado en Firebase a las "+horaAhora());toast("Listo: tu agenda quedó guardada en Firebase");return true}
+  catch(e){setSync(e&&e.code==="permission-denied"?"Firebase no dio permiso: revisa las reglas de Firestore":"No se pudo subir; quedó en este equipo y se subirá al volver la conexión");toast("No se pudo subir a Firebase ("+(e&&e.code||"error")+")");return false}
+}
+$("#btnRestaurar").onclick=abrirSubir;
+$("#subirCerrar").onclick=()=>$("#dlgSubir").close();
+$("#subirArchivo").onclick=()=>$("#fileRespaldo").click();
+$("#subirLocal").addEventListener("click",async e=>{if(!e.target.closest("#subirLocalBtn"))return;$("#dlgSubir").close();await subirEstado(datosLegado(),plantillaLegado(),"la agenda que tenías en este navegador")});
+$("#fileRespaldo").addEventListener("change",async e=>{
+  const file=e.target.files[0];e.target.value="";if(!file)return;
+  let j;try{j=JSON.parse(await file.text())}catch(err){toast("Ese archivo no es un respaldo válido de la agenda");return}
+  const est=j.estado||j;if(!est||!Array.isArray(est.pacientes)){toast("Ese archivo no es un respaldo válido de la agenda");return}
+  $("#dlgSubir").close();await subirEstado(est,j.plantilla,"el respaldo "+file.name);
+});
 })();
 </script>
 </body>
