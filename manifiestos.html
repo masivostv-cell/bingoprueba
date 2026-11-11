@@ -8,7 +8,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Sistema de Manifiestos v20</title>
+<title>Sistema de Manifiestos v21</title>
 
 <!-- << v7 >> Para que al agregarla a la pantalla de inicio se comporte como
      una aplicación y no como una página dentro del navegador. -->
@@ -1149,7 +1149,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         <input id="histBuscar" placeholder="Buscar cliente, manifiesto, ruta..."
                autocomplete="off" oninput="buscarHistorialConPausa()">
         <label class="opcion-ruta">
-          <input type="checkbox" id="histPorRuta" checked onchange="filtrarHistorial()">
+          <input type="checkbox" id="histPorRuta" onchange="guardarCache('hist_por_ruta', this.checked ? '1' : '0'); filtrarHistorial()">
           Incluir las demás sedes de la misma ruta
         </label>
         <label class="opcion-ruta">
@@ -1654,10 +1654,23 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 "use strict";
 
 // << v18 >> Versión de la app (se ve en el menú) y la mínima del Apps Script
-const VERSION_APP = "v20";
+const VERSION_APP = "v21";
 const VERSION_SERVIDOR_MINIMA = 18;
+let versionServidor = 0;          // la que responde el Apps Script (0 = no se sabe)
 
-const API = "https://script.google.com/macros/s/AKfycbxcJGDPJMlrKZttCGNFchABjM9PZj5pacnDwT9EXJuXfkv-JO0vqw9y6hhMg9ZGKbHC/exec";
+// << v21 >> Una descarga parcial con un Apps Script anterior a v18 descargaría
+// TODO (el servidor viejo no entiende el filtro). Se bloquea antes de enviar.
+function servidorPermiteParcial(){
+  if(versionServidor >= 18) return true;
+  alert(versionServidor
+    ? "Su Apps Script está en la v" + versionServidor + ". Para descargar solo una parte necesita la v18:\n\n" +
+      "pegue el Codigo.gs nuevo y publique (Implementar → Administrar implementaciones → ✏️ → Nueva versión).\n\n" +
+      "Si descarga ahora, se descargaría TODO lo del móvil."
+    : "No se pudo comprobar la versión del Apps Script. Recargue la página e intente de nuevo.");
+  return false;
+}
+
+const API = "https://script.google.com/macros/s/AKfycbzwKwRCVowLpI53NlSGyjlsDNclAJpYIfwGjZqBrMDsHyw9Ctn3SCLhORYF2bFrDk1O/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
@@ -1953,6 +1966,7 @@ function revisarVersiones(){
     .then(r => {
       const v = String((r && r.version) || "?");
       const n = Number(v.replace(/[^0-9]/g, "")) || 0;
+      versionServidor = n;
       el.textContent = "App " + VERSION_APP + " · servidor " + v;
       if(n && n < VERSION_SERVIDOR_MINIMA){
         el.classList.add("mal");
@@ -4746,6 +4760,7 @@ function generarDescargaParcial(){
   const todosMan  = mans.length === Object.keys(parcial.man).length;
   const todosTipo = tipos.length === Object.keys(parcial.tipos).length;
   if(!mans.length || !tipos.length){ alert("Escoja al menos un manifiesto y un tipo de residuo."); return; }
+  if((!todosMan || !todosTipo) && !servidorPermiteParcial()) return;      // << v21 >>
 
   const resumen = $("parcialResumen").textContent.split("Quedan")[0].trim();
   if(!confirm("¿Generar la descarga del móvil " + v.movil + "?\n\n" + resumen +
@@ -4806,6 +4821,8 @@ function generarDescargaMovil(i, grupo){
       tipos = sI.tipos; kg = Math.round((sI.kg + sG.kg) * 100) / 100; todoMarcado = false;
     }
   }
+
+  if(tipos && !servidorPermiteParcial()) return;      // << v21 >>
 
   const que = (grupo === "IMSALUD" ? "lo de IMSALUD" : grupo === "GENERAL" ? "lo de otros clientes (sin IMSALUD)"
             : (v.imsalud && v.general ? "IMSALUD y otros clientes por aparte en el mismo informe" : "lo que lleva")) +
@@ -5369,6 +5386,13 @@ function buscarHistorialConPausa(){
   clearTimeout(temporizadorBusqueda);
   temporizadorBusqueda = setTimeout(filtrarHistorial, 250);
 }
+
+// << v21 >> "Incluir las demás sedes de la misma ruta" viene apagado: al
+// buscar un cliente salen solo sus manifiestos. Se recuerda si lo prende.
+(function(){
+  try{ const el = document.getElementById("histPorRuta"); if(el) el.checked = leerCache("hist_por_ruta") === "1"; }
+  catch(e){}
+})();
 
 function filtrarHistorial(){
   const inicio = $("histInicio").value;
