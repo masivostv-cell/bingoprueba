@@ -8,7 +8,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Sistema de Manifiestos v18</title>
+<title>Sistema de Manifiestos v20</title>
 
 <!-- << v7 >> Para que al agregarla a la pantalla de inicio se comporte como
      una aplicación y no como una página dentro del navegador. -->
@@ -250,7 +250,7 @@ tbody tr:nth-child(even){background:#f8fafc;}
 .rut-resumen-item .barra span{display:block;height:100%;background:var(--verde-oscuro);}
 
 /* ---------- << v11 >> Descarga ---------- */
-.desc-vehiculos{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;}
+.desc-vehiculos{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;align-items:start;}
 .desc-vehiculo{border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#fff;}
 .desc-vehiculo h3{margin:0;font-size:18px;}
 .desc-vehiculo .sub{font-size:12px;color:#64748b;margin:2px 0 8px;}
@@ -258,11 +258,33 @@ tbody tr:nth-child(even){background:#f8fafc;}
 .desc-vehiculo td.num{text-align:right;white-space:nowrap;}
 .desc-vehiculo tr.tot td{font-weight:bold;}
 .desc-vehiculo .btn-pro{width:100%;margin-top:10px;}
-.desc-grupo{border-top:1px solid #e2e8f0;padding-top:8px;margin-top:8px;}
-.desc-grupo h4{margin:0 0 4px;font-size:14px;}
-.desc-imsalud{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:8px;}
+/* << v19 >> los dos grupos con el mismo recuadro, uno debajo del otro */
+.desc-grupo{border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin-top:8px;background:#fff;}
+.desc-grupo h4{margin:0 0 6px;font-size:14px;}
+.desc-imsalud{background:#f0f9ff;border-color:#bae6fd;}
 .desc-imsalud h4{color:#075985;}
-.desc-todo{display:block;margin:8px auto 0;}
+.desc-otros{background:#f8fafc;}
+.desc-vehiculo .desc-todo,.desc-vehiculo .desc-escoger{width:100%;margin-top:8px;}
+.parcial-tipos{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.chip-check{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:999px;cursor:pointer;font-size:13px;background:#fff;}
+.chip-check.on{background:#e9fbf8;border-color:#99e2d6;}
+.chip-check input{width:auto;margin:0;}
+.parcial-grupo{margin-bottom:10px;}
+.parcial-grupo h4{margin:6px 0;font-size:14px;}
+.parcial-grupo table td,.parcial-grupo table th{padding:5px 7px;font-size:13px;}
+.parcial-grupo tr{cursor:pointer;}
+.parcial-grupo tr.parcial-fuera td{color:#94a3b8;background:#f8fafc;}
+.parcial-grupo input[type=checkbox]{width:auto;margin:0;transform:scale(1.2);}
+.tachado{text-decoration:line-through;color:#94a3b8;}
+/* << v20 >> casillas en la tabla de la tarjeta */
+.tabla-carga th.chk,.tabla-carga td.chk{width:28px;text-align:center;padding:4px;}
+.tabla-carga input[type=checkbox]{width:auto;margin:0;transform:scale(1.25);cursor:pointer;}
+.tabla-carga tbody tr{cursor:pointer;}
+.tabla-carga tbody tr.fuera td{color:#94a3b8;text-decoration:line-through;background:#f8fafc;}
+.tabla-carga tbody tr.fuera td.chk{text-decoration:none;}
+.tabla-carga tr.tot small{font-weight:normal;color:#64748b;}
+.desc-vehiculo button:disabled{opacity:.5;cursor:not-allowed;}
+.parcial-resumen{font-size:15px;margin:8px 0;padding:8px 10px;background:#f0fdfa;border-radius:8px;}
 .registro-dest{font-size:13px;margin:4px 0;padding:6px 10px;border-radius:8px;}
 .registro-dest:empty{display:none;}
 .registro-dest.pendiente{background:#fef3c7;color:#92400e;}
@@ -1560,6 +1582,22 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
   </div>
 </div>
 
+<!-- ================= << v19 >> ESCOGER QUÉ DESCARGAR ================= -->
+<div id="modalDescargaParcial" class="modal">
+  <div class="modal-contenido modal-ancho">
+    <h2>Escoger qué descargar · <span id="parcialTitulo"></span></h2>
+    <p class="ayuda" style="margin-left:0">Marque los manifiestos y los tipos de residuo que va a entregar.
+      Lo que no marque sigue cargado en el móvil para otra descarga.</p>
+    <h3>Tipos de residuo</h3>
+    <div id="parcialTipos" class="parcial-tipos"></div>
+    <h3>Manifiestos</h3>
+    <div id="parcialManifiestos" class="tabla-scroll"></div>
+    <p id="parcialResumen" class="parcial-resumen"></p>
+    <button type="button" class="btn-pro btn-guardar" id="btnParcial" onclick="generarDescargaParcial()">📦 Generar descarga de lo seleccionado</button>
+    <button type="button" class="btn-pro btn-consultar" onclick="cerrarDescargaParcial()">Cancelar</button>
+  </div>
+</div>
+
 <!-- ================= << v14 >> CORREGIR UN MANIFIESTO ================= -->
 <div id="modalEditarMan" class="modal">
   <div class="modal-contenido modal-ancho">
@@ -1616,8 +1654,8 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 "use strict";
 
 // << v18 >> Versión de la app (se ve en el menú) y la mínima del Apps Script
-const VERSION_APP = "v18";
-const VERSION_SERVIDOR_MINIMA = 17;
+const VERSION_APP = "v20";
+const VERSION_SERVIDOR_MINIMA = 18;
 
 const API = "https://script.google.com/macros/s/AKfycbxcJGDPJMlrKZttCGNFchABjM9PZj5pacnDwT9EXJuXfkv-JO0vqw9y6hhMg9ZGKbHC/exec";
 
@@ -4487,9 +4525,8 @@ function cargarDescarga(){
     mensaje("estadoDescarga", vehiculosCarga.length
       ? vehiculosCarga.length + " móvil(es) con residuos por descargar."
       : "");
-    $("descVehiculos").innerHTML = vehiculosCarga.length
-      ? vehiculosCarga.map((v, i) => tarjetaVehiculo(v, i)).join("")
-      : '<div class="desc-vacio">Ningún móvil tiene residuos pendientes por descargar.</div>';
+    marcaCarga = {};
+    pintarVehiculosCarga();
   }).catch(e => {
     mensaje("estadoDescarga", "No se pudo consultar la carga: " + explicarErrorV11(e), true);
   });
@@ -4497,45 +4534,242 @@ function cargarDescarga(){
   cargarHistorialDescargas();
 }
 
+function pintarVehiculosCarga(){
+  $("descVehiculos").innerHTML = vehiculosCarga.length
+    ? vehiculosCarga.map((v, i) => tarjetaVehiculo(v, i)).join("")
+    : '<div class="desc-vacio">Ningún móvil tiene residuos pendientes por descargar.</div>';
+}
+
+/* << v20 >> Cada residuo de la tarjeta tiene su casilla: lo que se desmarca
+   no se descarga y sigue cargado en el móvil. */
+let marcaCarga = {};                 // "movil|grupo|tipo" -> false si se desmarcó
+
+const claveMarca = (movil, grupo, tipo) => movil + "|" + grupo + "|" + tipo;
+const marcado = (movil, grupo, tipo) => marcaCarga[claveMarca(movil, grupo, tipo)] !== false;
+
+function marcarResiduoCarga(i, grupo, tipo, on){
+  const v = vehiculosCarga[i];
+  if(!v) return;
+  marcaCarga[claveMarca(v.movil, grupo, tipo)] = on;
+  pintarVehiculosCarga();
+}
+
+function marcarTodoCarga(i, grupo, on){
+  const v = vehiculosCarga[i];
+  const r = grupo === "IMSALUD" ? v.imsalud : grupo === "GENERAL" ? v.general : v;
+  (r.items || []).forEach(t => { marcaCarga[claveMarca(v.movil, grupo, t.tipo)] = on; });
+  pintarVehiculosCarga();
+}
+
+// Lo marcado de un grupo: { tipos:[...], todos:bool, kg, contenedores }
+function seleccionCarga(v, grupo){
+  const r = grupo === "IMSALUD" ? v.imsalud : grupo === "GENERAL" ? v.general : v;
+  const items = (r && r.items) || [];
+  const elegidos = items.filter(t => marcado(v.movil, grupo, t.tipo));
+  const sumaCont = t => Object.keys(t.contenedores || {}).reduce((s, k) => s + (Number(t.contenedores[k]) || 0), 0);
+  return {
+    tipos: elegidos.map(t => t.tipo),
+    todos: elegidos.length === items.length,
+    kg: Math.round(elegidos.reduce((s, t) => s + (Number(t.kg) || 0), 0) * 100) / 100,
+    contenedores: elegidos.reduce((s, t) => s + sumaCont(t), 0)
+  };
+}
+
 /* << v13 >> Tabla de residuos de un grupo (todo, IMSALUD o el resto) */
-function tablaCargaDescarga(r){
-  return `<table>
-    <thead><tr><th>Residuo</th><th>Contenedores</th><th>Kg</th></tr></thead>
+function tablaCargaDescarga(r, i, grupo){
+  const v = vehiculosCarga[i];
+  const sel = seleccionCarga(v, grupo);
+  const todos = sel.todos;
+  return `<table class="tabla-carga">
+    <thead><tr>
+      <th class="chk"><input type="checkbox" title="Marcar o desmarcar todos" ${todos ? "checked" : ""}
+          onchange="marcarTodoCarga(${i}, '${grupo}', this.checked)"></th>
+      <th>Residuo</th><th>Contenedores</th><th>Kg</th></tr></thead>
     <tbody>
-      ${r.items.map(t => `<tr><td>${esc(t.tipo)}</td><td>${esc(textoConts(t.contenedores)) || "—"}</td><td class="num">${kgCarrito(t.kg)}</td></tr>`).join("")}
-      <tr class="tot"><td>TOTAL</td><td>${r.totalContenedores || "—"}</td><td class="num">${kgCarrito(r.totalKg)}</td></tr>
+      ${r.items.map(t => {
+        const on = marcado(v.movil, grupo, t.tipo);
+        return `<tr class="${on ? "" : "fuera"}" onclick="marcarResiduoCarga(${i}, '${grupo}', '${esc(t.tipo)}', ${!on})">
+          <td class="chk"><input type="checkbox" ${on ? "checked" : ""} onclick="event.stopPropagation()"
+              onchange="marcarResiduoCarga(${i}, '${grupo}', '${esc(t.tipo)}', this.checked)"></td>
+          <td>${esc(t.tipo)}</td><td>${esc(textoConts(t.contenedores)) || "—"}</td><td class="num">${kgCarrito(t.kg)}</td></tr>`;
+      }).join("")}
+      <tr class="tot"><td></td><td>${todos ? "TOTAL" : "MARCADO"}</td>
+        <td>${sel.contenedores || "—"}</td><td class="num">${kgCarrito(sel.kg)}${todos ? "" : ` <small>de ${kgCarrito(r.totalKg)}</small>`}</td></tr>
     </tbody>
   </table>`;
+}
+
+// Texto del botón según lo marcado
+function textoBotonDescarga(sel, todo, parcial){
+  if(!sel.tipos.length) return "Marque al menos un residuo";
+  return sel.todos ? todo : parcial + " (" + kgCarrito(sel.kg) + " kg)";
 }
 
 function tarjetaVehiculo(v, i){
   const cabeza = `
     <h3>🚚 Móvil ${esc(v.movil)}</h3>
-    <div class="sub">${v.manifiestos.length} manifiesto(s) · del ${esc(fechaDiaMes(v.desde) || v.desde)} al ${esc(fechaDiaMes(v.hasta) || v.hasta)} · ${kgCarrito(v.totalKg)} kg en total</div>`;
+    <div class="sub">${v.manifiestos.length} manifiesto(s) · del ${esc(fechaDiaMes(v.desde) || v.desde)} al ${esc(fechaDiaMes(v.hasta) || v.hasta)} · <b>${kgCarrito(v.totalKg)} kg en total</b></div>
+    <p class="ayuda" style="margin:4px 0 0">Desmarque lo que NO va a descargar: se queda en el móvil.</p>`;
 
-  // Sin IMSALUD: una sola tabla y un botón, como antes
+  const escoger = Array.isArray(v.pendientes)
+    ? `<button type="button" class="btn-pro btn-consultar desc-escoger" onclick="abrirDescargaParcial(${i})">☑️ Escoger por manifiesto</button>`
+    : "";
+
+  // Sin IMSALUD: una sola tabla
   if(!v.imsalud){
+    const sel = seleccionCarga(v, "TODO");
     return `<div class="desc-vehiculo">${cabeza}
-      ${tablaCargaDescarga(v)}
-      <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i}, '')">📦 Generar descarga e informe</button>
+      <div class="desc-grupo">
+        ${tablaCargaDescarga(v, i, "TODO")}
+        <button type="button" class="btn-pro btn-guardar" ${sel.tipos.length ? "" : "disabled"}
+                onclick="generarDescargaMovil(${i}, '')">📦 ${textoBotonDescarga(sel, "Descargar todo", "Descargar lo marcado")}</button>
+      </div>
+      ${escoger}
     </div>`;
   }
 
-  // Con IMSALUD: va aparte para certificarlo por separado
+  // Con IMSALUD: cada grupo en su recuadro
+  const sI = seleccionCarga(v, "IMSALUD");
+  const sG = v.general ? seleccionCarga(v, "GENERAL") : null;
   return `<div class="desc-vehiculo">${cabeza}
     <div class="desc-grupo desc-imsalud">
-      <h4>🏥 IMSALUD · ${v.imsalud.manifiestos.length} manifiesto(s)</h4>
-      ${tablaCargaDescarga(v.imsalud)}
-      <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i}, 'IMSALUD')">🏥 Descarga solo IMSALUD</button>
+      <h4>🏥 IMSALUD · ${v.imsalud.manifiestos.length} manifiesto(s) · ${kgCarrito(v.imsalud.totalKg)} kg</h4>
+      ${tablaCargaDescarga(v.imsalud, i, "IMSALUD")}
+      <button type="button" class="btn-pro btn-guardar" ${sI.tipos.length ? "" : "disabled"}
+              onclick="generarDescargaMovil(${i}, 'IMSALUD')">🏥 ${textoBotonDescarga(sI, "Descargar solo IMSALUD", "Descargar lo marcado de IMSALUD")}</button>
     </div>
     ${v.general ? `
-    <div class="desc-grupo">
-      <h4>Otros clientes · ${v.general.manifiestos.length} manifiesto(s)</h4>
-      ${tablaCargaDescarga(v.general)}
-      <button type="button" class="btn-pro btn-guardar" onclick="generarDescargaMovil(${i}, 'GENERAL')">📦 Descarga sin IMSALUD</button>
-    </div>` : ""}
-    ${v.general ? `<button type="button" class="btn-pro btn-consultar desc-todo" onclick="generarDescargaMovil(${i}, '')">📋 Descarga total (IMSALUD y otros por aparte, en un solo informe)</button>` : ""}
+    <div class="desc-grupo desc-otros">
+      <h4>👥 Otros clientes · ${v.general.manifiestos.length} manifiesto(s) · ${kgCarrito(v.general.totalKg)} kg</h4>
+      ${tablaCargaDescarga(v.general, i, "GENERAL")}
+      <button type="button" class="btn-pro btn-guardar" ${sG.tipos.length ? "" : "disabled"}
+              onclick="generarDescargaMovil(${i}, 'GENERAL')">📦 ${textoBotonDescarga(sG, "Descargar sin IMSALUD", "Descargar lo marcado de otros")}</button>
+    </div>
+    <button type="button" class="btn-pro btn-guardar desc-todo" ${sI.tipos.length || sG.tipos.length ? "" : "disabled"}
+            onclick="generarDescargaMovil(${i}, '')">📋 ${sI.todos && sG.todos
+              ? "Descargar todo (IMSALUD y otros por aparte, en un solo informe)"
+              : "Descargar lo marcado de los dos (" + kgCarrito(sI.kg + sG.kg) + " kg, un solo informe)"}</button>` : ""}
+    ${escoger}
   </div>`;
+}
+
+/* ================= << v19 >> DESCARGA PARCIAL ================= */
+/*
+ * El administrador escoge qué manifiestos y qué tipos de residuo se
+ * descargan. Lo que no escoja sigue cargado en el móvil para otra descarga.
+ */
+let parcial = null;      // { v, man:{num:true}, tipos:{tipo:true} }
+
+function abrirDescargaParcial(i){
+  const v = vehiculosCarga[i];
+  if(!v || !Array.isArray(v.pendientes)) return;
+  const tipos = {};
+  v.pendientes.forEach(m => m.lineas.forEach(l => { tipos[l.tipo] = true; }));
+  const man = {};
+  v.pendientes.forEach(m => { man[m.manifiesto] = true; });
+  parcial = { v:v, man:man, tipos:tipos };
+  $("parcialTitulo").textContent = "Móvil " + v.movil;
+  pintarDescargaParcial();
+  $("modalDescargaParcial").classList.add("mostrar");
+}
+
+function cerrarDescargaParcial(){
+  $("modalDescargaParcial").classList.remove("mostrar");
+  parcial = null;
+}
+
+function pintarDescargaParcial(){
+  if(!parcial) return;
+  const v = parcial.v;
+
+  $("parcialTipos").innerHTML = Object.keys(parcial.tipos).map(t => `
+    <label class="chip-check${parcial.tipos[t] ? " on" : ""}">
+      <input type="checkbox" ${parcial.tipos[t] ? "checked" : ""} onchange="parcialTipo('${esc(t)}', this.checked)"> ${esc(t)}
+    </label>`).join("");
+
+  const grupos = [
+    { id:"IMSALUD", titulo:"🏥 IMSALUD", lista:v.pendientes.filter(m => m.grupo === "IMSALUD") },
+    { id:"GENERAL", titulo:"👥 Otros clientes", lista:v.pendientes.filter(m => m.grupo !== "IMSALUD") }
+  ].filter(g => g.lista.length);
+
+  $("parcialManifiestos").innerHTML = grupos.map(g => `
+    <div class="parcial-grupo">
+      <h4>${g.titulo} · ${g.lista.length} manifiesto(s)
+        <button type="button" class="btn-mini" onclick="parcialGrupo('${g.id}', true)">Todos</button>
+        <button type="button" class="btn-mini" onclick="parcialGrupo('${g.id}', false)">Ninguno</button>
+      </h4>
+      <table>
+        <thead><tr><th></th><th>Fecha</th><th>Manifiesto</th><th>Cliente</th><th>Residuos</th><th>Kg</th></tr></thead>
+        <tbody>${g.lista.map(m => `
+          <tr class="${parcial.man[m.manifiesto] ? "" : "parcial-fuera"}" onclick="parcialMan('${esc(m.manifiesto)}')">
+            <td><input type="checkbox" ${parcial.man[m.manifiesto] ? "checked" : ""} onclick="event.stopPropagation(); parcialMan('${esc(m.manifiesto)}')"></td>
+            <td>${esc(fechaCortaDest(m.fecha))}</td>
+            <td>${esc(m.manifiesto)}</td>
+            <td style="white-space:normal">${esc(m.cliente)}</td>
+            <td style="white-space:normal;font-size:12px">${m.lineas.map(l =>
+              `<span class="${parcial.tipos[l.tipo] ? "" : "tachado"}">${esc(l.tipo)} ${kgCarrito(l.kg)}</span>`).join(" · ")}</td>
+            <td class="num">${kgCarrito(m.kg)}</td>
+          </tr>`).join("")}</tbody>
+      </table>
+    </div>`).join("");
+
+  // Resumen de lo que se va a descargar
+  let ims = 0, gen = 0, n = 0;
+  v.pendientes.forEach(m => {
+    if(!parcial.man[m.manifiesto]) return;
+    const kg = m.lineas.filter(l => parcial.tipos[l.tipo]).reduce((s, l) => s + (Number(l.kg) || 0), 0);
+    if(kg > 0) n++;
+    if(m.grupo === "IMSALUD") ims += kg; else gen += kg;
+  });
+  const total = ims + gen;
+  $("parcialResumen").innerHTML = `Se descargan <b>${kgCarrito(total)} kg</b> de ${kgCarrito(v.totalKg)} kg · ${n} manifiesto(s)` +
+    (ims > 0 && gen > 0 ? ` <span class="ayuda">(IMSALUD ${kgCarrito(ims)} kg · otros ${kgCarrito(gen)} kg, por aparte en el informe)</span>` : "") +
+    `<br><span class="ayuda" style="margin-left:0">Quedan en el móvil ${kgCarrito(v.totalKg - total)} kg.</span>`;
+  $("btnParcial").disabled = !(total > 0);
+}
+
+function parcialMan(num){ if(!parcial) return; parcial.man[num] = !parcial.man[num]; pintarDescargaParcial(); }
+function parcialTipo(t, on){ if(!parcial) return; parcial.tipos[t] = on; pintarDescargaParcial(); }
+function parcialGrupo(grupo, on){
+  if(!parcial) return;
+  parcial.v.pendientes.forEach(m => {
+    if((grupo === "IMSALUD") === (m.grupo === "IMSALUD")) parcial.man[m.manifiesto] = on;
+  });
+  pintarDescargaParcial();
+}
+
+function generarDescargaParcial(){
+  if(!parcial) return;
+  const v = parcial.v;
+  const mans  = Object.keys(parcial.man).filter(k => parcial.man[k]);
+  const tipos = Object.keys(parcial.tipos).filter(k => parcial.tipos[k]);
+  const todosMan  = mans.length === Object.keys(parcial.man).length;
+  const todosTipo = tipos.length === Object.keys(parcial.tipos).length;
+  if(!mans.length || !tipos.length){ alert("Escoja al menos un manifiesto y un tipo de residuo."); return; }
+
+  const resumen = $("parcialResumen").textContent.split("Quedan")[0].trim();
+  if(!confirm("¿Generar la descarga del móvil " + v.movil + "?\n\n" + resumen +
+              "\n\nLo que no escogió sigue cargado en el móvil.")) return;
+
+  const ventana = window.open("", "_blank");
+  if(ventana) ventana.document.write("<p style='font-family:Arial;padding:20px'>Generando informe de descarga…</p>");
+
+  const datos = { accion:"generarDescarga", movil:v.movil, grupo:"" };
+  if(!todosMan)  datos.manifiestos = mans;
+  if(!todosTipo) datos.tipos = tipos;
+
+  ocupado("btnParcial", "Generando...");
+  enviar(datos).then(r => {
+    ocupado("btnParcial", null);
+    cerrarDescargaParcial();
+    mensaje("estadoDescarga", "✔ " + (r.mensaje || "Descarga generada"));
+    mostrarInformeDescarga(r, ventana);
+    cargarDescarga();
+  }).catch(e => {
+    ocupado("btnParcial", null);
+    if(ventana) ventana.close();
+    alert("No se generó la descarga: " + explicarErrorV11(e));
+  });
 }
 
 const NOMBRE_GRUPO_DESC = { IMSALUD:"IMSALUD", GENERAL:"SIN IMSALUD", TODO:"", "":"" };
@@ -4547,21 +4781,49 @@ function generarDescargaMovil(i, grupo){
   const parte = grupo === "IMSALUD" ? v.imsalud : grupo === "GENERAL" ? v.general : v;
   if(!parte) return;
 
-  const que = grupo === "IMSALUD" ? "solo lo de IMSALUD"
-            : grupo === "GENERAL" ? "todo menos IMSALUD"
-            : (v.imsalud && v.general ? "todo (IMSALUD y otros clientes por aparte en el mismo informe)" : "todo lo que lleva");
-  const queda = grupo ? "Lo demás sigue cargado en el móvil hasta que lo descargue."
-                      : "El móvil quedará en cero para empezar otro recorrido.";
+  // << v20 >> Solo los residuos marcados en la tarjeta
+  let tipos = null, kg = parte.totalKg, todoMarcado = true;
+  if(grupo){
+    const sel = seleccionCarga(v, grupo);
+    if(!sel.tipos.length){ alert("Marque al menos un residuo."); return; }
+    if(!sel.todos){ tipos = sel.tipos; kg = sel.kg; todoMarcado = false; }
+  }else if(!v.imsalud){
+    const sel = seleccionCarga(v, "TODO");
+    if(!sel.tipos.length){ alert("Marque al menos un residuo."); return; }
+    if(!sel.todos){ tipos = sel.tipos; kg = sel.kg; todoMarcado = false; }
+  }else{
+    const sI = seleccionCarga(v, "IMSALUD");
+    const sG = v.general ? seleccionCarga(v, "GENERAL") : { tipos:[], todos:true, kg:0 };
+    if(!(sI.todos && sG.todos)){
+      // Los dos grupos juntos con lo marcado: se puede si marcó los mismos tipos
+      const a = sI.tipos.slice().sort().join("|"), b = sG.tipos.slice().sort().join("|");
+      if(a !== b){
+        alert("En IMSALUD y en otros clientes marcó residuos distintos.\n\n" +
+              "Descárguelos por separado con el botón de cada recuadro, o use «Escoger por manifiesto».");
+        return;
+      }
+      if(!sI.tipos.length){ alert("Marque al menos un residuo."); return; }
+      tipos = sI.tipos; kg = Math.round((sI.kg + sG.kg) * 100) / 100; todoMarcado = false;
+    }
+  }
+
+  const que = (grupo === "IMSALUD" ? "lo de IMSALUD" : grupo === "GENERAL" ? "lo de otros clientes (sin IMSALUD)"
+            : (v.imsalud && v.general ? "IMSALUD y otros clientes por aparte en el mismo informe" : "lo que lleva")) +
+            (tipos ? ": " + tipos.join(", ") : "");
+  const queda = (grupo || tipos) ? "Lo demás sigue cargado en el móvil hasta que lo descargue."
+                                 : "El móvil quedará en cero para empezar otro recorrido.";
 
   if(!confirm("¿Generar la descarga del móvil " + v.movil + " con " + que +
-              " (" + kgCarrito(parte.totalKg) + " kg)?\n\n" + queda)) return;
+              " (" + kgCarrito(kg) + " kg)?\n\n" + queda)) return;
 
   // La ventana se abre YA (en el toque), si no el navegador la bloquea
   const ventana = window.open("", "_blank");
   if(ventana) ventana.document.write("<p style='font-family:Arial;padding:20px'>Generando informe de descarga…</p>");
 
   mensaje("estadoDescarga", "Generando la descarga del móvil " + v.movil + "…");
-  enviar({ accion:"generarDescarga", movil:v.movil, grupo:grupo }).then(r => {
+  const datosDesc = { accion:"generarDescarga", movil:v.movil, grupo:grupo };
+  if(tipos) datosDesc.tipos = tipos;                     // << v20 >>
+  enviar(datosDesc).then(r => {
     mensaje("estadoDescarga", "✔ " + (r.mensaje || "Descarga generada"));
     mostrarInformeDescarga(r, ventana);
     cargarDescarga();
