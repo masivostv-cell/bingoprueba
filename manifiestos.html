@@ -263,6 +263,8 @@ tbody tr:nth-child(even){background:#f8fafc;}
 .registro-dest.pendiente{background:#fef3c7;color:#92400e;}
 .registro-dest.listo{background:#dcfce7;color:#166534;}
 .cert-anulado td{color:#94a3b8;text-decoration:line-through;}
+.aviso-precios{padding:8px 12px;border-radius:8px;font-size:13px;background:#fef3c7;color:#92400e;}
+.aviso-precios.ok{background:#e0f2fe;color:#075985;}
 .desc-vacio{padding:16px;border:2px dashed #cbd5e1;border-radius:10px;color:#64748b;text-align:center;}
 
 /* ---------- Carrito de recolección (nuevo manifiesto) ---------- */
@@ -1195,6 +1197,14 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
                 onclick="cargarClientesCertificado()">🔍 Buscar clientes del rango</button>
 
         <br>
+        <label class="etiqueta">Cómo sale el periodo en el certificado</label>
+        <br>
+        <select id="certPeriodoModo" onchange="guardarModoPeriodo(this)">
+          <option value="mes">Nombre del mes — «DEL MES DE NOVIEMBRE DE 2026»</option>
+          <option value="rango">Rango de fechas — «DEL 1/11/26 AL 30/11/26»</option>
+        </select>
+
+        <br>
         <label class="etiqueta">Fecha de expedición</label>
         <span class="ayuda">La que se imprime arriba: «San José de Cúcuta, …».</span>
         <br>
@@ -1203,6 +1213,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         <button type="button" class="btn-mini" onclick="fechaExpedicion(1)">Mañana</button>
 
         <p id="estadoCert" class="estado"></p>
+        <p id="avisoPreciosImsalud" class="aviso-precios" hidden></p>
 
         <!-- Selector de clientes con búsqueda y casillas -->
         <div id="certSelector" class="selector" hidden>
@@ -1313,6 +1324,12 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
         </div>
 
         <div id="destModoCard" hidden>
+          <label class="etiqueta">¿Cómo sale el periodo?</label>
+          <select id="destPeriodoModo" onchange="guardarModoPeriodo(this)">
+            <option value="mes">Nombre del mes — «en el periodo de noviembre de 2026»</option>
+            <option value="rango">Rango de fechas — «en el periodo comprendido del 1/11/26 al 30/11/26»</option>
+          </select>
+          <br>
           <label class="etiqueta">¿Cómo quiere los certificados?</label>
           <label class="opcion-modo">
             <input type="checkbox" id="destOmitir">
@@ -2210,6 +2227,7 @@ function mostrar(id){
   if(id === "historial"){
     entrarHistorial();   // << v8 >> muestra lo guardado y actualiza solo
   }
+  if(id === "certificados" || id === "destinacion") restaurarModosPeriodo();   // << v18 >>
   if(id === "certificados"){
     cargarPreciosImsalud();          // << v17 >>
     describirTipoCert();
@@ -5696,6 +5714,39 @@ function periodoDestino(inicio, fin){
   return mesA + " de " + a[0] + " a " + mesB + " de " + b[0];
 }
 
+/* << v18 >> Periodo: nombre del mes o rango de fechas (se recuerda la elección) */
+
+// "2026-11-01" -> "1/11/26"
+function fechaPeriodoCorta(iso){
+  const p = String(iso || "").split("-");
+  if(p.length !== 3) return String(iso || "");
+  return Number(p[2]) + "/" + p[1] + "/" + p[0].slice(-2);
+}
+
+function modoPeriodo(id){
+  const el = $(id);
+  return el && el.value === "rango" ? "rango" : "mes";
+}
+
+function guardarModoPeriodo(sel){
+  guardarCache("modo_periodo_" + sel.id, sel.value);
+}
+
+function restaurarModosPeriodo(){
+  ["certPeriodoModo", "destPeriodoModo"].forEach(id => {
+    const v = leerCache("modo_periodo_" + id);
+    if($(id) && (v === "mes" || v === "rango")) $(id).value = v;
+  });
+}
+
+// Texto que va después de "en el periodo" en el certificado de destinación
+function periodoParaDestino(inicio, fin){
+  if(modoPeriodo("destPeriodoModo") === "rango"){
+    return "comprendido del " + fechaPeriodoCorta(inicio) + " al " + fechaPeriodoCorta(fin);
+  }
+  return "de " + periodoDestino(inicio, fin);
+}
+
 // "02 días del mes de febrero de 2026"
 function fechaExpideDest(iso){
   const p = String(iso || "").split("-");
@@ -5984,7 +6035,7 @@ function hojaDestino(cliente, consecutivo, inicio, fin, fechaExpedicion){
        certifica que <b>${editable(razon)}</b>${nit}${direccion}, entregó
        para Tratamiento y Disposición Final
        los Residuos Peligrosos, Hospitalarios y Similares${sede}, en el periodo
-       de ${editable(periodoDestino(inicio, fin))} los siguientes residuos:</p>
+       ${editable(periodoParaDestino(inicio, fin))} los siguientes residuos:</p>
 
     ${bloques}
 
@@ -7089,6 +7140,7 @@ function tarifaDeCliente(nombreEnManifiesto){
  * Medicamentos no tiene columna en la hoja: se cobra como Farmacéuticos.
  */
 let preciosImsalud   = [];      // [{ centro, identificacion, precios:{biosanitarios:...} }]
+let preciosImsaludError = "";   // por qué no se pudieron cargar (para avisarlo)
 let preciosPorTarifa = {};      // texto de la tarifa -> precios por kilo
 
 const ETIQUETA_PRECIO = {
@@ -7152,10 +7204,37 @@ function cargarPreciosImsalud(){
 
   if(!esAdmin()) return;
   pedir(API + "?accion=preciosImsalud").then(r => {
-    if(!r || r.estado === "error" || !Array.isArray(r.centros)) return;
+    if(!r || r.estado === "error" || !Array.isArray(r.centros)){
+      throw new Error((r && r.mensaje) || "respuesta inesperada");
+    }
+    if(!r.centros.length) throw new Error(r.aviso || "la hoja de precios de IMSALUD está vacía");
+    preciosImsaludError = "";
     guardarCache("precios_imsalud", JSON.stringify(r.centros));
     aplicar(r.centros);
-  }).catch(e => console.warn("No se pudieron cargar los precios de IMSALUD:", e));
+    avisarPreciosImsalud();
+  }).catch(e => {
+    const m = String((e && e.message) || e || "");
+    preciosImsaludError = /acci[oó]n desconocida/i.test(m)
+      ? "el Apps Script no tiene todavía la versión v17 (pegue el Codigo.gs nuevo y publique una Nueva versión)"
+      : explicarErrorV11(e);
+    console.warn("Precios de IMSALUD:", m);
+    avisarPreciosImsalud();
+  });
+}
+
+// Aviso en Certificados: si hay clientes de IMSALUD y no hay precios, se dice por qué
+function avisarPreciosImsalud(){
+  const p = $("avisoPreciosImsalud");
+  if(!p) return;
+  if(preciosImsalud.length){
+    p.hidden = false;
+    p.className = "aviso-precios ok";
+    p.textContent = "🏥 Precios de IMSALUD cargados: " + preciosImsalud.length + " centros de atención.";
+    return;
+  }
+  p.hidden = !preciosImsaludError;
+  p.className = "aviso-precios";
+  p.textContent = "⚠️ Los certificados de IMSALUD saldrán en $0: no se pudieron cargar los precios — " + preciosImsaludError + ".";
 }
 
 /**
@@ -7476,7 +7555,11 @@ function fechaLarga(iso){
 }
 
 // El subtítulo dice "DEL MES DE X" solo si el rango cae dentro de un mes.
+// << v18 >> Con «Rango de fechas» dice "DEL 1/11/26 AL 30/11/26".
 function periodoTexto(inicio, fin){
+  if(modoPeriodo("certPeriodoModo") === "rango"){
+    return "DEL " + fechaPeriodoCorta(inicio) + " AL " + fechaPeriodoCorta(fin);
+  }
   const a = String(inicio).split("-");
   const b = String(fin).split("-");
   if(a[0] === b[0] && a[1] === b[1]){
@@ -7583,7 +7666,8 @@ function hojaUnitaria(cliente, inicio, fin, fecha, valores){
         <b>CÓDIGO</b> ${esc(cliente.codigo || "—")}<br>
         <b>CLIENTE</b> ${esc(cliente.nombre)}<br>
         <b>DIRECCIÓN</b> ${esc(cliente.direccion || "—")}
-        ${valores ? `<br><b>TARIFA</b> ${esc(cliente.tarifa || "SIN TARIFA REGISTRADA")}` : ""}
+        ${valores ? `<br><b>TARIFA</b> ${esc(cliente.tarifa || (tipoDeCliente(cliente.nombre) === "imsalud"
+              ? "IMSALUD — SIN PRECIO EN LA TABLA DE PRECIOS IMSALUD" : "SIN TARIFA REGISTRADA"))}` : ""}
       </div>
 
       <table>
@@ -7811,6 +7895,14 @@ function generarCertificados(){
   if(!d) return;
 
   const area = $("areaCertificados");
+
+  // << v17 >> No dejar salir un certificado de IMSALUD en $0 sin avisar
+  const imsSinPrecio = d.elegidos.filter(c => c.conTarifa && !c.tarifa && tipoDeCliente(c.nombre) === "imsalud");
+  if(imsSinPrecio.length && !confirm(
+      imsSinPrecio.length + " cliente(s) de IMSALUD saldrán en $0 porque no se encontró su precio" +
+      (preciosImsaludError ? " (" + preciosImsaludError + ")" : " en la tabla de precios IMSALUD") +
+      ":\n\n" + imsSinPrecio.slice(0, 8).map(c => "• " + c.nombre).join("\n") +
+      "\n\n¿Generar de todos modos?")) return;
 
   const contenido = (d.tipo === "unitario")
     ? d.elegidos.map(c => hojaUnitaria(c, d.inicio, d.fin, d.fecha, c.conTarifa))
