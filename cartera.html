@@ -23,6 +23,7 @@
         .toast { position: fixed; top: 20px; right: 20px; z-index: 9999; padding: 12px 24px; border-radius: 8px; color: white; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; }
         .toast.show { opacity: 1; transform: translateY(0); }
     </style>
+<style id="clases-extra">/* Clases agregadas para los botones y ventanas nuevas (no estaban en el CSS incrustado) */.bottom-9{bottom:2.25rem}.-mt-2{margin-top:-.5rem}.ml-1{margin-left:.25rem}.mt-0\.5{margin-top:.125rem}.mt-3{margin-top:.75rem}.max-h-28{max-height:7rem}.min-h-24{min-height:6rem}.w-40{width:10rem}.w-80{width:20rem}.min-w-\[160px\]{min-width:160px}.min-w-\[200px\]{min-width:200px}.min-w-\[220px\]{min-width:220px}.min-w-\[240px\]{min-width:240px}.shrink-0{flex-shrink:0}.border-collapse{border-collapse:collapse}.gap-1\.5{gap:.375rem}.space-y-0\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.125rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.125rem*var(--tw-space-y-reverse))}.space-y-1>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.25rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.25rem*var(--tw-space-y-reverse))}.rounded-b-lg{border-bottom-right-radius:.5rem;border-bottom-left-radius:.5rem}.rounded-t-lg{border-top-left-radius:.5rem;border-top-right-radius:.5rem}.border-amber-200{--tw-border-opacity:1;border-color:rgb(253 230 138/var(--tw-border-opacity,1))}.border-amber-300{--tw-border-opacity:1;border-color:rgb(252 211 77/var(--tw-border-opacity,1))}.border-amber-400{--tw-border-opacity:1;border-color:rgb(251 191 36/var(--tw-border-opacity,1))}.border-blue-200{--tw-border-opacity:1;border-color:rgb(191 219 254/var(--tw-border-opacity,1))}.border-emerald-200{--tw-border-opacity:1;border-color:rgb(167 243 208/var(--tw-border-opacity,1))}.border-emerald-300{--tw-border-opacity:1;border-color:rgb(110 231 183/var(--tw-border-opacity,1))}.border-emerald-400{--tw-border-opacity:1;border-color:rgb(52 211 153/var(--tw-border-opacity,1))}.border-gray-100{--tw-border-opacity:1;border-color:rgb(243 244 246/var(--tw-border-opacity,1))}.bg-amber-100{--tw-bg-opacity:1;background-color:rgb(254 243 199/var(--tw-bg-opacity,1))}.bg-amber-50{--tw-bg-opacity:1;background-color:rgb(255 251 235/var(--tw-bg-opacity,1))}.bg-amber-500{--tw-bg-opacity:1;background-color:rgb(245 158 11/var(--tw-bg-opacity,1))}.bg-amber-600{--tw-bg-opacity:1;background-color:rgb(217 119 6/var(--tw-bg-opacity,1))}.bg-emerald-100{--tw-bg-opacity:1;background-color:rgb(209 250 229/var(--tw-bg-opacity,1))}.bg-emerald-50{--tw-bg-opacity:1;background-color:rgb(236 253 245/var(--tw-bg-opacity,1))}.bg-emerald-600{--tw-bg-opacity:1;background-color:rgb(5 150 105/var(--tw-bg-opacity,1))}.bg-teal-50{--tw-bg-opacity:1;background-color:rgb(240 253 250/var(--tw-bg-opacity,1))}.bg-teal-600{--tw-bg-opacity:1;background-color:rgb(13 148 136/var(--tw-bg-opacity,1))}.bg-white\/90{background-color:hsla(0,0%,100%,.9)}.p-6{padding:1.5rem}.px-1\.5{padding-left:.375rem;padding-right:.375rem}.px-2\.5{padding-left:.625rem;padding-right:.625rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.text-\[11px\]{font-size:11px}.text-amber-700{--tw-text-opacity:1;color:rgb(180 83 9/var(--tw-text-opacity,1))}.text-amber-800{--tw-text-opacity:1;color:rgb(146 64 14/var(--tw-text-opacity,1))}.text-amber-900{--tw-text-opacity:1;color:rgb(120 53 15/var(--tw-text-opacity,1))}.text-emerald-700{--tw-text-opacity:1;color:rgb(4 120 87/var(--tw-text-opacity,1))}.text-emerald-800{--tw-text-opacity:1;color:rgb(6 95 70/var(--tw-text-opacity,1))}.text-emerald-900{--tw-text-opacity:1;color:rgb(6 78 59/var(--tw-text-opacity,1))}.text-green-700{--tw-text-opacity:1;color:rgb(21 128 61/var(--tw-text-opacity,1))}.text-purple-900{--tw-text-opacity:1;color:rgb(88 28 135/var(--tw-text-opacity,1))}.text-red-900{--tw-text-opacity:1;color:rgb(127 29 29/var(--tw-text-opacity,1))}.text-teal-800{--tw-text-opacity:1;color:rgb(17 94 89/var(--tw-text-opacity,1))}.text-teal-900{--tw-text-opacity:1;color:rgb(19 78 74/var(--tw-text-opacity,1))}.underline{text-decoration-line:underline}.opacity-100{opacity:1}.opacity-80{opacity:.8}.hover\:border-emerald-400:hover{--tw-border-opacity:1;border-color:rgb(52 211 153/var(--tw-border-opacity,1))}.hover\:bg-amber-100:hover{--tw-bg-opacity:1;background-color:rgb(254 243 199/var(--tw-bg-opacity,1))}.hover\:bg-amber-600:hover{--tw-bg-opacity:1;background-color:rgb(217 119 6/var(--tw-bg-opacity,1))}.hover\:bg-amber-700:hover{--tw-bg-opacity:1;background-color:rgb(180 83 9/var(--tw-bg-opacity,1))}.hover\:bg-emerald-100:hover{--tw-bg-opacity:1;background-color:rgb(209 250 229/var(--tw-bg-opacity,1))}.hover\:bg-emerald-50:hover{--tw-bg-opacity:1;background-color:rgb(236 253 245/var(--tw-bg-opacity,1))}.hover\:bg-emerald-700:hover{--tw-bg-opacity:1;background-color:rgb(4 120 87/var(--tw-bg-opacity,1))}.hover\:bg-purple-50:hover{--tw-bg-opacity:1;background-color:rgb(250 245 255/var(--tw-bg-opacity,1))}.hover\:bg-red-100:hover{--tw-bg-opacity:1;background-color:rgb(254 226 226/var(--tw-bg-opacity,1))}.hover\:bg-red-200:hover{--tw-bg-opacity:1;background-color:rgb(254 202 202/var(--tw-bg-opacity,1))}.hover\:bg-teal-100:hover{--tw-bg-opacity:1;background-color:rgb(204 251 241/var(--tw-bg-opacity,1))}.hover\:bg-teal-700:hover{--tw-bg-opacity:1;background-color:rgb(15 118 110/var(--tw-bg-opacity,1))}.hover\:opacity-100:hover{opacity:1}.disabled\:cursor-not-allowed:disabled{cursor:not-allowed}.disabled\:bg-gray-300:disabled{--tw-bg-opacity:1;background-color:rgb(209 213 219/var(--tw-bg-opacity,1))}.disabled\:text-gray-500:disabled{--tw-text-opacity:1;color:rgb(107 114 128/var(--tw-text-opacity,1))}@media (min-width:640px){.sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}}</style>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
 
@@ -30,7 +31,7 @@
     // ==========================================
     // TU URL DE APPS SCRIPT (Ya configurada)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3RZKsBCkylnypTEC-SN9-Y7mkJJmSCuBcXPzNhR5dcZDHAvlUZjtj-8wJJ2wkokJ0/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJoRzWnowqdtuq3l4HLZXz63Eg5-NUvncB1cc3aopP01sKdckQOeRbjGHoe06TZtmF/exec'; 
     const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Y8CTQQSIDMJUAgVwcNV1EO-3T0SFwR4Z7XvpXxbB1h0/edit';
 </script>
 
@@ -387,11 +388,15 @@
                     <p class="text-xs text-amber-800 mt-1">Estos nombres de la hoja BANCOS no están escritos igual que en TERCEROS. Escoge el NIT correcto (las sugerencias con ✅ tienen un recibo contable que cuadra con el banco) o escribe el NIT. Se guardan en la hoja <b>ALIAS_TERCEROS</b> y la próxima vez se asocian solos.</p>
                     <div class="flex flex-wrap gap-2 mt-2">
                         <input type="text" id="asociarFiltro" placeholder="Filtrar nombres..." class="flex-1 min-w-[160px] border border-gray-300 rounded-md px-2 py-1 text-sm">
-                        <button type="button" id="btnAceptarSugerencias" class="text-xs bg-white border border-amber-400 text-amber-900 rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Usar la 1.ª sugerencia con ✅ en todos</button>
+                        <button type="button" id="btnAceptarSugerencias" class="text-xs bg-white border border-amber-400 text-amber-900 rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Usar sugerencias seguras (nombre parecido + recibo)</button>
                     </div>
                 </div>
                 <div id="asociarLista" class="divide-y max-h-80 overflow-y-auto text-sm"></div>
                 <div class="p-3 border-t bg-gray-50 rounded-b-lg flex flex-wrap items-center gap-3">
+                    <label class="w-full flex items-start gap-2 text-xs text-gray-700">
+                        <input type="checkbox" id="asociarCorregirBancos" checked class="mt-0.5 h-4 w-4">
+                        <span><b>Corregir también el nombre en la hoja BANCOS</b> (columna E) con el nombre completo de TERCEROS. Si un movimiento tiene varios nombres separados por "|", solo se cambia el que está incompleto.</span>
+                    </label>
                     <button type="button" id="btnGuardarAsociaciones" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-lg px-4 py-2 disabled:bg-gray-300">Guardar asociaciones y volver a conciliar</button>
                     <span id="asociarConteo" class="text-xs text-gray-600"></span>
                 </div>
@@ -400,7 +405,7 @@
                     class="w-full font-bold py-3 px-4 rounded-lg text-base text-white bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:text-gray-500">
                 Descargar conciliación (Excel)
             </button>
-            <p class="text-xs text-gray-500">La conciliación solo lee la hoja BANCOS; no la modifica. Lo único que se guarda son las asociaciones de nombre → NIT que confirmes.</p>
+            <p class="text-xs text-gray-500">La conciliación solo lee la hoja BANCOS. Lo único que se guarda son las asociaciones de nombre → NIT que confirmes y, si dejas marcada la casilla, el nombre corregido en la columna E de BANCOS.</p>
         </div>
     </div>
 </div>
@@ -1277,7 +1282,8 @@
             if (!sheetJsPromesa) {
                 sheetJsPromesa = new Promise((resolve, reject) => {
                     const sc = document.createElement('script');
-                    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                    // Versión de SheetJS que también permite colores en las celdas (verde/rojo).
+                    sc.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
                     sc.onload = () => resolve(window.XLSX);
                     sc.onerror = () => { sheetJsPromesa = null; reject(new Error('No se pudo cargar el lector de Excel. Revisa la conexión a Internet.')); };
                     document.head.appendChild(sc);
@@ -2707,9 +2713,9 @@
                 if (!exactos[k]) exactos[k] = { nits: new Set(), fuente };
                 if (exactos[k].fuente === fuente) exactos[k].nits.add(n);
             };
-            (alias || []).forEach(a => poner(a.nombre, a.nit, 'ASOCIACIÓN GUARDADA'));
+            (alias || []).forEach(a => String(a.nit || '').split(/[,;]/).forEach(n => poner(a.nombre, n, 'ASOCIACIÓN GUARDADA')));
             (terceros || []).forEach(t => poner(t.nombre, t.nit, 'TERCEROS'));
-            (pagos || []).forEach(pg => poner(pg.cliente, pg.nit, 'PAGOS'));
+            // Solo la hoja TERCEROS (y las asociaciones que tú guardaste).
 
             const candidatos = [];
             const vistos = new Set();
@@ -2720,8 +2726,7 @@
                 candidatos.push({ nit: n, nombre: String(nombre).trim(), fuente, tokens: concTokens(nombre) });
             };
             (terceros || []).forEach(t => agregarCand(t.nombre, t.nit, 'TERCEROS'));
-            (pagos || []).forEach(pg => agregarCand(pg.cliente, pg.nit, 'PAGOS'));
-            (contab || []).forEach(m => agregarCand(m.nombre, m.nit, 'CONTABILIDAD'));
+            // Las sugerencias salen únicamente de la hoja TERCEROS.
             const indice = {};
             candidatos.forEach((c, i) => c.tokens.forEach(t => (indice[t] = indice[t] || []).push(i)));
 
@@ -2751,7 +2756,16 @@
             // El nombre de BANCOS (columna E) se usa únicamente para buscar su NIT
             // en TERCEROS (nombre en A, NIT en E). Contra la contabilidad se compara
             // el NIT, nunca el nombre.
-            const resolutor = crearResolutorNit(terceros, contab, extras.pagos || [], extras.alias || []);
+            const resolutor = crearResolutorNit(terceros, contab, [], extras.alias || []);
+            // Busca un NIT en la hoja TERCEROS (con o sin dígito de verificación).
+            const tercerosPorNit = nit => {
+                const k = concNormNit(nit), base = k.split('-')[0];
+                const lista = (terceros || []);
+                const exacto = lista.find(t => concNormNit(t.nit) === k);
+                if (exacto) return { nit: concNormNit(exacto.nit), nombre: exacto.nombre };
+                const porBase = lista.filter(t => concNormNit(t.nit).split('-')[0] === base);
+                return porBase.length === 1 ? { nit: concNormNit(porBase[0].nit), nombre: porBase[0].nombre } : null;
+            };
             const pendientes = {}; // nombres que necesitan asociación (manual o confirmar)
 
             // NIT del libro auxiliar normalizado. Si TERCEROS tiene el NIT sin dígito
@@ -2775,7 +2789,7 @@
             });
 
             // ¿Hay en contabilidad un recibo de este NIT que respalde este movimiento?
-            const hayEvidencia = (b, nit) => ingresos.some(m =>
+            const hayEvidencia = (b, nit) => ingresos.some(m => !m.filaAsignada &&
                 nitContableDe(nit).includes(m.nitNorm) && concDiasEntre(m.fecha, b.fecha) <= 3 &&
                 (Math.abs(m.debe - b.valorBanco) <= 1 || (b.nombres.length > 1 && m.debe < b.valorBanco + 1)));
 
@@ -2805,8 +2819,9 @@
                         ingresos.filter(m => Math.abs(m.debe - b.valorBanco) <= 1 && concDiasEntre(m.fecha, b.fecha) <= 1)
                             .slice(0, 3)
                             .forEach(m => {
-                                if (!sugs.some(sg => sg.nit === m.nitNorm)) {
-                                    sugs.push({ nit: m.nitNorm, nombre: m.nombre, fuente: `recibo ${m.comprobante} mismo valor y fecha`, score: 0, evidencia: true, porValor: true });
+                                const enTerceros = tercerosPorNit(m.nitNorm);
+                                if (enTerceros && !sugs.some(sg => sg.nit === enTerceros.nit)) {
+                                    sugs.push({ nit: enTerceros.nit, nombre: enTerceros.nombre, fuente: `recibo ${m.comprobante}`, score: 0, evidencia: true, porValor: true });
                                 }
                             });
                     }
@@ -2914,101 +2929,172 @@
                 m.estado = 'NO ESTÁ EN BANCOS';
                 const posible = sinRelacionar.find(b => Math.abs(b.valorBanco - m.debe) <= 1 && concDiasEntre(b.fecha, m.fecha) <= 3);
                 m.observacion = posible
-                    ? `Posible movimiento sin relacionar en BANCOS: fila ${posible.fila} (${posible.fecha}, ${formatCurrency(posible.valorBanco)}).`
+                    ? `Posible movimiento sin relacionar en BANCOS: fila ${posible.fila} (${formatDate(posible.fecha)}, ${formatCurrency(posible.valorBanco)}).`
                     : `No hay movimiento en BANCOS del NIT ${m.nit} por este valor.`;
                 if (posible) posible.notas.push(`Posible: ${m.comprobante} ${m.nombre} (${formatCurrency(m.debe)}).`);
+            });
+
+            // 7) Nombres que SÍ encontraron NIT, pero cuyo movimiento no cuadra con la
+            //    contabilidad. Puede ser un nombre incompleto que coincidió con otro
+            //    tercero. También se ofrecen en "Asociar nombres" para corregirlos.
+            bancos.forEach(b => {
+                if (b.estado !== 'NO ESTÁ EN CONTABILIDAD' && b.estado !== 'DIFERENCIA') return;
+                b.nombres.forEach(nom => {
+                    const k = concNormNombre(nom);
+                    if (pendientes[k]) {
+                        if (!pendientes[k].filas.includes(b.fila)) pendientes[k].filas.push(b.fila);
+                        return;
+                    }
+                    const ex = resolutor.exacto(nom);
+                    const pend = pendientes[k] = {
+                        nombre: nom, filas: [b.fila], sugerencias: {}, auto: null, revisar: true,
+                        nitActual: ex ? ex.nits.join(' / ') : ''
+                    };
+                    const actuales = new Set(ex ? ex.nits.flatMap(n => nitContableDe(n)) : []);
+                    const sugs = resolutor.sugerir(nom, 6)
+                        .filter(sg => !nitContableDe(sg.nit).some(n => actuales.has(n)))
+                        .map(sg => ({ ...sg, evidencia: hayEvidencia(b, sg.nit) }));
+                    if (b.nombres.length === 1) {
+                        ingresos.filter(m => !m.filaAsignada && Math.abs(m.debe - b.valorBanco) <= 1 && concDiasEntre(m.fecha, b.fecha) <= 1)
+                            .slice(0, 3)
+                            .forEach(m => {
+                                const enTerceros = tercerosPorNit(m.nitNorm);
+                                if (enTerceros && !actuales.has(m.nitNorm) && !sugs.some(sg => sg.nit === enTerceros.nit)) {
+                                    sugs.push({ nit: enTerceros.nit, nombre: enTerceros.nombre, fuente: `recibo ${m.comprobante}`, score: 0, evidencia: true, porValor: true });
+                                }
+                            });
+                    }
+                    sugs.forEach(sg => { pend.sugerencias[sg.nit] = sg; });
+                });
             });
 
             const pendientesAlias = Object.values(pendientes).map(pd => ({
                 nombre: pd.nombre,
                 filas: pd.filas,
                 auto: pd.auto,
+                revisar: !!pd.revisar,
+                nitActual: pd.nitActual || '',
                 sugerencias: Object.values(pd.sugerencias)
                     .sort((x, y) => (y.evidencia - x.evidencia) || (y.score - x.score)).slice(0, 5)
-            })).sort((x, y) => (!!x.auto - !!y.auto) || (y.filas.length - x.filas.length));
+            })).sort((x, y) => (x.revisar - y.revisar) || (!!x.auto - !!y.auto) || (y.filas.length - x.filas.length));
 
             return { bancos, contab, pendientesAlias };
         }
 
+        // Excel sencillo: hoja BANCOS (tal como está en el Sheet) y hoja TNS
+        // (libro auxiliar). Verde = cuadra, rojo = no cuadra, con observación.
         function construirExcelConciliacion(XLSX, r, info) {
             const wb = XLSX.utils.book_new();
-            const estadosB = {}, estadosC = {};
-            r.bancos.forEach(b => { const e = estadosB[b.estado] = estadosB[b.estado] || { n: 0, v: 0 }; e.n++; e.v += b.valorBanco; });
-            r.contab.forEach(m => { const e = estadosC[m.estado] = estadosC[m.estado] || { n: 0, v: 0 }; e.n++; e.v += (m.debe || m.haber); });
-            const totalBanco = r.bancos.reduce((s, b) => s + b.valorBanco, 0);
-            const totalContable = r.contab.reduce((s, m) => s + m.debe, 0);
+            const borde = { style: 'thin', color: { rgb: 'D0D7DE' } };
+            const bordes = { top: borde, bottom: borde, left: borde, right: borde };
+            const ESTILO = {
+                enc: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F4E78' } }, alignment: { vertical: 'center', wrapText: true }, border: bordes },
+                verde: { fill: { fgColor: { rgb: 'C6EFCE' } }, font: { color: { rgb: '006100' } }, border: bordes, alignment: { vertical: 'top', wrapText: true } },
+                rojo: { fill: { fgColor: { rgb: 'FFC7CE' } }, font: { color: { rgb: '9C0006' } }, border: bordes, alignment: { vertical: 'top', wrapText: true } },
+                gris: { fill: { fgColor: { rgb: 'EDEDED' } }, font: { color: { rgb: '595959' } }, border: bordes, alignment: { vertical: 'top', wrapText: true } },
+                titulo: { font: { bold: true, sz: 13 } },
+                total: { font: { bold: true } }
+            };
+            const aFecha = iso => {
+                const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+                return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12) : (iso || '');
+            };
+            const fechaCorta = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}` : iso; };
 
-            const resumen = [
-                ['CONCILIACIÓN BANCOS vs CONTABILIDAD'],
-                ['Archivo contable', info.archivo],
-                ['Cuenta', info.cuenta || ''],
-                ['Periodo', `${info.desde} a ${info.hasta}`],
-                ['Generado', new Date().toLocaleString('es-CO')],
-                [],
-                ['Total ingresos en hoja BANCOS', totalBanco],
-                ['Total ingresos (debe) en contabilidad', totalContable],
-                ['Diferencia', totalBanco - totalContable],
-                [],
-                ['HOJA BANCOS', 'Movimientos', 'Valor'],
-                ...Object.entries(estadosB).map(([k, e]) => [k, e.n, e.v]),
-                [],
-                ['CONTABILIDAD', 'Movimientos', 'Valor'],
-                ...Object.entries(estadosC).map(([k, e]) => [k, e.n, e.v]),
-                [],
-                ['Qué significa cada estado'],
-                ['OK', 'El NIT, la fecha y el valor cuadran exacto con los recibos contables.'],
-                ['OK - FECHA DIFERENTE', 'Cuadran el NIT y el valor, pero el recibo tiene otra fecha (hasta 5 días).'],
-                ['OK PARCIAL', 'Lo relacionado cuadra, pero falta relacionar parte del movimiento en BANCOS.'],
-                ['DIFERENCIA', 'Hay recibos de ese NIT ese día, pero la suma no cuadra con el banco.'],
-                ['NO ESTÁ EN CONTABILIDAD', 'Se encontró el NIT, pero no hay recibo contable de ese NIT que lo respalde.'],
-                ['SIN NIT EN TERCEROS', 'El nombre de BANCOS no está en TERCEROS, así que no hay NIT para conciliar.'],
-                ['Regla', 'La conciliación se hace solo por NIT + fecha + valor. El nombre solo sirve para buscar el NIT en TERCEROS.'],
-                ['SIN RELACIONAR EN BANCOS', 'Movimiento del banco que todavía no tiene tercero en la hoja BANCOS.'],
-                ['NO ESTÁ EN BANCOS', 'Recibo contable que no se encontró en la hoja BANCOS.']
-            ];
-            const wsR = XLSX.utils.aoa_to_sheet(resumen);
-            wsR['!cols'] = [{ wch: 42 }, { wch: 80 }, { wch: 18 }];
-            XLSX.utils.book_append_sheet(wb, wsR, 'RESUMEN');
+            // Arma una hoja: título, encabezado, filas con color y totales.
+            function hoja(nombre, titulo, encabezados, filas, anchos, colsFecha, colsValor, totales) {
+                const aoa = [[titulo], [], encabezados, ...filas.map(f => f.valores), [], ...totales];
+                const ws = XLSX.utils.aoa_to_sheet(aoa, { cellDates: true });
+                const filaEnc = 2; // índice 0-based del encabezado
+                const ref = XLSX.utils.decode_range(ws['!ref']);
+                const celda = (rr, cc) => ws[XLSX.utils.encode_cell({ r: rr, c: cc })];
+                if (celda(0, 0)) celda(0, 0).s = ESTILO.titulo;
+                encabezados.forEach((_, c) => { const x = celda(filaEnc, c); if (x) x.s = ESTILO.enc; });
+                filas.forEach((f, i) => {
+                    const rr = filaEnc + 1 + i;
+                    for (let c = 0; c < encabezados.length; c++) {
+                        let x = celda(rr, c);
+                        if (!x) { x = ws[XLSX.utils.encode_cell({ r: rr, c })] = { t: 's', v: '' }; }
+                        x.s = { ...ESTILO[f.color] };
+                        if (colsFecha.includes(c) && x.t === 'd') x.z = 'dd/mm/yyyy';
+                        if (colsValor.includes(c) && x.t === 'n') x.z = '#,##0';
+                    }
+                });
+                for (let rr = filaEnc + filas.length + 2; rr <= ref.e.r; rr++) {
+                    const a = celda(rr, 0); if (a) a.s = ESTILO.total;
+                    const b = celda(rr, 1); if (b && b.t === 'n') { b.z = '#,##0'; b.s = ESTILO.total; }
+                }
+                ws['!cols'] = anchos.map(w => ({ wch: w }));
+                ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: filaEnc, c: 0 }, e: { r: filaEnc + filas.length, c: encabezados.length - 1 } }) };
+                XLSX.utils.book_append_sheet(wb, ws, nombre);
+            }
 
-            const filasB = [['Fila BANCOS', 'Fecha banco', 'Descripción', 'Referencia', 'Valor banco', 'Tercero(s) relacionado(s)',
-                'NIT buscado en TERCEROS', 'Valor relacionado', 'Valor en contabilidad', 'Diferencia (banco - contable)', 'Comprobantes contables', 'Estado', 'Observación']];
-            r.bancos.slice().sort((x, y) => x.fecha.localeCompare(y.fecha) || x.fila - y.fila).forEach(b => {
-                filasB.push([b.fila, b.fecha, b.descripcion, b.referencia, b.valorBanco, b.terceroRelacionado,
-                    b.nitPorNombre.join(' | '), b.valorRelacionado, b.valorContable, b.diferencia,
-                    b.asignados.map(m => `${m.comprobante} NIT ${m.nit} (${m.fecha}) ${formatCurrency(m.debe)}`).join(' | '),
-                    b.estado, b.notas.join(' ')]);
+            // ---------- Hoja 1: BANCOS tal como está en el Sheet ----------
+            const okBancos = b => b.estado === 'OK' || b.estado === 'OK - FECHA DIFERENTE';
+            const filasB = r.bancos.slice().sort((x, y) => x.fila - y.fila).map(b => {
+                let obs;
+                const todosPosibles = b.notas.filter(n => n.startsWith('Posible'));
+                const posibles = todosPosibles.slice(0, 3).concat(todosPosibles.length > 3 ? [`(y ${todosPosibles.length - 3} recibos más por el mismo valor)`] : []);
+                if (okBancos(b)) {
+                    obs = 'Cuadra con TNS: ' + b.asignados.map(m => `${m.comprobante} ${fechaCorta(m.fecha)} ${formatCurrency(m.debe)}`).join(', ');
+                    if (b.estado === 'OK - FECHA DIFERENTE') obs += ' (el recibo tiene otra fecha)';
+                } else if (b.estado === 'SIN RELACIONAR EN BANCOS') {
+                    obs = 'No tiene tercero en BANCOS.' + (posibles.length ? ' ' + posibles.join(' ') : '');
+                } else if (b.estado === 'SIN NIT EN TERCEROS') {
+                    obs = 'El nombre no está en la hoja TERCEROS; no se pudo buscar en TNS.';
+                } else if (b.estado === 'NO ESTÁ EN CONTABILIDAD') {
+                    obs = `No está en TNS: no hay recibo del NIT ${[...b.nits].join(' / ')} por ${formatCurrency(b.objetivo)} en esa fecha.`;
+                } else if (b.estado === 'OK PARCIAL') {
+                    obs = `Lo relacionado cuadra con TNS, pero faltan ${formatCurrency(b.valorBanco - b.objetivo)} por relacionar en BANCOS.`;
+                } else {
+                    obs = `No cuadra: banco ${formatCurrency(b.valorBanco)} y TNS ${formatCurrency(b.valorContable)} (diferencia ${formatCurrency(b.diferencia)}).` +
+                        (b.asignados.length ? ' Recibos: ' + b.asignados.map(m => `${m.comprobante} ${formatCurrency(m.debe)}`).join(', ') : '');
+                }
+                return {
+                    color: okBancos(b) ? 'verde' : 'rojo',
+                    valores: [b.fila, aFecha(b.fecha), b.descripcion, b.referencia, b.valorBanco, b.terceroRelacionado, b.valorRelacionado,
+                        okBancos(b) ? 'CUADRA' : 'NO CUADRA', obs]
+                };
             });
-            const wsB = XLSX.utils.aoa_to_sheet(filasB);
-            wsB['!cols'] = [8, 12, 35, 22, 14, 40, 45, 14, 14, 14, 60, 24, 60].map(w => ({ wch: w }));
-            wsB['!autofilter'] = { ref: `A1:M${filasB.length}` };
-            XLSX.utils.book_append_sheet(wb, wsB, 'BANCOS');
+            const verdesB = filasB.filter(f => f.color === 'verde'), rojosB = filasB.filter(f => f.color === 'rojo');
+            const sumaB = l => l.reduce((t, f) => t + (Number(f.valores[4]) || 0), 0);
+            hoja('BANCOS', `Conciliación BANCOS vs TNS · ${formatDate(info.desde)} a ${formatDate(info.hasta)}`,
+                ['Fila', 'Fecha Banco', 'Descripción Banco', 'Referencia Banco', 'Valor Banco', 'Tercero relacionado', 'Valor relacionado', 'Estado', 'Observación'],
+                filasB, [7, 12, 34, 20, 14, 42, 14, 12, 70], [1], [4, 6],
+                [['Cuadran (verde)', sumaB(verdesB), `${verdesB.length} movimientos`],
+                 ['No cuadran (rojo)', sumaB(rojosB), `${rojosB.length} movimientos`],
+                 ['Total BANCOS', sumaB(filasB), `${filasB.length} movimientos`]]);
 
-            const filasC = [['Fecha', 'NIT', 'Tercero', 'Comprobante', 'Detalle', 'Debe', 'Haber', 'Fila BANCOS', 'Estado', 'Observación']];
-            r.contab.forEach(m => filasC.push([m.fecha, m.nit, m.nombre, m.comprobante, m.detalle, m.debe, m.haber,
-                m.filaAsignada || '', m.estado, m.observacion]));
-            const wsC = XLSX.utils.aoa_to_sheet(filasC);
-            wsC['!cols'] = [12, 16, 35, 14, 70, 14, 14, 10, 24, 60].map(w => ({ wch: w }));
-            wsC['!autofilter'] = { ref: `A1:J${filasC.length}` };
-            XLSX.utils.book_append_sheet(wb, wsC, 'CONTABILIDAD');
-
-            const problemas = [['Origen', 'Fecha', 'Tercero → NIT', 'Valor', 'Estado', 'Detalle']];
-            r.bancos.filter(b => !/^OK/.test(b.estado)).forEach(b =>
-                problemas.push(['BANCOS fila ' + b.fila, b.fecha, (b.nitPorNombre.join(' | ') || '(sin tercero)'), b.valorBanco, b.estado, b.notas.join(' ')]));
-            r.contab.filter(m => m.estado === 'NO ESTÁ EN BANCOS' || m.estado === 'DIFERENCIA').forEach(m =>
-                problemas.push(['Contabilidad ' + m.comprobante, m.fecha, `${m.nombre} → ${m.nit}`, m.debe, m.estado, m.observacion]));
-            const wsP = XLSX.utils.aoa_to_sheet(problemas);
-            wsP['!cols'] = [22, 12, 40, 14, 26, 80].map(w => ({ wch: w }));
-            wsP['!autofilter'] = { ref: `A1:F${problemas.length}` };
-            XLSX.utils.book_append_sheet(wb, wsP, 'POR REVISAR');
-
-            const filasA = [['Nombre en BANCOS', 'Movimientos', 'Filas BANCOS', 'Asociado automáticamente', 'Sugerencia 1', 'Sugerencia 2', 'Sugerencia 3']];
-            (r.pendientesAlias || []).forEach(pd => {
-                const sg = pd.sugerencias.map(x => `${x.nit} ${x.nombre} (${x.fuente}, ${Math.round(x.score * 100)}%${x.evidencia ? ', tiene recibo' : ''})`);
-                filasA.push([pd.nombre, pd.filas.length, pd.filas.join(', '), pd.auto ? `${pd.auto.nit} ${pd.auto.nombre}` : '', sg[0] || '', sg[1] || '', sg[2] || '']);
+            // ---------- Hoja 2: TNS (libro auxiliar) ----------
+            const filasT = r.contab.map(m => {
+                let color, estado, obs;
+                if (!(m.debe > 0)) {
+                    color = 'gris'; estado = 'EGRESO'; obs = 'Salida del banco; no se concilia.';
+                } else if (/^OK/.test(m.estado)) {
+                    color = 'verde'; estado = 'CUADRA';
+                    const b = r.bancos.find(x => x.fila === m.filaAsignada);
+                    obs = `Está en BANCOS fila ${m.filaAsignada}` + (b ? ` (${fechaCorta(b.fecha)}, ${b.terceroRelacionado || 'sin tercero'}, ${formatCurrency(b.valorBanco)})` : '') +
+                        (m.estado === 'OK - FECHA DIFERENTE' ? ' con otra fecha.' : '.');
+                } else if (m.estado === 'DIFERENCIA') {
+                    color = 'rojo'; estado = 'NO CUADRA';
+                    obs = `Asociado a BANCOS fila ${m.filaAsignada}, pero el valor del banco no cuadra.`;
+                } else {
+                    color = 'rojo'; estado = 'NO CUADRA';
+                    obs = m.observacion && m.observacion.startsWith('Posible')
+                        ? 'No está en BANCOS. ' + m.observacion
+                        : `No está en BANCOS: no hay movimiento del NIT ${m.nit} por ${formatCurrency(m.debe)}.`;
+                }
+                return { color, valores: [aFecha(m.fecha), m.nit, m.nombre, m.comprobante, m.detalle, m.debe || 0, m.haber || 0, estado, obs] };
             });
-            const wsA = XLSX.utils.aoa_to_sheet(filasA);
-            wsA['!cols'] = [40, 12, 20, 45, 55, 55, 55].map(w => ({ wch: w }));
-            XLSX.utils.book_append_sheet(wb, wsA, 'NOMBRES A ASOCIAR');
+            const ingT = filasT.filter(f => f.color !== 'gris');
+            const verdesT = ingT.filter(f => f.color === 'verde'), rojosT = ingT.filter(f => f.color === 'rojo');
+            const sumaT = l => l.reduce((t, f) => t + (Number(f.valores[5]) || 0), 0);
+            hoja('TNS', `Libro auxiliar TNS · ${info.cuenta || info.archivo}`,
+                ['Fecha', 'NIT', 'Tercero', 'Comprobante', 'Detalle', 'Debe', 'Haber', 'Estado', 'Observación'],
+                filasT, [12, 16, 38, 14, 50, 14, 12, 12, 70], [0], [5, 6],
+                [['Cuadran (verde)', sumaT(verdesT), `${verdesT.length} recibos`],
+                 ['No cuadran (rojo)', sumaT(rojosT), `${rojosT.length} recibos`],
+                 ['Total ingresos TNS', sumaT(ingT), `${ingT.length} recibos`]]);
             return wb;
         }
 
@@ -3063,7 +3149,9 @@
             // Copias limpias para poder repetir la conciliación.
             const movs = d.movimientos.map(m => ({ ...m, filaAsignada: 0, estado: '', observacion: '' }));
             const bancos = d.bancosTodos.map(x => ({ ...x }));
-            const r = conciliarBancosVsContabilidad(bancos, movs, allData.clientes || [], {
+            // Solo terceros reales de la hoja TERCEROS (sin los que se agregan desde la cartera de TNS).
+            const tercerosHoja = (allData.clientes || []).filter(c => !c.sinTerceros);
+            const r = conciliarBancosVsContabilidad(bancos, movs, tercerosHoja, {
                 pagos: allData.pagos || [],
                 alias: asociacionesGuardadas
             });
@@ -3096,7 +3184,7 @@
             const pend = (r.pendientesAlias || []).length;
             estadoConciliacion(pend
                 ? `Conciliación lista${descargar ? ' y descargada' : ''}. Hay ${pend} nombre(s) para asociar con su NIT; al guardarlos se reconcilia solo.`
-                : `Conciliación lista${descargar ? ' y descargada' : ''}. La hoja POR REVISAR tiene lo que no cuadra.`, 'ok');
+                : `Conciliación lista${descargar ? ' y descargada' : ''}. En el Excel, lo verde cuadra y lo rojo no, con su observación.`, 'ok');
             if (descargar) descargarConciliacion();
         }
 
@@ -3108,24 +3196,36 @@
         const btnGuardarAsociaciones = document.getElementById('btnGuardarAsociaciones');
 
         function pintarAsociaciones(pendientes) {
-            if (!pendientes.length) { asociarPanel.classList.add('hidden'); asociarLista.innerHTML = ''; return; }
+            asociarPanel.classList.remove('hidden');
+            if (!pendientes.length) {
+                asociarLista.innerHTML = '<div class="p-4 text-sm text-green-700">✅ No hay nombres para asociar: todos los nombres de BANCOS tienen NIT y sus movimientos cuadran con la contabilidad.</div>';
+                asociarLista._pendientes = [];
+                contarAsociaciones();
+                return;
+            }
             asociarLista.innerHTML = pendientes.map((pd, i) => {
-                const opciones = pd.sugerencias.map(sg =>
-                    `<option value="${escHtml(sg.nit)}" ${pd.auto && pd.auto.nit === sg.nit ? 'selected' : ''} data-evidencia="${sg.evidencia ? 1 : 0}">` +
-                    `${sg.evidencia ? '✅ ' : ''}${escHtml(sg.nit)} · ${escHtml(sg.nombre)} (${escHtml(sg.fuente)}, ${Math.round(sg.score * 100)}%)</option>`).join('');
+                const opciones = pd.sugerencias.map(sg => {
+                    const seguro = sg.evidencia && !sg.porValor && sg.score >= 0.6;
+                    const etiqueta = sg.porValor
+                        ? `⚠️ ${escHtml(sg.nit)} · ${escHtml(sg.nombre)} (TERCEROS; solo coincide valor y fecha con ${escHtml(sg.fuente)}, el nombre es otro)`
+                        : `${sg.evidencia ? '✅ ' : ''}${escHtml(sg.nit)} · ${escHtml(sg.nombre)} (TERCEROS, nombre ${Math.round(sg.score * 100)}% parecido${sg.evidencia ? ', tiene recibo' : ''})`;
+                    return `<option value="${escHtml(sg.nit)}" ${pd.auto && pd.auto.nit === sg.nit ? 'selected' : ''} data-seguro="${seguro ? 1 : 0}">${etiqueta}</option>`;
+                }).join('');
                 return `<div class="p-3 asociar-fila" data-nombre="${escHtml(concNormNombre(pd.nombre))}">
                     <div class="flex justify-between gap-2">
                         <div class="font-semibold text-gray-900">${escHtml(pd.nombre)}</div>
                         <div class="text-xs text-gray-500 whitespace-nowrap">${pd.filas.length} mov. · fila${pd.filas.length > 1 ? 's' : ''} ${escHtml(pd.filas.slice(0, 6).join(', '))}${pd.filas.length > 6 ? '…' : ''}</div>
                     </div>
                     ${pd.auto ? '<div class="text-xs text-green-700">Asociado automáticamente; confírmalo para guardarlo.</div>' : ''}
+                    ${pd.revisar ? `<div class="text-xs text-red-700">Hoy se asocia al NIT ${escHtml(pd.nitActual)}, pero no cuadra con la contabilidad. Si el nombre está incompleto, escoge el tercero correcto.</div>` : ''}
+                    ${!pd.auto && !pd.revisar ? '<div class="text-xs text-amber-700">No se encontró en TERCEROS.</div>' : ''}
                     <div class="flex flex-wrap gap-2 mt-1">
                         <select class="asociar-select flex-1 min-w-[240px] border border-gray-300 rounded-md px-2 py-1 text-xs" data-i="${i}">
                             <option value="">— No asociar por ahora —</option>
                             ${opciones}
-                            <option value="__otro__">Escribir otro NIT…</option>
+                            <option value="__otro__">Escribir NIT (si son varios terceros, sepáralos con coma)…</option>
                         </select>
-                        <input type="text" class="asociar-otro hidden border border-gray-300 rounded-md px-2 py-1 text-xs w-40" placeholder="NIT, ej: 900123456-7">
+                        <input type="text" class="asociar-otro hidden border border-gray-300 rounded-md px-2 py-1 text-xs w-40" placeholder="NIT, ej: 900123456-7 o 2 NIT con coma">
                     </div>
                 </div>`;
             }).join('');
@@ -3142,17 +3242,81 @@
             contarAsociaciones();
         }
 
+        // Nombre completo del tercero según TERCEROS (por NIT, con o sin dígito de verificación).
+        function nombreCompletoPorNit(nit) {
+            const k = concNormNit(nit), base = k.split('-')[0];
+            const clientes = (allData.clientes || []).filter(c => !c.sinTerceros);
+            const exacto = clientes.find(c => concNormNit(c.nit) === k);
+            if (exacto) return exacto.nombre;
+            const porBase = clientes.filter(c => concNormNit(c.nit).split('-')[0] === base);
+            return porBase.length === 1 ? porBase[0].nombre : '';
+        }
+
+        // Deshacer la última corrección de nombres hecha en BANCOS.
+        function mostrarDeshacerCorreccion(lote, cantidad) {
+            let caja = document.getElementById('deshacerCorreccionBox');
+            if (!caja) {
+                caja = document.createElement('div');
+                caja.id = 'deshacerCorreccionBox';
+                caja.className = 'p-3 border border-red-200 bg-red-50 rounded-lg text-sm flex flex-wrap items-center gap-3';
+                asociarPanel.parentNode.insertBefore(caja, asociarPanel);
+            }
+            caja.innerHTML = `<span class="flex-1">Se corrigieron <b>${cantidad}</b> nombre(s) en BANCOS.</span>
+                <button type="button" class="bg-white border border-red-300 text-red-700 rounded-md px-3 py-1.5 font-semibold hover:bg-red-100">↩ Deshacer esta corrección</button>`;
+            caja.querySelector('button').addEventListener('click', () => deshacerCorreccionBancos(lote, caja));
+        }
+
+        async function deshacerCorreccionBancos(lote, caja) {
+            if (!confirm('¿Devolver los nombres de BANCOS a como estaban antes de esta corrección?')) return;
+            const btn = caja.querySelector('button');
+            btn.disabled = true; btn.textContent = 'Deshaciendo...';
+            try {
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'deshacerCorreccionBancos', lote })
+                });
+                const data = await res.json();
+                if (data.status !== 'success') throw new Error(data.message || 'No se pudo deshacer.');
+                (data.restauradas || []).forEach(c => {
+                    const b = conciliacionDatos && conciliacionDatos.bancosTodos.find(x => x.fila === c.fila);
+                    if (b) b.terceroRelacionado = c.terceroRelacionado;
+                });
+                caja.innerHTML = `<span>↩ Se devolvieron ${(data.restauradas || []).length} nombre(s) de BANCOS a como estaban.${(data.omitidas || []).length ? ` ${data.omitidas.length} fila(s) no se tocaron porque cambiaron después.` : ''}</span>`;
+                showToast('Corrección deshecha.', 'success');
+                if (conciliacionDatos) ejecutarConciliacion(false);
+            } catch (err) {
+                console.error(err);
+                showToast('No se pudo deshacer: ' + (err.message || err));
+                btn.disabled = false; btn.textContent = '↩ Deshacer esta corrección';
+            }
+        }
+
+        let faltanEnTerceros = [];
         function leerAsociacionesElegidas() {
             const pendientes = asociarLista._pendientes || [];
             const elegidas = [];
+            faltanEnTerceros = [];
             asociarLista.querySelectorAll('.asociar-fila').forEach((fila, i) => {
                 const sel = fila.querySelector('.asociar-select');
                 let nit = sel.value;
                 if (nit === '__otro__') nit = fila.querySelector('.asociar-otro').value.trim();
                 if (!nit) return;
                 const pd = pendientes[Number(sel.dataset.i)];
-                const sg = pd.sugerencias.find(x => x.nit === nit);
-                elegidas.push({ nombre: pd.nombre, nit, nombreTercero: sg ? sg.nombre : '' });
+                const nits = nit.split(/[,;]/).map(x => x.trim()).filter(Boolean);
+                const nombres = nits.map(n => {
+                    return nombreCompletoPorNit(n);
+                });
+                if (!nombres.every(Boolean)) {
+                    faltanEnTerceros.push(`${pd.nombre} → ${nits.filter((n, j) => !nombres[j]).join(', ')}`);
+                    return;
+                }
+                elegidas.push({
+                    nombre: pd.nombre,
+                    nit: nits.join(','),
+                    nombreTercero: nombres.every(Boolean) ? nombres.join(' | ') : '',
+                    filas: pd.filas
+                });
             });
             return elegidas;
         }
@@ -3170,13 +3334,17 @@
         document.getElementById('btnAceptarSugerencias').addEventListener('click', () => {
             asociarLista.querySelectorAll('.asociar-select').forEach(sel => {
                 if (sel.value) return;
-                const op = [...sel.options].find(o => o.dataset.evidencia === '1');
+                const op = [...sel.options].find(o => o.dataset.seguro === '1');
                 if (op) sel.value = op.value;
             });
             contarAsociaciones();
         });
         btnGuardarAsociaciones.addEventListener('click', async () => {
             const elegidas = leerAsociacionesElegidas();
+            if (faltanEnTerceros.length) {
+                alert('Estos NIT no están en la hoja TERCEROS, así que no se pueden asociar (agrégalos primero en TERCEROS):\n\n' + faltanEnTerceros.slice(0, 15).join('\n'));
+                if (!elegidas.length) return;
+            }
             if (!elegidas.length) return;
             btnGuardarAsociaciones.disabled = true;
             const textoOriginal = btnGuardarAsociaciones.textContent;
@@ -3190,11 +3358,45 @@
                 const data = await res.json();
                 if (data.status !== 'success') throw new Error(data.message || 'No se pudieron guardar las asociaciones.');
                 asociacionesGuardadas = data.alias || asociacionesGuardadas.concat(elegidas);
-                showToast(`${elegidas.length} asociación(es) guardada(s).`, 'success');
+                let mensaje = `${elegidas.length} asociación(es) guardada(s).`;
+
+                if (document.getElementById('asociarCorregirBancos').checked) {
+                    const cambios = [];
+                    elegidas.forEach(el => {
+                        if (!el.nombreTercero || concNormNombre(el.nombreTercero) === concNormNombre(el.nombre)) return;
+                        el.filas.forEach(fila => cambios.push({ fila, anterior: el.nombre, nuevo: el.nombreTercero }));
+                    });
+                    if (cambios.length) {
+                        const ejemplos = [...new Map(cambios.map(c => [c.anterior, c])).values()].slice(0, 8)
+                            .map(c => `• ${c.anterior}  →  ${c.nuevo}`).join('\n');
+                        if (!confirm(`Se cambiarán ${cambios.length} nombre(s) en la hoja BANCOS. Revisa que estén bien:\n\n${ejemplos}${cambios.length > 8 ? '\n…' : ''}\n\n¿Continuar?`)) {
+                            showToast(mensaje + ' No se cambió BANCOS.', 'success');
+                            ejecutarConciliacion(false);
+                            return;
+                        }
+                        btnGuardarAsociaciones.textContent = 'Corrigiendo nombres en BANCOS...';
+                        const resB = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'corregirNombresBancos', cambios })
+                        });
+                        const dataB = await resB.json();
+                        if (dataB.status !== 'success') throw new Error(dataB.message || 'No se pudieron corregir los nombres en BANCOS.');
+                        // Reflejar el cambio en los datos ya cargados para reconciliar sin volver a consultar.
+                        (dataB.corregidas || []).forEach(c => {
+                            const b = conciliacionDatos.bancosTodos.find(x => x.fila === c.fila);
+                            if (b) b.terceroRelacionado = c.terceroRelacionado;
+                        });
+                        mensaje += ` ${dataB.corregidas ? dataB.corregidas.length : 0} movimiento(s) corregido(s) en BANCOS.`;
+                        if (dataB.lote) mostrarDeshacerCorreccion(dataB.lote, (dataB.corregidas || []).length);
+                    }
+                }
+                showToast(mensaje, 'success');
                 ejecutarConciliacion(true);
             } catch (err) {
                 console.error(err);
                 estadoConciliacion('No se pudieron guardar las asociaciones: ' + (err.message || err), 'error');
+                showToast('No se pudieron guardar: ' + (err.message || err));
             } finally {
                 btnGuardarAsociaciones.textContent = textoOriginal;
                 contarAsociaciones();
