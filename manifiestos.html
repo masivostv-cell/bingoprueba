@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sistema de Manifiestos</title>
+<!-- Versión de la app: v18. Que el navegador pida siempre la última copia
+     (en GitHub Pages a veces muestra la anterior por la caché). -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Sistema de Manifiestos v18</title>
 
 <!-- << v7 >> Para que al agregarla a la pantalla de inicio se comporte como
      una aplicación y no como una página dentro del navegador. -->
@@ -265,6 +270,8 @@ tbody tr:nth-child(even){background:#f8fafc;}
 .cert-anulado td{color:#94a3b8;text-decoration:line-through;}
 .aviso-precios{padding:8px 12px;border-radius:8px;font-size:13px;background:#fef3c7;color:#92400e;}
 .aviso-precios.ok{background:#e0f2fe;color:#075985;}
+.version-app{display:block;margin-top:6px;font-size:11px;opacity:.85;}
+.version-app.mal{color:#fde68a;font-weight:bold;opacity:1;}
 .desc-vacio{padding:16px;border:2px dashed #cbd5e1;border-radius:10px;color:#64748b;text-align:center;}
 
 /* ---------- Carrito de recolección (nuevo manifiesto) ---------- */
@@ -940,6 +947,7 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
       <span class="quien" id="sesionNombre"></span>
       <span class="perfil" id="sesionPerfil"></span>
       <button type="button" onclick="salir()">Salir</button>
+      <span class="version-app" id="versionApp" title="Versión de la app y del Apps Script"></span>
     </div>
 
     <!-- Acceso directo a la hoja de cálculo: solo administración -->
@@ -1607,6 +1615,10 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 <script>
 "use strict";
 
+// << v18 >> Versión de la app (se ve en el menú) y la mínima del Apps Script
+const VERSION_APP = "v18";
+const VERSION_SERVIDOR_MINIMA = 17;
+
 const API = "https://script.google.com/macros/s/AKfycbxcJGDPJMlrKZttCGNFchABjM9PZj5pacnDwT9EXJuXfkv-JO0vqw9y6hhMg9ZGKbHC/exec";
 
 const CAMPOS_CANTIDAD = [
@@ -1891,7 +1903,29 @@ function aplicarRol(){
 }
 
 /* Arranque de la aplicación una vez hay sesión. */
+// << v18 >> Muestra en el menú la versión de la app y la del Apps Script, y
+// avisa si el Apps Script está viejo (es la causa de casi todos los errores).
+function revisarVersiones(){
+  const el = $("versionApp");
+  if(!el) return;
+  el.textContent = "App " + VERSION_APP + " · servidor …";
+  el.classList.remove("mal");
+  fetch(API, { cache:"no-store" })
+    .then(r => r.json())
+    .then(r => {
+      const v = String((r && r.version) || "?");
+      const n = Number(v.replace(/[^0-9]/g, "")) || 0;
+      el.textContent = "App " + VERSION_APP + " · servidor " + v;
+      if(n && n < VERSION_SERVIDOR_MINIMA){
+        el.classList.add("mal");
+        el.textContent += " ⚠️ actualice el Apps Script a v" + VERSION_SERVIDOR_MINIMA;
+      }
+    })
+    .catch(() => { el.textContent = "App " + VERSION_APP + " · servidor sin respuesta"; el.classList.add("mal"); });
+}
+
 function arrancarApp(){
+  revisarVersiones();     // << v18 >>
   aplicarRol();
   mostrar("nuevo");
   cargarClientes(false);
@@ -4432,7 +4466,7 @@ function explicarErrorV11(e){
   const m = String((e && e.message) || e || "");
   if(/failed to fetch|networkerror|load failed|fallo de red/i.test(m)){
     return navigator.onLine
-      ? "el servidor no respondió. Abra " + API + " en el navegador: debe decir versión v11. " +
+      ? "el servidor no respondió. Abra " + API + " en el navegador: debe decir versión v" + VERSION_SERVIDOR_MINIMA + " o mayor. " +
         "Si dice otra versión, falta publicar (Implementar → Administrar implementaciones → Nueva versión); " +
         "si sale una página de error, el código del Apps Script quedó con un error al pegarlo."
       : "no hay conexión a internet.";
