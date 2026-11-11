@@ -4772,11 +4772,11 @@
 
                 detalleSheet = `paga mes${mesesPagados.length > 1 ? 'es' : ''} de ${mesesDetalle}`;
                 if (detallePorFactura) detalleSheet += ` | ${detallePorFactura}`;
-                detalleSheet += ` | ${fechaParaTexto} ${medioDetalle} JP`;
+                detalleSheet += ` | ${fechaParaTexto} ${medioDetalle} EB`;
             } else if (conceptoMascota !== null) {
-                detalleSheet = `pago mascota: ${conceptoMascota} | ${fechaParaTexto} ${medioDetalle} JP`;
+                detalleSheet = `pago mascota: ${conceptoMascota} | ${fechaParaTexto} ${medioDetalle} EB`;
             } else {
-                detalleSheet = `anticipo ${fechaParaTexto} ${medioDetalle} JP`;
+                detalleSheet = `anticipo ${fechaParaTexto} ${medioDetalle} EB`;
             }
             const partesRet = [];
             if (rfValor > 0) partesRet.push(`retención ${fmtPorc(rfPorc)}% ${formatCurrency(rfValor)}`);
