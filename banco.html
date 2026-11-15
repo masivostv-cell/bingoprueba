@@ -137,6 +137,8 @@
   .mostrar .badge.todo{background:var(--ok-fondo);color:var(--ok)}
   .m-valor{font-weight:800;font-size:2rem;line-height:1.1;color:var(--oro);font-variant-numeric:tabular-nums}
   .m-ejes{display:flex;justify-content:space-between;color:var(--suave);font-size:.85rem;margin-top:-4px}
+  .m-form{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+  .m-form button{min-height:52px}
   #m-rango{width:100%;padding:0;border:none;background:none;accent-color:var(--ladrillo);height:34px}
   .foto-grande{overflow:auto;max-height:68vh;border-radius:10px;background:#000;cursor:zoom-in}
   .foto-grande img{display:block;width:100%;height:auto}
@@ -190,6 +192,12 @@
       <p id="m-valor" class="m-valor">$ 0</p>
       <input id="m-rango" type="range" min="0" max="0" step="1" value="0" aria-label="Cuánto mostrar en pantalla">
       <div class="m-ejes"><span>$ 0</span><span id="m-max">Hasta el momento</span></div>
+      <form id="m-form" class="m-form" autocomplete="off">
+        <label>O escribe el valor exacto
+          <div class="monto-wrap"><span>$</span><input id="m-input" inputmode="numeric" placeholder="51.210.000"></div>
+        </label>
+        <button type="submit" class="prim">Mostrar</button>
+      </form>
       <div class="acciones">
         <button type="button" data-ajuste="-500000">− 500 mil</button>
         <button type="button" data-ajuste="500000">+ 500 mil</button>
@@ -992,6 +1000,7 @@ function pintarMostrar(valorTemporal) {
   if (!arrastrando) rango.value = todo ? rango.max : v;
   $("#m-valor").textContent = cop(v);
   $("#m-max").textContent = "Hasta el momento: " + cop(real);
+  $("#m-input").placeholder = miles(v) || "0";
   const modo = $("#m-modo");
   modo.textContent = todo ? "En vivo" : "Parcial";
   modo.classList.toggle("todo", todo);
@@ -1019,6 +1028,20 @@ document.querySelectorAll("[data-ajuste]").forEach(b => b.addEventListener("clic
   guardarMostrar(v >= real ? { mostrarTodo: true } : { mostrarTodo: false, mostrarHasta: v });
 }));
 $("#m-todo").addEventListener("click", () => guardarMostrar({ mostrarTodo: true }));
+$("#m-input").addEventListener("input", e => e.target.value = miles(num(e.target.value)));
+$("#m-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = num($("#m-input").value), real = realAprobado();
+  if (!$("#m-input").value.trim()) { toast("Escribe el valor que quieres mostrar."); return; }
+  if (v >= real) {
+    if (v > real) toast(`Lo aprobado hasta ahora es ${cop(real)}. La pantalla mostrará eso y quedará en vivo.`);
+    await guardarMostrar({ mostrarTodo: true });
+  } else {
+    await guardarMostrar({ mostrarTodo: false, mostrarHasta: v });
+    toast(`La pantalla mostrará ${cop(v)}. Refréscala para ver el conteo.`);
+  }
+  $("#m-input").value = ""; $("#m-input").blur();
+});
 
 /* ---------- Ver el comprobante de un registro ---------- */
 // La foto se descarga solo cuando el banco la abre (y queda en memoria para no volver a leerla).

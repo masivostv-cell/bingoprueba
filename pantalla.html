@@ -245,7 +245,7 @@
   <header class="top">
     <div class="titulos">
       <h1 id="titulo">Donatón</h1>
-      <p id="subtitulo" class="sub">Construyendo juntos la casa de Dios</p>
+      <p id="subtitulo" class="sub">Construyamos juntos la casa del señor</p>
     </div>
   </header>
 
@@ -253,8 +253,8 @@
     <img id="insignia" class="insignia" alt="Imagen de la parroquia" hidden>
     <p class="meta">Nuestra meta: <span id="meta">$ 0</span></p>
     <div class="barra"><div id="barra" class="barra-fill"></div></div>
-    <p class="pct"><span id="pct">0</span>% de la obra</p>
-    <p id="gracias" class="gracias">¡Gracias por sembrar en la casa de Dios!</p>
+    <p class="pct"><span id="pct">0</span>% de la Meta</p>
+    <p id="gracias" class="gracias">¡Gracias por aportar para la construccion de la casa del señor!</p>
   </section>
 
   <section class="obra">
@@ -271,7 +271,7 @@
   </section>
 
   <section class="muro" aria-label="Donantes">
-    <p class="etq">Gracias a quienes siembran</p>
+    <p class="etq">Gracias a quienes aportan</p>
     <div class="muro-ventana"><div id="muro-pista" class="muro-pista"></div></div>
   </section>
 
@@ -718,7 +718,7 @@ function celebrarFinal(total) {
     $("#gracias").classList.add("on");
     return;
   }
-  $("#gracias").textContent = "¡Gracias por sembrar en la casa de Dios!";
+  $("#gracias").textContent = "¡Gracias por construir en la casa del Señor!";
   odo.classList.add("final");
   setTimeout(() => odo.classList.add("quieto"), 1400);
   $("#halo").classList.add("on");
