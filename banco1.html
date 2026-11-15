@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Donatón | Banco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fondo:#F6F0E7; --superficie:#FFFFFF; --tinta:#2A1A17; --suave:#7A5E4A;
+    --linea:#E6D9C7; --ladrillo:#8E2A2A; --ladrillo-txt:#FFFFFF; --oro:#8A5F00; --error:#B3261E;
+    --ok:#1E7A46; --ok-fondo:#E2F4EA; --pend:#8A5F00; --pend-fondo:#FBF1D6; --rech:#B3261E; --rech-fondo:#FBE4E2;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --fondo:#1A1211; --superficie:#2A1E1C; --tinta:#F3E6D0; --suave:#CDB898;
+      --linea:#4A3834; --ladrillo:#A83A38; --oro:#DDB86E; --error:#FF9C8A;
+      --ok:#8FE0B0; --ok-fondo:#1F4A3A; --pend:#DDB86E; --pend-fondo:#4A4128; --rech:#FF9C8A; --rech-fondo:#4E2C33;
+    }
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--fondo);color:var(--tinta);font-family:"Alegreya Sans","Trebuchet MS",sans-serif;font-size:17px;line-height:1.4}
+  .app{max-width:640px;margin:0 auto;padding:20px 16px 120px;display:flex;flex-direction:column;gap:16px}
+  .col{display:flex;flex-direction:column;gap:16px}
+  h1{font-family:"Alegreya",Georgia,serif;font-weight:800;font-size:1.9rem;line-height:1.1}
+  h2{font-size:1.15rem;font-weight:700}
+  .panel{background:var(--superficie);border:1px solid var(--linea);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+  label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:.95rem}
+  small,.nota{font-weight:400;color:var(--suave);font-size:.9rem}
+  input{width:100%;font:inherit;font-weight:400;color:var(--tinta);background:var(--fondo);border:1.5px solid var(--linea);border-radius:10px;padding:11px 13px}
+  input:focus-visible,button:focus-visible{outline:3px solid var(--oro);outline-offset:2px}
+  button{font:inherit;font-weight:700;border-radius:10px;padding:10px 14px;cursor:pointer;border:1.5px solid var(--linea);background:var(--superficie);color:var(--tinta)}
+  button:disabled{opacity:.6;cursor:wait}
+  .prim{background:var(--ladrillo);border-color:var(--ladrillo);color:var(--ladrillo-txt)}
+  .grande{font-size:1.1rem;padding:14px}
+  .peligro{color:var(--error)}
+  .barra{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .barra p{color:var(--suave);font-size:.9rem}
+  .error{color:var(--error);font-size:.95rem}
+
+  .cifras{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .cifra{background:var(--superficie);border:1px solid var(--linea);border-radius:14px;padding:14px}
+  .cifra p:first-child{color:var(--suave);font-size:.9rem}
+  .cifra .n{font-weight:800;font-size:1.6rem;font-variant-numeric:tabular-nums;color:var(--oro);line-height:1.15}
+  .cifra .s{font-size:.9rem;color:var(--suave)}
+
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+  .tabs button{white-space:nowrap;border-radius:999px;padding:8px 14px;font-size:.95rem}
+  .tabs button[aria-selected="true"]{background:var(--tinta);color:var(--fondo);border-color:var(--tinta)}
+
+  .monto-wrap{display:flex;align-items:center;gap:6px;border:1.5px solid var(--linea);border-radius:10px;background:var(--fondo);padding:0 13px}
+  .monto-wrap:focus-within{outline:3px solid var(--oro);outline-offset:2px}
+  .monto-wrap span{font-size:1.5rem;font-weight:800;color:var(--suave)}
+  .monto-wrap input{border:none;background:transparent;font-size:1.6rem;font-weight:800;padding:8px 0;font-variant-numeric:tabular-nums}
+  .monto-wrap input:focus-visible{outline:none}
+  fieldset{border:none;padding:0;display:flex;flex-direction:column;gap:6px}
+  legend{font-weight:700;font-size:.95rem;margin-bottom:6px}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .seg label{flex-direction:row;align-items:center;gap:8px;border:1.5px solid var(--linea);border-radius:10px;padding:11px 13px;font-weight:700;cursor:pointer}
+  .seg label:has(input:checked){border-color:var(--ladrillo);background:color-mix(in srgb, var(--ladrillo) 12%, transparent)}
+  .seg input{width:auto;accent-color:var(--ladrillo)}
+  .campos{display:flex;flex-direction:column;gap:12px}
+
+  .lista{list-style:none;padding:0;display:flex;flex-direction:column}
+  .reg{padding:14px 0;border-top:1px solid var(--linea);display:flex;flex-direction:column;gap:4px}
+  .reg:first-child{border-top:none;padding-top:0}
+  .reg-top{display:flex;align-items:baseline;gap:10px}
+  .reg-top .nom{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .reg-top .val{font-weight:800;font-variant-numeric:tabular-nums}
+  .det{color:var(--suave);font-size:.9rem}
+  .badge{font-size:.78rem;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .badge.pendiente{color:var(--pend);background:var(--pend-fondo)}
+  .badge.aprobada{color:var(--ok);background:var(--ok-fondo)}
+  .badge.rechazada{color:var(--rech);background:var(--rech-fondo)}
+  .motivo{color:var(--rech);font-size:.9rem}
+  .acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .acciones button{padding:7px 12px;font-size:.9rem}
+  .vacio{color:var(--suave);font-style:italic}
+
+  dialog{border:1px solid var(--linea);border-radius:16px;background:var(--superficie);color:var(--tinta);
+    width:min(560px,calc(100% - 24px));max-height:92vh;padding:20px}
+  dialog::backdrop{background:rgba(10,12,30,.55)}
+  .fila-botones{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);width:min(520px,calc(100% - 32px));
+    background:var(--tinta);color:var(--fondo);border-radius:12px;padding:12px 16px;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:10}
+
+  /* ---------- Celular ---------- */
+  :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  input,select,textarea{font-size:max(16px,1em)}            /* evita que el iPhone haga zoom al escribir */
+  input[type="datetime-local"]{min-height:48px;display:block;text-align:left}
+  input::-webkit-date-and-time-value{text-align:left}
+  button{min-height:44px;touch-action:manipulation}
+  .tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--fondo);padding:8px 0;margin:-8px 0;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .toast{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  .reg-top{flex-wrap:wrap}
+  @media (max-width:560px){
+    body{font-size:16px}
+    .app{padding:14px 12px 110px;gap:14px}
+    .col{gap:14px}
+    h1{font-size:1.6rem}
+    .panel{padding:14px;border-radius:12px}
+    .cifras{gap:8px}
+    .cifra{padding:12px}
+    .cifra .n{font-size:1.3rem}
+    .reg-top .nom{flex-basis:100%;white-space:normal;order:0}
+    .reg-top .badge{order:1}
+    .reg-top .val{order:2;margin-left:auto;font-size:1.1rem}
+    .acciones button{flex:1 1 auto}
+    .fila-botones button{flex:1 1 100%}
+    .seg label{padding:12px 10px}
+    .monto-wrap input{font-size:1.5rem}
+    dialog{width:100%;max-width:100%;height:100dvh;max-height:100dvh;margin:0;border:none;border-radius:0;
+      padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(16px + env(safe-area-inset-bottom,0px))}
+    dialog .fila-botones{position:sticky;bottom:0;background:var(--superficie);padding-top:10px}
+  }
+  @media (max-width:340px){ .cifras{grid-template-columns:1fr} }
+  .img-caja{display:grid;place-items:center;min-height:120px;border-radius:12px;padding:12px;
+    background:repeating-conic-gradient(var(--linea) 0 25%, transparent 0 50%) 0 0/18px 18px}
+  .img-caja img{max-height:260px;max-width:100%}
+  #pat-vista{background:#FBF6EE;padding:10px 14px;border-radius:10px;max-height:140px}
+  .pat-fila{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--linea)}
+  .pat-fila:first-child{border-top:none;padding-top:0}
+  .pat-logo{flex:none;width:96px;height:56px;display:grid;place-items:center;background:#FBF6EE;border-radius:8px;padding:6px}
+  .pat-logo img{max-width:100%;max-height:100%}
+  .pat-fila .nom{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+  .pat-fila .acciones{margin:0;flex:none}
+  .pat-fila .acciones button{min-width:44px;flex:none}
+  .check{flex-direction:row;align-items:center;gap:10px;font-weight:500}
+  .check input{width:22px;height:22px;accent-color:var(--ladrillo)}
+  .mostrar .barra h2{margin:0}
+  .mostrar .badge{background:var(--pend-fondo);color:var(--pend)}
+  .mostrar .badge.todo{background:var(--ok-fondo);color:var(--ok)}
+  .m-valor{font-weight:800;font-size:2rem;line-height:1.1;color:var(--oro);font-variant-numeric:tabular-nums}
+  .m-ejes{display:flex;justify-content:space-between;color:var(--suave);font-size:.85rem;margin-top:-4px}
+  .m-form{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+  .m-form button{min-height:52px}
+  #m-rango{width:100%;padding:0;border:none;background:none;accent-color:var(--ladrillo);height:34px}
+  .foto-grande{overflow:auto;max-height:68vh;border-radius:10px;background:#000;cursor:zoom-in}
+  .foto-grande img{display:block;width:100%;height:auto}
+  .foto-grande.zoom{cursor:zoom-out}
+  .foto-grande.zoom img{width:auto;max-width:none}
+  .boton-link{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:10px;border:1.5px solid var(--linea);
+    color:var(--tinta);text-decoration:none;font-weight:700}
+  .con-foto{color:var(--ok);font-weight:700}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<main class="app">
+
+  <section id="login" class="panel" hidden>
+    <h1>Banco de la Donatón</h1>
+    <p>Caja principal. Entra con la cuenta del banco.</p>
+    <form id="f-login" class="col">
+      <label>Correo<input id="correo" type="email" autocomplete="username" value="admin@banco.com" required></label>
+      <label>Contraseña<input id="clave" type="password" autocomplete="current-password" required></label>
+      <button class="prim grande" type="submit" id="entrar">Entrar</button>
+      <p id="login-error" class="error" hidden></p>
+    </form>
+  </section>
+
+  <section id="noadmin" class="panel" hidden>
+    <h1>Solo para el banco</h1>
+    <p>Esta página es de la caja principal. Si eres cajero, entra por <b>cajero.html</b>.</p>
+    <button type="button" class="salir">Salir</button>
+  </section>
+
+  <section id="caja" class="col" hidden>
+    <header class="barra">
+      <div><h1>Banco</h1><p id="usuario"></p></div>
+      <button type="button" class="salir">Salir</button>
+    </header>
+
+    <div class="cifras">
+      <div class="cifra"><p>Recaudado real (aprobado)</p><p id="c-total" class="n">$ 0</p><p id="c-meta" class="s"></p></div>
+      <div class="cifra"><p>Por aprobar</p><p id="c-pend" class="n">$ 0</p><p id="c-pend-n" class="s"></p></div>
+      <div class="cifra"><p>💵 Recibido en efectivo</p><p id="c-efectivo" class="n">$ 0</p><p id="c-efectivo-n" class="s"></p></div>
+      <div class="cifra"><p>🏦 Recibido en bancos</p><p id="c-bancos" class="n">$ 0</p><p id="c-bancos-n" class="s"></p></div>
+    </div>
+    <button type="button" id="exportar-arriba" class="prim">📊 Exportar a Excel lo recibido</button>
+
+    <section class="panel mostrar">
+      <div class="barra">
+        <h2>Lo que se ve en pantalla</h2>
+        <span id="m-modo" class="badge"></span>
+      </div>
+      <p id="m-valor" class="m-valor">$ 0</p>
+      <input id="m-rango" type="range" min="0" max="0" step="1" value="0" aria-label="Cuánto mostrar en pantalla">
+      <div class="m-ejes"><span>$ 0</span><span id="m-max">Hasta el momento</span></div>
+      <form id="m-form" class="m-form" autocomplete="off">
+        <label>O escribe el valor exacto
+          <div class="monto-wrap"><span>$</span><input id="m-input" inputmode="numeric" placeholder="51.210.000"></div>
+        </label>
+        <button type="submit" class="prim">Mostrar</button>
+      </form>
+      <div class="acciones">
+        <button type="button" data-ajuste="-500000">− 500 mil</button>
+        <button type="button" data-ajuste="500000">+ 500 mil</button>
+        <button type="button" data-ajuste="1000000">+ 1 millón</button>
+        <button type="button" id="m-todo" class="prim">Hasta el momento</button>
+      </div>
+      <p id="m-ayuda" class="nota"></p>
+      <p id="pub-estado" class="nota"></p>
+    </section>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="pendiente" aria-selected="true">Por aprobar <span id="n-pendiente"></span></button>
+      <button role="tab" data-tab="aprobada" aria-selected="false">Aprobadas</button>
+      <button role="tab" data-tab="rechazada" aria-selected="false">Rechazadas</button>
+      <button role="tab" data-tab="registrar" aria-selected="false">Registrar</button>
+      <button role="tab" data-tab="cajeros" aria-selected="false">Cajeros</button>
+      <button role="tab" data-tab="patrocinadores" aria-selected="false">Patrocinadores</button>
+      <button role="tab" data-tab="ajustes" aria-selected="false">Ajustes</button>
+    </nav>
+
+    <section class="panel" data-panel="lista">
+      <h2 id="titulo-lista">Por aprobar</h2>
+      <ul id="lista" class="lista"></ul>
+    </section>
+
+    <form id="f-directo" class="panel" data-panel="registrar" hidden autocomplete="off">
+      <h2>Registrar en la caja principal</h2>
+      <p class="nota">Lo que registra el banco queda aprobado de una vez y suma al conteo.</p>
+      <div class="campos"></div>
+      <button type="submit" class="prim grande">Registrar y aprobar</button>
+    </form>
+
+    <section class="col" data-panel="cajeros" hidden>
+      <form id="f-cajero" class="panel" autocomplete="off">
+        <h2>Agregar cajero</h2>
+        <p class="nota">Se crea su usuario y queda habilitado para enviar registros desde cajero.html.</p>
+        <label>Nombre<input name="nombre" maxlength="40" required></label>
+        <label>Correo<input name="correo" type="email" required></label>
+        <label>Contraseña <small>(mínimo 6 caracteres; entrégasela al cajero)</small><input name="clave" type="text" minlength="6" required></label>
+        <button type="submit" class="prim">Agregar cajero</button>
+      </form>
+      <section class="panel">
+        <h2>Cajeros habilitados</h2>
+        <ul id="lista-cajeros" class="lista"></ul>
+      </section>
+    </section>
+
+    <section class="col" data-panel="patrocinadores" hidden>
+      <form id="f-pat" class="panel" autocomplete="off">
+        <h2>Agregar patrocinador</h2>
+        <p class="nota">El logo se reduce y se guarda como texto (base64) en Firebase. En pantalla pasa de lado a lado sobre una tarjeta clara.</p>
+        <label>Nombre del patrocinador <small>(opcional)</small><input name="nombre" maxlength="50"></label>
+        <label>Logo<input id="pat-archivo" type="file" accept="image/*"></label>
+        <div class="img-caja"><img id="pat-vista" alt="Vista previa del logo" hidden><p id="pat-vacia" class="vacio">Elige un logo para ver cómo queda.</p></div>
+        <button type="submit" class="prim" id="pat-agregar" disabled>Agregar patrocinador</button>
+      </form>
+      <section class="panel">
+        <h2>Patrocinadores en pantalla</h2>
+        <p id="pat-peso" class="nota"></p>
+        <ul id="lista-pat" class="lista"></ul>
+      </section>
+    </section>
+
+    <section class="col" data-panel="ajustes" hidden>
+      <form id="f-ajustes" class="panel">
+        <h2>Pantalla</h2>
+        <label>Título en pantalla<input id="titulo-in" maxlength="40" placeholder="Donatón"></label>
+        <label>Frase debajo del título<input id="subtitulo-in" maxlength="70" placeholder="Construyendo juntos la casa de Dios"></label>
+        <label>Meta a recaudar<input id="meta-in" inputmode="numeric" placeholder="50.000.000"></label>
+        <button type="submit">Guardar ajustes</button>
+      </form>
+      <section class="panel">
+        <h2>Imagen de la parroquia</h2>
+        <p class="nota">Sale junto al título y en grande mientras se cuentan las ofrendas.</p>
+        <div class="img-caja"><img id="img-vista" alt="Imagen actual de la parroquia" hidden><p id="img-vacia" class="vacio">Todavía no hay imagen.</p></div>
+        <label>Elegir imagen<input id="img-archivo" type="file" accept="image/*"></label>
+        <label class="check"><input id="img-ovalo" type="checkbox" checked> Recortar en óvalo y quitar el fondo negro</label>
+        <div class="acciones">
+          <button type="button" id="img-subir" class="prim" disabled>Subir imagen</button>
+          <button type="button" id="img-quitar" class="peligro">Quitar imagen</button>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Herramientas</h2>
+        <p class="nota">Descarga en Excel la relación de lo recibido, separada en efectivo y bancos, con el resumen por cajero. La pantalla se actualiza sola mientras esta página está abierta; si algo no cuadra, publícala de nuevo.</p>
+        <div class="acciones">
+          <button type="button" id="exportar">📊 Exportar a Excel</button>
+          <button type="button" id="recalcular">Publicar pantalla ahora</button>
+        </div>
+      </section>
+    </section>
+  </section>
+</main>
+
+<dialog id="dlg-foto">
+  <div class="col">
+    <div class="barra"><h2>Comprobante del pago</h2><button type="button" id="foto-cerrar">Cerrar</button></div>
+    <p id="foto-info" class="nota"></p>
+    <p id="foto-carga" class="nota">Cargando…</p>
+    <div class="foto-grande" id="foto-marco"><img id="foto-grande" alt="Comprobante del pago"></div>
+    <p class="nota">Toca la foto para acercarla.</p>
+    <div class="fila-botones"><a id="foto-descargar" class="boton-link" download="comprobante.jpg" hidden>Descargar foto</a></div>
+  </div>
+</dialog>
+
+<dialog id="dlg">
+  <form id="f-editar" class="col" autocomplete="off">
+    <h2>Editar registro</h2>
+    <div class="campos"></div>
+    <div class="fila-botones">
+      <button type="button" id="cancelar">Cancelar</button>
+      <button type="submit" class="prim">Guardar cambios</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" hidden role="status"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDy9nmz3x8h20vSX5OMVEDAV1B5JCg73Hg",
+  authDomain: "donaton-701fc.firebaseapp.com",
+  projectId: "donaton-701fc",
+  storageBucket: "donaton-701fc.firebasestorage.app",
+  messagingSenderId: "445516813987",
+  appId: "1:445516813987:web:fbbd11132a9a726b031116"
+};
+const ADMIN = "admin@banco.com";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+// Segunda instancia solo para crear usuarios de cajeros sin cerrar la sesión del banco
+const authCrear = getAuth(initializeApp(firebaseConfig, "crear-cajeros"));
+const PANTALLA = doc(db, "publico", "pantalla");     // lo único que lee la pantalla
+const PATROCINADORES = doc(db, "config", "patrocinadores");
+const RANKING = collection(db, "ranking");           // una fila por cajero; la leen todos los cajeros
+// Compara datos sin importar el orden de las claves (evita escrituras repetidas)
+const estable = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x)
+  ? Object.keys(x).sort().reduce((o, c) => (o[c] = x[c], o), {}) : x);
+
+/* ---------- Utilidades ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const formato = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+const cop = n => formato.format(Math.round(n || 0));
+const num = s => Number(String(s).replace(/\D/g, "")) || 0;
+const miles = n => n ? n.toLocaleString("es-CO") : "";
+const aFecha = ts => ts?.toDate ? ts.toDate() : null;
+const fmtFecha = ts => { const d = aFecha(ts); return d ? d.toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "—"; };
+const localInput = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const ESTADOS = { pendiente: "Pendiente", aprobada: "Aprobada", rechazada: "Rechazada" };
+let tToast;
+function toast(txt) { const t = $("#toast"); t.textContent = txt; t.hidden = false; clearTimeout(tToast); tToast = setTimeout(() => t.hidden = true, 4500); }
+
+/* ---------- Campos del formulario de donación ---------- */
+const camposHTML = () => `
+  <label>Nombre del donante<input name="nombre" maxlength="60" placeholder="Anónimo"></label>
+  <label>Valor<div class="monto-wrap"><span>$</span><input name="monto" inputmode="numeric" placeholder="0"></div></label>
+  <fieldset><legend>Forma de pago</legend>
+    <div class="seg">
+      <label><input type="radio" name="tipo" value="efectivo" checked> Efectivo</label>
+      <label><input type="radio" name="tipo" value="transferencia"> Transferencia</label>
+    </div>
+  </fieldset>
+  <label class="ref">Referencia de la transferencia<input name="referencia" maxlength="60"></label>
+  <label>Número de talonario<input name="talonario" maxlength="30"></label>
+  <label>Fecha y hora de la donación<input type="datetime-local" name="fecha"></label>`;
+function tipoCambio(f) {
+  const t = f.elements.tipo.value;
+  $(".ref", f).hidden = t !== "transferencia";
+}
+function prepararForm(f) {
+  $(".campos", f).innerHTML = camposHTML();
+  const m = f.elements.monto;
+  m.addEventListener("input", () => m.value = miles(num(m.value)));
+  f.querySelectorAll("[name=tipo]").forEach(r => r.addEventListener("change", () => tipoCambio(f)));
+  limpiarForm(f);
+}
+function limpiarForm(f) {
+  const e = f.elements;
+  e.nombre.value = ""; e.monto.value = ""; e.referencia.value = ""; e.talonario.value = "";
+  $("[name=tipo][value=efectivo]", f).checked = true;
+  e.fecha.value = localInput();
+  tipoCambio(f);
+}
+function leerForm(f) {
+  const e = f.elements;
+  const monto = num(e.monto.value);
+  if (!monto) throw new Error("Escribe el valor de la donación.");
+  const tipo = e.tipo.value;
+  const referencia = e.referencia.value.trim();
+  if (tipo === "transferencia" && !referencia) throw new Error("Escribe la referencia de la transferencia.");
+  if (!e.fecha.value) throw new Error("Indica la fecha y hora de la donación.");
+  return {
+    nombre: e.nombre.value.trim() || "Anónimo", monto, tipo,
+    referencia: tipo === "transferencia" ? referencia : "",
+    talonario: e.talonario.value.trim(),
+    fecha: Timestamp.fromDate(new Date(e.fecha.value))
+  };
+}
+function llenarForm(f, d) {
+  const e = f.elements;
+  e.nombre.value = d.nombre === "Anónimo" ? "" : (d.nombre || "");
+  e.monto.value = miles(d.monto);
+  $(`[name=tipo][value=${d.tipo === "transferencia" ? "transferencia" : "efectivo"}]`, f).checked = true;
+  e.referencia.value = d.referencia || "";
+  e.talonario.value = d.talonario || "";
+  e.fecha.value = localInput(aFecha(d.fecha) || aFecha(d.creadoEn) || new Date());
+  tipoCambio(f);
+}
+
+/* ---------- Sesión ---------- */
+let unsubs = [];
+onAuthStateChanged(auth, u => {
+  unsubs.forEach(f => f()); unsubs = [];
+  const esAdmin = u && u.email?.toLowerCase() === ADMIN;
+  $("#login").hidden = !!u;
+  $("#noadmin").hidden = !u || esAdmin;
+  $("#caja").hidden = !esAdmin;
+  if (esAdmin) { $("#usuario").textContent = u.email; escuchar(); }
+});
+$("#f-login").addEventListener("submit", async e => {
+  e.preventDefault();
+  const b = $("#entrar"); b.disabled = true; $("#login-error").hidden = true;
+  try { await signInWithEmailAndPassword(auth, $("#correo").value.trim(), $("#clave").value); }
+  catch (err) {
+    $("#login-error").textContent = ["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found"].includes(err.code)
+      ? "Correo o contraseña incorrectos." : "No se pudo entrar: " + err.message;
+    $("#login-error").hidden = false;
+  } finally { b.disabled = false; }
+});
+document.querySelectorAll(".salir").forEach(b => b.addEventListener("click", () => signOut(auth)));
+
+/* ---------- Datos en vivo ---------- */
+let donaciones = [], cajeros = [], patrocinadores = [], evento = {}, pantallaActual = null, imagenActual = "", rankingActual = null;
+let totalPantalla = 0, meta = 50000000, tab = "pendiente";
+const listos = new Set();
+function listo(k) { listos.add(k); programarPublicar(); }
+function escuchar() {
+  listos.clear();
+  unsubs.push(onSnapshot(collection(db, "donaciones"), s => {
+    donaciones = s.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }), estado: d.data().estado || "pendiente" }))
+      .sort((a, b) => (aFecha(b.creadoEn) || aFecha(b.fecha) || 0) - (aFecha(a.creadoEn) || aFecha(a.fecha) || 0));
+    pintar();
+    if (!s.metadata.fromCache) listo("donaciones");
+  }, err => toast("No se pudieron leer las donaciones: " + err.message)));
+  unsubs.push(onSnapshot(PANTALLA, s => {
+    pantallaActual = s.exists() ? s.data() : null;
+    totalPantalla = Number(pantallaActual?.total) || 0;
+    pintarCifras(); listo("pantalla");
+  }));
+  unsubs.push(onSnapshot(doc(db, "config", "evento"), s => {
+    evento = s.data() || {};
+    meta = Number(evento.meta) > 0 ? Number(evento.meta) : 50000000;
+    if (document.activeElement !== $("#meta-in")) $("#meta-in").value = miles(meta);
+    if (document.activeElement !== $("#titulo-in")) $("#titulo-in").value = evento.titulo || "";
+    if (document.activeElement !== $("#subtitulo-in")) $("#subtitulo-in").value = evento.subtitulo || "";
+    pintarCifras(); listo("evento");
+  }));
+  unsubs.push(onSnapshot(doc(db, "config", "imagen"), s => { imagenActual = s.data()?.dataUrl || ""; mostrarImagen(imagenActual); listo("imagen"); }));
+  unsubs.push(onSnapshot(PATROCINADORES, s => { patrocinadores = s.data()?.lista || []; pintarPatrocinadores(); listo("patrocinadores"); }));
+  unsubs.push(onSnapshot(collection(db, "cajeros"), s => {
+    cajeros = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+    pintarCajeros(); listo("cajeros");
+  }));
+  // Si las reglas aún no permiten el ranking, la pantalla se sigue publicando igual
+  unsubs.push(onSnapshot(RANKING, s => { rankingActual = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); listo("ranking"); },
+    () => { rankingActual = null; listo("ranking"); }));
+}
+
+/* ---------- Publicar el documento único que lee la pantalla ---------- */
+// Cada vez que cambia algo aprobado, el banco arma un solo documento con el total, la meta,
+// los nombres y talonarios (sin valores) y las versiones de la imagen y los logos.
+// Cuánto se muestra: todo lo aprobado, o solo hasta el valor que el banco elija con la barra
+const realAprobado = () => donaciones.filter(d => d.estado === "aprobada").reduce((t, d) => t + (Number(d.monto) || 0), 0);
+const mostrarTodo = () => evento.mostrarTodo !== false;
+function totalVisible() {
+  const real = realAprobado();
+  return mostrarTodo() ? real : Math.min(real, Math.max(0, Number(evento.mostrarHasta) || 0));
+}
+function armarPantalla() {
+  const aprob = donaciones.filter(d => d.estado === "aprobada")
+    .sort((a, b) => (aFecha(b.aprobadoEn) || aFecha(b.creadoEn) || 0) - (aFecha(a.aprobadoEn) || aFecha(a.creadoEn) || 0));
+  return {
+    total: totalVisible(),            // solo lo que el banco decidió mostrar (el real no se publica)
+    meta,
+    titulo: evento.titulo || "Donatón",
+    subtitulo: evento.subtitulo || "Construyendo juntos la casa de Dios",
+    donantes: aprob.map(d => ({ n: d.nombre || "Anónimo", t: d.talonario || "" })),
+    imagenVersion: Number(evento.imagenVersion) || (imagenActual ? 1 : 0),
+    patrocinadoresVersion: Number(evento.patrocinadoresVersion) || (patrocinadores.length ? 1 : 0)
+  };
+}
+/* ---------- Ranking de cajeros (aprobado y recogido de cada uno) ---------- */
+function armarRanking() {
+  const suma = a => a.reduce((t, d) => t + (Number(d.monto) || 0), 0);
+  return cajeros.map(c => {
+    const suyos = donaciones.filter(d => d.cajeroEmail?.toLowerCase() === c.id);
+    const ok = suyos.filter(d => d.estado === "aprobada"), pend = suyos.filter(d => d.estado === "pendiente");
+    return { id: c.id, fila: { aprobado: suma(ok), nombre: c.nombre || c.id, recogido: suma(ok) + suma(pend), registros: ok.length + pend.length } };
+  });
+}
+// El banco corrige todas las filas cuando está abierto; cada cajero también mantiene la suya al día
+async function publicarRanking(forzar) {
+  if (!rankingActual) return;
+  const filas = armarRanking(), ids = new Set(filas.map(f => f.id));
+  const lote = writeBatch(db);
+  let cambios = 0;
+  for (const { id, fila } of filas) {
+    const actual = rankingActual[id];
+    const igual = actual && estable([actual.aprobado, actual.nombre, actual.recogido, actual.registros]) === estable([fila.aprobado, fila.nombre, fila.recogido, fila.registros]);
+    if (forzar || !igual) { lote.set(doc(db, "ranking", id), fila); cambios++; }
+  }
+  for (const id of Object.keys(rankingActual)) if (!ids.has(id)) { lote.delete(doc(db, "ranking", id)); cambios++; }
+  if (!cambios) return;
+  try { await lote.commit(); } catch (err) { console.warn("No se pudo actualizar el ranking", err); }
+}
+
+let tPub;
+function programarPublicar() { clearTimeout(tPub); tPub = setTimeout(() => publicar(false), 900); }
+async function publicar(forzar) {
+  const faltan = ["donaciones", "pantalla", "evento", "imagen", "patrocinadores", "cajeros", "ranking"].filter(k => !listos.has(k));
+  if (faltan.length) { if (forzar) toast("Todavía se están cargando los datos, intenta en un momento."); return; }
+  publicarRanking(forzar);
+  const nuevo = armarPantalla();
+  const claves = Object.keys(nuevo);
+  const igual = pantallaActual && estable(claves.map(k => pantallaActual[k])) === estable(claves.map(k => nuevo[k]));
+  if (igual && !forzar) { $("#pub-estado").textContent = "✓ La pantalla está al día."; return; }
+  $("#pub-estado").textContent = "Actualizando la pantalla…";
+  try {
+    await setDoc(PANTALLA, { ...nuevo, actualizado: serverTimestamp() });
+    $("#pub-estado").textContent = "✓ La pantalla está al día.";
+    if (forzar) toast("Pantalla publicada");
+  } catch (err) { $("#pub-estado").textContent = "No se pudo actualizar la pantalla: " + err.message; }
+}
+
+function pintarCifras() {
+  const pend = donaciones.filter(d => d.estado === "pendiente");
+  const real = realAprobado();
+  $("#c-total").textContent = cop(real);
+  $("#c-meta").textContent = `${meta > 0 ? Math.floor(real / meta * 100) : 0}% de ${cop(meta)}`;
+  pintarMostrar();
+  $("#c-pend").textContent = cop(pend.reduce((s, d) => s + (d.monto || 0), 0));
+  $("#c-pend-n").textContent = pend.length === 1 ? "1 registro" : `${pend.length} registros`;
+  $("#n-pendiente").textContent = pend.length ? `(${pend.length})` : "";
+  const r = resumenPorTipo(donaciones.filter(d => d.estado === "aprobada"));
+  const cuantos = n => n === 1 ? "1 donación" : `${n} donaciones`;
+  $("#c-efectivo").textContent = cop(r.efectivo.valor); $("#c-efectivo-n").textContent = cuantos(r.efectivo.n);
+  $("#c-bancos").textContent = cop(r.bancos.valor); $("#c-bancos-n").textContent = cuantos(r.bancos.n) + (r.otro.n ? ` · ${cuantos(r.otro.n)} sin forma de pago` : "");
+}
+
+function pintar() {
+  pintarCifras();
+  pintarCajeros();
+  if (!["pendiente", "aprobada", "rechazada"].includes(tab)) return;
+  const ul = $("#lista"); ul.replaceChildren();
+  const filas = donaciones.filter(d => d.estado === tab);
+  if (!filas.length) { ul.append(h("li", "vacio", tab === "pendiente" ? "No hay registros esperando aprobación." : "No hay registros aquí.")); return; }
+  for (const d of filas) ul.append(tarjeta(d));
+}
+
+function tarjeta(d) {
+  const li = h("li", "reg");
+  const top = h("div", "reg-top");
+  top.append(h("span", "nom", d.nombre || "Anónimo"), h("span", "badge " + d.estado, ESTADOS[d.estado]), h("span", "val", cop(d.monto)));
+  let pago = d.tipo === "transferencia" ? "Transferencia" : d.tipo === "efectivo" ? "Efectivo" : "Sin forma de pago";
+  if (d.referencia) pago += " · Ref. " + d.referencia;
+  if (d.talonario) pago += " · Talonario " + d.talonario;
+  li.append(top, h("p", "det", pago),
+    h("p", "det", `Donación: ${fmtFecha(d.fecha)} · Cajero: ${d.cajeroNombre || d.cajeroEmail || "—"}`));
+  let reg = "Registrado: " + fmtFecha(d.creadoEn);
+  const cre = aFecha(d.creadoEn), act = aFecha(d.actualizadoEn);
+  if (cre && act && act - cre > 60000) reg += " · Editado: " + fmtFecha(d.actualizadoEn);
+  if (d.estado === "aprobada" && d.aprobadoEn) reg += " · Aprobado: " + fmtFecha(d.aprobadoEn);
+  li.append(h("p", "det", reg));
+  if (d.estado === "rechazada" && d.motivoRechazo) li.append(h("p", "motivo", "Motivo: " + d.motivoRechazo));
+
+  const acc = h("div", "acciones");
+  const boton = (txt, cls, fn) => { const b = h("button", cls, txt); b.type = "button"; b.addEventListener("click", async () => { b.disabled = true; try { await fn(); } finally { b.disabled = false; } }); acc.append(b); };
+  if (d.estado !== "aprobada") boton("Aprobar", "prim", () => cambiarEstado(d, "aprobada"));
+  if (d.estado === "pendiente") boton("Rechazar", "peligro", () => {
+    const motivo = prompt("¿Por qué se rechaza? El cajero verá este motivo y podrá corregir el registro.");
+    if (motivo === null) return; return cambiarEstado(d, "rechazada", motivo.trim());
+  });
+  if (d.tieneFoto) boton("📷 Ver comprobante", "", () => verComprobante(d));
+  boton("Editar", "", () => abrirEditar(d));
+  if (d.estado === "aprobada") boton("Devolver a pendiente", "", () => {
+    if (confirm(`Se restarán ${cop(d.monto)} del total en pantalla hasta que la vuelvas a aprobar. ¿Continuar?`)) return cambiarEstado(d, "pendiente");
+  });
+  if (d.estado !== "pendiente") boton("Eliminar", "peligro", () => eliminar(d));
+  li.append(acc);
+  return li;
+}
+
+/* ---------- Acciones del banco ---------- */
+// El total de la pantalla se recalcula solo (ver publicar), así nunca se descuadra.
+async function cambiarEstado(d, nuevo, motivo = "") {
+  try {
+    const cambios = { estado: nuevo, motivoRechazo: nuevo === "rechazada" ? motivo : "", actualizadoEn: serverTimestamp() };
+    if (nuevo === "aprobada") { cambios.aprobadoPor = ADMIN; cambios.aprobadoEn = serverTimestamp(); }
+    await updateDoc(doc(db, "donaciones", d.id), cambios);
+    toast(nuevo === "aprobada" ? `Aprobada: ${cop(d.monto)} ya suma en pantalla` : nuevo === "rechazada" ? "Registro rechazado" : "Registro devuelto a pendiente");
+  } catch (err) { toast("No se pudo cambiar el estado: " + err.message); }
+}
+
+async function eliminar(d) {
+  const extra = d.estado === "aprobada" ? " Se restará del total en pantalla." : "";
+  if (!confirm(`¿Eliminar el registro de ${d.nombre || "Anónimo"} por ${cop(d.monto)}?${extra}`)) return;
+  try {
+    const lote = writeBatch(db);
+    lote.delete(doc(db, "donaciones", d.id));
+    if (d.tieneFoto) lote.delete(doc(db, "comprobantes", d.id));
+    await lote.commit(); toast("Registro eliminado");
+  }
+  catch (err) { toast("No se pudo eliminar: " + err.message); }
+}
+
+let editando = null;
+const fEditar = $("#f-editar");
+prepararForm(fEditar);
+function abrirEditar(d) { editando = d; llenarForm(fEditar, d); $("#dlg").showModal(); }
+$("#cancelar").addEventListener("click", () => $("#dlg").close());
+fEditar.addEventListener("submit", async e => {
+  e.preventDefault();
+  let datos; try { datos = leerForm(fEditar); } catch (err) { toast(err.message); return; }
+  const b = $("button[type=submit]", fEditar); b.disabled = true;
+  try {
+    await updateDoc(doc(db, "donaciones", editando.id), { ...datos, actualizadoEn: serverTimestamp(), editadoPor: ADMIN });
+    $("#dlg").close(); toast("Cambios guardados");
+  } catch (err) { toast("No se pudo guardar: " + err.message); }
+  finally { b.disabled = false; }
+});
+
+/* ---------- Registro directo del banco ---------- */
+const fDirecto = $("#f-directo");
+prepararForm(fDirecto);
+fDirecto.addEventListener("submit", async e => {
+  e.preventDefault();
+  let datos; try { datos = leerForm(fDirecto); } catch (err) { toast(err.message); return; }
+  if (datos.monto >= 5000000 && !confirm(`Vas a registrar ${cop(datos.monto)}. ¿El valor es correcto?`)) return;
+  const b = $("button[type=submit]", fDirecto); b.disabled = true;
+  try {
+    await addDoc(collection(db, "donaciones"), {
+      ...datos, estado: "aprobada", motivoRechazo: "",
+      cajeroUid: auth.currentUser.uid, cajeroEmail: ADMIN, cajeroNombre: "Banco",
+      creadoEn: serverTimestamp(), actualizadoEn: serverTimestamp(),
+      aprobadoPor: ADMIN, aprobadoEn: serverTimestamp()
+    });
+    limpiarForm(fDirecto);
+    toast(`Registrada y aprobada: ${cop(datos.monto)}`);
+  } catch (err) { toast("No se pudo registrar: " + err.message); }
+  finally { b.disabled = false; }
+});
+
+/* ---------- Cajeros ---------- */
+function pintarCajeros() {
+  const ul = $("#lista-cajeros"); ul.replaceChildren();
+  if (!cajeros.length) { ul.append(h("li", "vacio", "Aún no hay cajeros.")); return; }
+  for (const c of cajeros) {
+    const suyos = donaciones.filter(d => d.cajeroEmail?.toLowerCase() === c.id);
+    const aprob = suyos.filter(d => d.estado === "aprobada").reduce((s, d) => s + (d.monto || 0), 0);
+    const pend = suyos.filter(d => d.estado === "pendiente").length;
+    const li = h("li", "reg");
+    const top = h("div", "reg-top"); top.append(h("span", "nom", c.nombre || c.id), h("span", "val", cop(aprob)));
+    li.append(top, h("p", "det", `${c.id} · ${suyos.length} registros · ${pend} por aprobar`));
+    const acc = h("div", "acciones");
+    const quitar = h("button", "peligro", "Quitar acceso"); quitar.type = "button";
+    quitar.addEventListener("click", async () => {
+      if (!confirm(`¿Quitar el acceso de ${c.nombre || c.id}? Sus registros se conservan.`)) return;
+      try { await deleteDoc(doc(db, "cajeros", c.id)); toast("Acceso quitado"); } catch (err) { toast("No se pudo quitar: " + err.message); }
+    });
+    acc.append(quitar); li.append(acc); ul.append(li);
+  }
+}
+$("#f-cajero").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = e.target, nombre = f.nombre.value.trim(), correo = f.correo.value.trim().toLowerCase(), clave = f.clave.value;
+  if (correo === ADMIN) { toast("Ese es el correo del banco."); return; }
+  const b = $("button[type=submit]", f); b.disabled = true;
+  try {
+    let existia = false;
+    try { await createUserWithEmailAndPassword(authCrear, correo, clave); await signOut(authCrear); }
+    catch (err) { if (err.code === "auth/email-already-in-use") existia = true; else throw err; }
+    await setDoc(doc(db, "cajeros", correo), { nombre, creadoEn: serverTimestamp() });
+    f.reset();
+    toast(existia ? `${nombre} ya tenía usuario; quedó habilitado con su contraseña anterior.` : `Cajero ${nombre} creado.`);
+  } catch (err) {
+    toast(err.code === "auth/weak-password" ? "La contraseña debe tener al menos 6 caracteres." : "No se pudo crear: " + err.message);
+  } finally { b.disabled = false; }
+});
+
+/* ---------- Ajustes y herramientas ---------- */
+$("#meta-in").addEventListener("input", e => e.target.value = miles(num(e.target.value)));
+$("#f-ajustes").addEventListener("submit", async e => {
+  e.preventDefault();
+  const nuevaMeta = num($("#meta-in").value);
+  if (!nuevaMeta) { toast("Escribe una meta mayor que cero."); return; }
+  try { await setDoc(doc(db, "config", "evento"), { meta: nuevaMeta, titulo: $("#titulo-in").value.trim() || "Donatón", subtitulo: $("#subtitulo-in").value.trim() || "Construyendo juntos la casa de Dios" }, { merge: true }); toast("Ajustes guardados"); }
+  catch (err) { toast("No se pudieron guardar: " + err.message); }
+});
+$("#recalcular").addEventListener("click", () => publicar(true));
+/* ---------- Exportar a Excel ---------- */
+// Separa lo recibido (aprobado) en efectivo y bancos, con resumen general y por cajero.
+function resumenPorTipo(lista) {
+  const r = { efectivo: { n: 0, valor: 0 }, bancos: { n: 0, valor: 0 }, otro: { n: 0, valor: 0 } };
+  for (const d of lista) {
+    const k = d.tipo === "efectivo" ? "efectivo" : d.tipo === "transferencia" ? "bancos" : "otro";
+    r[k].n++; r[k].valor += Number(d.monto) || 0;
+  }
+  return r;
+}
+let xlsxCargado = null;
+function cargarXLSX() {
+  if (window.XLSX) return Promise.resolve();
+  return xlsxCargado ??= new Promise((ok, mal) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    sc.onload = ok; sc.onerror = () => { xlsxCargado = null; mal(new Error("No se pudo cargar el generador de Excel. Revisa la conexión.")); };
+    document.head.append(sc);
+  });
+}
+async function exportarExcel(boton) {
+  boton.disabled = true;
+  const texto = boton.textContent; boton.textContent = "Preparando Excel…";
+  try {
+    await cargarXLSX();
+    const X = window.XLSX;
+    const fechaJS = ts => aFecha(ts) || "";
+    const tipoTxt = t => t === "efectivo" ? "Efectivo" : t === "transferencia" ? "Bancos (transferencia)" : "Sin forma de pago";
+    const aprob = donaciones.filter(d => d.estado === "aprobada").sort((a, b) => (aFecha(a.fecha) || 0) - (aFecha(b.fecha) || 0));
+    const pend = donaciones.filter(d => d.estado === "pendiente");
+    const ra = resumenPorTipo(aprob), rp = resumenPorTipo(pend);
+    const MONEDA = '"$"#,##0', FECHA = "dd/mm/yyyy hh:mm";
+
+    // Da formato de moneda/fecha a columnas y anchos a la hoja
+    const formatear = (ws, { moneda = [], fecha = [], anchos = [] }) => {
+      const rango = X.utils.decode_range(ws["!ref"]);
+      for (let R = rango.s.r; R <= rango.e.r; R++) {
+        for (const C of moneda) { const c = ws[X.utils.encode_cell({ r: R, c: C })]; if (c && (c.t === "n" || c.f)) c.z = MONEDA; }
+        for (const C of fecha) { const c = ws[X.utils.encode_cell({ r: R, c: C })]; if (c && c.t === "d") c.z = FECHA; }
+      }
+      ws["!cols"] = anchos.map(w => ({ wch: w }));
+      return ws;
+    };
+    const hojaLista = (filas, encabezado, colValor) => {
+      const datos = [encabezado, ...filas];
+      const ws = X.utils.aoa_to_sheet(datos, { cellDates: true });
+      const n = filas.length;
+      const total = X.utils.encode_cell({ r: n + 1, c: colValor - 1 });
+      ws[total] = { t: "s", v: "TOTAL" };
+      const celdaTotal = X.utils.encode_cell({ r: n + 1, c: colValor });
+      const col = X.utils.encode_col(colValor);
+      ws[celdaTotal] = { t: "n", f: n ? `SUM(${col}2:${col}${n + 1})` : "0", v: filas.reduce((t, f) => t + (Number(f[colValor]) || 0), 0) };
+      ws["!ref"] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: n + 1, c: encabezado.length - 1 } });
+      return ws;
+    };
+
+    // 1. Resumen
+    const porCajero = new Map();
+    for (const d of aprob) {
+      const k = d.cajeroNombre || d.cajeroEmail || "Sin cajero";
+      const c = porCajero.get(k) || { efectivo: 0, bancos: 0, otro: 0, n: 0 };
+      if (d.tipo === "efectivo") c.efectivo += Number(d.monto) || 0;
+      else if (d.tipo === "transferencia") c.bancos += Number(d.monto) || 0;
+      else c.otro += Number(d.monto) || 0;
+      c.n++; porCajero.set(k, c);
+    }
+    const resumen = [
+      [`${evento.titulo || "Donatón"} · Relación de lo recibido`],
+      ["Generado el", new Date()],
+      [],
+      ["RECIBIDO (APROBADO)", "Cantidad", "Valor"],
+      ["Efectivo", ra.efectivo.n, ra.efectivo.valor],
+      ["Bancos (transferencias)", ra.bancos.n, ra.bancos.valor],
+      ...(ra.otro.n ? [["Sin forma de pago", ra.otro.n, ra.otro.valor]] : []),
+      ["TOTAL RECIBIDO", aprob.length, ra.efectivo.valor + ra.bancos.valor + ra.otro.valor],
+      [],
+      ["PENDIENTE POR APROBAR", "Cantidad", "Valor"],
+      ["Efectivo", rp.efectivo.n, rp.efectivo.valor],
+      ["Bancos (transferencias)", rp.bancos.n, rp.bancos.valor],
+      ...(rp.otro.n ? [["Sin forma de pago", rp.otro.n, rp.otro.valor]] : []),
+      ["TOTAL PENDIENTE", pend.length, rp.efectivo.valor + rp.bancos.valor + rp.otro.valor],
+      [],
+      ["RECIBIDO POR CAJERO", "Efectivo", "Bancos", "Total", "Donaciones"],
+      ...[...porCajero.entries()]
+        .map(([k, c]) => [k, c.efectivo, c.bancos, c.efectivo + c.bancos + c.otro, c.n])
+        .sort((a, b) => b[3] - a[3])
+    ];
+    const wsRes = X.utils.aoa_to_sheet(resumen, { cellDates: true });
+    const filaCajeros = resumen.findIndex(f => f[0] === "RECIBIDO POR CAJERO");
+    const rr = X.utils.decode_range(wsRes["!ref"]);
+    for (let R = 0; R <= rr.e.r; R++) {
+      const cols = R > filaCajeros ? [1, 2, 3] : [2];
+      for (const C of cols) { const c = wsRes[X.utils.encode_cell({ r: R, c: C })]; if (c && c.t === "n") c.z = MONEDA; }
+    }
+    const fechaGen = wsRes["B2"]; if (fechaGen) fechaGen.z = FECHA;
+    wsRes["!cols"] = [{ wch: 30 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 }];
+
+    // 2. Efectivo y 3. Bancos (solo lo aprobado)
+    const efectivo = aprob.filter(d => d.tipo === "efectivo").map(d =>
+      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, d.talonario || "", d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.aprobadoEn), d.tieneFoto ? "Sí" : "No"]);
+    const wsEf = formatear(hojaLista(efectivo, ["Fecha donación", "Donante", "Valor", "Talonario", "Cajero", "Aprobado el", "Comprobante"], 2),
+      { moneda: [2], fecha: [0, 5], anchos: [17, 30, 14, 12, 20, 17, 12] });
+    const bancos = aprob.filter(d => d.tipo === "transferencia").map(d =>
+      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, d.referencia || "", d.talonario || "", d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.aprobadoEn), d.tieneFoto ? "Sí" : "No"]);
+    const wsBa = formatear(hojaLista(bancos, ["Fecha donación", "Donante", "Valor", "Referencia", "Talonario", "Cajero", "Aprobado el", "Comprobante"], 2),
+      { moneda: [2], fecha: [0, 6], anchos: [17, 30, 14, 18, 12, 20, 17, 12] });
+
+    // 4. Todos los registros (incluye pendientes y rechazados)
+    const todos = [...donaciones].sort((a, b) => (aFecha(a.fecha) || 0) - (aFecha(b.fecha) || 0)).map(d =>
+      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, tipoTxt(d.tipo), d.referencia || "", d.talonario || "", ESTADOS[d.estado] || d.estado,
+       d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.creadoEn), d.motivoRechazo || "", d.tieneFoto ? "Sí" : "No"]);
+    const wsTo = formatear(X.utils.aoa_to_sheet([["Fecha donación", "Donante", "Valor", "Forma de pago", "Referencia", "Talonario", "Estado", "Cajero", "Registrado", "Motivo rechazo", "Comprobante"], ...todos], { cellDates: true }),
+      { moneda: [2], fecha: [0, 8], anchos: [17, 30, 14, 22, 18, 12, 12, 20, 17, 26, 12] });
+
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, wsRes, "Resumen");
+    X.utils.book_append_sheet(wb, wsEf, "Efectivo");
+    X.utils.book_append_sheet(wb, wsBa, "Bancos");
+    X.utils.book_append_sheet(wb, wsTo, "Todos los registros");
+    const hoy = new Date();
+    const nombre = `donaton-recibido-${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}.xlsx`;
+    X.writeFile(wb, nombre, { cellDates: true });
+    toast("Excel descargado");
+  } catch (err) { toast(err.message || "No se pudo generar el Excel"); }
+  finally { boton.disabled = false; boton.textContent = texto; }
+}
+$("#exportar").addEventListener("click", e => exportarExcel(e.currentTarget));
+$("#exportar-arriba").addEventListener("click", e => exportarExcel(e.currentTarget));
+
+/* ---------- Imagen de la parroquia ---------- */
+// Se guarda dentro de Firestore (no necesita Firebase Storage), reducida para que pese poco.
+function mostrarImagen(url) {
+  const img = $("#img-vista");
+  if (url) { img.src = url; img.hidden = false; $("#img-vacia").hidden = true; }
+  else { img.hidden = true; img.removeAttribute("src"); $("#img-vacia").hidden = false; }
+}
+function cargarImagen(file) {
+  return new Promise((ok, mal) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(url); ok(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error("No se pudo abrir la imagen.")); };
+    img.src = url;
+  });
+}
+// Busca el borde de la parte que no es fondo negro, para encajar el óvalo exacto
+function recuadroSinFondo(img) {
+  const k = Math.min(1, 400 / Math.max(img.width, img.height));
+  const w = Math.round(img.width * k), hh = Math.round(img.height * k);
+  const c = document.createElement("canvas"); c.width = w; c.height = hh;
+  const x = c.getContext("2d"); x.drawImage(img, 0, 0, w, hh);
+  const px = x.getImageData(0, 0, w, hh).data;
+  let x0 = w, y0 = hh, x1 = -1, y1 = -1;
+  for (let y = 0; y < hh; y++) for (let i = 0; i < w; i++) {
+    const o = (y * w + i) * 4;
+    if (px[o + 3] > 40 && Math.max(px[o], px[o + 1], px[o + 2]) > 70) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return { sx: 0, sy: 0, sw: img.width, sh: img.height };
+  return { sx: x0 / k, sy: y0 / k, sw: (x1 - x0 + 1) / k, sh: (y1 - y0 + 1) / k };
+}
+async function procesarImagen(file, ovalo) {
+  const img = await cargarImagen(file);
+  const r = ovalo ? recuadroSinFondo(img) : { sx: 0, sy: 0, sw: img.width, sh: img.height };
+  let lado = 900;
+  for (let intento = 0; intento < 6; intento++) {
+    const k = Math.min(1, lado / Math.max(r.sw, r.sh));
+    const w = Math.round(r.sw * k), hh = Math.round(r.sh * k);
+    const c = document.createElement("canvas"); c.width = w; c.height = hh;
+    const x = c.getContext("2d");
+    if (ovalo) { x.beginPath(); x.ellipse(w / 2, hh / 2, w / 2 * .995, hh / 2 * .995, 0, 0, Math.PI * 2); x.clip(); }
+    x.drawImage(img, r.sx, r.sy, r.sw, r.sh, 0, 0, w, hh);
+    let url = c.toDataURL("image/webp", .86);
+    if (!url.startsWith("data:image/webp")) url = c.toDataURL("image/png");
+    if (url.length < 850000) return url;
+    lado = Math.round(lado * .75);
+  }
+  throw new Error("La imagen es demasiado pesada, prueba con otra más pequeña.");
+}
+let imagenLista = null;
+async function prepararVista() {
+  const file = $("#img-archivo").files[0];
+  imagenLista = null; $("#img-subir").disabled = true;
+  if (!file) return;
+  try { imagenLista = await procesarImagen(file, $("#img-ovalo").checked); mostrarImagen(imagenLista); $("#img-subir").disabled = false; toast("Así se verá. Pulsa «Subir imagen» para ponerla en pantalla."); }
+  catch (err) { toast(err.message); }
+}
+$("#img-archivo").addEventListener("change", prepararVista);
+$("#img-ovalo").addEventListener("change", prepararVista);
+$("#img-subir").addEventListener("click", async () => {
+  if (!imagenLista) return;
+  const b = $("#img-subir"); b.disabled = true;
+  try {
+    const lote = writeBatch(db);
+    lote.set(doc(db, "config", "imagen"), { dataUrl: imagenLista, actualizado: serverTimestamp() });
+    lote.set(doc(db, "config", "evento"), { imagenVersion: Date.now() }, { merge: true });
+    await lote.commit(); imagenLista = null; $("#img-archivo").value = ""; toast("Imagen subida. Refresca la pantalla para verla."); }
+  catch (err) { toast("No se pudo subir: " + err.message); b.disabled = false; }
+});
+$("#img-quitar").addEventListener("click", async () => {
+  if (!confirm("¿Quitar la imagen de la pantalla?")) return;
+  try {
+    const lote = writeBatch(db);
+    lote.delete(doc(db, "config", "imagen"));
+    lote.set(doc(db, "config", "evento"), { imagenVersion: 0 }, { merge: true });
+    await lote.commit(); toast("Imagen quitada");
+  } catch (err) { toast("No se pudo quitar: " + err.message); }
+});
+
+/* ---------- Patrocinadores ---------- */
+// Los logos se reducen y se guardan como texto base64 en un solo documento (config/patrocinadores).
+const LIMITE = 950000;   // Firestore admite hasta ~1 MB por documento
+async function procesarLogo(file) {
+  const img = await cargarImagen(file);
+  let ancho = 520, alto = 260;
+  for (let intento = 0; intento < 6; intento++) {
+    const k = Math.min(1, ancho / img.width, alto / img.height);
+    const w = Math.max(1, Math.round(img.width * k)), hh = Math.max(1, Math.round(img.height * k));
+    const c = document.createElement("canvas"); c.width = w; c.height = hh;
+    c.getContext("2d").drawImage(img, 0, 0, w, hh);
+    let url = c.toDataURL("image/webp", .88);
+    if (!url.startsWith("data:image/webp")) url = c.toDataURL("image/png");
+    if (url.length < 90000) return url;
+    ancho = Math.round(ancho * .8); alto = Math.round(alto * .8);
+  }
+  throw new Error("Ese logo es muy pesado, prueba con otro archivo.");
+}
+const pesoKB = lista => Math.round(JSON.stringify(lista).length / 1024);
+async function guardarPatrocinadores(lista, mensaje) {
+  if (JSON.stringify(lista).length > LIMITE) { toast("Ya no caben más logos. Quita alguno o usa logos más livianos."); return false; }
+  try {
+    const lote = writeBatch(db);
+    lote.set(PATROCINADORES, { lista, actualizado: serverTimestamp() });
+    lote.set(doc(db, "config", "evento"), { patrocinadoresVersion: Date.now() }, { merge: true });
+    await lote.commit();
+    if (mensaje) toast(mensaje);
+    return true;
+  } catch (err) { toast("No se pudo guardar: " + err.message); return false; }
+}
+function pintarPatrocinadores() {
+  const ul = $("#lista-pat"); ul.replaceChildren();
+  $("#pat-peso").textContent = patrocinadores.length
+    ? `${patrocinadores.length} ${patrocinadores.length === 1 ? "logo" : "logos"} · ${pesoKB(patrocinadores)} KB de ${Math.round(LIMITE / 1024)} KB disponibles`
+    : "";
+  if (!patrocinadores.length) { ul.append(h("li", "vacio", "Aún no hay patrocinadores.")); return; }
+  patrocinadores.forEach((x, i) => {
+    const li = h("li", "pat-fila");
+    const caja = h("span", "pat-logo"); const img = document.createElement("img"); img.src = x.logo; img.alt = ""; caja.append(img);
+    const acc = h("div", "acciones");
+    const mover = (txt, etiqueta, j) => {
+      const b = h("button", "", txt); b.type = "button"; b.setAttribute("aria-label", etiqueta); b.disabled = j < 0 || j >= patrocinadores.length;
+      b.addEventListener("click", () => { const l = [...patrocinadores]; [l[i], l[j]] = [l[j], l[i]]; guardarPatrocinadores(l); });
+      acc.append(b);
+    };
+    mover("↑", "Subir", i - 1); mover("↓", "Bajar", i + 1);
+    const q = h("button", "peligro", "Quitar"); q.type = "button";
+    q.addEventListener("click", () => { if (confirm(`¿Quitar ${x.nombre || "este patrocinador"} de la pantalla?`)) guardarPatrocinadores(patrocinadores.filter((_, k) => k !== i), "Patrocinador quitado"); });
+    acc.append(q);
+    li.append(caja, h("span", "nom", x.nombre || "Sin nombre"), acc);
+    ul.append(li);
+  });
+}
+let logoListo = null;
+$("#pat-archivo").addEventListener("change", async () => {
+  const file = $("#pat-archivo").files[0];
+  logoListo = null; $("#pat-agregar").disabled = true;
+  $("#pat-vista").hidden = true; $("#pat-vacia").hidden = false;
+  if (!file) return;
+  try {
+    logoListo = await procesarLogo(file);
+    $("#pat-vista").src = logoListo; $("#pat-vista").hidden = false; $("#pat-vacia").hidden = true;
+    $("#pat-agregar").disabled = false;
+  } catch (err) { toast(err.message); }
+});
+$("#f-pat").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!logoListo) { toast("Elige el logo del patrocinador."); return; }
+  const f = e.target, b = $("#pat-agregar"); b.disabled = true;
+  const nuevo = { id: Date.now().toString(36), nombre: f.nombre.value.trim(), logo: logoListo };
+  const ok = await guardarPatrocinadores([...patrocinadores, nuevo], "Patrocinador agregado. Refresca la pantalla para verlo.");
+  if (ok) {
+    f.reset(); logoListo = null;
+    $("#pat-vista").hidden = true; $("#pat-vacia").hidden = false;
+  } else b.disabled = false;
+});
+
+/* ---------- Barra de «lo que se ve en pantalla» ---------- */
+const rango = $("#m-rango");
+let arrastrando = false;
+function pintarMostrar(valorTemporal) {
+  const real = realAprobado();
+  rango.max = Math.max(real, 1);
+  rango.step = real > 20000000 ? 100000 : real > 2000000 ? 50000 : 10000;
+  const todo = mostrarTodo();
+  const v = valorTemporal ?? totalVisible();
+  if (!arrastrando) rango.value = todo ? rango.max : v;
+  $("#m-valor").textContent = cop(v);
+  $("#m-max").textContent = "Hasta el momento: " + cop(real);
+  $("#m-input").placeholder = miles(v) || "0";
+  const modo = $("#m-modo");
+  modo.textContent = todo ? "En vivo" : "Parcial";
+  modo.classList.toggle("todo", todo);
+  $("#m-ayuda").textContent = todo
+    ? "La pantalla muestra todo lo aprobado. Cada donación nueva que apruebes suma sola."
+    : `La pantalla muestra ${cop(v)} de ${cop(real)}. Ve subiendo la barra para revelar más, o pulsa «Hasta el momento».`;
+}
+async function guardarMostrar(cambios) {
+  try { await setDoc(doc(db, "config", "evento"), cambios, { merge: true }); }
+  catch (err) { toast("No se pudo cambiar lo que se muestra: " + err.message); }
+}
+function valorDesdeBarra() {
+  const real = realAprobado(), v = Number(rango.value);
+  return v >= real - Number(rango.step) / 2 ? { todo: true, v: real } : { todo: false, v };
+}
+rango.addEventListener("input", () => { arrastrando = true; const r = valorDesdeBarra(); pintarMostrar(r.v); });
+rango.addEventListener("change", () => {
+  arrastrando = false;
+  const r = valorDesdeBarra();
+  guardarMostrar(r.todo ? { mostrarTodo: true } : { mostrarTodo: false, mostrarHasta: r.v });
+});
+document.querySelectorAll("[data-ajuste]").forEach(b => b.addEventListener("click", () => {
+  const real = realAprobado();
+  const v = Math.max(0, totalVisible() + Number(b.dataset.ajuste));
+  guardarMostrar(v >= real ? { mostrarTodo: true } : { mostrarTodo: false, mostrarHasta: v });
+}));
+$("#m-todo").addEventListener("click", () => guardarMostrar({ mostrarTodo: true }));
+$("#m-input").addEventListener("input", e => e.target.value = miles(num(e.target.value)));
+$("#m-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = num($("#m-input").value), real = realAprobado();
+  if (!$("#m-input").value.trim()) { toast("Escribe el valor que quieres mostrar."); return; }
+  if (v >= real) {
+    if (v > real) toast(`Lo aprobado hasta ahora es ${cop(real)}. La pantalla mostrará eso y quedará en vivo.`);
+    await guardarMostrar({ mostrarTodo: true });
+  } else {
+    await guardarMostrar({ mostrarTodo: false, mostrarHasta: v });
+    toast(`La pantalla mostrará ${cop(v)}. Refréscala para ver el conteo.`);
+  }
+  $("#m-input").value = ""; $("#m-input").blur();
+});
+
+/* ---------- Ver el comprobante de un registro ---------- */
+// La foto se descarga solo cuando el banco la abre (y queda en memoria para no volver a leerla).
+const fotosCache = new Map();
+async function verComprobante(d) {
+  const img = $("#foto-grande"), carga = $("#foto-carga"), bajar = $("#foto-descargar");
+  img.removeAttribute("src"); bajar.hidden = true; $("#foto-marco").classList.remove("zoom");
+  carga.hidden = false; carga.textContent = "Cargando…";
+  let info = `${d.nombre || "Anónimo"} · ${cop(d.monto)} · ${d.tipo === "transferencia" ? "Transferencia" : "Efectivo"}`;
+  if (d.referencia) info += " · Ref. " + d.referencia;
+  if (d.talonario) info += " · Talonario " + d.talonario;
+  $("#foto-info").textContent = info + ` · Cajero: ${d.cajeroNombre || d.cajeroEmail || "—"}`;
+  $("#dlg-foto").showModal();
+  try {
+    let url = fotosCache.get(d.id);
+    if (!url) { url = (await getDoc(doc(db, "comprobantes", d.id))).data()?.dataUrl || ""; if (url) fotosCache.set(d.id, url); }
+    if (!url) { carga.textContent = "Este registro no tiene foto guardada."; return; }
+    img.src = url; carga.hidden = true;
+    bajar.href = url; bajar.download = `comprobante-${(d.nombre || "anonimo").replace(/[^\wáéíóúñ]+/gi, "-")}-${d.id.slice(0, 5)}.jpg`; bajar.hidden = false;
+  } catch (err) { carga.textContent = "No se pudo cargar la foto: " + err.message; }
+}
+$("#foto-marco").addEventListener("click", () => $("#foto-marco").classList.toggle("zoom"));
+$("#foto-cerrar").addEventListener("click", () => $("#dlg-foto").close());
+
+/* ---------- Pestañas ---------- */
+const TITULOS = { pendiente: "Por aprobar", aprobada: "Aprobadas", rechazada: "Rechazadas" };
+document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
+  const esLista = tab in TITULOS;
+  document.querySelectorAll("[data-panel]").forEach(p => p.hidden = p.dataset.panel !== (esLista ? "lista" : tab));
+  if (esLista) $("#titulo-lista").textContent = TITULOS[tab];
+  pintar();
+}));
+</script>
+</body>
+</html>
