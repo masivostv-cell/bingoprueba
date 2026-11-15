@@ -3,323 +3,304 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Donatón | Banco</title>
+<title>Donatón | Pantalla</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,700;0,800;1,500&family=Alegreya+Sans:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <style>
   :root{
-    --fondo:#F6F0E7; --superficie:#FFFFFF; --tinta:#2A1A17; --suave:#7A5E4A;
-    --linea:#E6D9C7; --ladrillo:#8E2A2A; --ladrillo-txt:#FFFFFF; --oro:#8A5F00; --error:#B3261E;
-    --ok:#1E7A46; --ok-fondo:#E2F4EA; --pend:#8A5F00; --pend-fondo:#FBF1D6; --rech:#B3261E; --rech-fondo:#FBE4E2;
-  }
-  @media (prefers-color-scheme:dark){
-    :root:not([data-theme="light"]){
-      color-scheme:dark;
-      --fondo:#1A1211; --superficie:#2A1E1C; --tinta:#F3E6D0; --suave:#CDB898;
-      --linea:#4A3834; --ladrillo:#A83A38; --oro:#DDB86E; --error:#FF9C8A;
-      --ok:#8FE0B0; --ok-fondo:#1F4A3A; --pend:#DDB86E; --pend-fondo:#4A4128; --rech:#FF9C8A; --rech-fondo:#4E2C33;
-    }
+    --noche:#140E0D; --noche2:#4A1A1C; --crema:#F3E6D0; --oro:#DDB86E; --ladrillo:#8E2A2A; --durazno:#E3B892; --cielo:#B5B9B4;
+    --tenue:#CDB898; --plano:rgba(243,230,208,.3);
+    color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0}
-  body{background:var(--fondo);color:var(--tinta);font-family:"Alegreya Sans","Trebuchet MS",sans-serif;font-size:17px;line-height:1.4}
-  .app{max-width:640px;margin:0 auto;padding:20px 16px 120px;display:flex;flex-direction:column;gap:16px}
-  .col{display:flex;flex-direction:column;gap:16px}
-  h1{font-family:"Alegreya",Georgia,serif;font-weight:800;font-size:1.9rem;line-height:1.1}
-  h2{font-size:1.15rem;font-weight:700}
-  .panel{background:var(--superficie);border:1px solid var(--linea);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
-  label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:.95rem}
-  small,.nota{font-weight:400;color:var(--suave);font-size:.9rem}
-  input{width:100%;font:inherit;font-weight:400;color:var(--tinta);background:var(--fondo);border:1.5px solid var(--linea);border-radius:10px;padding:11px 13px}
-  input:focus-visible,button:focus-visible{outline:3px solid var(--oro);outline-offset:2px}
-  button{font:inherit;font-weight:700;border-radius:10px;padding:10px 14px;cursor:pointer;border:1.5px solid var(--linea);background:var(--superficie);color:var(--tinta)}
-  button:disabled{opacity:.6;cursor:wait}
-  .prim{background:var(--ladrillo);border-color:var(--ladrillo);color:var(--ladrillo-txt)}
-  .grande{font-size:1.1rem;padding:14px}
-  .peligro{color:var(--error)}
-  .barra{display:flex;justify-content:space-between;align-items:center;gap:12px}
-  .barra p{color:var(--suave);font-size:.9rem}
-  .error{color:var(--error);font-size:.95rem}
-
-  .cifras{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .cifra{background:var(--superficie);border:1px solid var(--linea);border-radius:14px;padding:14px}
-  .cifra p:first-child{color:var(--suave);font-size:.9rem}
-  .cifra .n{font-weight:800;font-size:1.6rem;font-variant-numeric:tabular-nums;color:var(--oro);line-height:1.15}
-  .cifra .s{font-size:.9rem;color:var(--suave)}
-
-  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
-  .tabs button{white-space:nowrap;border-radius:999px;padding:8px 14px;font-size:.95rem}
-  .tabs button[aria-selected="true"]{background:var(--tinta);color:var(--fondo);border-color:var(--tinta)}
-
-  .monto-wrap{display:flex;align-items:center;gap:6px;border:1.5px solid var(--linea);border-radius:10px;background:var(--fondo);padding:0 13px}
-  .monto-wrap:focus-within{outline:3px solid var(--oro);outline-offset:2px}
-  .monto-wrap span{font-size:1.5rem;font-weight:800;color:var(--suave)}
-  .monto-wrap input{border:none;background:transparent;font-size:1.6rem;font-weight:800;padding:8px 0;font-variant-numeric:tabular-nums}
-  .monto-wrap input:focus-visible{outline:none}
-  fieldset{border:none;padding:0;display:flex;flex-direction:column;gap:6px}
-  legend{font-weight:700;font-size:.95rem;margin-bottom:6px}
-  .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .seg label{flex-direction:row;align-items:center;gap:8px;border:1.5px solid var(--linea);border-radius:10px;padding:11px 13px;font-weight:700;cursor:pointer}
-  .seg label:has(input:checked){border-color:var(--ladrillo);background:color-mix(in srgb, var(--ladrillo) 12%, transparent)}
-  .seg input{width:auto;accent-color:var(--ladrillo)}
-  .campos{display:flex;flex-direction:column;gap:12px}
-
-  .lista{list-style:none;padding:0;display:flex;flex-direction:column}
-  .reg{padding:14px 0;border-top:1px solid var(--linea);display:flex;flex-direction:column;gap:4px}
-  .reg:first-child{border-top:none;padding-top:0}
-  .reg-top{display:flex;align-items:baseline;gap:10px}
-  .reg-top .nom{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .reg-top .val{font-weight:800;font-variant-numeric:tabular-nums}
-  .det{color:var(--suave);font-size:.9rem}
-  .badge{font-size:.78rem;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
-  .badge.pendiente{color:var(--pend);background:var(--pend-fondo)}
-  .badge.aprobada{color:var(--ok);background:var(--ok-fondo)}
-  .badge.rechazada{color:var(--rech);background:var(--rech-fondo)}
-  .motivo{color:var(--rech);font-size:.9rem}
-  .acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-  .acciones button{padding:7px 12px;font-size:.9rem}
-  .vacio{color:var(--suave);font-style:italic}
-
-  dialog{border:1px solid var(--linea);border-radius:16px;background:var(--superficie);color:var(--tinta);
-    width:min(560px,calc(100% - 24px));max-height:92vh;padding:20px}
-  dialog::backdrop{background:rgba(10,12,30,.55)}
-  .fila-botones{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
-
-  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);width:min(520px,calc(100% - 32px));
-    background:var(--tinta);color:var(--fondo);border-radius:12px;padding:12px 16px;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:10}
-
-  /* ---------- Celular ---------- */
-  :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-  input,select,textarea{font-size:max(16px,1em)}            /* evita que el iPhone haga zoom al escribir */
-  input[type="datetime-local"]{min-height:48px;display:block;text-align:left}
-  input::-webkit-date-and-time-value{text-align:left}
-  button{min-height:44px;touch-action:manipulation}
-  .tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--fondo);padding:8px 0;margin:-8px 0;scrollbar-width:none}
-  .tabs::-webkit-scrollbar{display:none}
-  .toast{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
-  .reg-top{flex-wrap:wrap}
-  @media (max-width:560px){
-    body{font-size:16px}
-    .app{padding:14px 12px 110px;gap:14px}
-    .col{gap:14px}
-    h1{font-size:1.6rem}
-    .panel{padding:14px;border-radius:12px}
-    .cifras{gap:8px}
-    .cifra{padding:12px}
-    .cifra .n{font-size:1.3rem}
-    .reg-top .nom{flex-basis:100%;white-space:normal;order:0}
-    .reg-top .badge{order:1}
-    .reg-top .val{order:2;margin-left:auto;font-size:1.1rem}
-    .acciones button{flex:1 1 auto}
-    .fila-botones button{flex:1 1 100%}
-    .seg label{padding:12px 10px}
-    .monto-wrap input{font-size:1.5rem}
-    dialog{width:100%;max-width:100%;height:100dvh;max-height:100dvh;margin:0;border:none;border-radius:0;
-      padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(16px + env(safe-area-inset-bottom,0px))}
-    dialog .fila-botones{position:sticky;bottom:0;background:var(--superficie);padding-top:10px}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(ellipse at 30% 115%, var(--noche2) 0%, var(--noche) 62%);
+    background-color:var(--noche);color:var(--crema);
+    font-family:"Alegreya Sans","Trebuchet MS",sans-serif;overflow:hidden;
   }
-  @media (max-width:340px){ .cifras{grid-template-columns:1fr} }
-  .img-caja{display:grid;place-items:center;min-height:120px;border-radius:12px;padding:12px;
-    background:repeating-conic-gradient(var(--linea) 0 25%, transparent 0 50%) 0 0/18px 18px}
-  .img-caja img{max-height:260px;max-width:100%}
-  #pat-vista{background:#FBF6EE;padding:10px 14px;border-radius:10px;max-height:140px}
-  .pat-fila{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--linea)}
-  .pat-fila:first-child{border-top:none;padding-top:0}
-  .pat-logo{flex:none;width:96px;height:56px;display:grid;place-items:center;background:#FBF6EE;border-radius:8px;padding:6px}
-  .pat-logo img{max-width:100%;max-height:100%}
-  .pat-fila .nom{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis}
-  .pat-fila .acciones{margin:0;flex:none}
-  .pat-fila .acciones button{min-width:44px;flex:none}
-  .check{flex-direction:row;align-items:center;gap:10px;font-weight:500}
-  .check input{width:22px;height:22px;accent-color:var(--ladrillo)}
-  .mostrar .barra h2{margin:0}
-  .mostrar .badge{background:var(--pend-fondo);color:var(--pend)}
-  .mostrar .badge.todo{background:var(--ok-fondo);color:var(--ok)}
-  .m-valor{font-weight:800;font-size:2rem;line-height:1.1;color:var(--oro);font-variant-numeric:tabular-nums}
-  .m-ejes{display:flex;justify-content:space-between;color:var(--suave);font-size:.85rem;margin-top:-4px}
-  .m-form{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
-  .m-form button{min-height:52px}
-  #m-rango{width:100%;padding:0;border:none;background:none;accent-color:var(--ladrillo);height:34px}
-  .foto-grande{overflow:auto;max-height:68vh;border-radius:10px;background:#000;cursor:zoom-in}
-  .foto-grande img{display:block;width:100%;height:auto}
-  .foto-grande.zoom{cursor:zoom-out}
-  .foto-grande.zoom img{width:auto;max-width:none}
-  .boton-link{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:10px;border:1.5px solid var(--linea);
-    color:var(--tinta);text-decoration:none;font-weight:700}
-  .con-foto{color:var(--ok);font-weight:700}
-  [hidden]{display:none !important}
+  .stage{
+    height:100vh;display:grid;
+    grid-template-columns:minmax(0,.72fr) minmax(0,1.5fr) minmax(0,.8fr);
+    grid-template-rows:auto minmax(0,1fr) auto auto;
+    gap:2vh 4vw;padding:4vh 4vw 2.5vh;
+  }
+  .top{grid-column:1/-1;display:flex;align-items:center;gap:1.6vw}
+  .insignia{max-width:100%;max-height:30vh;width:auto;height:auto;align-self:center;margin-bottom:3vh;filter:drop-shadow(0 0 2vh rgba(221,184,110,.4))}
+  .titulos{display:flex;align-items:baseline;gap:.4vh 1.6vw;flex-wrap:wrap}
+  h1{font-family:"Alegreya",Georgia,serif;font-weight:800;font-size:clamp(2rem,4.4vw,5.4rem);line-height:1}
+  .sub{font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1rem,2vw,2.3rem);color:var(--tenue)}
+
+  /* Iglesia */
+  .obra{display:flex;flex-direction:column;align-items:center;min-height:0;min-width:0}
+  .lienzo{position:relative;flex:1;min-height:0;width:100%}
+  .lienzo svg,.lienzo canvas{position:absolute;inset:0;width:100%;height:100%}
+  .halo{position:absolute;inset:0;background:radial-gradient(closest-side at 50% 40%, rgba(221,184,110,.38), transparent);
+    opacity:0;transform:scale(.6);transition:opacity 1.2s, transform 1.8s cubic-bezier(.2,.8,.2,1)}
+  .halo.on{opacity:1;transform:scale(1.1)}
+  .brick{opacity:0;transform:translateY(-26px) rotate(-6deg);transform-box:fill-box;transform-origin:center;
+    transition:opacity .3s ease, transform .6s cubic-bezier(.2,.9,.3,1.35)}
+  .brick.on{opacity:1;transform:none}
+  .sin-trans .brick,.sin-trans #obreroA,.sin-trans .luz{transition:none}
+  /* Obreros, andamio y ladrillos: solo mientras se construye */
+  .faena{opacity:0;transition:opacity .9s ease}
+  .obrando .faena{opacity:1;transition-duration:.4s}
+  .luz{opacity:0;transition:opacity 1.2s}
+
+  /* Durante el conteo solo se ve el templo con el dinero; al terminar aparece todo */
+  body.enfoque .top,body.enfoque .lateral,body.enfoque .muro,body.enfoque .patrocinios,body.enfoque .pie{display:none}
+  body.enfoque .obra{grid-column:1/-1;grid-row:1/-1}
+  .top{view-transition-name:encabezado}
+  .lienzo{view-transition-name:templo}
+  .cuenta{view-transition-name:cuenta}
+  ::view-transition-group(*){animation-duration:.9s;animation-timing-function:cubic-bezier(.3,.8,.3,1)}
+  .luz.on{opacity:1}
+
+  /* Obreros */
+  .obrero,.caminaB,.salta,.pierna,.brazoA{transform-box:view-box}
+  #obreroA{transition:transform .8s cubic-bezier(.3,.8,.3,1)}
+  .brazoA{transform-origin:4px -54px;transition:transform .4s}
+  .pierna{transform-origin:0 -30px}
+  .caminaB{transform-origin:0 0}
+  .obrando .brazoA{animation:alisar .55s ease-in-out infinite}
+  @keyframes alisar{0%,100%{transform:rotate(-30deg)}50%{transform:rotate(18deg)}}
+  .obrando .caminaB{animation:caminar 2.6s linear infinite}
+  @keyframes caminar{
+    0%{transform:translateX(0) scaleX(1)} 45%{transform:translateX(-92px) scaleX(1)}
+    50%{transform:translateX(-92px) scaleX(-1)} 95%{transform:translateX(0) scaleX(-1)}
+    100%{transform:translateX(0) scaleX(1)}
+  }
+  .obrando .ladrilloB{animation:cargar 2.6s linear infinite}
+  @keyframes cargar{0%,46%{opacity:1}47%,97%{opacity:0}98%,100%{opacity:1}}
+  .obrando .pb1{animation:paso .32s ease-in-out infinite alternate}
+  .obrando .pb2{animation:paso .32s ease-in-out infinite alternate-reverse}
+  @keyframes paso{from{transform:rotate(-22deg)}to{transform:rotate(22deg)}}
+  .celebran .salta{animation:saltar .45s ease-in-out 5}
+  @keyframes saltar{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  .celebran .brazoA{transform:rotate(-75deg)}
+  .plano{fill:rgba(243,230,208,.035);stroke:var(--plano);stroke-width:1.5;stroke-dasharray:6 6}
+  .suelo{stroke:var(--plano);stroke-width:2}
+  .puerta,.ventana{fill:var(--noche);stroke:var(--plano);stroke-width:1.5;stroke-dasharray:6 6;transition:fill 1s}
+  .puerta.on{fill:#5A3420;stroke:#3A2214;stroke-dasharray:none}
+  .ventana.on{fill:var(--oro);stroke:none;filter:url(#brillo)}
+  .cruz{fill:none;stroke:var(--plano);stroke-width:1.5;stroke-dasharray:4 4;transition:fill 1s}
+  .cruz.on{fill:var(--oro);stroke:none;filter:url(#brillo)}
+
+  /* Conteo debajo de la iglesia y columna lateral */
+  .lateral{display:flex;flex-direction:column;justify-content:center;min-width:0;min-height:0}
+  .lateral > *{flex:none}
+  .cuenta{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;padding-top:1vh}
+  .cuenta .etq{font-size:clamp(1rem,1.9vw,2.4rem)}
+  .chip{position:absolute;left:50%;top:0;pointer-events:none;white-space:nowrap;
+    background:var(--ladrillo);color:var(--crema);font-weight:800;border-radius:999px;padding:.2em .75em;
+    font-size:clamp(1rem,1.9vw,2.3rem);box-shadow:0 0 0 .2vh var(--oro);animation:chip 1s ease-out forwards}
+  @keyframes chip{
+    0%{opacity:0;transform:translate(-50%,10px) scale(.7)}
+    15%{opacity:1;transform:translate(-50%,-12px) scale(1.06)}
+    70%{opacity:1}
+    100%{opacity:0;transform:translate(-50%,-80px) scale(1)}
+  }
+  .odo.golpe{animation:golpe .35s ease-out}
+  /* Presentación: «Así debe quedar nuestra iglesia» */
+  .previa-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+    font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:800;color:var(--oro);
+    font-size:clamp(1.6rem,4.2vw,5.2rem);line-height:1.1;text-shadow:0 0 .4em rgba(221,184,110,.35);
+    opacity:0;transform:translateY(12px);transition:opacity .9s ease, transform .9s ease;pointer-events:none}
+  .previa-txt.on{opacity:1;transform:none}
+  .cuenta .etq,.cuenta .odo{transition:opacity .6s ease}
+  body.previa .cuenta .etq,body.previa .cuenta .odo{opacity:0}
+  @keyframes golpe{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+  .etq{font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;color:var(--tenue);font-size:clamp(1.2rem,2.4vw,3rem)}
+  .odo{display:flex;align-items:flex-start;font-weight:900;color:var(--oro);line-height:1;
+    font-variant-numeric:tabular-nums;margin:.6vh 0 0;white-space:nowrap;transform-origin:center}
+  .odo .simbolo{margin-right:.12em}
+  .odo .col{display:inline-block;height:1em;overflow:hidden;transition:opacity .4s}
+  .odo .tira{display:flex;flex-direction:column;will-change:transform}
+  .odo .tira span{height:1em;display:block;text-align:center}
+  .odo .sep{transition:opacity .4s}
+  .odo .apagada{opacity:.13}
+  .odo.final{animation:latido 1.4s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes latido{
+    0%{transform:scale(1);text-shadow:none}
+    30%{transform:scale(1.09);text-shadow:0 0 .35em rgba(221,184,110,.7)}
+    100%{transform:scale(1);text-shadow:0 0 .15em rgba(221,184,110,.35)}
+  }
+  .odo.final.quieto{text-shadow:0 0 .15em rgba(221,184,110,.35)}
+  .meta{font-size:clamp(1.1rem,2vw,2.4rem)}
+  .barra{position:relative;height:clamp(14px,2.2vh,28px);border-radius:999px;background:rgba(243,230,208,.1);margin-top:3vh;overflow:hidden}
+  .barra-fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:inherit;
+    background:linear-gradient(90deg,var(--ladrillo),#B5654A 50%,var(--oro))}
+  .barra-fill::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);
+    background-size:200% 100%;animation:brillo 1.6s linear infinite}
+  @keyframes brillo{from{background-position:150% 0}to{background-position:-50% 0}}
+  .pct{margin-top:1.4vh;font-family:"Alegreya",Georgia,serif;font-weight:800;font-size:clamp(1.4rem,3vw,3.8rem);font-variant-numeric:tabular-nums}
+  .gracias{margin-top:3vh;font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1.2rem,2.4vw,3rem);
+    opacity:0;transform:translateY(1.5vh);transition:opacity .9s .3s, transform .9s .3s}
+  .gracias.on{opacity:1;transform:none}
+
+  /* Muro de donantes */
+  .muro{display:flex;flex-direction:column;min-height:0;gap:1.5vh}
+  .muro-ventana{position:relative;flex:1;min-height:0;overflow:hidden;
+    -webkit-mask-image:linear-gradient(transparent, #000 10%, #000 88%, transparent);
+    mask-image:linear-gradient(transparent, #000 10%, #000 88%, transparent)}
+  .muro-pista{display:flex;flex-direction:column;gap:1.4vh;will-change:transform}
+  .muro-pista.anda{animation:subir var(--dur,60s) linear infinite}
+  @keyframes subir{from{transform:translateY(0)}to{transform:translateY(calc(-50% - .7vh))}}
+  .don{display:flex;align-items:center;gap:1vw;padding:1.4vh 1.1vw;
+    background:rgba(243,230,208,.07);border:1px solid rgba(243,230,208,.14);
+    border-radius:1.1vw 1.1vw 1.1vw .25vw}
+  .avatar{flex:none;width:clamp(34px,3.2vw,64px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+    font-weight:800;font-size:clamp(.9rem,1.25vw,1.6rem);color:var(--noche)}
+  .don .n{font-weight:700;font-size:clamp(1rem,1.55vw,2rem);line-height:1.15;overflow-wrap:anywhere}
+  .don .t{color:var(--tenue);font-size:clamp(.8rem,1.05vw,1.3rem)}
+  .muro-vacio{color:var(--tenue);font-style:italic;font-size:clamp(1rem,1.3vw,1.6rem)}
+
+  /* Patrocinadores */
+  .patrocinios{grid-column:1/-1;display:flex;align-items:center;gap:2vw;min-width:0}
+  .pat-titulo{flex:none;font-family:"Alegreya",Georgia,serif;font-style:italic;font-weight:500;color:var(--tenue);font-size:clamp(1rem,1.6vw,1.9rem)}
+  .pat-ventana{flex:1;min-width:0;overflow:hidden;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+  .pat-pista{display:flex;gap:1.6vw;width:max-content;will-change:transform}
+  .pat-pista.anda{animation:lado var(--dur,40s) linear infinite}
+  @keyframes lado{to{transform:translateX(calc(-50% - .8vw))}}
+  /* Cajita cuadrada: el logo cabe completo sin deformarse, sea cuadrado u horizontal */
+  .logo{flex:none;box-sizing:border-box;width:12vh;height:12vh;padding:1.2vh;background:#FFFFFF;border-radius:1.2vh;
+    box-shadow:0 0 0 .25vh rgba(221,184,110,.6)}
+  .logo img{display:block;width:100%;height:100%;object-fit:contain}
+
+  .pie{grid-column:1/-1;display:flex;gap:2.5vw;align-items:center;font-size:clamp(.75rem,.95vw,1.05rem);color:var(--tenue)}
+  .pie button{font:inherit;color:inherit;background:none;border:1px solid var(--plano);border-radius:999px;padding:.4em 1em;cursor:pointer}
+  .pie button:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+  #estado{margin-left:auto}
+  #estado.error{color:#FF9C8A}
+
+  /* Intro de suspenso */
+  .intro{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:var(--noche);
+    transition:opacity .6s;font-family:"Alegreya",Georgia,serif;font-style:italic;font-size:clamp(2rem,5vw,6rem)}
+  .intro.off{opacity:0;pointer-events:none}
+  .intro-caja{display:flex;flex-direction:column;align-items:center;gap:3vh;text-align:center}
+  .insignia-intro{height:52vh;width:auto;animation:respira 2.4s ease-in-out infinite}
+  @keyframes respira{
+    0%,100%{transform:scale(1);filter:drop-shadow(0 0 2vh rgba(221,184,110,.3))}
+    50%{transform:scale(1.03);filter:drop-shadow(0 0 5vh rgba(221,184,110,.65))}
+  }
+  .puntos i{display:inline-block;font-style:normal;animation:salto 1s infinite}
+  .puntos i:nth-child(2){animation-delay:.15s}
+  .puntos i:nth-child(3){animation-delay:.3s}
+  @keyframes salto{0%,60%,100%{transform:none}30%{transform:translateY(-.3em)}}
+
+  /* Avisos de metas */
+  .hito{position:fixed;left:50%;top:13vh;z-index:30;pointer-events:none;
+    background:var(--oro);color:var(--noche);font-weight:900;font-size:clamp(1.3rem,3vw,3.6rem);
+    padding:.35em 1em;border-radius:999px;transform:translateX(-50%) scale(0);opacity:0;white-space:nowrap}
+  .hito.on{animation:pop 1.9s cubic-bezier(.2,.9,.3,1.4) forwards}
+  @keyframes pop{
+    0%{transform:translateX(-50%) scale(0) rotate(-8deg);opacity:0}
+    18%{transform:translateX(-50%) scale(1.12) rotate(2deg);opacity:1}
+    28%{transform:translateX(-50%) scale(1) rotate(0)}
+    80%{transform:translateX(-50%) scale(1);opacity:1}
+    100%{transform:translateX(-50%) scale(.9) translateY(-2vh);opacity:0}
+  }
+
+  /* Botón «Dona aquí» (solo en celular) */
+  .dona{display:none}
+  @media (max-width:820px){
+    body{overflow:auto}
+    .stage{height:auto;grid-template-columns:1fr;padding-bottom:calc(14vh + env(safe-area-inset-bottom,0px))}
+    .top{order:0}.obra{order:1}.lateral{order:2}.muro{order:3}.patrocinios{order:4}.pie{order:5}
+    .lienzo{height:52vh;flex:none}
+    .insignia{max-width:60%;max-height:34vh}
+    .muro-ventana{height:50vh;flex:none}
+    .patrocinios{flex-direction:column;align-items:stretch;gap:1.2vh}
+    .pie button,.pie .tecla{display:none}           /* las teclas no aplican en el celular */
+    .dona{
+      display:flex;align-items:center;gap:10px;
+      position:fixed;z-index:60;
+      right:calc(16px + env(safe-area-inset-right,0px));
+      bottom:calc(16px + env(safe-area-inset-bottom,0px));
+      padding:12px 18px 12px 14px;border-radius:999px;
+      background:var(--oro);color:var(--noche);text-decoration:none;
+      font-weight:800;font-size:1.05rem;line-height:1.1;
+      box-shadow:0 6px 22px rgba(0,0,0,.45),0 0 0 3px rgba(142,42,42,.9);
+      animation:llamar 2.6s ease-in-out infinite;
+    }
+    .dona svg{width:28px;height:28px;flex:none}
+    .dona small{display:block;font-weight:500;font-size:.78rem}
+    .dona:focus-visible{outline:3px solid var(--crema);outline-offset:3px}
+    @keyframes llamar{0%,70%,100%{transform:scale(1)}80%{transform:scale(1.07)}90%{transform:scale(.98)}}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .brick,.halo,.gracias{transition:none}
+    .chip,.odo.golpe,.obrando *,.celebran *,.dona,.insignia-intro,.muro-pista.anda,.pat-pista.anda,.odo.final,.hito.on,.barra-fill::after,.puntos i{animation:none}
+    .hito.on{opacity:1;transform:translateX(-50%)}
+  }
 </style>
 </head>
 <body>
-<main class="app">
-
-  <section id="login" class="panel" hidden>
-    <h1>Banco de la Donatón</h1>
-    <p>Caja principal. Entra con la cuenta del banco.</p>
-    <form id="f-login" class="col">
-      <label>Correo<input id="correo" type="email" autocomplete="username" value="admin@banco.com" required></label>
-      <label>Contraseña<input id="clave" type="password" autocomplete="current-password" required></label>
-      <button class="prim grande" type="submit" id="entrar">Entrar</button>
-      <p id="login-error" class="error" hidden></p>
-    </form>
-  </section>
-
-  <section id="noadmin" class="panel" hidden>
-    <h1>Solo para el banco</h1>
-    <p>Esta página es de la caja principal. Si eres cajero, entra por <b>cajero.html</b>.</p>
-    <button type="button" class="salir">Salir</button>
-  </section>
-
-  <section id="caja" class="col" hidden>
-    <header class="barra">
-      <div><h1>Banco</h1><p id="usuario"></p></div>
-      <button type="button" class="salir">Salir</button>
-    </header>
-
-    <div class="cifras">
-      <div class="cifra"><p>Recaudado real (aprobado)</p><p id="c-total" class="n">$ 0</p><p id="c-meta" class="s"></p></div>
-      <div class="cifra"><p>Por aprobar</p><p id="c-pend" class="n">$ 0</p><p id="c-pend-n" class="s"></p></div>
-      <div class="cifra"><p>💵 Recibido en efectivo</p><p id="c-efectivo" class="n">$ 0</p><p id="c-efectivo-n" class="s"></p></div>
-      <div class="cifra"><p>🏦 Recibido en bancos</p><p id="c-bancos" class="n">$ 0</p><p id="c-bancos-n" class="s"></p></div>
+<main class="stage">
+  <header class="top">
+    <div class="titulos">
+      <h1 id="titulo">Donatón</h1>
+      <p id="subtitulo" class="sub">Construyamos juntos la casa del señor</p>
     </div>
-    <button type="button" id="exportar-arriba" class="prim">📊 Exportar a Excel lo recibido</button>
+  </header>
 
-    <section class="panel mostrar">
-      <div class="barra">
-        <h2>Lo que se ve en pantalla</h2>
-        <span id="m-modo" class="badge"></span>
-      </div>
-      <p id="m-valor" class="m-valor">$ 0</p>
-      <input id="m-rango" type="range" min="0" max="0" step="1" value="0" aria-label="Cuánto mostrar en pantalla">
-      <div class="m-ejes"><span>$ 0</span><span id="m-max">Hasta el momento</span></div>
-      <form id="m-form" class="m-form" autocomplete="off">
-        <label>O escribe el valor exacto
-          <div class="monto-wrap"><span>$</span><input id="m-input" inputmode="numeric" placeholder="51.210.000"></div>
-        </label>
-        <button type="submit" class="prim">Mostrar</button>
-      </form>
-      <div class="acciones">
-        <button type="button" data-ajuste="-500000">− 500 mil</button>
-        <button type="button" data-ajuste="500000">+ 500 mil</button>
-        <button type="button" data-ajuste="1000000">+ 1 millón</button>
-        <button type="button" id="m-todo" class="prim">Hasta el momento</button>
-      </div>
-      <p id="m-ayuda" class="nota"></p>
-      <p id="pub-estado" class="nota"></p>
-    </section>
-
-    <nav class="tabs" role="tablist">
-      <button role="tab" data-tab="pendiente" aria-selected="true">Por aprobar <span id="n-pendiente"></span></button>
-      <button role="tab" data-tab="aprobada" aria-selected="false">Aprobadas</button>
-      <button role="tab" data-tab="rechazada" aria-selected="false">Rechazadas</button>
-      <button role="tab" data-tab="registrar" aria-selected="false">Registrar</button>
-      <button role="tab" data-tab="cajeros" aria-selected="false">Cajeros</button>
-      <button role="tab" data-tab="patrocinadores" aria-selected="false">Patrocinadores</button>
-      <button role="tab" data-tab="ajustes" aria-selected="false">Ajustes</button>
-    </nav>
-
-    <section class="panel" data-panel="lista">
-      <h2 id="titulo-lista">Por aprobar</h2>
-      <ul id="lista" class="lista"></ul>
-    </section>
-
-    <form id="f-directo" class="panel" data-panel="registrar" hidden autocomplete="off">
-      <h2>Registrar en la caja principal</h2>
-      <p class="nota">Lo que registra el banco queda aprobado de una vez y suma al conteo.</p>
-      <div class="campos"></div>
-      <button type="submit" class="prim grande">Registrar y aprobar</button>
-    </form>
-
-    <section class="col" data-panel="cajeros" hidden>
-      <form id="f-cajero" class="panel" autocomplete="off">
-        <h2>Agregar cajero</h2>
-        <p class="nota">Se crea su usuario y queda habilitado para enviar registros desde cajero.html.</p>
-        <label>Nombre<input name="nombre" maxlength="40" required></label>
-        <label>Correo<input name="correo" type="email" required></label>
-        <label>Contraseña <small>(mínimo 6 caracteres; entrégasela al cajero)</small><input name="clave" type="text" minlength="6" required></label>
-        <button type="submit" class="prim">Agregar cajero</button>
-      </form>
-      <section class="panel">
-        <h2>Cajeros habilitados</h2>
-        <ul id="lista-cajeros" class="lista"></ul>
-      </section>
-    </section>
-
-    <section class="col" data-panel="patrocinadores" hidden>
-      <form id="f-pat" class="panel" autocomplete="off">
-        <h2>Agregar patrocinador</h2>
-        <p class="nota">El logo se reduce y se guarda como texto (base64) en Firebase. En pantalla pasa de lado a lado sobre una tarjeta clara.</p>
-        <label>Nombre del patrocinador <small>(opcional)</small><input name="nombre" maxlength="50"></label>
-        <label>Logo<input id="pat-archivo" type="file" accept="image/*"></label>
-        <div class="img-caja"><img id="pat-vista" alt="Vista previa del logo" hidden><p id="pat-vacia" class="vacio">Elige un logo para ver cómo queda.</p></div>
-        <button type="submit" class="prim" id="pat-agregar" disabled>Agregar patrocinador</button>
-      </form>
-      <section class="panel">
-        <h2>Patrocinadores en pantalla</h2>
-        <p id="pat-peso" class="nota"></p>
-        <ul id="lista-pat" class="lista"></ul>
-      </section>
-    </section>
-
-    <section class="col" data-panel="ajustes" hidden>
-      <form id="f-ajustes" class="panel">
-        <h2>Pantalla</h2>
-        <label>Título en pantalla<input id="titulo-in" maxlength="40" placeholder="Donatón"></label>
-        <label>Frase debajo del título<input id="subtitulo-in" maxlength="70" placeholder="Construyendo juntos la casa de Dios"></label>
-        <label>Meta a recaudar<input id="meta-in" inputmode="numeric" placeholder="50.000.000"></label>
-        <button type="submit">Guardar ajustes</button>
-      </form>
-      <section class="panel">
-        <h2>Imagen de la parroquia</h2>
-        <p class="nota">Sale junto al título y en grande mientras se cuentan las ofrendas.</p>
-        <div class="img-caja"><img id="img-vista" alt="Imagen actual de la parroquia" hidden><p id="img-vacia" class="vacio">Todavía no hay imagen.</p></div>
-        <label>Elegir imagen<input id="img-archivo" type="file" accept="image/*"></label>
-        <label class="check"><input id="img-ovalo" type="checkbox" checked> Recortar en óvalo y quitar el fondo negro</label>
-        <div class="acciones">
-          <button type="button" id="img-subir" class="prim" disabled>Subir imagen</button>
-          <button type="button" id="img-quitar" class="peligro">Quitar imagen</button>
-        </div>
-      </section>
-      <section class="panel">
-        <h2>Herramientas</h2>
-        <p class="nota">Descarga en Excel la relación de lo recibido, separada en efectivo y bancos, con el resumen por cajero. La pantalla se actualiza sola mientras esta página está abierta; si algo no cuadra, publícala de nuevo.</p>
-        <div class="acciones">
-          <button type="button" id="exportar">📊 Exportar a Excel</button>
-          <button type="button" id="recalcular">Publicar pantalla ahora</button>
-        </div>
-      </section>
-    </section>
+  <section class="lateral">
+    <img id="insignia" class="insignia" alt="Imagen de la parroquia" hidden>
+    <p class="meta">Nuestra meta: <span id="meta">$ 0</span></p>
+    <div class="barra"><div id="barra" class="barra-fill"></div></div>
+    <p class="pct"><span id="pct">0</span>% de la Meta</p>
+    <p id="gracias" class="gracias">¡Gracias por aportar para la construccion de la casa del señor!</p>
   </section>
+
+  <section class="obra">
+    <div class="lienzo" aria-hidden="true">
+      <div id="halo" class="halo"></div>
+      <canvas id="obra-canvas"></canvas>
+      <svg id="iglesia" viewBox="0 0 760 600"></svg>
+    </div>
+    <div class="cuenta">
+      <p id="previa-txt" class="previa-txt" aria-live="polite">Así debe quedar nuestra iglesia</p>
+      <p class="etq">Llevamos recaudado</p>
+      <p id="odo" class="odo" role="img" aria-label="Recaudado"></p>
+    </div>
+  </section>
+
+  <section class="muro" aria-label="Donantes">
+    <p class="etq">Gracias a quienes aportan</p>
+    <div class="muro-ventana"><div id="muro-pista" class="muro-pista"></div></div>
+  </section>
+
+  <section id="patrocinios" class="patrocinios" hidden aria-label="Patrocinadores">
+    <p class="pat-titulo">Con el apoyo de</p>
+    <div class="pat-ventana"><div id="pat-pista" class="pat-pista"></div></div>
+  </section>
+
+  <footer class="pie">
+    <button id="actualizar" type="button">Barra espaciadora: actualizar el conteo</button>
+    <span class="tecla">F: pantalla completa</span>
+    <span id="estado"></span>
+  </footer>
 </main>
 
-<dialog id="dlg-foto">
-  <div class="col">
-    <div class="barra"><h2>Comprobante del pago</h2><button type="button" id="foto-cerrar">Cerrar</button></div>
-    <p id="foto-info" class="nota"></p>
-    <p id="foto-carga" class="nota">Cargando…</p>
-    <div class="foto-grande" id="foto-marco"><img id="foto-grande" alt="Comprobante del pago"></div>
-    <p class="nota">Toca la foto para acercarla.</p>
-    <div class="fila-botones"><a id="foto-descargar" class="boton-link" download="comprobante.jpg" hidden>Descargar foto</a></div>
-  </div>
-</dialog>
+<a class="dona" href="https://wa.me/573133589044?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20c%C3%B3mo%20participar%20en%20la%20Donat%C3%B3n%20de%20la%20Parroquia%20San%20Pablo." target="_blank" rel="noopener" aria-label="Dona aquí: escríbenos por WhatsApp">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.4A8.4 8.4 0 1 1 21 11.5z"/>
+    <path d="M12 15.2s-3.2-1.9-3.2-4a1.7 1.7 0 0 1 3.2-.8 1.7 1.7 0 0 1 3.2.8c0 2.1-3.2 4-3.2 4z" fill="currentColor" stroke="none"/>
+  </svg>
+  <span>Dona aquí<small>Escríbenos por WhatsApp</small></span>
+</a>
 
-<dialog id="dlg">
-  <form id="f-editar" class="col" autocomplete="off">
-    <h2>Editar registro</h2>
-    <div class="campos"></div>
-    <div class="fila-botones">
-      <button type="button" id="cancelar">Cancelar</button>
-      <button type="submit" class="prim">Guardar cambios</button>
-    </div>
-  </form>
-</dialog>
-
-<div id="toast" class="toast" hidden role="status"></div>
+<div id="intro" class="intro"><div class="intro-caja"><img id="insignia-intro" class="insignia-intro" alt="" hidden><p>Contando las ofrendas<span class="puntos"><i>.</i><i>.</i><i>.</i></span></p></div></div>
+<div id="hito" class="hito"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDy9nmz3x8h20vSX5OMVEDAV1B5JCg73Hg",
@@ -329,753 +310,631 @@ const firebaseConfig = {
   messagingSenderId: "445516813987",
   appId: "1:445516813987:web:fbbd11132a9a726b031116"
 };
-const ADMIN = "admin@banco.com";
+const db = getFirestore(initializeApp(firebaseConfig));
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-// Segunda instancia solo para crear usuarios de cajeros sin cerrar la sesión del banco
-const authCrear = getAuth(initializeApp(firebaseConfig, "crear-cajeros"));
-const PANTALLA = doc(db, "publico", "pantalla");     // lo único que lee la pantalla
-const PATROCINADORES = doc(db, "config", "patrocinadores");
-const RANKING = collection(db, "ranking");           // una fila por cajero; la leen todos los cajeros
-// Compara datos sin importar el orden de las claves (evita escrituras repetidas)
-const estable = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x)
-  ? Object.keys(x).sort().reduce((o, c) => (o[c] = x[c], o), {}) : x);
-
-/* ---------- Utilidades ---------- */
-const $ = (s, r = document) => r.querySelector(s);
+const $ = s => document.querySelector(s);
 const formato = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
-const cop = n => formato.format(Math.round(n || 0));
-const num = s => Number(String(s).replace(/\D/g, "")) || 0;
-const miles = n => n ? n.toLocaleString("es-CO") : "";
-const aFecha = ts => ts?.toDate ? ts.toDate() : null;
-const fmtFecha = ts => { const d = aFecha(ts); return d ? d.toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "—"; };
-const localInput = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-const ESTADOS = { pendiente: "Pendiente", aprobada: "Aprobada", rechazada: "Rechazada" };
-let tToast;
-function toast(txt) { const t = $("#toast"); t.textContent = txt; t.hidden = false; clearTimeout(tToast); tToast = setTimeout(() => t.hidden = true, 4500); }
+const cop = n => formato.format(Math.round(n));
+const reducir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const COLORES = ["#DDB86E", "#F3E6D0", "#8E2A2A", "#E3B892", "#B5B9B4"];
+let meta = 50000000;
 
-/* ---------- Campos del formulario de donación ---------- */
-const camposHTML = () => `
-  <label>Nombre del donante<input name="nombre" maxlength="60" placeholder="Anónimo"></label>
-  <label>Valor<div class="monto-wrap"><span>$</span><input name="monto" inputmode="numeric" placeholder="0"></div></label>
-  <fieldset><legend>Forma de pago</legend>
-    <div class="seg">
-      <label><input type="radio" name="tipo" value="efectivo" checked> Efectivo</label>
-      <label><input type="radio" name="tipo" value="transferencia"> Transferencia</label>
-    </div>
-  </fieldset>
-  <label class="ref">Referencia de la transferencia<input name="referencia" maxlength="60"></label>
-  <label>Número de talonario<input name="talonario" maxlength="30"></label>
-  <label>Fecha y hora de la donación<input type="datetime-local" name="fecha"></label>`;
-function tipoCambio(f) {
-  const t = f.elements.tipo.value;
-  $(".ref", f).hidden = t !== "transferencia";
-}
-function prepararForm(f) {
-  $(".campos", f).innerHTML = camposHTML();
-  const m = f.elements.monto;
-  m.addEventListener("input", () => m.value = miles(num(m.value)));
-  f.querySelectorAll("[name=tipo]").forEach(r => r.addEventListener("change", () => tipoCambio(f)));
-  limpiarForm(f);
-}
-function limpiarForm(f) {
-  const e = f.elements;
-  e.nombre.value = ""; e.monto.value = ""; e.referencia.value = ""; e.talonario.value = "";
-  $("[name=tipo][value=efectivo]", f).checked = true;
-  e.fecha.value = localInput();
-  tipoCambio(f);
-}
-function leerForm(f) {
-  const e = f.elements;
-  const monto = num(e.monto.value);
-  if (!monto) throw new Error("Escribe el valor de la donación.");
-  const tipo = e.tipo.value;
-  const referencia = e.referencia.value.trim();
-  if (tipo === "transferencia" && !referencia) throw new Error("Escribe la referencia de la transferencia.");
-  if (!e.fecha.value) throw new Error("Indica la fecha y hora de la donación.");
-  return {
-    nombre: e.nombre.value.trim() || "Anónimo", monto, tipo,
-    referencia: tipo === "transferencia" ? referencia : "",
-    talonario: e.talonario.value.trim(),
-    fecha: Timestamp.fromDate(new Date(e.fecha.value))
-  };
-}
-function llenarForm(f, d) {
-  const e = f.elements;
-  e.nombre.value = d.nombre === "Anónimo" ? "" : (d.nombre || "");
-  e.monto.value = miles(d.monto);
-  $(`[name=tipo][value=${d.tipo === "transferencia" ? "transferencia" : "efectivo"}]`, f).checked = true;
-  e.referencia.value = d.referencia || "";
-  e.talonario.value = d.talonario || "";
-  e.fecha.value = localInput(aFecha(d.fecha) || aFecha(d.creadoEn) || new Date());
-  tipoCambio(f);
-}
+/* ================= El nuevo templo, construido bloque por bloque ================= */
+const NS = "http://www.w3.org/2000/svg";
+const svg = $("#iglesia");
+const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
 
-/* ---------- Sesión ---------- */
-let unsubs = [];
-onAuthStateChanged(auth, u => {
-  unsubs.forEach(f => f()); unsubs = [];
-  const esAdmin = u && u.email?.toLowerCase() === ADMIN;
-  $("#login").hidden = !!u;
-  $("#noadmin").hidden = !u || esAdmin;
-  $("#caja").hidden = !esAdmin;
-  if (esAdmin) { $("#usuario").textContent = u.email; escuchar(); }
-});
-$("#f-login").addEventListener("submit", async e => {
-  e.preventDefault();
-  const b = $("#entrar"); b.disabled = true; $("#login-error").hidden = true;
-  try { await signInWithEmailAndPassword(auth, $("#correo").value.trim(), $("#clave").value); }
-  catch (err) {
-    $("#login-error").textContent = ["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found"].includes(err.code)
-      ? "Correo o contraseña incorrectos." : "No se pudo entrar: " + err.message;
-    $("#login-error").hidden = false;
-  } finally { b.disabled = false; }
-});
-document.querySelectorAll(".salir").forEach(b => b.addEventListener("click", () => signOut(auth)));
+// Dibujo del templo según el render: aletas blancas, cruz al centro, madera, vitrales triangulares y escalinata.
+// "plano" = solo las líneas punteadas (lo que falta por construir).
+const ESPEJO = pts => pts.map(([x, y]) => [760 - x, y]);
+function templo(plano) {
+  const C = plano
+    ? { blanco: "none", sombra: "none", madera: "none", vetas: "rgba(243,230,208,.22)", fondo: "none", fondo2: "none", vidrio: "none", piso: "none", piso2: "none", cruz: "none", campana: "none" }
+    : { blanco: "#F2EEE6", sombra: "#D3CBBE", madera: "#C9A97C", vetas: "#A88A60", fondo: "#BFA57E", fondo2: "#A68C66", vidrio: "#2E3B42", piso: "#CFC9BF", piso2: "#B9B2A6", cruz: "#CDB898", campana: "#3A302B" };
+  const trazo = plano ? ` stroke="rgba(243,230,208,.34)" stroke-width="1.4" stroke-dasharray="5 5" fill-opacity="0"` : "";
+  const pol = (pts, fill) => `<polygon points="${pts.map(p => p.join(",")).join(" ")}" fill="${fill}"${trazo}/>`;
+  const par = (pts, fill) => pol(pts, fill) + pol(ESPEJO(pts), fill);
+  const rect = (x, y, w, h, fill) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"${trazo}/>`;
+  const rectPar = (x, y, w, h, fill) => rect(x, y, w, h, fill) + rect(760 - x - w, y, w, h, fill);
+  const vetas = (xs, y1, y2) => xs.map(x => `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="${C.vetas}" stroke-width="1.2"/>`).join("");
+  return [
+    // torre de fondo y bloque central
+    pol([[285, 265], [380, 212], [475, 265], [475, 580], [285, 580]], C.fondo),
+    pol([[350, 220], [410, 220], [422, 580], [338, 580]], C.fondo2),
+    `<path d="M370 312 q0 -18 10 -18 q10 0 10 18 z" fill="${C.campana}"${trazo}/>`,
+    // cruz
+    rect(376, 54, 8, 202, C.cruz), rect(361, 71, 38, 8, C.cruz),
+    // puerta central de madera, dintel y la imagen del santo
+    rect(342, 372, 76, 208, C.madera), vetas([361, 380, 399], 372, 580),
+    rect(338, 497, 84, 7, C.blanco),
+    `<circle cx="380" cy="441" r="6" fill="${C.blanco}"${trazo}/>`,
+    pol([[373, 449], [387, 449], [391, 497], [369, 497]], C.blanco),
+    // muros exteriores
+    rectPar(87, 402, 35, 178, C.sombra),
+    // alas: muro de madera, dintel, frontón triangular de madera, vitral y losa blanca
+    rectPar(132, 504, 135, 76, C.madera), vetas([159, 186, 213, 240, 520, 547, 574, 601], 504, 580),
+    rectPar(140, 493, 127, 11, C.blanco),
+    par([[146, 493], [267, 339], [267, 493]], C.madera),
+    par([[214, 418], [260, 418], [240, 486]], C.vidrio),
+    par([[140, 480], [267, 322], [267, 342], [152, 493]], C.blanco),
+    // aletas exteriores
+    par([[112, 580], [147, 580], [159, 344], [146, 344]], C.blanco),
+    par([[112, 580], [122, 580], [146, 344], [146, 344]], C.sombra),
+    // aletas intermedias
+    par([[266, 262], [292, 255], [300, 580], [262, 580]], C.blanco),
+    // las dos agujas centrales
+    par([[343, 104], [369, 97], [338, 580], [290, 580]], C.blanco),
+    par([[362, 99], [369, 97], [338, 580], [326, 580]], C.sombra),
+    // escalinata
+    rect(50, 580, 660, 8, C.piso), rect(30, 588, 700, 9, C.piso2)
+  ].join("");
+}
+const urlTemplo = plano => "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 600" width="760" height="600">${templo(plano)}</svg>`);
 
-/* ---------- Datos en vivo ---------- */
-let donaciones = [], cajeros = [], patrocinadores = [], evento = {}, pantallaActual = null, imagenActual = "", rankingActual = null;
-let totalPantalla = 0, meta = 50000000, tab = "pendiente";
-const listos = new Set();
-function listo(k) { listos.add(k); programarPublicar(); }
-function escuchar() {
-  listos.clear();
-  unsubs.push(onSnapshot(collection(db, "donaciones"), s => {
-    donaciones = s.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }), estado: d.data().estado || "pendiente" }))
-      .sort((a, b) => (aFecha(b.creadoEn) || aFecha(b.fecha) || 0) - (aFecha(a.creadoEn) || aFecha(a.fecha) || 0));
-    pintar();
-    if (!s.metadata.fromCache) listo("donaciones");
-  }, err => toast("No se pudieron leer las donaciones: " + err.message)));
-  unsubs.push(onSnapshot(PANTALLA, s => {
-    pantallaActual = s.exists() ? s.data() : null;
-    totalPantalla = Number(pantallaActual?.total) || 0;
-    pintarCifras(); listo("pantalla");
-  }));
-  unsubs.push(onSnapshot(doc(db, "config", "evento"), s => {
-    evento = s.data() || {};
-    meta = Number(evento.meta) > 0 ? Number(evento.meta) : 50000000;
-    if (document.activeElement !== $("#meta-in")) $("#meta-in").value = miles(meta);
-    if (document.activeElement !== $("#titulo-in")) $("#titulo-in").value = evento.titulo || "";
-    if (document.activeElement !== $("#subtitulo-in")) $("#subtitulo-in").value = evento.subtitulo || "";
-    pintarCifras(); listo("evento");
-  }));
-  unsubs.push(onSnapshot(doc(db, "config", "imagen"), s => { imagenActual = s.data()?.dataUrl || ""; mostrarImagen(imagenActual); listo("imagen"); }));
-  unsubs.push(onSnapshot(PATROCINADORES, s => { patrocinadores = s.data()?.lista || []; pintarPatrocinadores(); listo("patrocinadores"); }));
-  unsubs.push(onSnapshot(collection(db, "cajeros"), s => {
-    cajeros = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
-    pintarCajeros(); listo("cajeros");
-  }));
-  // Si las reglas aún no permiten el ranking, la pantalla se sigue publicando igual
-  unsubs.push(onSnapshot(RANKING, s => { rankingActual = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); listo("ranking"); },
-    () => { rankingActual = null; listo("ranking"); }));
-}
+const defs = el("defs", {});
+defs.innerHTML = `
+  <filter id="brillo" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>`;
+svg.append(defs);
+svg.append(el("line", { x1: 10, y1: 597, x2: 750, y2: 597, class: "suelo" }));
+const iglesia = el("g", {});
+svg.append(iglesia);
 
-/* ---------- Publicar el documento único que lee la pantalla ---------- */
-// Cada vez que cambia algo aprobado, el banco arma un solo documento con el total, la meta,
-// los nombres y talonarios (sin valores) y las versiones de la imagen y los logos.
-// Cuánto se muestra: todo lo aprobado, o solo hasta el valor que el banco elija con la barra
-const realAprobado = () => donaciones.filter(d => d.estado === "aprobada").reduce((t, d) => t + (Number(d.monto) || 0), 0);
-const mostrarTodo = () => evento.mostrarTodo !== false;
-function totalVisible() {
-  const real = realAprobado();
-  return mostrarTodo() ? real : Math.min(real, Math.max(0, Number(evento.mostrarHasta) || 0));
-}
-function armarPantalla() {
-  const aprob = donaciones.filter(d => d.estado === "aprobada")
-    .sort((a, b) => (aFecha(b.aprobadoEn) || aFecha(b.creadoEn) || 0) - (aFecha(a.aprobadoEn) || aFecha(a.creadoEn) || 0));
-  return {
-    total: totalVisible(),            // solo lo que el banco decidió mostrar (el real no se publica)
-    meta,
-    titulo: evento.titulo || "Donatón",
-    subtitulo: evento.subtitulo || "Construyendo juntos la casa de Dios",
-    donantes: aprob.map(d => ({ n: d.nombre || "Anónimo", t: d.talonario || "" })),
-    imagenVersion: Number(evento.imagenVersion) || (imagenActual ? 1 : 0),
-    patrocinadoresVersion: Number(evento.patrocinadoresVersion) || (patrocinadores.length ? 1 : 0)
-  };
-}
-/* ---------- Ranking de cajeros (aprobado y recogido de cada uno) ---------- */
-function armarRanking() {
-  const suma = a => a.reduce((t, d) => t + (Number(d.monto) || 0), 0);
-  return cajeros.map(c => {
-    const suyos = donaciones.filter(d => d.cajeroEmail?.toLowerCase() === c.id);
-    const ok = suyos.filter(d => d.estado === "aprobada"), pend = suyos.filter(d => d.estado === "pendiente");
-    return { id: c.id, fila: { aprobado: suma(ok), nombre: c.nombre || c.id, recogido: suma(ok) + suma(pend), registros: ok.length + pend.length } };
-  });
-}
-// El banco corrige todas las filas cuando está abierto; cada cajero también mantiene la suya al día
-async function publicarRanking(forzar) {
-  if (!rankingActual) return;
-  const filas = armarRanking(), ids = new Set(filas.map(f => f.id));
-  const lote = writeBatch(db);
-  let cambios = 0;
-  for (const { id, fila } of filas) {
-    const actual = rankingActual[id];
-    const igual = actual && estable([actual.aprobado, actual.nombre, actual.recogido, actual.registros]) === estable([fila.aprobado, fila.nombre, fila.recogido, fila.registros]);
-    if (forzar || !igual) { lote.set(doc(db, "ranking", id), fila); cambios++; }
+// Luces que se encienden en las metas: el nicho del santo, los vitrales y la cruz dorada
+const puerta = el("ellipse", { cx: 380, cy: 468, rx: 26, ry: 38, fill: "rgba(221,184,110,.55)", filter: "url(#brillo)", class: "luz" });
+const ventana = el("g", { class: "luz", filter: "url(#brillo)" });
+ventana.innerHTML = `<polygon points="214,418 260,418 240,486" fill="#DDB86E"/><polygon points="546,418 500,418 520,486" fill="#DDB86E"/>`;
+const cruz = el("g", { class: "luz", filter: "url(#brillo)" });
+cruz.innerHTML = `<rect x="376" y="54" width="8" height="202" fill="#DDB86E"/><rect x="361" y="71" width="38" height="8" fill="#DDB86E"/>`;
+iglesia.append(puerta, ventana, cruz);
+
+// Bloques: el templo se dibuja en un <canvas> (mucho más fluido que cientos de elementos animados).
+// Cada bloque cae en su sitio; cuando termina de caer queda "pegado" en una capa fija y ya no se recalcula.
+const ladrillos = [];
+const SILUETA = (() => { const izq = [[30, 597], [30, 588], [50, 580], [87, 580], [87, 402], [146, 344], [159, 344], [267, 322], [266, 262], [343, 104], [369, 97], [376, 54]]; return [...izq, ...ESPEJO(izq).reverse()]; })();
+const enSilueta = (x, y) => {
+  let d = false;
+  for (let i = 0, j = SILUETA.length - 1; i < SILUETA.length; j = i++) {
+    const [xi, yi] = SILUETA[i], [xj, yj] = SILUETA[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) d = !d;
   }
-  for (const id of Object.keys(rankingActual)) if (!ids.has(id)) { lote.delete(doc(db, "ranking", id)); cambios++; }
-  if (!cambios) return;
-  try { await lote.commit(); } catch (err) { console.warn("No se pudo actualizar el ranking", err); }
+  return d;
+};
+const ESC = 2;                                   // nitidez de la imagen del templo
+const DUR_BLOQUE = 420;                          // ms que tarda cada bloque en caer
+const lienzo = $("#obra-canvas"), ctx = lienzo.getContext("2d");
+const capa = document.createElement("canvas"), capaCtx = capa.getContext("2d");
+const fuente = { color: null, plano: null };
+let vista = { s: 1, ox: 0, oy: 0 };
+let previa = 0;                                  // 1 = iglesia terminada a todo color, 0 = solo la obra
+
+function pintarBloque(c, b, dy, alfa) {
+  c.globalAlpha = alfa;
+  c.drawImage(fuente.color, b.x * ESC, b.y * ESC, b.w * ESC, b.h * ESC, b.x, b.y + dy, b.w, b.h);
+  c.globalAlpha = 1;
 }
-
-let tPub;
-function programarPublicar() { clearTimeout(tPub); tPub = setTimeout(() => publicar(false), 900); }
-async function publicar(forzar) {
-  const faltan = ["donaciones", "pantalla", "evento", "imagen", "patrocinadores", "cajeros", "ranking"].filter(k => !listos.has(k));
-  if (faltan.length) { if (forzar) toast("Todavía se están cargando los datos, intenta en un momento."); return; }
-  publicarRanking(forzar);
-  const nuevo = armarPantalla();
-  const claves = Object.keys(nuevo);
-  const igual = pantallaActual && estable(claves.map(k => pantallaActual[k])) === estable(claves.map(k => nuevo[k]));
-  if (igual && !forzar) { $("#pub-estado").textContent = "✓ La pantalla está al día."; return; }
-  $("#pub-estado").textContent = "Actualizando la pantalla…";
-  try {
-    await setDoc(PANTALLA, { ...nuevo, actualizado: serverTimestamp() });
-    $("#pub-estado").textContent = "✓ La pantalla está al día.";
-    if (forzar) toast("Pantalla publicada");
-  } catch (err) { $("#pub-estado").textContent = "No se pudo actualizar la pantalla: " + err.message; }
+function medir() {
+  const r = lienzo.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+  const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
+  lienzo.width = W; lienzo.height = H; capa.width = W; capa.height = H;
+  const sc = Math.min(W / 760, H / 600);
+  vista = { s: sc, ox: (W - 760 * sc) / 2, oy: (H - 600 * sc) / 2 };
+  capaCtx.setTransform(sc, 0, 0, sc, vista.ox, vista.oy);
+  if (fuente.color) for (let i = 0; i < puestos; i++) if (ladrillos[i].listo) pintarBloque(capaCtx, ladrillos[i], 0, 1);
 }
-
-function pintarCifras() {
-  const pend = donaciones.filter(d => d.estado === "pendiente");
-  const real = realAprobado();
-  $("#c-total").textContent = cop(real);
-  $("#c-meta").textContent = `${meta > 0 ? Math.floor(real / meta * 100) : 0}% de ${cop(meta)}`;
-  pintarMostrar();
-  $("#c-pend").textContent = cop(pend.reduce((s, d) => s + (d.monto || 0), 0));
-  $("#c-pend-n").textContent = pend.length === 1 ? "1 registro" : `${pend.length} registros`;
-  $("#n-pendiente").textContent = pend.length ? `(${pend.length})` : "";
-  const r = resumenPorTipo(donaciones.filter(d => d.estado === "aprobada"));
-  const cuantos = n => n === 1 ? "1 donación" : `${n} donaciones`;
-  $("#c-efectivo").textContent = cop(r.efectivo.valor); $("#c-efectivo-n").textContent = cuantos(r.efectivo.n);
-  $("#c-bancos").textContent = cop(r.bancos.valor); $("#c-bancos-n").textContent = cuantos(r.bancos.n) + (r.otro.n ? ` · ${cuantos(r.otro.n)} sin forma de pago` : "");
-}
-
-function pintar() {
-  pintarCifras();
-  pintarCajeros();
-  if (!["pendiente", "aprobada", "rechazada"].includes(tab)) return;
-  const ul = $("#lista"); ul.replaceChildren();
-  const filas = donaciones.filter(d => d.estado === tab);
-  if (!filas.length) { ul.append(h("li", "vacio", tab === "pendiente" ? "No hay registros esperando aprobación." : "No hay registros aquí.")); return; }
-  for (const d of filas) ul.append(tarjeta(d));
-}
-
-function tarjeta(d) {
-  const li = h("li", "reg");
-  const top = h("div", "reg-top");
-  top.append(h("span", "nom", d.nombre || "Anónimo"), h("span", "badge " + d.estado, ESTADOS[d.estado]), h("span", "val", cop(d.monto)));
-  let pago = d.tipo === "transferencia" ? "Transferencia" : d.tipo === "efectivo" ? "Efectivo" : "Sin forma de pago";
-  if (d.referencia) pago += " · Ref. " + d.referencia;
-  if (d.talonario) pago += " · Talonario " + d.talonario;
-  li.append(top, h("p", "det", pago),
-    h("p", "det", `Donación: ${fmtFecha(d.fecha)} · Cajero: ${d.cajeroNombre || d.cajeroEmail || "—"}`));
-  let reg = "Registrado: " + fmtFecha(d.creadoEn);
-  const cre = aFecha(d.creadoEn), act = aFecha(d.actualizadoEn);
-  if (cre && act && act - cre > 60000) reg += " · Editado: " + fmtFecha(d.actualizadoEn);
-  if (d.estado === "aprobada" && d.aprobadoEn) reg += " · Aprobado: " + fmtFecha(d.aprobadoEn);
-  li.append(h("p", "det", reg));
-  if (d.estado === "rechazada" && d.motivoRechazo) li.append(h("p", "motivo", "Motivo: " + d.motivoRechazo));
-
-  const acc = h("div", "acciones");
-  const boton = (txt, cls, fn) => { const b = h("button", cls, txt); b.type = "button"; b.addEventListener("click", async () => { b.disabled = true; try { await fn(); } finally { b.disabled = false; } }); acc.append(b); };
-  if (d.estado !== "aprobada") boton("Aprobar", "prim", () => cambiarEstado(d, "aprobada"));
-  if (d.estado === "pendiente") boton("Rechazar", "peligro", () => {
-    const motivo = prompt("¿Por qué se rechaza? El cajero verá este motivo y podrá corregir el registro.");
-    if (motivo === null) return; return cambiarEstado(d, "rechazada", motivo.trim());
-  });
-  if (d.tieneFoto) boton("📷 Ver comprobante", "", () => verComprobante(d));
-  boton("Editar", "", () => abrirEditar(d));
-  if (d.estado === "aprobada") boton("Devolver a pendiente", "", () => {
-    if (confirm(`Se restarán ${cop(d.monto)} del total en pantalla hasta que la vuelvas a aprobar. ¿Continuar?`)) return cambiarEstado(d, "pendiente");
-  });
-  if (d.estado !== "pendiente") boton("Eliminar", "peligro", () => eliminar(d));
-  li.append(acc);
-  return li;
-}
-
-/* ---------- Acciones del banco ---------- */
-// El total de la pantalla se recalcula solo (ver publicar), así nunca se descuadra.
-async function cambiarEstado(d, nuevo, motivo = "") {
-  try {
-    const cambios = { estado: nuevo, motivoRechazo: nuevo === "rechazada" ? motivo : "", actualizadoEn: serverTimestamp() };
-    if (nuevo === "aprobada") { cambios.aprobadoPor = ADMIN; cambios.aprobadoEn = serverTimestamp(); }
-    await updateDoc(doc(db, "donaciones", d.id), cambios);
-    toast(nuevo === "aprobada" ? `Aprobada: ${cop(d.monto)} ya suma en pantalla` : nuevo === "rechazada" ? "Registro rechazado" : "Registro devuelto a pendiente");
-  } catch (err) { toast("No se pudo cambiar el estado: " + err.message); }
-}
-
-async function eliminar(d) {
-  const extra = d.estado === "aprobada" ? " Se restará del total en pantalla." : "";
-  if (!confirm(`¿Eliminar el registro de ${d.nombre || "Anónimo"} por ${cop(d.monto)}?${extra}`)) return;
-  try {
-    const lote = writeBatch(db);
-    lote.delete(doc(db, "donaciones", d.id));
-    if (d.tieneFoto) lote.delete(doc(db, "comprobantes", d.id));
-    await lote.commit(); toast("Registro eliminado");
+function dibujar() {
+  const { s: sc, ox, oy } = vista;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, lienzo.width, lienzo.height);
+  if (!fuente.color) return false;
+  ctx.setTransform(sc, 0, 0, sc, ox, oy);
+  ctx.drawImage(fuente.plano, 0, 0, 760, 600);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(capa, 0, 0);
+  ctx.setTransform(sc, 0, 0, sc, ox, oy);
+  const ahora = performance.now();
+  let quedan = false;
+  for (let i = 0; i < puestos; i++) {
+    const b = ladrillos[i];
+    if (b.listo) continue;
+    const k = (ahora - b.t0) / DUR_BLOQUE;
+    if (k >= 1 || reducir) { b.listo = true; pintarBloque(capaCtx, b, 0, 1); pintarBloque(ctx, b, 0, 1); continue; }
+    quedan = true;
+    const e = 1 - Math.pow(1 - Math.max(0, k), 3);
+    pintarBloque(ctx, b, -24 * (1 - e), Math.min(1, k * 2.5));
   }
-  catch (err) { toast("No se pudo eliminar: " + err.message); }
+  if (previa > 0) { ctx.globalAlpha = previa; ctx.drawImage(fuente.color, 0, 0, 760, 600); ctx.globalAlpha = 1; }
+  return quedan;
+}
+let animando = false;
+function bucle() { if (dibujar()) requestAnimationFrame(bucle); else animando = false; }
+function despertar() { if (!animando) { animando = true; requestAnimationFrame(bucle); } }
+new ResizeObserver(() => { medir(); dibujar(); }).observe(lienzo);
+
+const cargarImg = url => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = url; });
+const rasterizar = img => {
+  const c = document.createElement("canvas"); c.width = 760 * ESC; c.height = 600 * ESC;
+  if (img) c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c;
+};
+const obraLista = (async () => {
+  const [ic, ip] = await Promise.all([cargarImg(urlTemplo(false)), cargarImg(urlTemplo(true))]);
+  fuente.color = rasterizar(ic); fuente.plano = rasterizar(ip);
+  let hayPixel = enSilueta;
+  try {
+    const AN = 760 * ESC, AL = 600 * ESC;
+    const px = fuente.color.getContext("2d").getImageData(0, 0, AN, AL).data;
+    hayPixel = (a, b) => { a = Math.round(a * ESC); b = Math.round(b * ESC); return a >= 0 && a < AN && b >= 0 && b < AL && px[(b * AN + a) * 4 + 3] > 10; };
+  } catch {}
+  const BW = 16, BH = 10;
+  for (let r = 0; ; r++) {
+    const y = 597 - (r + 1) * BH;
+    if (y < 44) break;
+    for (let x = (r % 2 ? -8 : 0); x < 760; x += BW) {
+      const muestras = [[x + BW / 2, y + BH / 2], [x + 2, y + 2], [x + BW - 2, y + 2], [x + 2, y + BH - 2], [x + BW - 2, y + BH - 2]];
+      if (!muestras.some(([a, b]) => hayPixel(a, b))) continue;
+      const x0 = Math.max(0, x), x1 = Math.min(760, x + BW + 1);
+      ladrillos.push({ x: x0, y, w: x1 - x0, h: BH + 1, t0: 0, listo: false });
+    }
+  }
+  medir(); dibujar();
+})();
+
+// Andamio al frente del ala izquierda y los dos obreros
+const andamio = el("g", { stroke: "#7D6A55", "stroke-width": 3, "stroke-linecap": "round", class: "faena" });
+andamio.innerHTML = `<line x1="158" y1="316" x2="158" y2="581"/><line x1="210" y1="316" x2="210" y2="581"/>
+  ${[360, 404, 448, 492, 536].map(y => `<line x1="158" y1="${y}" x2="210" y2="${y}"/>`).join("")}
+  ${[316, 360, 404, 448, 492, 536].map(y => `<line x1="158" y1="${y + 44}" x2="210" y2="${y}" stroke-width="1.6"/>`).join("")}`;
+svg.append(andamio);
+
+const cuerpoObrero = brazos => `
+  <g class="pierna PA"><rect x="-7" y="-30" width="6" height="30" rx="2" fill="#2E3A55"/></g>
+  <g class="pierna PB"><rect x="1" y="-30" width="6" height="30" rx="2" fill="#26314A"/></g>
+  <rect x="-10" y="-58" width="20" height="30" rx="5" fill="#E9A23B"/>
+  <rect x="-10" y="-46" width="20" height="3" fill="#F3E6D0"/>
+  <circle cx="0" cy="-66" r="8" fill="#C98F6B"/>
+  <path d="M-9 -67 a9 9 0 0 1 18 0 z" fill="#F2C14E"/>
+  ${brazos}`;
+const obreros = el("g", { class: "faena" });
+obreros.innerHTML = `
+  <g fill="#9C4A35" stroke="#5A2A1E" stroke-width=".8" transform="translate(-48,0)">
+    <rect x="700" y="569" width="20" height="10" rx="1.5"/><rect x="721" y="569" width="20" height="10" rx="1.5"/>
+    <rect x="742" y="569" width="14" height="10" rx="1.5"/><rect x="710" y="558" width="20" height="10" rx="1.5"/>
+    <rect x="731" y="558" width="20" height="10" rx="1.5"/><rect x="720" y="547" width="20" height="10" rx="1.5"/>
+  </g>
+  <g id="obreroA" class="obrero" style="transform:translate(184px,580px) scale(1.3)">
+    <rect x="-26" y="0" width="52" height="5" rx="1.5" fill="#B08A5A"/>
+    <g class="salta">${cuerpoObrero(`
+      <rect x="-10" y="-68" width="23" height="3" rx="1.5" fill="#F2C14E"/>
+      <g class="brazoA"><rect x="2" y="-56" width="19" height="5" rx="2.5" fill="#C98F6B"/><path d="M20 -60 l12 -1 v9 z" fill="#C9CDD2"/></g>`).replace("PA", "").replace("PB", "")}
+    </g>
+  </g>
+  <g transform="translate(640,580) scale(1.3)">
+    <g class="caminaB"><g class="salta">${cuerpoObrero(`
+      <rect x="-13" y="-68" width="23" height="3" rx="1.5" fill="#F2C14E"/>
+      <rect x="-20" y="-52" width="16" height="5" rx="2.5" fill="#C98F6B"/>
+      <rect class="ladrilloB" x="-31" y="-58" width="16" height="9" rx="1.5" fill="#A3513A"/>`).replace("PA", "pb1").replace("PB", "pb2")}
+    </g></g>
+  </g>`;
+svg.append(obreros);
+const obreroA = svg.querySelector("#obreroA");
+
+let puestos = 0;
+function setObra(p) {
+  p = Math.max(0, Math.min(1, p));
+  const objetivo = Math.round(p * ladrillos.length);
+  if (objetivo > puestos) {
+    const ahora = performance.now();
+    for (let i = puestos; i < objetivo; i++) { ladrillos[i].t0 = ahora; ladrillos[i].listo = false; }
+    puestos = objetivo;
+    despertar();
+  }
+  // El obrero del andamio sube a medida que crece la obra
+  const tope = puestos ? ladrillos[puestos - 1].y : 580;
+  obreroA.style.transform = `translate(184px, ${Math.max(360, Math.min(580, tope + 60))}px) scale(1.3)`;
+  puerta.classList.toggle("on", p >= 0.25);
+  ventana.classList.toggle("on", p >= 0.75);
+  cruz.classList.toggle("on", p >= 1);
+}
+function reiniciarObra() {
+  svg.classList.add("sin-trans");
+  ladrillos.forEach(b => { b.listo = false; b.t0 = 0; });
+  [puerta, ventana, cruz].forEach(e => e.classList.remove("on"));
+  puestos = 0;
+  medir(); dibujar();
+  svg.classList.remove("obrando", "celebran");
+  obreroA.style.transform = "translate(184px, 580px) scale(1.3)";
+  svg.getBoundingClientRect();
+  svg.classList.remove("sin-trans");
 }
 
-let editando = null;
-const fEditar = $("#f-editar");
-prepararForm(fEditar);
-function abrirEditar(d) { editando = d; llenarForm(fEditar, d); $("#dlg").showModal(); }
-$("#cancelar").addEventListener("click", () => $("#dlg").close());
-fEditar.addEventListener("submit", async e => {
-  e.preventDefault();
-  let datos; try { datos = leerForm(fEditar); } catch (err) { toast(err.message); return; }
-  const b = $("button[type=submit]", fEditar); b.disabled = true;
-  try {
-    await updateDoc(doc(db, "donaciones", editando.id), { ...datos, actualizadoEn: serverTimestamp(), editadoPor: ADMIN });
-    $("#dlg").close(); toast("Cambios guardados");
-  } catch (err) { toast("No se pudo guardar: " + err.message); }
-  finally { b.disabled = false; }
-});
+/* ================= Odómetro de números ================= */
+let cols = [], seps = [];
+function construirOdometro(maximo) {
+  const dig = Math.max(1, String(Math.floor(maximo)).length);
+  const odo = $("#odo");
+  odo.replaceChildren(); cols = []; seps = [];
+  odo.classList.remove("final", "quieto");
+  const simbolo = document.createElement("span"); simbolo.className = "simbolo"; simbolo.textContent = "$";
+  odo.append(simbolo);
+  for (let p = dig - 1; p >= 0; p--) {
+    const col = document.createElement("span"); col.className = "col";
+    const tira = document.createElement("span"); tira.className = "tira";
+    for (let d = 0; d <= 10; d++) { const c = document.createElement("span"); c.textContent = d % 10; tira.append(c); }
+    col.append(tira); odo.append(col);
+    cols.push({ p, col, tira, prev: 0 });
+    if (p > 0 && p % 3 === 0) {
+      const s = document.createElement("span"); s.className = "sep"; s.textContent = ".";
+      odo.append(s); seps.push({ p, s });
+    }
+  }
+  ajustarTamano(dig);
+  odo.setAttribute("aria-label", "Recaudado " + cop(maximo));
+}
+function ajustarTamano(dig = cols.length) {
+  const ancho = $(".obra").getBoundingClientRect().width;
+  const chars = dig + Math.floor((dig - 1) / 3) * 0.45 + 1;
+  const tope = innerWidth < 820 ? innerWidth * 0.13 : Math.min(innerWidth * 0.075, innerHeight * 0.12);
+  const px = Math.min(tope, (ancho * 0.92) / (chars * 0.6));
+  $("#odo").style.fontSize = px + "px";
+}
+addEventListener("resize", () => ajustarTamano());
 
-/* ---------- Registro directo del banco ---------- */
-const fDirecto = $("#f-directo");
-prepararForm(fDirecto);
-fDirecto.addEventListener("submit", async e => {
-  e.preventDefault();
-  let datos; try { datos = leerForm(fDirecto); } catch (err) { toast(err.message); return; }
-  if (datos.monto >= 5000000 && !confirm(`Vas a registrar ${cop(datos.monto)}. ¿El valor es correcto?`)) return;
-  const b = $("button[type=submit]", fDirecto); b.disabled = true;
-  try {
-    await addDoc(collection(db, "donaciones"), {
-      ...datos, estado: "aprobada", motivoRechazo: "",
-      cajeroUid: auth.currentUser.uid, cajeroEmail: ADMIN, cajeroNombre: "Banco",
-      creadoEn: serverTimestamp(), actualizadoEn: serverTimestamp(),
-      aprobadoPor: ADMIN, aprobadoEn: serverTimestamp()
+function ponerValor(v, exacto) {
+  for (const c of cols) {
+    const base = 10 ** c.p;
+    let pos;
+    if (exacto) pos = Math.floor(Math.round(v) / base) % 10;
+    else {
+      const frac = (v % base) / base;
+      pos = Math.floor(v / base) % 10 + (frac > 0.85 ? (frac - 0.85) / 0.15 : 0);
+    }
+    let d = Math.abs(pos - c.prev); if (d > 5) d = 10 - d;
+    c.prev = pos;
+    c.tira.style.transform = `translateY(${-pos}em)`;
+    c.col.style.filter = !reducir && d > 0.15 && !exacto ? `blur(${Math.min(3.5, d * 5)}px)` : "none";
+    c.col.classList.toggle("apagada", c.p > 0 && v < base);
+  }
+  for (const s of seps) s.s.classList.toggle("apagada", v < 10 ** s.p);
+}
+
+/* ================= Sonido (solo al actualizar con la barra espaciadora) ================= */
+let ac = null;
+function activarAudio() {
+  try { if (!ac) ac = new AudioContext(); if (ac.state === "suspended") ac.resume(); } catch {}
+}
+function nota(f, dur, vol = .06, tipo = "triangle", cuando = 0) {
+  if (!ac || ac.state !== "running") return;
+  const t = ac.currentTime + cuando, o = ac.createOscillator(), g = ac.createGain();
+  o.type = tipo; o.frequency.value = f;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + .02);
+}
+const tic = altura => nota(500 + altura * 900, .05);
+function tada() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => nota(f, 1.4, .07, "triangle", i * .09)); }
+function campana() { nota(880, .6, .07, "sine"); nota(1320, .6, .04, "sine", .05); }
+
+/* ================= Metas intermedias ================= */
+const HITOS = [
+  [0.25, "¡Ya se levantan las paredes!"],
+  [0.5, "¡Vamos por la mitad!"],
+  [0.75, "¡Se iluminaron los vitrales!"],
+  [1, "¡Meta cumplida, gloria a Dios!"]
+];
+function mostrarHito(texto) {
+  const h = $("#hito");
+  h.textContent = texto;
+  h.classList.remove("on"); void h.offsetWidth; h.classList.add("on");
+  campana();
+  if (!reducir && window.confetti) confetti({ particleCount: 70, spread: 70, startVelocity: 35, origin: { x: .5, y: .5 }, colors: COLORES });
+}
+
+/* ================= El conteo: va sumando de a pasos (500 mil, 1 millón, 1,5 millones…) ================= */
+function pasoPara(total) {
+  for (const p of [10000, 20000, 50000, 100000, 200000, 500000, 1e6, 2e6, 5e6, 1e7, 2e7, 5e7]) if (total / p <= 16) return p;
+  return Math.ceil(total / 16);
+}
+let hitoIdx = 0;
+function avance(v) {
+  const prog = meta > 0 ? v / meta : 0;
+  setObra(prog);
+  $("#barra").style.width = Math.min(100, prog * 100) + "%";
+  $("#pct").textContent = Math.floor(prog * 100);
+}
+function animarValor(desde, hasta, dur) {
+  return new Promise(res => {
+    const t0 = performance.now();
+    const f = t => {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      const v = desde + (hasta - desde) * e;
+      ponerValor(v, k >= 1); avance(v);
+      if (k < 1) requestAnimationFrame(f); else res();
+    };
+    requestAnimationFrame(f);
+  });
+}
+function chip(valor) {
+  const c = document.createElement("span"); c.className = "chip"; c.textContent = "+ " + cop(valor);
+  $(".cuenta").append(c); setTimeout(() => c.remove(), 1100);
+}
+function golpe() { const o = $("#odo"); o.classList.remove("golpe"); void o.offsetWidth; o.classList.add("golpe"); }
+
+// Muestra la iglesia terminada, y poco a poco se le va el color hasta quedar el plano para empezar a construir
+async function mostrarPrevia() {
+  document.body.classList.add("previa");
+  previa = 1; dibujar();
+  [puerta, ventana, cruz].forEach(e => e.classList.add("on"));
+  $("#halo").classList.add("on");
+  $("#previa-txt").classList.add("on");
+  await esperar(reducir ? 1500 : 3000);
+  [puerta, ventana, cruz].forEach(e => e.classList.remove("on"));
+  $("#halo").classList.remove("on");
+  if (!reducir) {
+    await new Promise(fin => {
+      const t0 = performance.now(), dur = 1800;
+      const f = t => {
+        const k = Math.min(1, (t - t0) / dur);
+        previa = 1 - (k * k * (3 - 2 * k));    // se funde suave
+        dibujar();
+        if (k < 1) requestAnimationFrame(f); else fin();
+      };
+      requestAnimationFrame(f);
     });
-    limpiarForm(fDirecto);
-    toast(`Registrada y aprobada: ${cop(datos.monto)}`);
-  } catch (err) { toast("No se pudo registrar: " + err.message); }
-  finally { b.disabled = false; }
-});
-
-/* ---------- Cajeros ---------- */
-function pintarCajeros() {
-  const ul = $("#lista-cajeros"); ul.replaceChildren();
-  if (!cajeros.length) { ul.append(h("li", "vacio", "Aún no hay cajeros.")); return; }
-  for (const c of cajeros) {
-    const suyos = donaciones.filter(d => d.cajeroEmail?.toLowerCase() === c.id);
-    const aprob = suyos.filter(d => d.estado === "aprobada").reduce((s, d) => s + (d.monto || 0), 0);
-    const pend = suyos.filter(d => d.estado === "pendiente").length;
-    const li = h("li", "reg");
-    const top = h("div", "reg-top"); top.append(h("span", "nom", c.nombre || c.id), h("span", "val", cop(aprob)));
-    li.append(top, h("p", "det", `${c.id} · ${suyos.length} registros · ${pend} por aprobar`));
-    const acc = h("div", "acciones");
-    const quitar = h("button", "peligro", "Quitar acceso"); quitar.type = "button";
-    quitar.addEventListener("click", async () => {
-      if (!confirm(`¿Quitar el acceso de ${c.nombre || c.id}? Sus registros se conservan.`)) return;
-      try { await deleteDoc(doc(db, "cajeros", c.id)); toast("Acceso quitado"); } catch (err) { toast("No se pudo quitar: " + err.message); }
-    });
-    acc.append(quitar); li.append(acc); ul.append(li);
   }
+  previa = 0; dibujar();
+  $("#previa-txt").classList.remove("on");
+  document.body.classList.remove("previa");
+  await esperar(500);
 }
-$("#f-cajero").addEventListener("submit", async e => {
-  e.preventDefault();
-  const f = e.target, nombre = f.nombre.value.trim(), correo = f.correo.value.trim().toLowerCase(), clave = f.clave.value;
-  if (correo === ADMIN) { toast("Ese es el correo del banco."); return; }
-  const b = $("button[type=submit]", f); b.disabled = true;
+
+async function contar(objetivo) {
+  hitoIdx = 0;
+  if (objetivo <= 0 || reducir) { ponerValor(objetivo, true); avance(objetivo); return; }
+  svg.classList.add("obrando");
+  const paso = pasoPara(objetivo), marcas = [];
+  for (let v = paso; v < objetivo; v += paso) marcas.push(v);
+  marcas.push(objetivo);
+  const base = Math.min(560, Math.max(220, 5600 / marcas.length));
+  let previo = 0;
+  for (let i = 0; i < marcas.length; i++) {
+    const dur = base * (i >= marcas.length - 2 ? 1.6 : 1);     // los dos últimos pasos, un poco de suspenso
+    tic(i / marcas.length);
+    await animarValor(previo, marcas[i], dur * 0.6);
+    golpe();
+    previo = marcas[i];
+    await esperar(dur * 0.4);
+  }
+  ponerValor(objetivo, true);
+  svg.classList.remove("obrando");
+}
+
+function celebrarFinal(total) {
+  const odo = $("#odo");
+  if (total <= 0) {
+    $("#gracias").textContent = "Esperando las primeras ofrendas";
+    $("#gracias").classList.add("on");
+    return;
+  }
+  $("#gracias").textContent = "¡Gracias por construir en la casa del Señor!";
+  odo.classList.add("final");
+  setTimeout(() => odo.classList.add("quieto"), 1400);
+  $("#halo").classList.add("on");
+  $("#gracias").classList.add("on");
+  tada();
+  if (reducir || !window.confetti) return;
+  confetti({ particleCount: 220, spread: 110, startVelocity: 50, origin: { x: .5, y: .45 }, colors: COLORES });
+  const fin = Date.now() + 3000;
+  (function cañones() {
+    confetti({ particleCount: 6, angle: 60, spread: 60, origin: { x: 0, y: .8 }, colors: COLORES });
+    confetti({ particleCount: 6, angle: 120, spread: 60, origin: { x: 1, y: .8 }, colors: COLORES });
+    if (Date.now() < fin) requestAnimationFrame(cañones);
+  })();
+  setTimeout(() => confetti({ particleCount: 120, spread: 360, startVelocity: 30, origin: { x: .5, y: .3 }, colors: COLORES, shapes: ["star"] }), 900);
+}
+
+function estado(txt, error = false) { const e = $("#estado"); e.textContent = txt; e.classList.toggle("error", error); }
+
+/* ================= Lectura de datos: 1 sola lectura + caché ================= */
+// Todo lo de la pantalla vive en un único documento: publico/pantalla (1 lectura por actualización).
+// La imagen y los logos solo se descargan cuando el banco los cambia (se comparan versiones)
+// y se guardan en la memoria del navegador para no volver a leerlos.
+const cache = {
+  leer(k) { try { return JSON.parse(localStorage.getItem("donaton:" + k)); } catch { return null; } },
+  guardar(k, v) { try { localStorage.setItem("donaton:" + k, JSON.stringify(v)); } catch {} }
+};
+let lecturas = 0, sinConexion = false;
+
+function aplicarTextos(p) {
+  if (Number(p.meta) > 0) meta = Number(p.meta);
+  $("#meta").textContent = cop(meta);
+  if (p.titulo) { $("#titulo").textContent = p.titulo; document.title = p.titulo + " | Pantalla"; }
+  if (p.subtitulo) $("#subtitulo").textContent = p.subtitulo;
+}
+
+async function leerTotal() {
+  let p;
+  sinConexion = false;
   try {
-    let existia = false;
-    try { await createUserWithEmailAndPassword(authCrear, correo, clave); await signOut(authCrear); }
-    catch (err) { if (err.code === "auth/email-already-in-use") existia = true; else throw err; }
-    await setDoc(doc(db, "cajeros", correo), { nombre, creadoEn: serverTimestamp() });
-    f.reset();
-    toast(existia ? `${nombre} ya tenía usuario; quedó habilitado con su contraseña anterior.` : `Cajero ${nombre} creado.`);
+    const s = await getDoc(doc(db, "publico", "pantalla"));
+    lecturas++;
+    p = s.data() || {};
+    cache.guardar("ultimo", p);
   } catch (err) {
-    toast(err.code === "auth/weak-password" ? "La contraseña debe tener al menos 6 caracteres." : "No se pudo crear: " + err.message);
-  } finally { b.disabled = false; }
-});
-
-/* ---------- Ajustes y herramientas ---------- */
-$("#meta-in").addEventListener("input", e => e.target.value = miles(num(e.target.value)));
-$("#f-ajustes").addEventListener("submit", async e => {
-  e.preventDefault();
-  const nuevaMeta = num($("#meta-in").value);
-  if (!nuevaMeta) { toast("Escribe una meta mayor que cero."); return; }
-  try { await setDoc(doc(db, "config", "evento"), { meta: nuevaMeta, titulo: $("#titulo-in").value.trim() || "Donatón", subtitulo: $("#subtitulo-in").value.trim() || "Construyendo juntos la casa de Dios" }, { merge: true }); toast("Ajustes guardados"); }
-  catch (err) { toast("No se pudieron guardar: " + err.message); }
-});
-$("#recalcular").addEventListener("click", () => publicar(true));
-/* ---------- Exportar a Excel ---------- */
-// Separa lo recibido (aprobado) en efectivo y bancos, con resumen general y por cajero.
-function resumenPorTipo(lista) {
-  const r = { efectivo: { n: 0, valor: 0 }, bancos: { n: 0, valor: 0 }, otro: { n: 0, valor: 0 } };
-  for (const d of lista) {
-    const k = d.tipo === "efectivo" ? "efectivo" : d.tipo === "transferencia" ? "bancos" : "otro";
-    r[k].n++; r[k].valor += Number(d.monto) || 0;
+    p = cache.leer("ultimo");
+    if (!p) throw err;
+    sinConexion = true;
   }
-  return r;
+  aplicarTextos(p);
+  donantes = (p.donantes || []).map(d => ({ nombre: d.n, talonario: d.t }));
+  if (!sinConexion) await Promise.all([sincronizarImagen(Number(p.imagenVersion) || 0), sincronizarPatrocinadores(Number(p.patrocinadoresVersion) || 0)]);
+  return Math.max(0, Number(p.total) || 0);
 }
-let xlsxCargado = null;
-function cargarXLSX() {
-  if (window.XLSX) return Promise.resolve();
-  return xlsxCargado ??= new Promise((ok, mal) => {
-    const sc = document.createElement("script");
-    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-    sc.onload = ok; sc.onerror = () => { xlsxCargado = null; mal(new Error("No se pudo cargar el generador de Excel. Revisa la conexión.")); };
-    document.head.append(sc);
-  });
-}
-async function exportarExcel(boton) {
-  boton.disabled = true;
-  const texto = boton.textContent; boton.textContent = "Preparando Excel…";
+
+async function sincronizarImagen(v) {
+  const c = cache.leer("img");
+  if (c && c.v === v) { ponerImagen(c.url); return; }
+  if (!v) { cache.guardar("img", { v: 0, url: "" }); ponerImagen(""); return; }
   try {
-    await cargarXLSX();
-    const X = window.XLSX;
-    const fechaJS = ts => aFecha(ts) || "";
-    const tipoTxt = t => t === "efectivo" ? "Efectivo" : t === "transferencia" ? "Bancos (transferencia)" : "Sin forma de pago";
-    const aprob = donaciones.filter(d => d.estado === "aprobada").sort((a, b) => (aFecha(a.fecha) || 0) - (aFecha(b.fecha) || 0));
-    const pend = donaciones.filter(d => d.estado === "pendiente");
-    const ra = resumenPorTipo(aprob), rp = resumenPorTipo(pend);
-    const MONEDA = '"$"#,##0', FECHA = "dd/mm/yyyy hh:mm";
-
-    // Da formato de moneda/fecha a columnas y anchos a la hoja
-    const formatear = (ws, { moneda = [], fecha = [], anchos = [] }) => {
-      const rango = X.utils.decode_range(ws["!ref"]);
-      for (let R = rango.s.r; R <= rango.e.r; R++) {
-        for (const C of moneda) { const c = ws[X.utils.encode_cell({ r: R, c: C })]; if (c && (c.t === "n" || c.f)) c.z = MONEDA; }
-        for (const C of fecha) { const c = ws[X.utils.encode_cell({ r: R, c: C })]; if (c && c.t === "d") c.z = FECHA; }
-      }
-      ws["!cols"] = anchos.map(w => ({ wch: w }));
-      return ws;
-    };
-    const hojaLista = (filas, encabezado, colValor) => {
-      const datos = [encabezado, ...filas];
-      const ws = X.utils.aoa_to_sheet(datos, { cellDates: true });
-      const n = filas.length;
-      const total = X.utils.encode_cell({ r: n + 1, c: colValor - 1 });
-      ws[total] = { t: "s", v: "TOTAL" };
-      const celdaTotal = X.utils.encode_cell({ r: n + 1, c: colValor });
-      const col = X.utils.encode_col(colValor);
-      ws[celdaTotal] = { t: "n", f: n ? `SUM(${col}2:${col}${n + 1})` : "0", v: filas.reduce((t, f) => t + (Number(f[colValor]) || 0), 0) };
-      ws["!ref"] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: n + 1, c: encabezado.length - 1 } });
-      return ws;
-    };
-
-    // 1. Resumen
-    const porCajero = new Map();
-    for (const d of aprob) {
-      const k = d.cajeroNombre || d.cajeroEmail || "Sin cajero";
-      const c = porCajero.get(k) || { efectivo: 0, bancos: 0, otro: 0, n: 0 };
-      if (d.tipo === "efectivo") c.efectivo += Number(d.monto) || 0;
-      else if (d.tipo === "transferencia") c.bancos += Number(d.monto) || 0;
-      else c.otro += Number(d.monto) || 0;
-      c.n++; porCajero.set(k, c);
-    }
-    const resumen = [
-      [`${evento.titulo || "Donatón"} · Relación de lo recibido`],
-      ["Generado el", new Date()],
-      [],
-      ["RECIBIDO (APROBADO)", "Cantidad", "Valor"],
-      ["Efectivo", ra.efectivo.n, ra.efectivo.valor],
-      ["Bancos (transferencias)", ra.bancos.n, ra.bancos.valor],
-      ...(ra.otro.n ? [["Sin forma de pago", ra.otro.n, ra.otro.valor]] : []),
-      ["TOTAL RECIBIDO", aprob.length, ra.efectivo.valor + ra.bancos.valor + ra.otro.valor],
-      [],
-      ["PENDIENTE POR APROBAR", "Cantidad", "Valor"],
-      ["Efectivo", rp.efectivo.n, rp.efectivo.valor],
-      ["Bancos (transferencias)", rp.bancos.n, rp.bancos.valor],
-      ...(rp.otro.n ? [["Sin forma de pago", rp.otro.n, rp.otro.valor]] : []),
-      ["TOTAL PENDIENTE", pend.length, rp.efectivo.valor + rp.bancos.valor + rp.otro.valor],
-      [],
-      ["RECIBIDO POR CAJERO", "Efectivo", "Bancos", "Total", "Donaciones"],
-      ...[...porCajero.entries()]
-        .map(([k, c]) => [k, c.efectivo, c.bancos, c.efectivo + c.bancos + c.otro, c.n])
-        .sort((a, b) => b[3] - a[3])
-    ];
-    const wsRes = X.utils.aoa_to_sheet(resumen, { cellDates: true });
-    const filaCajeros = resumen.findIndex(f => f[0] === "RECIBIDO POR CAJERO");
-    const rr = X.utils.decode_range(wsRes["!ref"]);
-    for (let R = 0; R <= rr.e.r; R++) {
-      const cols = R > filaCajeros ? [1, 2, 3] : [2];
-      for (const C of cols) { const c = wsRes[X.utils.encode_cell({ r: R, c: C })]; if (c && c.t === "n") c.z = MONEDA; }
-    }
-    const fechaGen = wsRes["B2"]; if (fechaGen) fechaGen.z = FECHA;
-    wsRes["!cols"] = [{ wch: 30 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 }];
-
-    // 2. Efectivo y 3. Bancos (solo lo aprobado)
-    const efectivo = aprob.filter(d => d.tipo === "efectivo").map(d =>
-      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, d.talonario || "", d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.aprobadoEn), d.tieneFoto ? "Sí" : "No"]);
-    const wsEf = formatear(hojaLista(efectivo, ["Fecha donación", "Donante", "Valor", "Talonario", "Cajero", "Aprobado el", "Comprobante"], 2),
-      { moneda: [2], fecha: [0, 5], anchos: [17, 30, 14, 12, 20, 17, 12] });
-    const bancos = aprob.filter(d => d.tipo === "transferencia").map(d =>
-      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, d.referencia || "", d.talonario || "", d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.aprobadoEn), d.tieneFoto ? "Sí" : "No"]);
-    const wsBa = formatear(hojaLista(bancos, ["Fecha donación", "Donante", "Valor", "Referencia", "Talonario", "Cajero", "Aprobado el", "Comprobante"], 2),
-      { moneda: [2], fecha: [0, 6], anchos: [17, 30, 14, 18, 12, 20, 17, 12] });
-
-    // 4. Todos los registros (incluye pendientes y rechazados)
-    const todos = [...donaciones].sort((a, b) => (aFecha(a.fecha) || 0) - (aFecha(b.fecha) || 0)).map(d =>
-      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, tipoTxt(d.tipo), d.referencia || "", d.talonario || "", ESTADOS[d.estado] || d.estado,
-       d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.creadoEn), d.motivoRechazo || "", d.tieneFoto ? "Sí" : "No"]);
-    const wsTo = formatear(X.utils.aoa_to_sheet([["Fecha donación", "Donante", "Valor", "Forma de pago", "Referencia", "Talonario", "Estado", "Cajero", "Registrado", "Motivo rechazo", "Comprobante"], ...todos], { cellDates: true }),
-      { moneda: [2], fecha: [0, 8], anchos: [17, 30, 14, 22, 18, 12, 12, 20, 17, 26, 12] });
-
-    const wb = X.utils.book_new();
-    X.utils.book_append_sheet(wb, wsRes, "Resumen");
-    X.utils.book_append_sheet(wb, wsEf, "Efectivo");
-    X.utils.book_append_sheet(wb, wsBa, "Bancos");
-    X.utils.book_append_sheet(wb, wsTo, "Todos los registros");
-    const hoy = new Date();
-    const nombre = `donaton-recibido-${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}.xlsx`;
-    X.writeFile(wb, nombre, { cellDates: true });
-    toast("Excel descargado");
-  } catch (err) { toast(err.message || "No se pudo generar el Excel"); }
-  finally { boton.disabled = false; boton.textContent = texto; }
+    const s = await getDoc(doc(db, "config", "imagen")); lecturas++;
+    const url = s.data()?.dataUrl || "";
+    cache.guardar("img", { v, url }); ponerImagen(url);
+  } catch { if (c) ponerImagen(c.url); }
 }
-$("#exportar").addEventListener("click", e => exportarExcel(e.currentTarget));
-$("#exportar-arriba").addEventListener("click", e => exportarExcel(e.currentTarget));
 
-/* ---------- Imagen de la parroquia ---------- */
-// Se guarda dentro de Firestore (no necesita Firebase Storage), reducida para que pese poco.
-function mostrarImagen(url) {
-  const img = $("#img-vista");
-  if (url) { img.src = url; img.hidden = false; $("#img-vacia").hidden = true; }
-  else { img.hidden = true; img.removeAttribute("src"); $("#img-vacia").hidden = false; }
+async function sincronizarPatrocinadores(v) {
+  const c = cache.leer("pat");
+  if (c && c.v === v) { await pintarPatrocinadores(c.lista); return; }
+  if (!v) { cache.guardar("pat", { v: 0, lista: [] }); await pintarPatrocinadores([]); return; }
+  try {
+    const s = await getDoc(doc(db, "config", "patrocinadores")); lecturas++;
+    const lista = (s.data()?.lista || []).map(x => ({ nombre: x.nombre || "", logo: x.logo }));
+    cache.guardar("pat", { v, lista }); await pintarPatrocinadores(lista);
+  } catch { if (c) await pintarPatrocinadores(c.lista); }
 }
-function cargarImagen(file) {
-  return new Promise((ok, mal) => {
-    const img = new Image(), url = URL.createObjectURL(file);
-    img.onload = () => { URL.revokeObjectURL(url); ok(img); };
-    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error("No se pudo abrir la imagen.")); };
-    img.src = url;
-  });
-}
-// Busca el borde de la parte que no es fondo negro, para encajar el óvalo exacto
-function recuadroSinFondo(img) {
-  const k = Math.min(1, 400 / Math.max(img.width, img.height));
-  const w = Math.round(img.width * k), hh = Math.round(img.height * k);
-  const c = document.createElement("canvas"); c.width = w; c.height = hh;
-  const x = c.getContext("2d"); x.drawImage(img, 0, 0, w, hh);
-  const px = x.getImageData(0, 0, w, hh).data;
-  let x0 = w, y0 = hh, x1 = -1, y1 = -1;
-  for (let y = 0; y < hh; y++) for (let i = 0; i < w; i++) {
-    const o = (y * w + i) * 4;
-    if (px[o + 3] > 40 && Math.max(px[o], px[o + 1], px[o + 2]) > 70) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+
+/* ================= Imagen de la parroquia ================= */
+function ponerImagen(url) {
+  for (const img of [$("#insignia"), $("#insignia-intro")]) {
+    if (url) { if (img.src !== url) img.src = url; img.hidden = false; } else { img.hidden = true; img.removeAttribute("src"); }
   }
-  if (x1 < 0) return { sx: 0, sy: 0, sw: img.width, sh: img.height };
-  return { sx: x0 / k, sy: y0 / k, sw: (x1 - x0 + 1) / k, sh: (y1 - y0 + 1) / k };
 }
-async function procesarImagen(file, ovalo) {
-  const img = await cargarImagen(file);
-  const r = ovalo ? recuadroSinFondo(img) : { sx: 0, sy: 0, sw: img.width, sh: img.height };
-  let lado = 900;
-  for (let intento = 0; intento < 6; intento++) {
-    const k = Math.min(1, lado / Math.max(r.sw, r.sh));
-    const w = Math.round(r.sw * k), hh = Math.round(r.sh * k);
-    const c = document.createElement("canvas"); c.width = w; c.height = hh;
-    const x = c.getContext("2d");
-    if (ovalo) { x.beginPath(); x.ellipse(w / 2, hh / 2, w / 2 * .995, hh / 2 * .995, 0, 0, Math.PI * 2); x.clip(); }
-    x.drawImage(img, r.sx, r.sy, r.sw, r.sh, 0, 0, w, hh);
-    let url = c.toDataURL("image/webp", .86);
-    if (!url.startsWith("data:image/webp")) url = c.toDataURL("image/png");
-    if (url.length < 850000) return url;
-    lado = Math.round(lado * .75);
+
+/* ================= Patrocinadores que pasan de lado a lado ================= */
+let patrocinadores = [];
+async function pintarPatrocinadores(lista) {
+  patrocinadores = lista || [];
+  const zona = $("#patrocinios"), pista = $("#pat-pista");
+  pista.classList.remove("anda"); pista.replaceChildren();
+  zona.hidden = !patrocinadores.length;
+  if (!patrocinadores.length) return;
+  const tarjeta = x => {
+    const t = document.createElement("div"); t.className = "logo";
+    const img = document.createElement("img"); img.src = x.logo; img.alt = x.nombre || "Patrocinador";
+    t.append(img); return t;
+  };
+  patrocinadores.forEach(x => pista.append(tarjeta(x)));
+  await Promise.all([...pista.querySelectorAll("img")].map(i => i.decode().catch(() => {})));
+  const ancho = $(".pat-ventana").clientWidth;
+  let vueltas = 1;
+  while (pista.scrollWidth < ancho && vueltas < 30) { patrocinadores.forEach(x => pista.append(tarjeta(x))); vueltas++; }
+  await Promise.all([...pista.querySelectorAll("img")].map(i => i.decode().catch(() => {})));
+  [...pista.children].forEach(e => { const c = e.cloneNode(true); c.setAttribute("aria-hidden", "true"); pista.append(c); });
+  pista.style.setProperty("--dur", Math.max(18, patrocinadores.length * vueltas * 4.5) + "s");
+  if (!reducir) pista.classList.add("anda");
+}
+
+// Al abrir, muestra de una vez lo que quedó guardado (sin gastar lecturas)
+(function desdeCache() {
+  const u = cache.leer("ultimo"); if (u) aplicarTextos(u);
+  const i = cache.leer("img"); if (i?.url) ponerImagen(i.url);
+  const pt = cache.leer("pat"); if (pt?.lista?.length) pintarPatrocinadores(pt.lista);
+})();
+
+/* ================= Muro de donantes que sube sin fin ================= */
+let donantes = [];
+const AVATARES = ["#DDB86E", "#E3B892", "#F3E6D0", "#B5B9B4", "#C98F6B"];
+function tarjetaDonante(d, i) {
+  const nombre = (d.nombre || "").trim() || "Anónimo";
+  const el = document.createElement("div"); el.className = "don";
+  const av = document.createElement("span"); av.className = "avatar";
+  av.style.background = AVATARES[i % AVATARES.length];
+  av.textContent = nombre === "Anónimo" ? "♥" : nombre.split(/\s+/).slice(0, 2).map(p => p[0]).join("").toUpperCase();
+  const txt = document.createElement("div");
+  const n = document.createElement("p"); n.className = "n"; n.textContent = nombre;
+  const t = document.createElement("p"); t.className = "t";
+  t.textContent = d.talonario ? `Talonario N.º ${d.talonario}` : "Ofrenda recibida";
+  txt.append(n, t); el.append(av, txt);
+  return el;
+}
+function pintarMuro() {
+  const pista = $("#muro-pista");
+  pista.classList.remove("anda"); pista.replaceChildren();
+  if (!donantes.length) {
+    const p = document.createElement("p"); p.className = "muro-vacio";
+    p.textContent = "Aquí aparecerán los nombres de quienes siembran en esta obra.";
+    pista.append(p); return;
   }
-  throw new Error("La imagen es demasiado pesada, prueba con otra más pequeña.");
+  const alto = $(".muro-ventana").clientHeight;
+  let vueltas = 0;
+  do { donantes.forEach((d, i) => pista.append(tarjetaDonante(d, i))); vueltas++; }
+  while (pista.scrollHeight < alto && vueltas < 40);
+  // Se duplica todo para que al llegar a la mitad empiece de nuevo sin que se note el salto
+  [...pista.children].forEach(e => { const c = e.cloneNode(true); c.setAttribute("aria-hidden", "true"); pista.append(c); });
+  pista.style.setProperty("--dur", Math.max(20, donantes.length * vueltas * 3.2) + "s");
+  if (!reducir) pista.classList.add("anda");
 }
-let imagenLista = null;
-async function prepararVista() {
-  const file = $("#img-archivo").files[0];
-  imagenLista = null; $("#img-subir").disabled = true;
-  if (!file) return;
-  try { imagenLista = await procesarImagen(file, $("#img-ovalo").checked); mostrarImagen(imagenLista); $("#img-subir").disabled = false; toast("Así se verá. Pulsa «Subir imagen» para ponerla en pantalla."); }
-  catch (err) { toast(err.message); }
-}
-$("#img-archivo").addEventListener("change", prepararVista);
-$("#img-ovalo").addEventListener("change", prepararVista);
-$("#img-subir").addEventListener("click", async () => {
-  if (!imagenLista) return;
-  const b = $("#img-subir"); b.disabled = true;
-  try {
-    const lote = writeBatch(db);
-    lote.set(doc(db, "config", "imagen"), { dataUrl: imagenLista, actualizado: serverTimestamp() });
-    lote.set(doc(db, "config", "evento"), { imagenVersion: Date.now() }, { merge: true });
-    await lote.commit(); imagenLista = null; $("#img-archivo").value = ""; toast("Imagen subida. Refresca la pantalla para verla."); }
-  catch (err) { toast("No se pudo subir: " + err.message); b.disabled = false; }
-});
-$("#img-quitar").addEventListener("click", async () => {
-  if (!confirm("¿Quitar la imagen de la pantalla?")) return;
-  try {
-    const lote = writeBatch(db);
-    lote.delete(doc(db, "config", "imagen"));
-    lote.set(doc(db, "config", "evento"), { imagenVersion: 0 }, { merge: true });
-    await lote.commit(); toast("Imagen quitada");
-  } catch (err) { toast("No se pudo quitar: " + err.message); }
-});
+let tMuro;
+addEventListener("resize", () => { clearTimeout(tMuro); tMuro = setTimeout(() => { if (document.body.classList.contains("enfoque")) return; pintarMuro(); pintarPatrocinadores(patrocinadores); }, 300); });
 
-/* ---------- Patrocinadores ---------- */
-// Los logos se reducen y se guardan como texto base64 en un solo documento (config/patrocinadores).
-const LIMITE = 950000;   // Firestore admite hasta ~1 MB por documento
-async function procesarLogo(file) {
-  const img = await cargarImagen(file);
-  let ancho = 520, alto = 260;
-  for (let intento = 0; intento < 6; intento++) {
-    const k = Math.min(1, ancho / img.width, alto / img.height);
-    const w = Math.max(1, Math.round(img.width * k)), hh = Math.max(1, Math.round(img.height * k));
-    const c = document.createElement("canvas"); c.width = w; c.height = hh;
-    c.getContext("2d").drawImage(img, 0, 0, w, hh);
-    let url = c.toDataURL("image/webp", .88);
-    if (!url.startsWith("data:image/webp")) url = c.toDataURL("image/png");
-    if (url.length < 90000) return url;
-    ancho = Math.round(ancho * .8); alto = Math.round(alto * .8);
+let corriendo = false;
+async function actualizar() {
+  if (corriendo) return;
+  corriendo = true;
+  $("#intro").classList.remove("off");
+  $("#halo").classList.remove("on");
+  $("#gracias").classList.remove("on");
+  const t0 = Date.now();
+  try {
+    const total = await leerTotal();
+    await obraLista;
+    document.body.classList.add("enfoque");     // solo el templo mientras cuenta
+    await esperar(Math.max(0, 1200 - (Date.now() - t0)));   // un poquito de suspenso
+    reiniciarObra();
+    $("#barra").style.width = "0%";
+    $("#pct").textContent = "0";
+    $("#meta").textContent = cop(meta);
+    construirOdometro(total);
+    ponerValor(0, true);
+    $("#intro").classList.add("off");
+    await esperar(700);
+    await mostrarPrevia();
+    await contar(total);
+    celebrarFinal(total);
+    await esperar(total > 0 ? 2400 : 1000);     // un momento para disfrutar el total
+    salirEnfoque();
+    const hora = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    if (sinConexion) estado("Sin conexión: mostrando el último conteo guardado", true);
+    else estado(`Actualizado a las ${hora}`);
+    lecturas = 0;
+  } catch (err) {
+    $("#intro").classList.add("off");
+    salirEnfoque();
+    estado("No se pudo leer Firebase: " + err.message, true);
   }
-  throw new Error("Ese logo es muy pesado, prueba con otro archivo.");
+  corriendo = false;
 }
-const pesoKB = lista => Math.round(JSON.stringify(lista).length / 1024);
-async function guardarPatrocinadores(lista, mensaje) {
-  if (JSON.stringify(lista).length > LIMITE) { toast("Ya no caben más logos. Quita alguno o usa logos más livianos."); return false; }
-  try {
-    const lote = writeBatch(db);
-    lote.set(PATROCINADORES, { lista, actualizado: serverTimestamp() });
-    lote.set(doc(db, "config", "evento"), { patrocinadoresVersion: Date.now() }, { merge: true });
-    await lote.commit();
-    if (mensaje) toast(mensaje);
-    return true;
-  } catch (err) { toast("No se pudo guardar: " + err.message); return false; }
-}
-function pintarPatrocinadores() {
-  const ul = $("#lista-pat"); ul.replaceChildren();
-  $("#pat-peso").textContent = patrocinadores.length
-    ? `${patrocinadores.length} ${patrocinadores.length === 1 ? "logo" : "logos"} · ${pesoKB(patrocinadores)} KB de ${Math.round(LIMITE / 1024)} KB disponibles`
-    : "";
-  if (!patrocinadores.length) { ul.append(h("li", "vacio", "Aún no hay patrocinadores.")); return; }
-  patrocinadores.forEach((x, i) => {
-    const li = h("li", "pat-fila");
-    const caja = h("span", "pat-logo"); const img = document.createElement("img"); img.src = x.logo; img.alt = ""; caja.append(img);
-    const acc = h("div", "acciones");
-    const mover = (txt, etiqueta, j) => {
-      const b = h("button", "", txt); b.type = "button"; b.setAttribute("aria-label", etiqueta); b.disabled = j < 0 || j >= patrocinadores.length;
-      b.addEventListener("click", () => { const l = [...patrocinadores]; [l[i], l[j]] = [l[j], l[i]]; guardarPatrocinadores(l); });
-      acc.append(b);
-    };
-    mover("↑", "Subir", i - 1); mover("↓", "Bajar", i + 1);
-    const q = h("button", "peligro", "Quitar"); q.type = "button";
-    q.addEventListener("click", () => { if (confirm(`¿Quitar ${x.nombre || "este patrocinador"} de la pantalla?`)) guardarPatrocinadores(patrocinadores.filter((_, k) => k !== i), "Patrocinador quitado"); });
-    acc.append(q);
-    li.append(caja, h("span", "nom", x.nombre || "Sin nombre"), acc);
-    ul.append(li);
-  });
-}
-let logoListo = null;
-$("#pat-archivo").addEventListener("change", async () => {
-  const file = $("#pat-archivo").files[0];
-  logoListo = null; $("#pat-agregar").disabled = true;
-  $("#pat-vista").hidden = true; $("#pat-vacia").hidden = false;
-  if (!file) return;
-  try {
-    logoListo = await procesarLogo(file);
-    $("#pat-vista").src = logoListo; $("#pat-vista").hidden = false; $("#pat-vacia").hidden = true;
-    $("#pat-agregar").disabled = false;
-  } catch (err) { toast(err.message); }
-});
-$("#f-pat").addEventListener("submit", async e => {
-  e.preventDefault();
-  if (!logoListo) { toast("Elige el logo del patrocinador."); return; }
-  const f = e.target, b = $("#pat-agregar"); b.disabled = true;
-  const nuevo = { id: Date.now().toString(36), nombre: f.nombre.value.trim(), logo: logoListo };
-  const ok = await guardarPatrocinadores([...patrocinadores, nuevo], "Patrocinador agregado. Refresca la pantalla para verlo.");
-  if (ok) {
-    f.reset(); logoListo = null;
-    $("#pat-vista").hidden = true; $("#pat-vacia").hidden = false;
-  } else b.disabled = false;
-});
 
-/* ---------- Barra de «lo que se ve en pantalla» ---------- */
-const rango = $("#m-rango");
-let arrastrando = false;
-function pintarMostrar(valorTemporal) {
-  const real = realAprobado();
-  rango.max = Math.max(real, 1);
-  rango.step = real > 20000000 ? 100000 : real > 2000000 ? 50000 : 10000;
-  const todo = mostrarTodo();
-  const v = valorTemporal ?? totalVisible();
-  if (!arrastrando) rango.value = todo ? rango.max : v;
-  $("#m-valor").textContent = cop(v);
-  $("#m-max").textContent = "Hasta el momento: " + cop(real);
-  $("#m-input").placeholder = miles(v) || "0";
-  const modo = $("#m-modo");
-  modo.textContent = todo ? "En vivo" : "Parcial";
-  modo.classList.toggle("todo", todo);
-  $("#m-ayuda").textContent = todo
-    ? "La pantalla muestra todo lo aprobado. Cada donación nueva que apruebes suma sola."
-    : `La pantalla muestra ${cop(v)} de ${cop(real)}. Ve subiendo la barra para revelar más, o pulsa «Hasta el momento».`;
+function salirEnfoque() {
+  const mostrarTodo = () => {
+    document.body.classList.remove("enfoque");
+    ajustarTamano();
+    pintarMuro();
+    pintarPatrocinadores(patrocinadores);
+  };
+  if (document.startViewTransition && !reducir && document.body.classList.contains("enfoque")) document.startViewTransition(mostrarTodo);
+  else mostrarTodo();
 }
-async function guardarMostrar(cambios) {
-  try { await setDoc(doc(db, "config", "evento"), cambios, { merge: true }); }
-  catch (err) { toast("No se pudo cambiar lo que se muestra: " + err.message); }
-}
-function valorDesdeBarra() {
-  const real = realAprobado(), v = Number(rango.value);
-  return v >= real - Number(rango.step) / 2 ? { todo: true, v: real } : { todo: false, v };
-}
-rango.addEventListener("input", () => { arrastrando = true; const r = valorDesdeBarra(); pintarMostrar(r.v); });
-rango.addEventListener("change", () => {
-  arrastrando = false;
-  const r = valorDesdeBarra();
-  guardarMostrar(r.todo ? { mostrarTodo: true } : { mostrarTodo: false, mostrarHasta: r.v });
-});
-document.querySelectorAll("[data-ajuste]").forEach(b => b.addEventListener("click", () => {
-  const real = realAprobado();
-  const v = Math.max(0, totalVisible() + Number(b.dataset.ajuste));
-  guardarMostrar(v >= real ? { mostrarTodo: true } : { mostrarTodo: false, mostrarHasta: v });
-}));
-$("#m-todo").addEventListener("click", () => guardarMostrar({ mostrarTodo: true }));
-$("#m-input").addEventListener("input", e => e.target.value = miles(num(e.target.value)));
-$("#m-form").addEventListener("submit", async e => {
-  e.preventDefault();
-  const v = num($("#m-input").value), real = realAprobado();
-  if (!$("#m-input").value.trim()) { toast("Escribe el valor que quieres mostrar."); return; }
-  if (v >= real) {
-    if (v > real) toast(`Lo aprobado hasta ahora es ${cop(real)}. La pantalla mostrará eso y quedará en vivo.`);
-    await guardarMostrar({ mostrarTodo: true });
-  } else {
-    await guardarMostrar({ mostrarTodo: false, mostrarHasta: v });
-    toast(`La pantalla mostrará ${cop(v)}. Refréscala para ver el conteo.`);
-  }
-  $("#m-input").value = ""; $("#m-input").blur();
-});
 
-/* ---------- Ver el comprobante de un registro ---------- */
-// La foto se descarga solo cuando el banco la abre (y queda en memoria para no volver a leerla).
-const fotosCache = new Map();
-async function verComprobante(d) {
-  const img = $("#foto-grande"), carga = $("#foto-carga"), bajar = $("#foto-descargar");
-  img.removeAttribute("src"); bajar.hidden = true; $("#foto-marco").classList.remove("zoom");
-  carga.hidden = false; carga.textContent = "Cargando…";
-  let info = `${d.nombre || "Anónimo"} · ${cop(d.monto)} · ${d.tipo === "transferencia" ? "Transferencia" : "Efectivo"}`;
-  if (d.referencia) info += " · Ref. " + d.referencia;
-  if (d.talonario) info += " · Talonario " + d.talonario;
-  $("#foto-info").textContent = info + ` · Cajero: ${d.cajeroNombre || d.cajeroEmail || "—"}`;
-  $("#dlg-foto").showModal();
-  try {
-    let url = fotosCache.get(d.id);
-    if (!url) { url = (await getDoc(doc(db, "comprobantes", d.id))).data()?.dataUrl || ""; if (url) fotosCache.set(d.id, url); }
-    if (!url) { carga.textContent = "Este registro no tiene foto guardada."; return; }
-    img.src = url; carga.hidden = true;
-    bajar.href = url; bajar.download = `comprobante-${(d.nombre || "anonimo").replace(/[^\wáéíóúñ]+/gi, "-")}-${d.id.slice(0, 5)}.jpg`; bajar.hidden = false;
-  } catch (err) { carga.textContent = "No se pudo cargar la foto: " + err.message; }
+/* ================= Controles ================= */
+let bloqueo = null;
+async function mantenerEncendida() { try { bloqueo = await navigator.wakeLock?.request("screen"); } catch {} }
+function alternarPantalla() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+  mantenerEncendida();
 }
-$("#foto-marco").addEventListener("click", () => $("#foto-marco").classList.toggle("zoom"));
-$("#foto-cerrar").addEventListener("click", () => $("#dlg-foto").close());
+addEventListener("keydown", e => {
+  if (e.key === "f" || e.key === "F") alternarPantalla();
+  if (e.code === "Space" || e.key === "r" || e.key === "R") { e.preventDefault(); activarAudio(); mantenerEncendida(); actualizar(); }
+});
+$("#actualizar").addEventListener("click", () => { activarAudio(); actualizar(); });
+addEventListener("dblclick", alternarPantalla);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && bloqueo) mantenerEncendida(); });
 
-/* ---------- Pestañas ---------- */
-const TITULOS = { pendiente: "Por aprobar", aprobada: "Aprobadas", rechazada: "Rechazadas" };
-document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
-  tab = b.dataset.tab;
-  document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
-  const esLista = tab in TITULOS;
-  document.querySelectorAll("[data-panel]").forEach(p => p.hidden = p.dataset.panel !== (esLista ? "lista" : tab));
-  if (esLista) $("#titulo-lista").textContent = TITULOS[tab];
-  pintar();
-}));
+actualizar();
 </script>
 </body>
 </html>
