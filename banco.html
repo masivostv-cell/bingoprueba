@@ -138,6 +138,13 @@
   .m-valor{font-weight:800;font-size:2rem;line-height:1.1;color:var(--oro);font-variant-numeric:tabular-nums}
   .m-ejes{display:flex;justify-content:space-between;color:var(--suave);font-size:.85rem;margin-top:-4px}
   #m-rango{width:100%;padding:0;border:none;background:none;accent-color:var(--ladrillo);height:34px}
+  .foto-grande{overflow:auto;max-height:68vh;border-radius:10px;background:#000;cursor:zoom-in}
+  .foto-grande img{display:block;width:100%;height:auto}
+  .foto-grande.zoom{cursor:zoom-out}
+  .foto-grande.zoom img{width:auto;max-width:none}
+  .boton-link{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:10px;border:1.5px solid var(--linea);
+    color:var(--tinta);text-decoration:none;font-weight:700}
+  .con-foto{color:var(--ok);font-weight:700}
   [hidden]{display:none !important}
 </style>
 </head>
@@ -170,7 +177,10 @@
     <div class="cifras">
       <div class="cifra"><p>Recaudado real (aprobado)</p><p id="c-total" class="n">$ 0</p><p id="c-meta" class="s"></p></div>
       <div class="cifra"><p>Por aprobar</p><p id="c-pend" class="n">$ 0</p><p id="c-pend-n" class="s"></p></div>
+      <div class="cifra"><p>💵 Recibido en efectivo</p><p id="c-efectivo" class="n">$ 0</p><p id="c-efectivo-n" class="s"></p></div>
+      <div class="cifra"><p>🏦 Recibido en bancos</p><p id="c-bancos" class="n">$ 0</p><p id="c-bancos-n" class="s"></p></div>
     </div>
+    <button type="button" id="exportar-arriba" class="prim">📊 Exportar a Excel lo recibido</button>
 
     <section class="panel mostrar">
       <div class="barra">
@@ -264,15 +274,26 @@
       </section>
       <section class="panel">
         <h2>Herramientas</h2>
-        <p class="nota">Descarga todos los registros para Excel. La pantalla se actualiza sola mientras esta página está abierta; si algo no cuadra, publícala de nuevo.</p>
+        <p class="nota">Descarga en Excel la relación de lo recibido, separada en efectivo y bancos, con el resumen por cajero. La pantalla se actualiza sola mientras esta página está abierta; si algo no cuadra, publícala de nuevo.</p>
         <div class="acciones">
-          <button type="button" id="exportar">Descargar para Excel</button>
+          <button type="button" id="exportar">📊 Exportar a Excel</button>
           <button type="button" id="recalcular">Publicar pantalla ahora</button>
         </div>
       </section>
     </section>
   </section>
 </main>
+
+<dialog id="dlg-foto">
+  <div class="col">
+    <div class="barra"><h2>Comprobante del pago</h2><button type="button" id="foto-cerrar">Cerrar</button></div>
+    <p id="foto-info" class="nota"></p>
+    <p id="foto-carga" class="nota">Cargando…</p>
+    <div class="foto-grande" id="foto-marco"><img id="foto-grande" alt="Comprobante del pago"></div>
+    <p class="nota">Toca la foto para acercarla.</p>
+    <div class="fila-botones"><a id="foto-descargar" class="boton-link" download="comprobante.jpg" hidden>Descargar foto</a></div>
+  </div>
+</dialog>
 
 <dialog id="dlg">
   <form id="f-editar" class="col" autocomplete="off">
@@ -290,7 +311,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDy9nmz3x8h20vSX5OMVEDAV1B5JCg73Hg",
@@ -309,7 +330,7 @@ const db = getFirestore(app);
 const authCrear = getAuth(initializeApp(firebaseConfig, "crear-cajeros"));
 const PANTALLA = doc(db, "publico", "pantalla");     // lo único que lee la pantalla
 const PATROCINADORES = doc(db, "config", "patrocinadores");
-const RANKING = doc(db, "ranking", "actual");         // lo leen los cajeros
+const RANKING = collection(db, "ranking");           // una fila por cajero; la leen todos los cajeros
 // Compara datos sin importar el orden de las claves (evita escrituras repetidas)
 const estable = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x)
   ? Object.keys(x).sort().reduce((o, c) => (o[c] = x[c], o), {}) : x);
@@ -440,7 +461,7 @@ function escuchar() {
     pintarCajeros(); listo("cajeros");
   }));
   // Si las reglas aún no permiten el ranking, la pantalla se sigue publicando igual
-  unsubs.push(onSnapshot(RANKING, s => { rankingActual = s.exists() ? s.data() : null; listo("ranking"); },
+  unsubs.push(onSnapshot(RANKING, s => { rankingActual = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); listo("ranking"); },
     () => { rankingActual = null; listo("ranking"); }));
 }
 
@@ -473,14 +494,23 @@ function armarRanking() {
   return cajeros.map(c => {
     const suyos = donaciones.filter(d => d.cajeroEmail?.toLowerCase() === c.id);
     const ok = suyos.filter(d => d.estado === "aprobada"), pend = suyos.filter(d => d.estado === "pendiente");
-    return { aprobado: suma(ok), id: c.id, nombre: c.nombre || c.id, recogido: suma(ok) + suma(pend), registros: ok.length + pend.length };
-  }).sort((a, b) => b.aprobado - a.aprobado || b.recogido - a.recogido || a.nombre.localeCompare(b.nombre));
+    return { id: c.id, fila: { aprobado: suma(ok), nombre: c.nombre || c.id, recogido: suma(ok) + suma(pend), registros: ok.length + pend.length } };
+  });
 }
+// El banco corrige todas las filas cuando está abierto; cada cajero también mantiene la suya al día
 async function publicarRanking(forzar) {
-  const filas = armarRanking();
-  if (!forzar && rankingActual && estable(rankingActual.filas) === estable(filas)) return;
-  try { await setDoc(RANKING, { filas, actualizado: serverTimestamp() }); }
-  catch (err) { console.warn("No se pudo actualizar el ranking", err); }
+  if (!rankingActual) return;
+  const filas = armarRanking(), ids = new Set(filas.map(f => f.id));
+  const lote = writeBatch(db);
+  let cambios = 0;
+  for (const { id, fila } of filas) {
+    const actual = rankingActual[id];
+    const igual = actual && estable([actual.aprobado, actual.nombre, actual.recogido, actual.registros]) === estable([fila.aprobado, fila.nombre, fila.recogido, fila.registros]);
+    if (forzar || !igual) { lote.set(doc(db, "ranking", id), fila); cambios++; }
+  }
+  for (const id of Object.keys(rankingActual)) if (!ids.has(id)) { lote.delete(doc(db, "ranking", id)); cambios++; }
+  if (!cambios) return;
+  try { await lote.commit(); } catch (err) { console.warn("No se pudo actualizar el ranking", err); }
 }
 
 let tPub;
@@ -510,6 +540,10 @@ function pintarCifras() {
   $("#c-pend").textContent = cop(pend.reduce((s, d) => s + (d.monto || 0), 0));
   $("#c-pend-n").textContent = pend.length === 1 ? "1 registro" : `${pend.length} registros`;
   $("#n-pendiente").textContent = pend.length ? `(${pend.length})` : "";
+  const r = resumenPorTipo(donaciones.filter(d => d.estado === "aprobada"));
+  const cuantos = n => n === 1 ? "1 donación" : `${n} donaciones`;
+  $("#c-efectivo").textContent = cop(r.efectivo.valor); $("#c-efectivo-n").textContent = cuantos(r.efectivo.n);
+  $("#c-bancos").textContent = cop(r.bancos.valor); $("#c-bancos-n").textContent = cuantos(r.bancos.n) + (r.otro.n ? ` · ${cuantos(r.otro.n)} sin forma de pago` : "");
 }
 
 function pintar() {
@@ -545,6 +579,7 @@ function tarjeta(d) {
     const motivo = prompt("¿Por qué se rechaza? El cajero verá este motivo y podrá corregir el registro.");
     if (motivo === null) return; return cambiarEstado(d, "rechazada", motivo.trim());
   });
+  if (d.tieneFoto) boton("📷 Ver comprobante", "", () => verComprobante(d));
   boton("Editar", "", () => abrirEditar(d));
   if (d.estado === "aprobada") boton("Devolver a pendiente", "", () => {
     if (confirm(`Se restarán ${cop(d.monto)} del total en pantalla hasta que la vuelvas a aprobar. ¿Continuar?`)) return cambiarEstado(d, "pendiente");
@@ -568,7 +603,12 @@ async function cambiarEstado(d, nuevo, motivo = "") {
 async function eliminar(d) {
   const extra = d.estado === "aprobada" ? " Se restará del total en pantalla." : "";
   if (!confirm(`¿Eliminar el registro de ${d.nombre || "Anónimo"} por ${cop(d.monto)}?${extra}`)) return;
-  try { await deleteDoc(doc(db, "donaciones", d.id)); toast("Registro eliminado"); }
+  try {
+    const lote = writeBatch(db);
+    lote.delete(doc(db, "donaciones", d.id));
+    if (d.tieneFoto) lote.delete(doc(db, "comprobantes", d.id));
+    await lote.commit(); toast("Registro eliminado");
+  }
   catch (err) { toast("No se pudo eliminar: " + err.message); }
 }
 
@@ -656,17 +696,134 @@ $("#f-ajustes").addEventListener("submit", async e => {
   catch (err) { toast("No se pudieron guardar: " + err.message); }
 });
 $("#recalcular").addEventListener("click", () => publicar(true));
-$("#exportar").addEventListener("click", () => {
-  const cel = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const fecha = ts => { const d = aFecha(ts); return d ? d.toLocaleString("es-CO") : ""; };
-  const filas = [["Fecha donación", "Donante", "Valor", "Forma de pago", "Referencia", "Talonario", "Estado", "Cajero", "Registrado", "Última edición", "Motivo rechazo"]];
-  for (const d of donaciones) filas.push([fecha(d.fecha), d.nombre, d.monto, d.tipo, d.referencia, d.talonario, ESTADOS[d.estado], d.cajeroNombre || d.cajeroEmail, fecha(d.creadoEn), fecha(d.actualizadoEn), d.motivoRechazo]);
-  const csv = "\ufeff" + filas.map(f => f.map(cel).join(";")).join("\r\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  a.download = `donaton-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-});
+/* ---------- Exportar a Excel ---------- */
+// Separa lo recibido (aprobado) en efectivo y bancos, con resumen general y por cajero.
+function resumenPorTipo(lista) {
+  const r = { efectivo: { n: 0, valor: 0 }, bancos: { n: 0, valor: 0 }, otro: { n: 0, valor: 0 } };
+  for (const d of lista) {
+    const k = d.tipo === "efectivo" ? "efectivo" : d.tipo === "transferencia" ? "bancos" : "otro";
+    r[k].n++; r[k].valor += Number(d.monto) || 0;
+  }
+  return r;
+}
+let xlsxCargado = null;
+function cargarXLSX() {
+  if (window.XLSX) return Promise.resolve();
+  return xlsxCargado ??= new Promise((ok, mal) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    sc.onload = ok; sc.onerror = () => { xlsxCargado = null; mal(new Error("No se pudo cargar el generador de Excel. Revisa la conexión.")); };
+    document.head.append(sc);
+  });
+}
+async function exportarExcel(boton) {
+  boton.disabled = true;
+  const texto = boton.textContent; boton.textContent = "Preparando Excel…";
+  try {
+    await cargarXLSX();
+    const X = window.XLSX;
+    const fechaJS = ts => aFecha(ts) || "";
+    const tipoTxt = t => t === "efectivo" ? "Efectivo" : t === "transferencia" ? "Bancos (transferencia)" : "Sin forma de pago";
+    const aprob = donaciones.filter(d => d.estado === "aprobada").sort((a, b) => (aFecha(a.fecha) || 0) - (aFecha(b.fecha) || 0));
+    const pend = donaciones.filter(d => d.estado === "pendiente");
+    const ra = resumenPorTipo(aprob), rp = resumenPorTipo(pend);
+    const MONEDA = '"$"#,##0', FECHA = "dd/mm/yyyy hh:mm";
+
+    // Da formato de moneda/fecha a columnas y anchos a la hoja
+    const formatear = (ws, { moneda = [], fecha = [], anchos = [] }) => {
+      const rango = X.utils.decode_range(ws["!ref"]);
+      for (let R = rango.s.r; R <= rango.e.r; R++) {
+        for (const C of moneda) { const c = ws[X.utils.encode_cell({ r: R, c: C })]; if (c && (c.t === "n" || c.f)) c.z = MONEDA; }
+        for (const C of fecha) { const c = ws[X.utils.encode_cell({ r: R, c: C })]; if (c && c.t === "d") c.z = FECHA; }
+      }
+      ws["!cols"] = anchos.map(w => ({ wch: w }));
+      return ws;
+    };
+    const hojaLista = (filas, encabezado, colValor) => {
+      const datos = [encabezado, ...filas];
+      const ws = X.utils.aoa_to_sheet(datos, { cellDates: true });
+      const n = filas.length;
+      const total = X.utils.encode_cell({ r: n + 1, c: colValor - 1 });
+      ws[total] = { t: "s", v: "TOTAL" };
+      const celdaTotal = X.utils.encode_cell({ r: n + 1, c: colValor });
+      const col = X.utils.encode_col(colValor);
+      ws[celdaTotal] = { t: "n", f: n ? `SUM(${col}2:${col}${n + 1})` : "0", v: filas.reduce((t, f) => t + (Number(f[colValor]) || 0), 0) };
+      ws["!ref"] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: n + 1, c: encabezado.length - 1 } });
+      return ws;
+    };
+
+    // 1. Resumen
+    const porCajero = new Map();
+    for (const d of aprob) {
+      const k = d.cajeroNombre || d.cajeroEmail || "Sin cajero";
+      const c = porCajero.get(k) || { efectivo: 0, bancos: 0, otro: 0, n: 0 };
+      if (d.tipo === "efectivo") c.efectivo += Number(d.monto) || 0;
+      else if (d.tipo === "transferencia") c.bancos += Number(d.monto) || 0;
+      else c.otro += Number(d.monto) || 0;
+      c.n++; porCajero.set(k, c);
+    }
+    const resumen = [
+      [`${evento.titulo || "Donatón"} · Relación de lo recibido`],
+      ["Generado el", new Date()],
+      [],
+      ["RECIBIDO (APROBADO)", "Cantidad", "Valor"],
+      ["Efectivo", ra.efectivo.n, ra.efectivo.valor],
+      ["Bancos (transferencias)", ra.bancos.n, ra.bancos.valor],
+      ...(ra.otro.n ? [["Sin forma de pago", ra.otro.n, ra.otro.valor]] : []),
+      ["TOTAL RECIBIDO", aprob.length, ra.efectivo.valor + ra.bancos.valor + ra.otro.valor],
+      [],
+      ["PENDIENTE POR APROBAR", "Cantidad", "Valor"],
+      ["Efectivo", rp.efectivo.n, rp.efectivo.valor],
+      ["Bancos (transferencias)", rp.bancos.n, rp.bancos.valor],
+      ...(rp.otro.n ? [["Sin forma de pago", rp.otro.n, rp.otro.valor]] : []),
+      ["TOTAL PENDIENTE", pend.length, rp.efectivo.valor + rp.bancos.valor + rp.otro.valor],
+      [],
+      ["RECIBIDO POR CAJERO", "Efectivo", "Bancos", "Total", "Donaciones"],
+      ...[...porCajero.entries()]
+        .map(([k, c]) => [k, c.efectivo, c.bancos, c.efectivo + c.bancos + c.otro, c.n])
+        .sort((a, b) => b[3] - a[3])
+    ];
+    const wsRes = X.utils.aoa_to_sheet(resumen, { cellDates: true });
+    const filaCajeros = resumen.findIndex(f => f[0] === "RECIBIDO POR CAJERO");
+    const rr = X.utils.decode_range(wsRes["!ref"]);
+    for (let R = 0; R <= rr.e.r; R++) {
+      const cols = R > filaCajeros ? [1, 2, 3] : [2];
+      for (const C of cols) { const c = wsRes[X.utils.encode_cell({ r: R, c: C })]; if (c && c.t === "n") c.z = MONEDA; }
+    }
+    const fechaGen = wsRes["B2"]; if (fechaGen) fechaGen.z = FECHA;
+    wsRes["!cols"] = [{ wch: 30 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 }];
+
+    // 2. Efectivo y 3. Bancos (solo lo aprobado)
+    const efectivo = aprob.filter(d => d.tipo === "efectivo").map(d =>
+      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, d.talonario || "", d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.aprobadoEn), d.tieneFoto ? "Sí" : "No"]);
+    const wsEf = formatear(hojaLista(efectivo, ["Fecha donación", "Donante", "Valor", "Talonario", "Cajero", "Aprobado el", "Comprobante"], 2),
+      { moneda: [2], fecha: [0, 5], anchos: [17, 30, 14, 12, 20, 17, 12] });
+    const bancos = aprob.filter(d => d.tipo === "transferencia").map(d =>
+      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, d.referencia || "", d.talonario || "", d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.aprobadoEn), d.tieneFoto ? "Sí" : "No"]);
+    const wsBa = formatear(hojaLista(bancos, ["Fecha donación", "Donante", "Valor", "Referencia", "Talonario", "Cajero", "Aprobado el", "Comprobante"], 2),
+      { moneda: [2], fecha: [0, 6], anchos: [17, 30, 14, 18, 12, 20, 17, 12] });
+
+    // 4. Todos los registros (incluye pendientes y rechazados)
+    const todos = [...donaciones].sort((a, b) => (aFecha(a.fecha) || 0) - (aFecha(b.fecha) || 0)).map(d =>
+      [fechaJS(d.fecha), d.nombre || "Anónimo", Number(d.monto) || 0, tipoTxt(d.tipo), d.referencia || "", d.talonario || "", ESTADOS[d.estado] || d.estado,
+       d.cajeroNombre || d.cajeroEmail || "", fechaJS(d.creadoEn), d.motivoRechazo || "", d.tieneFoto ? "Sí" : "No"]);
+    const wsTo = formatear(X.utils.aoa_to_sheet([["Fecha donación", "Donante", "Valor", "Forma de pago", "Referencia", "Talonario", "Estado", "Cajero", "Registrado", "Motivo rechazo", "Comprobante"], ...todos], { cellDates: true }),
+      { moneda: [2], fecha: [0, 8], anchos: [17, 30, 14, 22, 18, 12, 12, 20, 17, 26, 12] });
+
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, wsRes, "Resumen");
+    X.utils.book_append_sheet(wb, wsEf, "Efectivo");
+    X.utils.book_append_sheet(wb, wsBa, "Bancos");
+    X.utils.book_append_sheet(wb, wsTo, "Todos los registros");
+    const hoy = new Date();
+    const nombre = `donaton-recibido-${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}.xlsx`;
+    X.writeFile(wb, nombre, { cellDates: true });
+    toast("Excel descargado");
+  } catch (err) { toast(err.message || "No se pudo generar el Excel"); }
+  finally { boton.disabled = false; boton.textContent = texto; }
+}
+$("#exportar").addEventListener("click", e => exportarExcel(e.currentTarget));
+$("#exportar-arriba").addEventListener("click", e => exportarExcel(e.currentTarget));
 
 /* ---------- Imagen de la parroquia ---------- */
 // Se guarda dentro de Firestore (no necesita Firebase Storage), reducida para que pese poco.
@@ -862,6 +1019,29 @@ document.querySelectorAll("[data-ajuste]").forEach(b => b.addEventListener("clic
   guardarMostrar(v >= real ? { mostrarTodo: true } : { mostrarTodo: false, mostrarHasta: v });
 }));
 $("#m-todo").addEventListener("click", () => guardarMostrar({ mostrarTodo: true }));
+
+/* ---------- Ver el comprobante de un registro ---------- */
+// La foto se descarga solo cuando el banco la abre (y queda en memoria para no volver a leerla).
+const fotosCache = new Map();
+async function verComprobante(d) {
+  const img = $("#foto-grande"), carga = $("#foto-carga"), bajar = $("#foto-descargar");
+  img.removeAttribute("src"); bajar.hidden = true; $("#foto-marco").classList.remove("zoom");
+  carga.hidden = false; carga.textContent = "Cargando…";
+  let info = `${d.nombre || "Anónimo"} · ${cop(d.monto)} · ${d.tipo === "transferencia" ? "Transferencia" : "Efectivo"}`;
+  if (d.referencia) info += " · Ref. " + d.referencia;
+  if (d.talonario) info += " · Talonario " + d.talonario;
+  $("#foto-info").textContent = info + ` · Cajero: ${d.cajeroNombre || d.cajeroEmail || "—"}`;
+  $("#dlg-foto").showModal();
+  try {
+    let url = fotosCache.get(d.id);
+    if (!url) { url = (await getDoc(doc(db, "comprobantes", d.id))).data()?.dataUrl || ""; if (url) fotosCache.set(d.id, url); }
+    if (!url) { carga.textContent = "Este registro no tiene foto guardada."; return; }
+    img.src = url; carga.hidden = true;
+    bajar.href = url; bajar.download = `comprobante-${(d.nombre || "anonimo").replace(/[^\wáéíóúñ]+/gi, "-")}-${d.id.slice(0, 5)}.jpg`; bajar.hidden = false;
+  } catch (err) { carga.textContent = "No se pudo cargar la foto: " + err.message; }
+}
+$("#foto-marco").addEventListener("click", () => $("#foto-marco").classList.toggle("zoom"));
+$("#foto-cerrar").addEventListener("click", () => $("#dlg-foto").close());
 
 /* ---------- Pestañas ---------- */
 const TITULOS = { pendiente: "Por aprobar", aprobada: "Aprobadas", rechazada: "Rechazadas" };
