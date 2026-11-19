@@ -75,6 +75,17 @@
   .empty{margin:0;color:var(--muted);font-size:13px;line-height:1.35}
   .cart-line{display:grid;grid-template-columns:1fr auto;gap:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.09);font-size:14px}
   .cart-line small{display:block;color:var(--muted);margin-top:4px}
+  .cart-line{align-items:center}
+  .cl-name{background:none;border:0;padding:0;color:#fff;font-weight:900;text-align:left;cursor:pointer;font-size:14px;text-decoration:underline;text-decoration-color:rgba(246,168,0,.5);text-underline-offset:3px}
+  .cl-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .cl-qty{display:flex;align-items:center;gap:6px}
+  .cl-qty button{width:28px;height:28px;border-radius:50%;border:0;cursor:pointer;font-weight:900;font-size:17px;display:grid;place-items:center;padding:0;
+    color:#111;background:linear-gradient(135deg,var(--yellow),var(--orange))}
+  .cl-qty button.m{color:#fff;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16)}
+  .cl-qty button:disabled{opacity:.35;cursor:not-allowed}
+  .cl-qty b{min-width:18px;text-align:center}
+  .product.flash{animation:flash 1.4s ease}
+  @keyframes flash{0%,60%{box-shadow:0 0 0 3px var(--yellow),0 10px 24px rgba(0,0,0,.24)}100%{box-shadow:0 10px 24px rgba(0,0,0,.24)}}
   .total{display:flex;justify-content:space-between;align-items:center;font-size:19px;font-weight:900}
   .total strong{color:var(--yellow);font-size:27px}
   .sub-note{font-size:12px;color:var(--muted);margin-top:6px}
@@ -185,6 +196,7 @@
   const CK='menu_cache_'+NEG, PK='menu_pedido_'+NEG;
   let M=null, sel='Todos', cart={}, notes={};
   const $=id=>document.getElementById(id);
+  const $$cl=q=>Array.from(document.getElementById('cartLines').querySelectorAll(q));
   const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=v=>{ const d=(M&&M.decimales)||0; return (M&&M.simbolo||'$')+' '+Number(v||0).toLocaleString('es-CO',{minimumFractionDigits:d,maximumFractionDigits:d}); };
 
@@ -268,7 +280,7 @@
     $('products').innerHTML=grupos.filter(g=>g.ps.length).map(g=>'<section class="category-section"><h2 class="category-heading">'+esc(g.n)+'</h2>'+
       g.ps.sort((a,b)=>(a.o||0)-(b.o||0)||String(a.n).localeCompare(String(b.n),'es')).map(p=>{
         const out=!(p.max>0), q=cart[p.id]||0;
-        return '<article class="product'+(out?' out':'')+'">'+(out?'<span class="badge-out">AGOTADO</span>':'')+
+        return '<article class="product'+(out?' out':'')+'" id="pc_'+esc(p.id)+'">'+(out?'<span class="badge-out">AGOTADO</span>':'')+
           '<div class="product-img">'+(p.f?'<img loading="lazy" src="'+p.f+'" alt="'+esc(p.n)+'">':'<span class="no-image">'+esc(p.e||'🍔')+'</span>')+'</div>'+
           '<div class="product-info"><div><div class="product-name">'+esc(p.n)+'</div>'+(p.d?'<p class="product-desc">'+esc(p.d)+'</p>':'')+
           '<div class="price">'+money(p.pr)+'</div></div>'+
@@ -279,21 +291,38 @@
             (p.max<10? '<div class="left-note">Quedan '+p.max+'</div>':'')+'</div>'+
             '<div><textarea class="obs" data-id="'+esc(p.id)+'" maxlength="120" placeholder="Ej: sin cebolla…">'+esc(notes[p.id]||'')+'</textarea></div></div>')+
           '</div></article>'; }).join('')+'</section>').join('');
-    document.querySelectorAll('.qty-btn').forEach(b=>b.onclick=()=>{
-      const p=(M.prods||[]).find(x=>x.id===b.dataset.id); if(!p) return;
-      const top=Math.min(20,p.max||0); let q=cart[p.id]||0;
-      q= b.dataset.a==='+'? Math.min(top,q+1) : Math.max(0,q-1);
-      if(q) cart[p.id]=q; else delete cart[p.id];
-      $('q_'+p.id).value=q;
-      const plus=b.parentNode.querySelector('[data-a="+"]'); if(plus) plus.disabled=q>=top;
-      pintarCarrito(); });
+    document.querySelectorAll('.qty-btn').forEach(b=>b.onclick=()=>ponerCant(b.dataset.id,(cart[b.dataset.id]||0)+(b.dataset.a==='+'?1:-1)));
     document.querySelectorAll('.obs').forEach(t=>t.oninput=()=>{ notes[t.dataset.id]=t.value; pintarCarrito(); });
+  }
+  function ponerCant(id,q){
+    const p=(M.prods||[]).find(x=>x.id===id); if(!p) return;
+    const top=Math.min(20,p.max||0); q=Math.max(0,Math.min(top,q));
+    if(q) cart[id]=q; else delete cart[id];
+    const inp=$('q_'+id); if(inp){ inp.value=q; const plus=inp.parentNode.querySelector('[data-a="+"]'); if(plus) plus.disabled=q>=top; }
+    pintarCarrito();
+  }
+  /* ir hasta el producto en la carta (para agregar otro o cambiar la observación) */
+  function irAProducto(id){
+    let card=$('pc_'+id);
+    if(!card){ sel='Todos'; pintarTabs(); pintarProductos(); card=$('pc_'+id); }
+    if(!card) return;
+    card.scrollIntoView({behavior:'smooth',block:'center'});
+    card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
   }
   function lineas(){ return Object.keys(cart).map(id=>{ const p=(M.prods||[]).find(x=>x.id===id); return p? {p:p,q:cart[id],nota:(notes[id]||'').trim()} : null; }).filter(Boolean); }
   function pintarCarrito(){
     const L=lineas(), tot=L.reduce((s,l)=>s+l.p.pr*l.q,0), n=L.reduce((s,l)=>s+l.q,0);
-    $('cartLines').innerHTML=L.length? L.map(l=>'<div class="cart-line"><div><b>'+l.q+' × '+esc(l.p.n)+'</b>'+(l.nota?'<small>Obs: '+esc(l.nota)+'</small>':'')+'</div><span>'+money(l.p.pr*l.q)+'</span></div>').join('')
+    $('cartLines').innerHTML=L.length? L.map(l=>{ const top=Math.min(20,l.p.max||0);
+      return '<div class="cart-line"><div><button type="button" class="cl-name" data-go="'+esc(l.p.id)+'" title="Ver en la carta">'+esc(l.p.n)+'</button>'+
+        (l.nota?'<small>Obs: '+esc(l.nota)+'</small>':'')+'<small>'+money(l.p.pr)+' c/u</small></div>'+
+        '<div class="cl-right"><b>'+money(l.p.pr*l.q)+'</b><div class="cl-qty">'+
+          '<button type="button" class="m" data-cq="'+esc(l.p.id)+'" data-d="-1" aria-label="Quitar uno">'+(l.q===1?'🗑':'−')+'</button>'+
+          '<b>'+l.q+'</b>'+
+          '<button type="button" data-cq="'+esc(l.p.id)+'" data-d="1" aria-label="Agregar uno"'+(l.q>=top?' disabled':'')+'>+</button></div></div></div>'; }).join('')+
+        '<div class="sub-note">Toca el nombre de un producto para verlo en la carta.</div>'
       : '<p class="empty">Todavía no has seleccionado productos.</p>';
+    $$cl('[data-cq]').forEach(b=>b.onclick=()=>ponerCant(b.dataset.cq,(cart[b.dataset.cq]||0)+Number(b.dataset.d)));
+    $$cl('[data-go]').forEach(b=>b.onclick=()=>irAProducto(b.dataset.go));
     $('totalText').textContent=money(tot);
     $('miniCart').textContent=n+' · '+money(tot);
     const fc=$('floatCart'); fc.textContent='🛒 Ver pedido · '+n+' · '+money(tot); fc.classList.toggle('on',n>0);
