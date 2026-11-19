@@ -692,7 +692,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.11.08-2';
+const APP_VERSION='2026.11.09-1';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -2274,13 +2274,14 @@ const VIEWS=[
   {g:'Gestión'},
   {k:'clientes', n:'Clientes y proveedores', i:'👥'},
   {k:'reportes', n:'Reportes y utilidad',  i:'📊'},
+  {k:'menulinea', n:'Menú en línea', i:'🌐'},
   {k:'ajustes',  n:'Ajustes',   i:'⚙️'},
   {g:'Superadmin', req:'super'},
   {k:'super', n:'Negocios', i:'🏢'}
 ];
 const TITLES={pos:'Punto de venta',mesas:'Mesas y comandas',ventas:'Ventas',compras:'Compras',
   inventario:'Inventario',productos:'Productos y recetas',cartera:'Cartera',tesoreria:'Tesorería',cocina:'Cocina · pedidos que llegan',entregas:'Entregas · tiempo de los pedidos',
-  caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes y utilidad',ajustes:'Ajustes'};
+  caja:'Caja',turnos:'Caja y turnos',clientes:'Clientes y proveedores',reportes:'Reportes y utilidad',menulinea:'Menú en línea',ajustes:'Ajustes'};
 
 /* el nombre de arriba: para cualquier administrador abre la lista de sus
    restaurantes (si tiene uno solo, le dice cómo agregar más) */
@@ -2344,7 +2345,7 @@ function render(){
   buildNav(); paintSync(); pintarPrueba(); pintarEstacion();
   const fn=({pos:viewPOS,mesas:viewMesas,ventas:viewVentas,compras:viewCompras,inventario:viewInventario,
     productos:viewProductos,cartera:viewCartera,tesoreria:viewTesoreria,turnos:viewCaja,caja:viewCaja,cocina:viewCocina,entregas:viewEntregas,
-    clientes:viewClientes,reportes:viewReportes,ajustes:viewAjustes,super:viewSuper,
+    clientes:viewClientes,reportes:viewReportes,menulinea:viewMenuLinea,ajustes:viewAjustes,super:viewSuper,
     contabilidad:viewContabilidad})[S.view];
   vw.scrollTop=0;
   if(fn) fn(vw); else vw.innerHTML='<div class="empty">Sección no disponible</div>';
@@ -9978,8 +9979,10 @@ let _repTab='utilidad', _repF=null;
    Los productos se marcan "Agotado" solos cuando el inventario no alcanza. */
 let _menuHashMem='', _pedWeb=[], _pedWebT=null, _pedWebVistos={};
 function menuActivo(){ return !!(S.cfg.menuOn && S.cfg.fbOn && S.cfg.fbNegocio && S.cfg.fbProjectId); }
+const MENU_PROYECTO='restaurante-8f3f9';       // el que viene metido en menu.html: con ese, el link es corto
 function menuLink(){
   const base=location.origin+location.pathname.replace(/[^\/]*$/,'');
+  if(S.cfg.fbProjectId===MENU_PROYECTO) return base+'menu.html?'+encodeURIComponent(S.cfg.fbNegocio||'');
   return base+'menu.html?r='+encodeURIComponent(S.cfg.fbNegocio||'')+'&p='+encodeURIComponent(S.cfg.fbProjectId||'')+
     (S.cfg.fbApiKey?'&k='+encodeURIComponent(S.cfg.fbApiKey):'');
 }
@@ -10169,6 +10172,68 @@ const REGLAS_MENU=`    // ===== MENÚ EN LÍNEA (pegar dentro de: match /databas
         allow list, update, delete: if esDelNegocio(neg);
       }
     }`;
+/* pantalla propia (menú lateral ▸ 🌐 Menú en línea): link, compartir, WhatsApp */
+function viewMenuLinea(vw){
+  const c=S.cfg, on=menuActivo(), link=on? menuLink() : '';
+  topact('<button class="btn pri sm" id="mlcfg">⚙️ Configurar</button>');
+  const paso=(n,t,d)=>'<div class="row" style="gap:12px;align-items:flex-start;margin:10px 0"><div style="flex:0 0 30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800">'+n+'</div>'+
+    '<div><b>'+t+'</b><div class="tiny muted">'+d+'</div></div></div>';
+  vw.innerHTML='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">'+
+    '<div class="card"><div class="hd"><h3>🔗 Link de tu menú</h3>'+(on?'<span class="pill ok">Activo</span>':'<span class="pill">Apagado</span>')+'</div><div class="bd">'+
+      (on? '<input id="vl_link" readonly value="'+esc(link)+'" style="width:100%;font-size:12px">'+
+        '<div class="row wrap" style="gap:8px;margin-top:10px">'+
+          '<button class="btn pri" id="vl_sh">📤 Compartir</button><button class="btn" id="vl_cp">📋 Copiar link</button>'+
+          '<a class="btn" href="'+esc(link)+'" target="_blank" rel="noopener">👁️ Ver menú</a>'+
+          '<button class="btn" id="vl_test">🩺 Probar</button>'+
+          (c.menuWhatsapp? '<a class="btn" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text='+encodeURIComponent('Haz tu pedido aquí 👇 '+link)+'">🟢 Mandar por WhatsApp</a>':'')+'</div>'+
+        '<div style="text-align:center;margin-top:14px"><img alt="QR" style="width:200px;height:200px;background:#fff;padding:8px;border-radius:12px" '+
+          'src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=0&data='+encodeURIComponent(link)+'"><div class="tiny muted">Código QR para las mesas (clic derecho ▸ guardar imagen)</div></div>'
+      : '<div class="empty" style="padding:18px"><span class="ico">🌐</span>El menú en línea está apagado.<br>Toca <b>⚙️ Configurar</b>, pon el WhatsApp del local y actívalo.</div>')+
+    '</div></div>'+
+    '<div class="card"><div class="hd"><h3>📲 WhatsApp donde llegan los pedidos</h3></div><div class="bd">'+
+      '<div class="row" style="gap:8px"><input id="vl_wa" inputmode="tel" placeholder="Ej: 3189040086" value="'+esc(c.menuWhatsapp||'')+'" style="flex:1;font-size:16px">'+
+        '<button class="btn pri" id="vl_wag">Guardar</button></div>'+
+      '<div class="tiny muted" style="margin-top:6px">El número de WhatsApp de <b>este restaurante</b>. Con 10 dígitos basta (se le pone el 57 solo).</div>'+
+      '<label class="row" style="gap:8px;margin-top:12px"><input type="checkbox" id="vl_on"'+(c.menuOn?' checked':'')+'> <b>Menú en línea activado</b></label>'+
+      '<label class="row" style="gap:8px;margin-top:6px"><input type="checkbox" id="vl_ab"'+(c.menuAbierto!==false?' checked':'')+'> Recibiendo pedidos ahora</label>'+
+      '<hr style="margin:14px 0;border:0;border-top:1px solid var(--line)">'+
+      '<b>Cómo funciona</b>'+
+      paso(1,'Compartes el link','Por WhatsApp, Instagram o con el QR en las mesas.')+
+      paso(2,'El cliente pide','Escoge, llena sus datos y el pedido te llega a este WhatsApp.')+
+      paso(3,'Lo traes al sistema','En Mesas o en Cocina toca <b>🛎️ Pedidos del menú</b> y dale Aceptar: se imprime en cocina.')+
+    '</div></div></div>';
+  $('#mlcfg').onclick=mMenuLinea;
+  if($('#vl_cp')) $('#vl_cp').onclick=()=>copiarTexto(link,'Link copiado');
+  if($('#vl_test')) $('#vl_test').onclick=probarMenuPublico;
+  if($('#vl_sh')) $('#vl_sh').onclick=()=>{ if(navigator.share) navigator.share({title:'Menú · '+nombreDelNegocio(),text:'Haz tu pedido aquí 👇',url:link}).catch(()=>{}); else copiarTexto(link,'Link copiado: pégalo donde lo quieras compartir'); };
+  const guardar=async(msg)=>{ c.menuWhatsapp=$('#vl_wa').value.replace(/\D/g,''); c.menuOn=$('#vl_on').checked; c.menuAbierto=$('#vl_ab').checked;
+    if(c.menuOn && !c.menuWhatsapp){ c.menuOn=false; saveCfg(); render(); return toast('Escribe primero el WhatsApp del local','warn'); }
+    if(c.menuOn && (!c.fbOn || !c.fbNegocio)){ c.menuOn=false; saveCfg(); render(); return toast('Este restaurante no está conectado a la nube (Ajustes ▸ Nube · Firebase)','warn',6000); }
+    saveCfg(); render(); toast(msg||'Guardado','ok');
+    if(c.menuOn){ if(await publicarMenu(true)) toast('✅ Menú publicado','ok'); } };
+  $('#vl_wag').onclick=()=>guardar('WhatsApp guardado');
+  $('#vl_on').onchange=()=>guardar(c.menuOn?'Menú apagado':'Menú activado');
+  $('#vl_ab').onchange=()=>guardar();
+}
+/* mira el menú como lo vería un cliente (sin iniciar sesión) y dice qué falta */
+async function probarMenuPublico(){
+  const url='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(S.cfg.fbProjectId)+'/databases/(default)/documents/menus/'+
+    encodeURIComponent(S.cfg.fbNegocio)+(S.cfg.fbApiKey?'?key='+encodeURIComponent(S.cfg.fbApiKey):'');
+  let st=0; try{ const r=await fetch(url,{cache:'no-store'}); st=r.status; }catch(e){ st=-1; }
+  if(st===200) return toast('✅ Todo bien: los clientes ya pueden ver tu menú','ok',5000);
+  if(st===404){ toast('El menú todavía no está publicado. Publicando…','warn',4000);
+    return publicarMenu(true).then(ok=>toast(ok?'✅ Publicado. Prueba otra vez el link.':'No se pudo publicar: revisa las reglas de Firebase','warn',6000)); }
+  if(st===403){ return modal({title:'🔒 Falta poner las reglas en Firebase',size:'wide',
+    body:'<p class="tiny">Firebase todavía no deja que los clientes vean el menú. Hazlo una sola vez:</p>'+
+      '<ol class="tiny" style="line-height:1.7"><li>Entra a <b>console.firebase.google.com</b> y abre el proyecto <b>'+esc(S.cfg.fbProjectId)+'</b>.</li>'+
+      '<li>Menú de la izquierda ▸ <b>Firestore Database</b> ▸ pestaña <b>Reglas</b>.</li>'+
+      '<li>Busca la línea <code>match /databases/{database}/documents {</code> y pega el bloque de abajo <b>justo debajo</b> de esa línea. No borres nada de lo que ya hay.</li>'+
+      '<li>Dale <b>Publicar</b>, espera un minuto y vuelve a tocar <b>🩺 Probar</b>.</li></ol>'+
+      '<textarea readonly style="width:100%;height:240px;font-family:monospace;font-size:11px">'+esc(REGLAS_MENU)+'</textarea>',
+    footer:'<button class="btn" data-x>Cerrar</button><button class="btn pri" id="pr_cp">📋 Copiar reglas</button>',
+    onOpen:m=>{ $('#pr_cp',m).onclick=()=>copiarTexto(REGLAS_MENU,'Reglas copiadas: pégalas en Firebase'); }}); }
+  toast('No se pudo comprobar (código '+st+'). Revisa la conexión a internet.','warn',5000);
+}
 function mMenuLinea(){
   if(!puedeEditar()) return pedirAlAdmin('configurar el menú en línea');
   const c=S.cfg;
