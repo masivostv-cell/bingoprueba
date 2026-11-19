@@ -286,6 +286,7 @@ table.tbl td.num,table.tbl th.num{text-align:right;white-space:nowrap;font-varia
 #sync.off .dot{background:var(--muted)}
 #sync.err .dot{background:var(--bad)}
 @keyframes pulse{50%{opacity:.25}}
+@keyframes pedPulse{50%{transform:scale(1.06)}}
 
 /* ---------- login ---------- */
 #login{position:fixed;inset:0;z-index:80;background:var(--sb);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -691,7 +692,7 @@ const nameOf=(c,id,f)=>{const o=byId(c,id);return o?(o.nombre||o[f||'nombre']):'
 
 /* Versión: cambia en cada entrega. Al subir el archivo al dominio, los equipos
    comparan la suya con la publicada y se actualizan solos. */
-const APP_VERSION='2026.11.07-1';
+const APP_VERSION='2026.11.08-2';
 const APP_WEB='mercadodigital.com.co';
 /* Marca del software (igual para todos los clientes). El logo de cada
    restaurante sigue saliendo adentro: menú, tickets y facturas. */
@@ -876,7 +877,7 @@ function fsDoc(fields){ const o={}; Object.keys(fields||{}).forEach(k=>{ o[k]=fs
 
 /* la configuración del dispositivo nunca viaja a la nube */
 const CFG_LOCAL=['fbApiKey','fbProjectId','fbNegocio','fbOn','autoSync','pullSeg','tema','ticketAncho','prueba',
-  'estacion','estacionAuto','estacionSonido','estacionVel','impresoraComanda','impresoraTicket','modoImp','respaldoCierre'];
+  'estacion','estacionAuto','estacionSonido','estacionVel','impresoraComanda','impresoraTicket','modoImp','respaldoCierre','menuAvisarAqui','menuRevisarAuto'];
 function cfgParaNube(){ const o={}; Object.keys(S.cfg).forEach(k=>{ if(CFG_LOCAL.indexOf(k)<0) o[k]=S.cfg[k]; }); o.id='cfg'; return o; }
 
 /* ------------------------- cola de envío (outbox) ------------------- */
@@ -4320,7 +4321,7 @@ function viewCocina(vw){
   const abiertas=S.comandas.filter(c=>c.estado==='abierta')
     .sort((a,b)=>String(b.apertura||'').localeCompare(String(a.apertura||'')));
   sub(pend.length? pend.length+' pedido(s) esperando impresión' : 'Todo al día');
-  topact('<button class="btn sm" id="k_ref">↻ Revisar ahora</button>'+
+  topact((menuActivo()? '<button class="btn sm" id="k_pw">🛎️ Pedidos del menú</button>':'')+'<button class="btn sm" id="k_ref">↻ Revisar ahora</button>'+
     (pend.length? '<button class="btn pri sm" id="k_todo">🖨️ Imprimir los '+pend.length+'</button>':''));
   const destino=cm=>{ const m=cm.mesaId? byId('mesas',cm.mesaId):null;
     const nm=nombreDePedido(cm);
@@ -4426,6 +4427,7 @@ function viewCocina(vw){
   $('#k_auto').onchange=e=>{ S.cfg.estacionAuto=e.target.checked; saveCfg(); };
   if($('#k_vel')) $('#k_vel').onchange=e=>{ S.cfg.estacionVel=e.target.value; saveCfg(); _quietos=0; programarPull(); render(); };
   $('#k_snd').onchange=e=>{ S.cfg.estacionSonido=e.target.checked; saveCfg(); if(e.target.checked) campanaCocina(); };
+  if($('#k_pw')) $('#k_pw').onclick=traerPedidosWeb;
   $('#k_ref').onclick=async()=>{ await pullCloud(true);
     const n=esEstacion()? revisarCocina():0;
     if(!n) toast(comandasPendientes().length? 'Hay pedidos esperando: toca Imprimir':'Todo al día','ok'); render(); };
@@ -4997,7 +4999,8 @@ function verTicket(v){
 function viewMesas(vw){
   const abiertas=S.comandas.filter(c=>c.estado==='abierta');
   sub(abiertas.length+' cuenta(s) abierta(s)');
-  topact('<button class="btn pri sm" id="nd">🛵 Domicilio</button><button class="btn sm" id="nm">+ Mesa</button>'+
+  topact((menuActivo()? '<button class="btn sm" id="pedweb" title="Traer los pedidos que llegaron del menú en línea">🛎️ Pedidos del menú</button>':'')+
+    '<button class="btn pri sm" id="nd">🛵 Domicilio</button><button class="btn sm" id="nm">+ Mesa</button>'+
     (puedeEditar()? '<button class="btn sm" id="edm">✏️ Editar mesas</button>':''));
   const zonas={};
   S.mesas.filter(m=>m.activo).forEach(m=>{ (zonas[m.zona||'General']=zonas[m.zona||'General']||[]).push(m); });
@@ -5030,6 +5033,7 @@ function viewMesas(vw){
   $('#nm').onclick=()=>edMesa(null);
   $('#nd').onclick=()=>mNuevoDomicilio();
   if($('#edm')) $('#edm').onclick=mEditarMesas;
+  if($('#pedweb')) $('#pedweb').onclick=traerPedidosWeb;
 }
 /* lista de mesas para cambiarles el nombre, la zona o los puestos (solo admin) */
 function mEditarMesas(){
@@ -5243,12 +5247,14 @@ function moverProducto(id,dir){
 
 function viewProductos(vw){
   let tab='prod', q='';
-  topact('<button class="btn pri sm" id="add">+ Nuevo</button>');
+  topact('<button class="btn pri sm" id="add">+ Nuevo</button>'+
+    (puedeEditar()? '<button class="btn sm" id="menul" title="Carta para que los clientes pidan desde su celular">🌐 Menú en línea</button>':''));
   vw.innerHTML='<div id="ptabs"></div><div id="pbody"></div>';
   $('#ptabs').appendChild(tabsBar([['prod','Productos'],['cat','Categorías']],tab,t=>{tab=t;paint();}));
   function paint(){
     $$('#ptabs .tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
     $('#add').onclick=()=> tab==='prod'? edProducto(null): edCategoria(null);
+    if($('#menul')) $('#menul').onclick=mMenuLinea;
     if(tab==='cat'){
       $('#pbody').innerHTML='<div class="card"><div class="bd p0">'+tbl([
         {t:'',w:'44px',f:c=>'<span style="font-size:20px">'+(c.emoji||'🍽️')+'</span>'},
@@ -5453,6 +5459,11 @@ function edProducto(p){
           '> Este producto NO va a la comanda de cocina</label>'+
         '<label class="row tiny" style="margin-top:7px;gap:7px"><input type="checkbox" id="ninv" '+(ed.noInventario?'checked':'')+
           '> No lleva inventario (servicio, domicilio, propina…): no avisar que no tiene receta</label>'+
+        '<div class="card" style="margin-top:12px;background:var(--panel2)"><div class="bd"><b class="tiny">🌐 Menú en línea</b>'+
+          '<div class="f" style="margin-top:6px"><label>Descripción para el cliente</label><textarea id="pdesc" rows="2" placeholder="Carne al carbón, queso mozzarella, lechuga, tomate…">'+esc(ed.descripcion||'')+'</textarea></div>'+
+          '<label class="row tiny" style="margin-top:7px;gap:7px"><input type="checkbox" id="penm" '+(ed.enMenu!==false?'checked':'')+'> Mostrar en el menú en línea</label>'+
+          '<label class="row tiny" style="margin-top:5px;gap:7px"><input type="checkbox" id="pago" '+(ed.agotado?'checked':'')+'> Agotado por ahora (se ve pero no se puede pedir)</label>'+
+        '</div></div>'+
       '</div>'+
       '<div>'+
         '<div class="row" style="margin-bottom:8px"><b>Receta (descuenta inventario)</b><span class="spacer"></span>'+
@@ -5510,6 +5521,7 @@ function edProducto(p){
         ed.precio=toN($('#pr',m).value); ed.costoManual=toN($('#cm',m).value); ed.activo=$('#ac',m).checked;
         ed.sinComanda=$('#sc',m)? $('#sc',m).checked : !!ed.sinComanda;
         ed.noInventario=$('#ninv',m)? $('#ninv',m).checked : !!ed.noInventario;
+        if($('#pdesc',m)){ ed.descripcion=$('#pdesc',m).value.trim(); ed.enMenu=$('#penm',m).checked; ed.agotado=$('#pago',m).checked; }
         ed.orden=Math.max(0,toN($('#or',m).value));
         ed.receta=ed.receta.filter(r=>r.ingredienteId&&r.cantidad>0);
         put('productos',ed); closeModal(); render(); toast('Producto guardado','ok');
@@ -9956,6 +9968,297 @@ function mInformeGerencial(d1,d2){
 
 /* Reportes y Contabilidad quedaron en un solo menú con dos pestañas */
 let _repTab='utilidad', _repF=null;
+/* ===================== MENÚ EN LÍNEA (para clientes) =====================
+   Cada restaurante publica su carta en Firebase en UN documento público:
+     menus/{negocio}            -> nombre, logo, categorías, productos con
+                                   precio, foto, descripción y si hay o no
+     menus/{negocio}/pedidos/*  -> los pedidos que hacen los clientes
+   El cliente abre  menu.html?r=<negocio>&p=<proyecto>&k=<apiKey>, pide, y el
+   pedido llega al PC de la cocina. Leer el menú cuesta 1 lectura por cliente.
+   Los productos se marcan "Agotado" solos cuando el inventario no alcanza. */
+let _menuHashMem='', _pedWeb=[], _pedWebT=null, _pedWebVistos={};
+function menuActivo(){ return !!(S.cfg.menuOn && S.cfg.fbOn && S.cfg.fbNegocio && S.cfg.fbProjectId); }
+function menuLink(){
+  const base=location.origin+location.pathname.replace(/[^\/]*$/,'');
+  return base+'menu.html?r='+encodeURIComponent(S.cfg.fbNegocio||'')+'&p='+encodeURIComponent(S.cfg.fbProjectId||'')+
+    (S.cfg.fbApiKey?'&k='+encodeURIComponent(S.cfg.fbApiKey):'');
+}
+function enMenuLinea(p){ return p && p.activo!==false && p.enMenu!==false; }
+function dispMenu(p){
+  if(p.agotado) return 0;
+  if(S.cfg.menuStock===false || p.siempreDisp) return 99;
+  const d=maxPorReceta(p); return d===Infinity? 99 : Math.max(0,Math.min(99,Math.floor(d+1e-9)));
+}
+function armarMenu(){
+  const c=S.cfg;
+  const cats=S.categorias.filter(x=>x.activo!==false).map(x=>({id:x.id, n:x.nombre, o:Number(x.orden)||0}));
+  const prods=S.productos.filter(enMenuLinea).map(p=>{ const im=imgDe(p.id);
+    return {id:p.id, n:p.nombre, d:String(p.descripcion||''), pr:Number(p.precio)||0, c:p.categoriaId||'',
+      o:Number(p.orden)||0, e:p.emoji||'', f:im? im.datos : '', max:dispMenu(p)}; });
+  const mesas=S.mesas.filter(m=>!m.temporal && m.activo!==false && !esDomicilio(m) && !esLlevar(m)).map(m=>m.nombre)
+    .sort((a,b)=>String(a).localeCompare(String(b),'es',{numeric:true}));
+  const lg=imgDe('logo');
+  return {nombre:nombreDelNegocio(), eslogan:c.menuEslogan||'', logo:lg? lg.datos:'', whatsapp:String(c.menuWhatsapp||'').replace(/\D/g,''),
+    mensaje:c.menuMensaje||'', abierto:c.menuAbierto!==false, cerradoMsg:c.menuCerradoMsg||'',
+    servicios:{mesa:c.menuMesa!==false, llevar:c.menuLlevar!==false, domicilio:c.menuDom!==false},
+    domicilioCosto:Number(c.menuDomCosto)||0, pagos:(c.menuPagos||'Efectivo, Transferencia').split(',').map(x=>x.trim()).filter(Boolean),
+    datosPago:c.menuDatosPago||'', mesas:mesas, cats:cats, prods:prods, simbolo:c.simbolo||'$', decimales:Number(c.decimales)||0};
+}
+function hashTxt(t){ let h=5381; for(let i=0;i<t.length;i++){ h=((h<<5)+h+t.charCodeAt(i))|0; } return String(h>>>0)+':'+t.length; }
+function hashMenu(M){ return hashTxt(JSON.stringify(Object.assign({},M,{logo:M.logo.length,
+  prods:M.prods.map(p=>Object.assign({},p,{f:p.f? p.f.length+p.f.slice(-24):''}))}))); }
+/* las fotos se achican si el documento se pasa del límite de Firebase (1 MB) */
+function achicarFoto(datos,lado){ return new Promise(res=>{ try{ const im=new Image(); im.onload=()=>{ const k=Math.min(1,lado/Math.max(im.width,im.height));
+  const cv=document.createElement('canvas'); cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k);
+  cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height); res(cv.toDataURL('image/jpeg',0.72)); }; im.onerror=()=>res(''); im.src=datos; }catch(e){ res(''); } }); }
+async function publicarMenu(forzar){
+  if(!menuActivo() || !FB.listo() || !navigator.onLine) return false;
+  const M=armarMenu(), h=hashMenu(M);
+  if(!forzar && (h===_menuHashMem || h===(S.meta.menuHash||''))) return false;
+  let tam=JSON.stringify(M).length;
+  if(tam>880000){ for(const p of M.prods){ if(p.f && p.f.length>14000) p.f=await achicarFoto(p.f,220); }
+    if(M.logo.length>30000) M.logo=await achicarFoto(M.logo,260); tam=JSON.stringify(M).length; }
+  if(tam>990000){ M.prods.forEach(p=>p.f=''); }
+  M.actualizado=now();
+  try{ await fbSet('menus/'+S.cfg.fbNegocio, M); _menuHashMem=h; S.meta.menuHash=h; S.meta.menuPub=now(); saveMeta(); return true; }
+  catch(e){ console.warn('menú',e); if(forzar) toast('No se pudo publicar el menú: '+e.message+'. Revisa las reglas de Firebase (Menú en línea ▸ Reglas).','bad',9000); return false; }
+}
+/* revisa cada minuto si algo cambió (precio, foto, agotado…) y publica solo si cambió */
+setInterval(()=>{ if(menuActivo() && S.user && (esEstacion() || puedeEditar())) publicarMenu().catch(()=>{}); },60000);
+
+/* ---------- pedidos que llegan del menú ---------- */
+async function fbPatchCampos(ruta,obj){
+  const hdr=await fbAuthHdr(); contarEscritura(1);
+  await fbJson(fbUrl(':commit'),{method:'POST',headers:hdr,body:JSON.stringify({writes:[{
+    update:{name:'projects/'+S.cfg.fbProjectId+'/databases/(default)/documents/'+ruta, fields:fsFields(obj)},
+    updateMask:{fieldPaths:Object.keys(obj)}}]})});
+}
+async function revisarPedidosWeb(manual){
+  if(!menuActivo() || !FB.listo() || !navigator.onLine || !S.user){ if(manual) toast(menuActivo()? 'Sin conexión con la nube' : 'El menú en línea no está activado','warn'); return; }
+  if(!manual && !(esEstacion() || S.cfg.menuAvisarAqui)) return;
+  try{
+    const hdr=await fbAuthHdr();
+    const res=await fbJson(fbUrl('/menus/'+encodeURIComponent(S.cfg.fbNegocio)+':runQuery'),{method:'POST',headers:hdr,
+      body:JSON.stringify({structuredQuery:{from:[{collectionId:'pedidos'}],
+        where:{fieldFilter:{field:{fieldPath:'estado'},op:'EQUAL',value:{stringValue:'nuevo'}}},limit:30}})});
+    const docs=(res||[]).filter(r=>r&&r.document);
+    contarLectura(Math.max(1,docs.length));
+    _pedWeb=docs.map(r=>Object.assign(fsDoc(r.document.fields),{_ruta:r.document.name.split('/documents/')[1], _id:r.document.name.split('/').pop()}))
+      .sort((a,b)=>String(a.creado||'').localeCompare(String(b.creado||'')));
+    const nuevos=_pedWeb.filter(o=>!_pedWebVistos[o._id]);
+    nuevos.forEach(o=>_pedWebVistos[o._id]=1);
+    if(manual && !_pedWeb.length) toast('No hay pedidos nuevos del menú','ok');
+    if(nuevos.length){
+      if(S.cfg.menuAuto){ for(const o of nuevos) await aceptarPedidoWeb(o,true); }
+      else if(!manual){ campanaCocina(); setTimeout(campanaCocina,900);
+        toast('🛎️ '+nuevos.length+' pedido(s) nuevo(s) del menú en línea','ok',8000); }
+    }
+    pintarBotonPedWeb();
+  }catch(e){ console.warn('pedidos web',e); }
+}
+function pintarBotonPedWeb(){
+  let b=$('#pedwebbtn');
+  if(!_pedWeb.length){ if(b) b.remove(); return; }
+  if(!b){ b=document.createElement('button'); b.id='pedwebbtn'; b.className='btn pri';
+    b.style.cssText='position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:900;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:15px;padding:12px 16px;animation:pedPulse 1.4s infinite';
+    b.onclick=mPedidosWeb; document.body.appendChild(b); }
+  b.textContent='🛎️ '+_pedWeb.length+' pedido'+(_pedWeb.length>1?'s':'')+' del menú';
+}
+/* por defecto NO se revisa solo: los pedidos llegan por WhatsApp y se traen
+   con el botón "🛎️ Pedidos del menú" (1 lectura cada vez). Se puede activar
+   la revisión automática en el equipo que se quiera. */
+setInterval(()=>{ if(S.cfg.menuRevisarAuto) revisarPedidosWeb(); },15000);
+async function traerPedidosWeb(){ await revisarPedidosWeb(true); if(_pedWeb.length) mPedidosWeb(); }
+
+function textoPedidoWeb(o){
+  const tipo={mesa:'🍽️ Mesa '+(o.mesa||''), llevar:'🥡 Para llevar', domicilio:'🛵 Domicilio'}[o.tipo]||o.tipo;
+  return tipo;
+}
+function itemsPedidoWeb(o){
+  return (o.items||[]).map(i=>{ const p=byId('productos',i.id); if(!p) return null;
+    const q=Math.max(1,Math.min(50,Math.round(Number(i.cant)||1)));
+    return {id:uid('it'), productoId:p.id, nombre:p.nombre, precio:Number(p.precio)||0, cant:q, nota:String(i.nota||'').slice(0,140), env:0, envNota:''}; })
+    .filter(Boolean);
+}
+async function aceptarPedidoWeb(o,auto){
+  const items=itemsPedidoWeb(o);
+  if(!items.length){ await rechazarPedidoWeb(o,'Los productos ya no están disponibles'); return; }
+  const notaWeb=[ 'MENÚ EN LÍNEA', o.tipo==='domicilio'&&o.direccion? 'DIR: '+o.direccion : '', o.telefono? 'TEL: '+o.telefono : '',
+    o.pago? 'PAGA: '+o.pago : '', o.nota||'' ].filter(Boolean).join(' · ');
+  let mesa=null, tipo='mostrador', paraLlevar=undefined;
+  if(o.tipo==='mesa'){
+    const k=normTxt(o.mesa||''), num_=String(o.mesa||'').replace(/\D/g,'');
+    mesa=S.mesas.find(m=>!m.temporal && m.activo!==false && normTxt(m.nombre)===k) ||
+         (num_? S.mesas.find(m=>!m.temporal && m.activo!==false && !esDomicilio(m) && !esLlevar(m) && String(m.nombre).replace(/\D/g,'')===num_) : null);
+    if(mesa) tipo='mesa'; else { mesa=nuevoLlevar(o.cliente+' · Mesa '+(o.mesa||'?')); paraLlevar=false; }
+  } else if(o.tipo==='domicilio'){ mesa=nuevoDomicilio(o.cliente,o.telefono); tipo='domicilio'; }
+  else { mesa=nuevoLlevar(o.cliente); paraLlevar=true; }
+  let cm=S.comandas.find(c=>c.estado==='abierta' && c.mesaId===mesa.id);
+  if(cm){ cm.items=(cm.items||[]).concat(items); cm.nota=[cm.nota,notaWeb].filter(Boolean).join(' · '); }
+  else {
+    cm={id:uid('cm'), mesaId:mesa.id, nombrePedido:o.cliente||'', paraLlevar:paraLlevar, items:items, clienteId:'', bajas:[], anulados:[],
+      tipo:tipo, descuento:0, descuentoMotivo:'', propinaPct:0, nota:notaWeb, estado:'abierta', origen:'menu', pedidoWebId:o._id,
+      destNombre:o.cliente||'', destTel:o.telefono||'', destDir:o.direccion||'', meseroId:S.user?S.user.id:'', apertura:now()};
+    try{ const tp=siguienteTurnoPedido(); if(tp){ cm.nroTurno=tp.n; cm.turnoPedidoId=tp.tid; } }catch(e){}
+  }
+  cm.cocinaMs=Date.now(); put('comandas',cm);
+  if(S.cfg.impComanda!==false && imprimeCocinaAqui()) try{ imprimirPendiente(cm); }catch(e){}
+  if(S.cfg.autoSync) scheduleSync(200);
+  try{ await fbPatchCampos(o._ruta,{estado:'aceptado', atendido:now(), turno:cm.nroTurno||0}); }catch(e){}
+  _pedWeb=_pedWeb.filter(x=>x._id!==o._id); pintarBotonPedWeb();
+  toast((auto?'🛎️ Pedido del menú recibido y enviado a cocina: ':'✅ Pedido aceptado: ')+(o.cliente||'')+' · '+textoPedidoWeb(o),'ok',6000);
+  if(S.view==='mesas'||S.view==='cocina'||S.view==='entregas') render();
+}
+async function rechazarPedidoWeb(o,motivo){
+  try{ await fbPatchCampos(o._ruta,{estado:'rechazado', motivo:String(motivo||'').slice(0,200), atendido:now()}); }
+  catch(e){ return toast('No se pudo rechazar: '+e.message,'bad'); }
+  _pedWeb=_pedWeb.filter(x=>x._id!==o._id); pintarBotonPedWeb();
+  toast('Pedido de '+(o.cliente||'')+' rechazado','ok');
+}
+function mPedidosWeb(){
+  const l=_pedWeb.slice();
+  modal({title:'🛎️ Pedidos del menú en línea', size:'wide',
+    body: l.length? l.map(o=>{ const its=itemsPedidoWeb(o); const tot=sum(its,i=>i.precio*i.cant);
+      const faltan=(o.items||[]).length-its.length;
+      return '<div class="card" style="margin-bottom:10px"><div class="bd">'+
+        '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:16px">'+esc(o.cliente||'Cliente')+'</b>'+
+          '<span class="pill">'+esc(textoPedidoWeb(o))+'</span>'+(o.pago?'<span class="pill">'+esc(o.pago)+'</span>':'')+
+          '<span class="tiny muted">'+fdate(o.creado,true)+'</span><div class="spacer"></div><b>'+money(tot)+'</b></div>'+
+        (o.telefono? '<div class="tiny" style="margin-top:4px">📞 '+esc(o.telefono)+'</div>':'')+
+        (o.direccion? '<div class="tiny">🏠 '+esc(o.direccion)+'</div>':'')+
+        '<div style="margin-top:6px">'+its.map(i=>'<div class="tiny">'+i.cant+' × <b>'+esc(i.nombre)+'</b> '+money(i.precio*i.cant)+(i.nota?' <i>· '+esc(i.nota)+'</i>':'')+'</div>').join('')+'</div>'+
+        (faltan? '<div class="tiny" style="color:var(--bad)">⚠ '+faltan+' producto(s) ya no existen en la carta</div>':'')+
+        (o.nota? '<div class="tiny" style="margin-top:4px">📝 '+esc(o.nota)+'</div>':'')+
+        (Math.abs(tot-(Number(o.total)||0))>0.5? '<div class="tiny muted">El cliente vio '+money(o.total)+'; se cobra con los precios actuales.</div>':'')+
+        '<div class="row" style="gap:8px;margin-top:10px"><button class="btn danger sm" data-pr="'+o._id+'">Rechazar</button><div class="spacer"></div>'+
+          '<button class="btn pri" data-pa="'+o._id+'">✅ Aceptar y mandar a cocina</button></div></div></div>'; }).join('')
+      : '<div class="empty"><span class="ico">🛎️</span>No hay pedidos nuevos</div>',
+    footer:'<button class="btn" id="pw_ref">🔄 Actualizar</button><div class="spacer"></div><button class="btn" data-x>Cerrar</button>',
+    onOpen:m=>{
+      $('#pw_ref',m).onclick=async()=>{ closeModal(); await revisarPedidosWeb(true); mPedidosWeb(); };
+      $$('[data-pa]',m).forEach(b=>b.onclick=async()=>{ const o=_pedWeb.find(x=>x._id===b.dataset.pa); if(!o) return;
+        b.disabled=true; await aceptarPedidoWeb(o); closeModal(); if(_pedWeb.length) mPedidosWeb(); });
+      $$('[data-pr]',m).forEach(b=>b.onclick=()=>{ const o=_pedWeb.find(x=>x._id===b.dataset.pr); if(!o) return;
+        closeModal();
+        modal({title:'Rechazar pedido de '+esc(o.cliente||''),size:'slim',
+          body:'<div class="f"><label>Motivo (lo ve el cliente)</label><input id="rm" value="Lo sentimos, en este momento no podemos atender tu pedido"></div>',
+          footer:'<button class="btn" data-x>Cancelar</button><button class="btn danger" id="rok">Rechazar</button>',
+          onOpen:m2=>{ $('#rok',m2).onclick=async()=>{ await rechazarPedidoWeb(o,$('#rm',m2).value); closeModal(); if(_pedWeb.length) mPedidosWeb(); }; }}); });
+    }});
+}
+
+/* ---------- pantalla de configuración ---------- */
+const REGLAS_MENU=`    // ===== MENÚ EN LÍNEA (pegar dentro de: match /databases/{database}/documents { ... }) =====
+    function esDelNegocio(neg) {
+      return request.auth != null && (
+        get(/databases/$(database)/documents/usuariosNube/$(request.auth.uid)).data.rol == 'superadmin' ||
+        get(/databases/$(database)/documents/usuariosNube/$(request.auth.uid)).data.negocioId == neg ||
+        neg in get(/databases/$(database)/documents/usuariosNube/$(request.auth.uid)).data.get('negocios', []));
+    }
+    match /menus/{neg} {
+      allow read: if true;                       // cualquiera puede VER la carta
+      allow write: if esDelNegocio(neg);         // solo el restaurante la publica
+      match /pedidos/{pid} {
+        allow get: if true;                      // el cliente ve el estado de SU pedido
+        allow create: if request.resource.data.estado == 'nuevo'
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0
+          && request.resource.data.items.size() <= 60
+          && request.resource.data.cliente is string
+          && request.resource.data.cliente.size() <= 80;
+        allow list, update, delete: if esDelNegocio(neg);
+      }
+    }`;
+function mMenuLinea(){
+  if(!puedeEditar()) return pedirAlAdmin('configurar el menú en línea');
+  const c=S.cfg;
+  if(!c.fbOn || !c.fbNegocio) return toast('Primero conecta este restaurante a la nube (Ajustes ▸ Nube · Firebase)','warn',6000);
+  const link=menuLink();
+  const prods=S.productos.filter(p=>p.activo!==false).sort((a,b)=>String(nameOf('categorias',a.categoriaId)).localeCompare(String(nameOf('categorias',b.categoriaId)))||String(a.nombre).localeCompare(String(b.nombre)));
+  const chk=(id,on,txt)=>'<label class="row tiny" style="gap:7px;margin:6px 0"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+'> '+txt+'</label>';
+  modal({title:'🌐 Menú en línea · '+esc(nombreDelNegocio()), size:'xl',
+    body:'<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">'+
+      '<div>'+
+        '<div class="card" style="margin-bottom:12px"><div class="bd">'+
+          '<b>🔗 Link para tus clientes</b>'+
+          '<div class="row" style="gap:6px;margin-top:8px"><input id="ml_link" readonly value="'+esc(link)+'" style="flex:1;font-size:12px">'+
+            '<button class="btn sm" id="ml_cp">📋 Copiar</button></div>'+
+          '<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><button class="btn sm" id="ml_sh">📤 Compartir</button>'+
+            '<a class="btn sm" href="'+esc(link)+'" target="_blank" rel="noopener">👁️ Abrir el menú</a>'+
+            '<button class="btn sm" id="ml_pub">🔄 Publicar ahora</button></div>'+
+          '<div style="text-align:center;margin-top:10px"><img alt="QR del menú" style="width:170px;height:170px;background:#fff;padding:6px;border-radius:10px" '+
+            'src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data='+encodeURIComponent(link)+'">'+
+            '<div class="tiny muted">Código QR para imprimir en las mesas</div></div>'+
+          '<div class="tiny muted" style="margin-top:6px">Última publicación: '+(S.meta.menuPub? fdate(S.meta.menuPub,true):'todavía no')+
+            '. Se publica sola cuando cambias productos, precios, fotos o cuando algo se agota.</div>'+
+          '<div class="tiny" style="margin-top:6px">⚠ Sube el archivo <b>menu.html</b> a la misma carpeta del dominio donde está el sistema.</div>'+
+        '</div></div>'+
+        '<div class="card" style="margin-bottom:12px"><div class="bd"><b>⚙️ Cómo funciona</b>'+
+          chk('ml_on',c.menuOn,'<b>Menú en línea activado</b>')+
+          chk('ml_abierto',c.menuAbierto!==false,'Recibiendo pedidos ahora (si lo apagas, el menú se ve pero no deja pedir)')+
+          '<div class="f" style="margin:6px 0"><label>Mensaje cuando no recibes pedidos</label><input id="ml_cerr" value="'+esc(c.menuCerradoMsg||'En este momento no estamos recibiendo pedidos. ¡Vuelve pronto!')+'"></div>'+
+          '<div class="tiny" style="margin-top:8px"><b>El cliente puede pedir:</b></div>'+
+          chk('ml_mesa',c.menuMesa!==false,'🍽️ Para la mesa (escoge su mesa)')+
+          chk('ml_llev',c.menuLlevar!==false,'🥡 Para llevar (recoge en el local)')+
+          chk('ml_dom',c.menuDom!==false,'🛵 Domicilio')+
+          '<div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'+
+            '<div class="f"><label>Valor del domicilio (informativo)</label><input id="ml_domc" type="number" value="'+(Number(c.menuDomCosto)||0)+'"></div>'+
+            '<div class="f"><label>WhatsApp del local</label><input id="ml_wa" placeholder="573001234567" value="'+esc(c.menuWhatsapp||'')+'"></div></div>'+
+          '<div class="f" style="margin-top:6px"><label>Formas de pago (separadas por coma)</label><input id="ml_pag" value="'+esc(c.menuPagos||'Efectivo, Transferencia')+'"></div>'+
+          '<div class="f" style="margin-top:6px"><label>Datos para transferencia (se le muestran al cliente)</label><input id="ml_dp" placeholder="Nequi 300 123 4567 a nombre de…" value="'+esc(c.menuDatosPago||'')+'"></div>'+
+          '<div class="f" style="margin-top:6px"><label>Frase debajo del nombre</label><input id="ml_esl" placeholder="Asadas al carbón · Express" value="'+esc(c.menuEslogan||'')+'"></div>'+
+          '<div class="f" style="margin-top:6px"><label>Mensaje de bienvenida</label><input id="ml_msg" placeholder="Elige tus productos y envía tu pedido" value="'+esc(c.menuMensaje||'')+'"></div>'+
+          chk('ml_stock',c.menuStock!==false,'Marcar <b>Agotado</b> solo cuando el inventario no alcanza')+
+          chk('ml_auto',!!c.menuAuto,'Aceptar los pedidos solos y mandarlos de una a la cocina (si no, se aceptan a mano)')+
+          '<div class="tiny" style="margin-top:8px;padding:8px;border-radius:8px;background:var(--panel2)">📲 El pedido le llega al <b>WhatsApp del local</b>. '+
+            'Cuando te llegue, toca <b>🛎️ Pedidos del menú</b> (en Mesas o en Cocina) para traerlo al sistema: así solo se gasta 1 lectura cada vez.</div>'+
+          chk('ml_rauto',!!c.menuRevisarAuto,'En ESTE equipo, revisar pedidos solo cada 15 s (gasta unas 240 lecturas por hora)')+
+        '</div></div>'+
+        '<details class="card"><summary class="bd" style="cursor:pointer"><b>🔒 Reglas de Firebase (hacer una sola vez)</b></summary><div class="bd" style="padding-top:0">'+
+          '<div class="tiny" style="margin-bottom:6px">En la consola de Firebase ▸ Firestore Database ▸ <b>Reglas</b>, pega este bloque <b>dentro</b> de '+
+          '<code>match /databases/{database}/documents { … }</code>, sin borrar tus reglas, y dale <b>Publicar</b>. Así los clientes pueden ver la carta y '+
+          'mandar pedidos, pero no pueden ver tus ventas ni cambiar nada.</div>'+
+          '<textarea id="ml_rules" readonly style="width:100%;height:220px;font-family:monospace;font-size:11px">'+esc(REGLAS_MENU)+'</textarea>'+
+          '<button class="btn sm" id="ml_rcp" style="margin-top:6px">📋 Copiar reglas</button></div></details>'+
+      '</div>'+
+      '<div><div class="card"><div class="hd"><h3>🍔 Productos en el menú</h3><div class="spacer"></div>'+
+        '<input id="ml_q" placeholder="Buscar…" style="max-width:160px"></div><div class="bd p0" style="max-height:62vh;overflow:auto">'+
+        prods.map(p=>{ const d=dispMenu(p);
+          return '<div class="row" data-mlr="'+esc(normTxt(p.nombre))+'" style="gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);align-items:center">'+
+            '<div style="flex:1;min-width:0"><b>'+esc(p.nombre)+'</b> <span class="tiny muted">'+money(p.precio)+' · '+esc(nameOf('categorias',p.categoriaId))+'</span>'+
+              '<div class="tiny">'+(p.agotado? '<span style="color:var(--bad)">Agotado (a mano)</span>' : d<=0? '<span style="color:var(--bad)">Agotado: no alcanza el inventario</span>'
+                : d<99? '<span class="muted">Alcanza para '+d+'</span>' : '<span style="color:var(--ok)">Disponible</span>')+
+                (imgDe(p.id)?'':' · <span class="muted">sin foto</span>')+(p.descripcion?'':' · <span class="muted">sin descripción</span>')+'</div></div>'+
+            '<label class="tiny row" style="gap:4px"><input type="checkbox" data-mle="'+p.id+'"'+(p.enMenu!==false?' checked':'')+'> En menú</label>'+
+            '<label class="tiny row" style="gap:4px"><input type="checkbox" data-mla="'+p.id+'"'+(p.agotado?' checked':'')+'> Agotado</label>'+
+            '<button class="btn ghost sm" data-mled="'+p.id+'" title="Editar foto, descripción y precio">✎</button></div>'; }).join('')+
+      '</div></div><div class="tiny muted" style="margin-top:6px">✎ para ponerle foto y descripción. "Agotado" a mano sirve para lo que se acabó hoy aunque el inventario diga otra cosa.</div></div>'+
+    '</div>',
+    footer:'<button class="btn" data-x>Cerrar</button><button class="btn pri" id="ml_ok">Guardar</button>',
+    onOpen:m=>{
+      $('#ml_cp',m).onclick=()=>copiarTexto(link,'Link copiado');
+      $('#ml_rcp',m).onclick=()=>copiarTexto(REGLAS_MENU,'Reglas copiadas');
+      $('#ml_sh',m).onclick=()=>{ if(navigator.share) navigator.share({title:'Menú · '+nombreDelNegocio(),text:'Haz tu pedido aquí 👇',url:link}).catch(()=>{}); else copiarTexto(link,'Link copiado'); };
+      $('#ml_q',m).oninput=e=>{ const q=normTxt(e.target.value); $$('[data-mlr]',m).forEach(r=>r.style.display=!q||r.dataset.mlr.indexOf(q)>=0?'':'none'); };
+      $$('[data-mle]',m).forEach(ch=>ch.onchange=()=>{ const p=byId('productos',ch.dataset.mle); p.enMenu=ch.checked; put('productos',p); });
+      $$('[data-mla]',m).forEach(ch=>ch.onchange=()=>{ const p=byId('productos',ch.dataset.mla); p.agotado=ch.checked; put('productos',p); });
+      $$('[data-mled]',m).forEach(b=>b.onclick=()=>{ closeModal(); edProducto(byId('productos',b.dataset.mled)); });
+      const guardar=()=>{
+        c.menuOn=$('#ml_on',m).checked; c.menuAbierto=$('#ml_abierto',m).checked; c.menuCerradoMsg=$('#ml_cerr',m).value.trim();
+        c.menuMesa=$('#ml_mesa',m).checked; c.menuLlevar=$('#ml_llev',m).checked; c.menuDom=$('#ml_dom',m).checked;
+        c.menuDomCosto=toN($('#ml_domc',m).value); c.menuWhatsapp=$('#ml_wa',m).value.replace(/\D/g,'');
+        c.menuPagos=$('#ml_pag',m).value; c.menuDatosPago=$('#ml_dp',m).value.trim(); c.menuEslogan=$('#ml_esl',m).value.trim();
+        c.menuMensaje=$('#ml_msg',m).value.trim(); c.menuStock=$('#ml_stock',m).checked; c.menuAuto=$('#ml_auto',m).checked;
+        c.menuRevisarAuto=$('#ml_rauto',m).checked; c.menuAvisarAqui=c.menuRevisarAuto; saveCfg(); };
+      $('#ml_pub',m).onclick=async()=>{ guardar(); if(!S.cfg.menuOn) return toast('Activa el menú primero','warn');
+        toast('Publicando…','ok',1500); if(await publicarMenu(true)) toast('✅ Menú publicado','ok'); };
+      $('#ml_ok',m).onclick=async()=>{ guardar();
+        if(S.cfg.menuOn && !S.cfg.menuWhatsapp) return toast('Escribe el WhatsApp del local: ahí llegan los pedidos','warn',5000);
+        closeModal(); toast('Menú en línea guardado','ok');
+        if(S.cfg.menuOn) publicarMenu(true).then(ok=>{ if(ok) toast('✅ Menú publicado','ok'); }); };
+    }});
+}
+
 function viewReportes(vw){
   vw.innerHTML='<div class="row wrap" style="gap:8px;margin-bottom:12px;align-items:center">'+
     '<button class="btn '+(_repTab==='utilidad'?'pri':'')+'" data-rt="utilidad">💰 Utilidad y estado de resultados</button>'+
