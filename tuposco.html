@@ -1977,7 +1977,12 @@ function mVentaVentana(){
         $('#vhead',m).classList.toggle('hide',!items.length);
         const ba=$('[data-vadd]',m); if(ba) ba.onclick=()=>$('#vadd',m).click();
         $$('#vrows [data-i]',m).forEach(row=>{ const i=+row.dataset.i;
-          const tot=()=>{ const it=items[i]; $('[data-t]',row).textContent=money((Number(it.precio)||0)*(Number(it.cant)||0)); pintaTot(); };
+          const tot=()=>{ const it=items[i]; $('[data-t]',row).textContent=money((Number(it.precio)||0)*(Number(it.cant)||0));
+            const p=byId('productos',it.productoId), hay=p? maxPorReceta(p) : Infinity;
+            const pide=sum(items.filter(x=>x.productoId===it.productoId),x=>Number(x.cant)||0);
+            row.style.outline= (p && hay!==Infinity && pide>hay+0.0001)? '2px solid var(--bad)' : '';
+            row.title= (p && hay!==Infinity && pide>hay+0.0001)? 'Solo hay '+num(Math.max(0,hay),2)+' en inventario' : '';
+            pintaTot(); };
           combo($('[data-g]',row),{lista:S.productos.filter(x=>x.activo!==false), valor:items[i].productoId,
             placeholder:'Buscar producto o código…',
             sub:x=>{ const g=invDeProducto(x); return (x.codigo? x.codigo+' · ':'')+money(x.precio)+(g? ' · stock '+num(g.stock,2):'')+
@@ -2015,6 +2020,7 @@ function mVentaVentana(){
         }
         const T=calc();
         if(!T.lin.length) return toast('Agrega productos a la venta','warn');
+        { const fl=faltantesVenta(T.lin); if(fl.length) return toast('No hay inventario suficiente: '+textoFaltantes(fl)+'. Primero registra la compra.','bad',9000); }
         if(T.total<=0) return toast('El total de la venta está en cero','warn');
         const clienteId=cbCl.valor()||'';
         if(credito && !clienteId) return toast('Para vender a crédito escoge el cliente','warn');
@@ -2851,11 +2857,15 @@ function prodPorRef(cod,nom){
   return (c && S.productos.find(p=>String(p.codigo||'').trim()===c)) || (n && S.productos.find(p=>normTxt(p.nombre).trim()===n)) ||
     (c && S.productos.find(p=>normTxt(p.nombre).trim()===normTxt(c).trim())) || null;
 }
-function terceroImp(coll,nombre){
-  const ex=buscaPorNombre(coll,nombre); if(ex) return ex;
-  const id= coll==='clientes'? crearClienteRapido(nombre,{}) : crearProveedorRapido(nombre,{});
-  return byId(coll,id);
+/* en las importaciones el tercero se busca SOLO por documento: si no está creado, la fila no se sube */
+function terceroImpDoc(coll,doc,quien){
+  if(!docKey(doc)) return 'falta el documento del '+quien;
+  return terceroPorDoc(coll,doc) || ('el '+quien+' con documento '+doc+' no está creado (créalo primero)');
 }
+/* repite documento dentro del mismo archivo */
+function validarDocsRepetidos(campo){ return (l,mal)=>{ const vistos={};
+  return l.filter(x=>{ const k=docKey(x[campo]); if(vistos[k]){ mal.push({fila:x._fila,msg:'el documento '+x[campo]+' ya viene en la fila '+vistos[k]}); return false; }
+    vistos[k]=x._fila; return true; }); }; }
 function proyPorNombre(n){ if(!n) return ''; const p=proyectosTodos().find(x=>normTxt(x.nombre)===normTxt(n)); return p? p.id : null; }
 function esCredito(v){ return /cred/i.test(String(v||'')); }
 function medioDeTexto(v){ const n=normTxt(v||''); return /tarj|dataf/.test(n)?'tarjeta' : /trans|nequi|davi|banc|pse/.test(n)?'transferencia' : 'efectivo'; }
@@ -2876,16 +2886,30 @@ const IMPORTADORES={
     aplicar:l=>{ l.forEach(x=>{ if(x.categoria && !buscaPorNombre('categorias',x.categoria))
         put('categorias',{id:uid('c'),nombre:x.categoria,emoji:'🏷️',orden:0,activo:true}); });
       const pl=_planVacio(); pl.productos=l; const r=aplicarImport(pl); return r.creados+' creados · '+r.actualizados+' actualizados'; }},
-  clientes:{titulo:'Clientes', archivo:'modelo_clientes', hoja:'Clientes', campos:['nombre','documento','telefono','cupo'], oblig:['nombre'],
-    ej:[['Juan Pérez','1020304050','3001234567',300000],['Tienda La Esquina','900111222','3157654321',0]],
-    notas:['Si el nombre ya existe, se actualiza.','"cupo" es cuánto le puedes fiar (0 = sin cupo).'],
-    leer:o=> o.nombre? {nombre:o.nombre, doc:o.documento||'', telefono:o.telefono||'', limite:toN(o.cupo), _t:o.nombre} : 'falta el nombre',
-    aplicar:l=>{ const pl=_planVacio(); pl.clientes=l; const r=aplicarImport(pl); return r.creados+' creados · '+r.actualizados+' actualizados'; }},
-  proveedores:{titulo:'Proveedores', archivo:'modelo_proveedores', hoja:'Proveedores', campos:['nombre','nit','contacto','telefono'], oblig:['nombre'],
-    ej:[['Distribuidora Central','900123456','Ventas','3101234567']],
-    notas:['Si el nombre ya existe, se actualiza.'],
-    leer:o=> o.nombre? {nombre:o.nombre, nit:o.nit||'', contacto:o.contacto||'', telefono:o.telefono||'', _t:o.nombre} : 'falta el nombre',
-    aplicar:l=>{ const pl=_planVacio(); pl.proveedores=l; const r=aplicarImport(pl); return r.creados+' creados · '+r.actualizados+' actualizados'; }},
+  clientes:{titulo:'Clientes', archivo:'modelo_clientes', hoja:'Clientes', campos:['documento','nombre','telefono','cupo'], oblig:['documento','nombre'],
+    ej:[['1020304050','Juan Pérez','3001234567',300000],['900111222','Tienda La Esquina','3157654321',0]],
+    notas:['El documento es obligatorio y es la llave: si ya existe un cliente con ese documento, se actualiza; si no, se crea.',
+      'No importan puntos, espacios ni el dígito de verificación (900.111.222-3 = 900111222).','"cupo" es cuánto le puedes fiar (0 = sin cupo).'],
+    leer:o=>{ if(!docKey(o.documento)) return 'falta el documento'; if(!o.nombre) return 'falta el nombre';
+      const ex=terceroPorDoc('clientes',o.documento);
+      return {doc:String(o.documento).trim(), nombre:o.nombre, telefono:o.telefono||'', limite:toN(o.cupo), ex:ex,
+        _t:o.documento+' · '+o.nombre+(ex? ' (actualiza)' : ' (nuevo)')}; },
+    validarPlan:validarDocsRepetidos('doc'),
+    aplicar:l=>{ let c=0,a=0; l.forEach(x=>{ const d=x.ex||{id:uid('cl'),activo:true};
+        Object.assign(d,{doc:x.doc,nombre:x.nombre,telefono:x.telefono||d.telefono||'',limite:x.limite,activo:true});
+        put('clientes',d); x.ex? a++ : c++; }); return c+' creados · '+a+' actualizados'; }},
+  proveedores:{titulo:'Proveedores', archivo:'modelo_proveedores', hoja:'Proveedores', campos:['nit','nombre','contacto','telefono'], oblig:['nit','nombre'],
+    ej:[['900123456','Distribuidora Central','Ventas','3101234567']],
+    notas:['El NIT (o documento) es obligatorio y es la llave: si ya existe, se actualiza; si no, se crea.',
+      'No importan puntos, espacios ni el dígito de verificación.'],
+    leer:o=>{ if(!docKey(o.nit)) return 'falta el NIT'; if(!o.nombre) return 'falta el nombre';
+      const ex=terceroPorDoc('proveedores',o.nit);
+      return {nit:String(o.nit).trim(), nombre:o.nombre, contacto:o.contacto||'', telefono:o.telefono||'', ex:ex,
+        _t:o.nit+' · '+o.nombre+(ex? ' (actualiza)' : ' (nuevo)')}; },
+    validarPlan:validarDocsRepetidos('nit'),
+    aplicar:l=>{ let c=0,a=0; l.forEach(x=>{ const d=x.ex||{id:uid('pr'),activo:true};
+        Object.assign(d,{nit:x.nit,nombre:x.nombre,contacto:x.contacto||d.contacto||'',telefono:x.telefono||d.telefono||'',activo:true});
+        put('proveedores',d); x.ex? a++ : c++; }); return c+' creados · '+a+' actualizados'; }},
   inventario:{titulo:'Existencias de inventario', archivo:'modelo_inventario', hoja:'Inventario',
     campos:['codigo','producto','cantidad','costo_unitario','tasa_usd','tasa_bs'], oblig:['cantidad'],
     ej:[['7701234567890','Cuaderno 100 hojas',40,2500,4000,16],['','Cargador USB-C',15,9000,4000,16]],
@@ -2900,27 +2924,29 @@ const IMPORTADORES={
           try{ movInv(g.id,'entrada',dif,x.costo||null,'importacion','','Existencias cargadas desde Excel'); } finally{ _tasasEntrada=null; } n++; }
         else if(dif<-0.000001){ movInv(g.id,'salida',-dif,null,'importacion','','Existencias corregidas desde Excel'); n++; } });
       return n+' productos ajustados'; }},
-  compras:{titulo:'Compras', archivo:'modelo_compras', hoja:'Compras', agrupar:o=>normTxt(o.proveedor)+'|'+(o.factura||''),
-    campos:['factura','fecha','proveedor','codigo','producto','cantidad','costo_unitario','impuesto','condicion','vence','cuenta','proyecto','tasa_usd','tasa_bs'],
-    oblig:['factura','proveedor','cantidad','costo_unitario'],
-    ej:[['FV-101','2026-11-01','Distribuidora Central','7701234567890','Cuaderno 100 hojas',20,2500,0,'contado','','Caja general','Papelería',4000,16],
-        ['FV-101','2026-11-01','Distribuidora Central','','Lapicero negro',50,600,'','','','','',4000,16],
-        ['FV-102','2026-11-05','Importadora Tecno','','Cargador USB-C',10,9000,0,'credito','2026-12-05','','Tecnología',4100,16.5]],
+  compras:{titulo:'Compras', archivo:'modelo_compras', hoja:'Compras', agrupar:o=>docKey(o.proveedor_documento)+'|'+(o.factura||''),
+    campos:['factura','fecha','proveedor_documento','proveedor','codigo','producto','cantidad','costo_unitario','impuesto','condicion','vence','cuenta','proyecto','tasa_usd','tasa_bs'],
+    oblig:['factura','proveedor_documento','cantidad','costo_unitario'],
+    ej:[['FV-101','2026-11-01','900123456','Distribuidora Central','7701234567890','Cuaderno 100 hojas',20,2500,0,'contado','','Caja general','Papelería',4000,16],
+        ['FV-101','2026-11-01','900123456','Distribuidora Central','','Lapicero negro',50,600,'','','','','',4000,16],
+        ['FV-102','2026-11-05','830445566','Importadora Tecno','','Cargador USB-C',10,9000,0,'credito','2026-12-05','','Tecnología',4100,16.5]],
     notas:['Una fila por producto. Las filas con la misma factura y proveedor forman UNA compra.',
       'Lo comprado ENTRA al inventario con su costo y sus tasas (PEPS en el orden de las fechas).',
       '"condicion": contado o credito. A crédito queda en Tesorería ▸ Por pagar y "vence" es la fecha límite.',
       'De contado: si pones "cuenta" (el nombre de una caja o banco), la plata sale de ahí; si la dejas vacía, la compra queda pagada sin mover caja (ya la habías pagado).',
-      '"impuesto" se toma de la primera fila de cada factura. El proveedor se crea si no existe.'],
+      '"impuesto" se toma de la primera fila de cada factura.',
+      'El proveedor se busca por "proveedor_documento" (NIT). Si no está creado, esas filas NO se suben: créalo primero en Proveedores. La columna "proveedor" es solo de referencia.'],
     leer:o=>{ const p=prodPorRef(o.codigo,o.producto); if(!p) return 'no encontré el producto «'+(o.producto||o.codigo||'')+'»';
-      if(!(toN(o.cantidad)>0)) return 'falta la cantidad'; if(!o.proveedor) return 'falta el proveedor';
+      if(!(toN(o.cantidad)>0)) return 'falta la cantidad';
+      const pv=terceroImpDoc('proveedores',o.proveedor_documento,'proveedor'); if(typeof pv==='string') return pv;
       const f=fechaExcel(o.fecha); if(f===null) return 'no entiendo la fecha «'+o.fecha+'»';
       if(o.cuenta && !buscaPorNombre('cuentas',o.cuenta)) return 'no existe la cuenta «'+o.cuenta+'»';
       const py=proyPorNombre(o.proyecto); if(py===null) return 'no existe el proyecto «'+o.proyecto+'»';
-      return {p:p, q:toN(o.cantidad), c:toN(o.costo_unitario), fecha:f||todayISO(), factura:o.factura, proveedor:o.proveedor,
+      return {p:p, q:toN(o.cantidad), c:toN(o.costo_unitario), fecha:f||todayISO(), factura:o.factura, pv:pv,
         imp:toN(o.impuesto), credito:esCredito(o.condicion), vence:fechaExcel(o.vence)||'', cuenta:o.cuenta||'', proyecto:py||'',
         tu:toN(o.tasa_usd), tb:toN(o.tasa_bs), _t:(o.factura||'')+' · '+p.nombre+' × '+num(toN(o.cantidad),2)}; },
     aplicar:grupos=>{ let n=0;
-      grupos.forEach(g=>{ const x=g[0]; const pv=terceroImp('proveedores',x.proveedor);
+      grupos.forEach(g=>{ const x=g[0]; const pv=x.pv;
         const items=g.map(y=>{ const inv=asegurarInventario(y.p); return {ingredienteId:inv.id,cantidad:y.q,costoUnit:y.c}; });
         const sub=round(sum(items,i=>i.cantidad*i.costoUnit),2), total=round(sub+x.imp,2);
         const cta=x.cuenta? buscaPorNombre('cuentas',x.cuenta) : null;
@@ -2940,34 +2966,44 @@ const IMPORTADORES={
         n++; });
       return n+' compras registradas'; }},
   ventas:{titulo:'Ventas', archivo:'modelo_ventas', hoja:'Ventas', agrupar:o=>String(o.factura||''), caja:true,
-    campos:['factura','fecha','cliente','codigo','producto','cantidad','precio','descuento','condicion','plazo_dias','medio','cuenta','proyecto'],
+    campos:['factura','fecha','cliente_documento','cliente','codigo','producto','cantidad','precio','descuento','condicion','plazo_dias','medio','cuenta','proyecto'],
     oblig:['factura','cantidad'],
-    ej:[['F-001','2026-11-02','','7701234567890','Cuaderno 100 hojas',2,4500,0,'contado','','efectivo','Caja general',''],
-        ['F-001','2026-11-02','','','Lapicero negro',3,1500,'','','','','',''],
-        ['F-002','2026-11-03','Juan Pérez','','Cargador USB-C',1,18000,0,'credito',30,'','','Tecnología']],
+    ej:[['F-001','2026-11-02','','','7701234567890','Cuaderno 100 hojas',2,4500,0,'contado','','efectivo','Caja general',''],
+        ['F-001','2026-11-02','','','','Lapicero negro',3,1500,'','','','','',''],
+        ['F-002','2026-11-03','1020304050','Juan Pérez','','Cargador USB-C',1,18000,0,'credito',30,'','','Tecnología']],
     notas:['Una fila por producto. Las filas con la misma factura forman UNA venta.',
       'Cada venta SALE del inventario por PEPS (como una venta normal) y, si es de contado, la plata entra a la cuenta.',
       'Si el precio va vacío se usa el precio del producto. "descuento" (en pesos) se toma de la primera fila de la factura.',
       '"condicion": contado o credito. A crédito el cliente es obligatorio y queda en Cartera ▸ Por cobrar.',
       '"medio": efectivo, tarjeta o transferencia. "cuenta" vacía = la cuenta que usas para ese medio.',
+      'El cliente se busca por "cliente_documento". Si lo pones y no está creado, la fila NO se sube. Vacío = cliente ocasional (solo de contado).',
+      'PRIMERO sube las compras (o las existencias de Inventario): una factura que pida más de lo que hay en inventario NO se sube completa.',
       'Necesita la caja abierta.'],
     leer:o=>{ const p=prodPorRef(o.codigo,o.producto); if(!p) return 'no encontré el producto «'+(o.producto||o.codigo||'')+'»';
       if(!(toN(o.cantidad)>0)) return 'falta la cantidad';
       const f=fechaExcel(o.fecha); if(f===null) return 'no entiendo la fecha «'+o.fecha+'»';
-      if(esCredito(o.condicion) && !o.cliente) return 'a crédito necesita el cliente';
+      if(esCredito(o.condicion) && !docKey(o.cliente_documento)) return 'a crédito necesita el documento del cliente';
+      let cl=null; if(docKey(o.cliente_documento)){ cl=terceroImpDoc('clientes',o.cliente_documento,'cliente'); if(typeof cl==='string') return cl; }
       if(o.cuenta && !buscaPorNombre('cuentas',o.cuenta)) return 'no existe la cuenta «'+o.cuenta+'»';
       const py=proyPorNombre(o.proyecto); if(py===null) return 'no existe el proyecto «'+o.proyecto+'»';
       const pr= o.precio===''||o.precio==null? (Number(p.precio)||0) : toN(o.precio);
-      return {p:p, q:toN(o.cantidad), precio:pr, fecha:f||todayISO(), factura:o.factura, cliente:o.cliente||'', desc:toN(o.descuento),
+      return {p:p, q:toN(o.cantidad), precio:pr, fecha:f||todayISO(), factura:o.factura, cl:cl, desc:toN(o.descuento),
         credito:esCredito(o.condicion), plazo:toN(o.plazo_dias)||30, medio:medioDeTexto(o.medio), cuenta:o.cuenta||'', proyecto:py||'',
         _t:(o.factura||'')+' · '+p.nombre+' × '+num(toN(o.cantidad),2)+' · '+money(pr*toN(o.cantidad))}; },
+    validarPlan:(grupos,mal)=>{ const queda={};          // inventario que va quedando, factura por factura
+      return grupos.filter(g=>{ const pide={}; g.forEach(y=>pide[y.p.id]=(pide[y.p.id]||0)+y.q);
+        const falta=Object.keys(pide).map(pid=>{ const p=byId('productos',pid); if(queda[pid]===undefined) queda[pid]=maxPorReceta(p);
+            return (queda[pid]!==Infinity && pide[pid]>queda[pid]+0.0001)? p.nombre+' (hay '+num(Math.max(0,queda[pid]),2)+', pide '+num(pide[pid],2)+')' : null; }).filter(Boolean);
+        if(falta.length){ g.forEach(y=>mal.push({fila:y._fila,msg:'factura '+y.factura+': sin inventario suficiente de '+falta.join(', ')})); return false; }
+        Object.keys(pide).forEach(pid=>{ if(queda[pid]!==Infinity) queda[pid]-=pide[pid]; }); return true; }); },
     aplicar:grupos=>{ let n=0; const prev=S.cart, tOld=toast;
       try{ toast=()=>{};
-        grupos.forEach(g=>{ const x=g[0]; const cl=x.cliente? terceroImp('clientes',x.cliente) : null;
+        grupos.forEach(g=>{ const x=g[0]; const cl=x.cl;
           S.cart=newCart({clienteId:cl?cl.id:'', descuento:x.desc, descuentoMotivo:x.desc?'Descuento (Excel)':''});
           S.cart.items=g.map(y=>({id:uid('it'),productoId:y.p.id,nombre:y.p.nombre,precio:y.precio,cant:y.q,nota:'',env:0,envNota:''}));
           const t=cartTot(S.cart);
           const cta=x.cuenta? buscaPorNombre('cuentas',x.cuenta) : null;
+          if(faltantesVenta(S.cart.items).length) return;     // por si cambió el inventario
           const v=registrarVenta({pagos:x.credito? [] : [{medio:x.medio,monto:t.total,cuentaId:cta? cta.id : cuentaDeMedio(x.medio)}],
             credito:x.credito, clienteId:cl?cl.id:'', plazo:x.plazo, imprimir:false, proyectoId:x.proyecto||'', fecha:x.fecha});
           if(v){ v.facturaExterna=x.factura; if(x.credito) v.vence=dateAdd(x.fecha,x.plazo); put('ventas',v);
@@ -2975,41 +3011,43 @@ const IMPORTADORES={
           n++; });
       } finally{ toast=tOld; S.cart=(prev&&prev.items&&prev.items.length)? prev : newCart(); }
       return n+' ventas registradas'; }},
-  cxc:{titulo:'Cuentas por cobrar', archivo:'modelo_por_cobrar', hoja:'Por cobrar', campos:['cliente','documento','fecha','concepto','valor','vence'], oblig:['cliente','valor'],
-    ej:[['Juan Pérez','FAC-88','2026-10-15','Saldo de factura',150000,'2026-11-15'],['Tienda La Esquina','','2026-10-20','Préstamo',50000,'']],
+  cxc:{titulo:'Cuentas por cobrar', archivo:'modelo_por_cobrar', hoja:'Por cobrar', campos:['cliente_documento','cliente','documento','fecha','concepto','valor','vence'], oblig:['cliente_documento','valor'],
+    ej:[['1020304050','Juan Pérez','FAC-88','2026-10-15','Saldo de factura',150000,'2026-11-15'],['900111222','Tienda La Esquina','','2026-10-20','Préstamo',50000,'']],
     notas:['Son saldos que te deben HOY (por ejemplo, lo que traías en tu Excel). No mueven caja: solo quedan en Cartera ▸ Por cobrar.',
-      'El cliente se crea si no existe. "vence" vacío = 30 días después de la fecha.'],
-    leer:o=>{ if(!o.cliente) return 'falta el cliente'; if(!(toN(o.valor)>0)) return 'falta el valor';
+      'El cliente se busca por "cliente_documento": si no está creado, la fila NO se sube. "documento" es el número de la factura (opcional).',
+      '"vence" vacío = 30 días después de la fecha.'],
+    leer:o=>{ const t=terceroImpDoc('clientes',o.cliente_documento,'cliente'); if(typeof t==='string') return t; if(!(toN(o.valor)>0)) return 'falta el valor';
       const f=fechaExcel(o.fecha); if(f===null) return 'no entiendo la fecha «'+o.fecha+'»';
-      return {ter:o.cliente, no:o.documento||'', fecha:f||todayISO(), concepto:o.concepto||'Saldo inicial', valor:toN(o.valor), vence:fechaExcel(o.vence)||'',
-        _t:o.cliente+' · '+money(toN(o.valor))}; },
+      return {ter:t, no:o.documento||'', fecha:f||todayISO(), concepto:o.concepto||'Saldo inicial', valor:toN(o.valor), vence:fechaExcel(o.vence)||'',
+        _t:t.nombre+' · '+money(toN(o.valor))}; },
     aplicar:l=>importarDocs('cxc',l)},
-  cxp:{titulo:'Cuentas por pagar', archivo:'modelo_por_pagar', hoja:'Por pagar', campos:['proveedor','documento','fecha','concepto','valor','vence'], oblig:['proveedor','valor'],
-    ej:[['Distribuidora Central','FV-55','2026-10-10','Factura pendiente',320000,'2026-11-10'],['Arrendador local','','2026-11-01','Arriendo de noviembre',800000,'2026-11-30']],
+  cxp:{titulo:'Cuentas por pagar', archivo:'modelo_por_pagar', hoja:'Por pagar', campos:['proveedor_documento','proveedor','documento','fecha','concepto','valor','vence'], oblig:['proveedor_documento','valor'],
+    ej:[['900123456','Distribuidora Central','FV-55','2026-10-10','Factura pendiente',320000,'2026-11-10'],['79123456','Arrendador local','','2026-11-01','Arriendo de noviembre',800000,'2026-11-30']],
     notas:['Son saldos que debes HOY. No mueven caja: solo quedan en Tesorería ▸ Por pagar.',
-      'El proveedor se crea si no existe. "vence" vacío = 30 días después de la fecha.'],
-    leer:o=>{ if(!o.proveedor) return 'falta el proveedor'; if(!(toN(o.valor)>0)) return 'falta el valor';
+      'El proveedor se busca por "proveedor_documento": si no está creado, la fila NO se sube. "documento" es el número de la factura (opcional).',
+      '"vence" vacío = 30 días después de la fecha.'],
+    leer:o=>{ const t=terceroImpDoc('proveedores',o.proveedor_documento,'proveedor'); if(typeof t==='string') return t; if(!(toN(o.valor)>0)) return 'falta el valor';
       const f=fechaExcel(o.fecha); if(f===null) return 'no entiendo la fecha «'+o.fecha+'»';
-      return {ter:o.proveedor, no:o.documento||'', fecha:f||todayISO(), concepto:o.concepto||'Saldo inicial', valor:toN(o.valor), vence:fechaExcel(o.vence)||'',
-        _t:o.proveedor+' · '+money(toN(o.valor))}; },
+      return {ter:t, no:o.documento||'', fecha:f||todayISO(), concepto:o.concepto||'Saldo inicial', valor:toN(o.valor), vence:fechaExcel(o.vence)||'',
+        _t:t.nombre+' · '+money(toN(o.valor))}; },
     aplicar:l=>importarDocs('cxp',l)},
   movimientos:{titulo:'Pagos e ingresos', archivo:'modelo_pagos_ingresos', hoja:'Movimientos',
-    campos:['fecha','tipo','cuenta','valor','concepto','categoria','tercero','proyecto'], oblig:['tipo','cuenta','valor'],
-    ej:[['2026-11-03','pago','Caja general',120000,'Servicio de luz','servicios','Empresa de energía',''],
-        ['2026-11-04','ingreso','Nequi',50000,'Reparación de celular','servicios','','Tecnología']],
+    campos:['fecha','tipo','cuenta','valor','concepto','categoria','tercero_documento','tercero','proyecto'], oblig:['tipo','cuenta','valor'],
+    ej:[['2026-11-03','pago','Caja general',120000,'Servicio de luz','servicios','900123456','Distribuidora Central',''],
+        ['2026-11-04','ingreso','Nequi',50000,'Reparación de celular','servicios','','','Tecnología']],
     notas:['"tipo": pago (sale plata) o ingreso (entra plata).','"cuenta" debe ser el nombre exacto de una caja o banco.',
-      'Estos movimientos SÍ cambian el saldo de la cuenta. Los pagos cuentan como gasto en la utilidad (según su categoría).'],
+      'Estos movimientos SÍ cambian el saldo de la cuenta. Los pagos cuentan como gasto en la utilidad (según su categoría).',
+      '"tercero_documento" es opcional: si lo pones, debe ser de un proveedor o cliente ya creado; si no está creado, la fila NO se sube.'],
     leer:o=>{ const tp=/^(pago|egreso|gasto|salida)/i.test(String(o.tipo||''))? 'egreso' : /^(ingreso|cobro|entrada)/i.test(String(o.tipo||''))? 'ingreso' : null;
       if(!tp) return 'el tipo debe ser pago o ingreso'; const c=buscaPorNombre('cuentas',o.cuenta||''); if(!c) return 'no existe la cuenta «'+(o.cuenta||'')+'»';
       if(!(toN(o.valor)>0)) return 'falta el valor'; const f=fechaExcel(o.fecha); if(f===null) return 'no entiendo la fecha «'+o.fecha+'»';
       const py=proyPorNombre(o.proyecto); if(py===null) return 'no existe el proyecto «'+o.proyecto+'»';
-      return {tipo:tp, c:c, valor:toN(o.valor), fecha:f||todayISO(), concepto:o.concepto||'', categoria:normTxt(o.categoria||'otros'), tercero:o.tercero||'', proyecto:py||'',
+      let ter=null; if(docKey(o.tercero_documento)){ const pv=terceroPorDoc('proveedores',o.tercero_documento), cl=pv? null : terceroPorDoc('clientes',o.tercero_documento);
+        if(!pv && !cl) return 'el tercero con documento '+o.tercero_documento+' no está creado (créalo primero)';
+        ter= pv? {id:'proveedor:'+pv.id,nombre:pv.nombre} : {id:'cliente:'+cl.id,nombre:cl.nombre}; }
+      return {tipo:tp, c:c, valor:toN(o.valor), fecha:f||todayISO(), concepto:o.concepto||'', categoria:normTxt(o.categoria||'otros'), ter:ter, proyecto:py||'',
         _t:(tp==='egreso'?'Pago':'Ingreso')+' · '+(o.concepto||'')+' · '+money(toN(o.valor))}; },
-    aplicar:l=>{ l.forEach(x=>{ let tid='', tnom=x.tercero;
-        if(x.tercero){ const pv=buscaPorNombre('proveedores',x.tercero), cl=pv? null : buscaPorNombre('clientes',x.tercero);
-          if(pv){ tid='proveedor:'+pv.id; tnom=pv.nombre; } else if(cl){ tid='cliente:'+cl.id; tnom=cl.nombre; }
-          else if(x.tipo==='egreso'){ const id=crearProveedorRapido(x.tercero,{}); tid='proveedor:'+id; }
-          else { const id=crearClienteRapido(x.tercero,{}); tid='cliente:'+id; } }
+    aplicar:l=>{ l.forEach(x=>{ const tid=x.ter? x.ter.id : '', tnom=x.ter? x.ter.nombre : '';
         const m={id:uid('mv'),fecha:fechaTs(x.fecha),cuentaId:x.c.id,tipo:x.tipo,monto:round(x.valor,2),concepto:x.concepto,categoria:x.categoria,
           refTipo:'',refId:'',terceroId:tid,terceroNombre:tnom,usuarioId:S.user?S.user.id:'',turnoId:'',importado:true};
         if(x.proyecto) m.proyectoId=x.proyecto; put('movimientos',m); });
@@ -3017,7 +3055,7 @@ const IMPORTADORES={
 };
 function importarDocs(tipo,l){
   const esC=tipo==='cxc';
-  l.forEach(x=>{ const t=terceroImp(esC?'clientes':'proveedores',x.ter);
+  l.forEach(x=>{ const t=x.ter;
     put('otrosdocs',{id:uid('od'), no:x.no||nextNo(tipo,esC?'PC-':'PP-'), tipo:tipo, esOtro:true, fecha:x.fecha,
       terceroId:(esC?'cliente:':'proveedor:')+t.id, terceroNombre:t.nombre, concepto:x.concepto, total:round(x.valor,2),
       vence:x.vence||dateAdd(x.fecha,30), estado:'pendiente', nota:'Cargado desde Excel', usuarioId:S.user?S.user.id:''}); });
@@ -3074,6 +3112,8 @@ function mImportarModulo(lista,sel){
             let x; try{ x=d.leer(o); }catch(er){ x='error: '+er.message; }
             if(typeof x==='string') mal.push({fila:i+2,msg:x}); else { x._fila=i+2; x._g=d.agrupar? d.agrupar(o) : ''; ok.push(x); } });
           plan= d.agrupar? Object.values(ok.reduce((a,x)=>{ (a[x._g]=a[x._g]||[]).push(x); return a; },{})) : ok;
+          if(d.validarPlan){ plan=d.validarPlan(plan,mal); mal.sort((a,b)=>a.fila-b.fila);
+            const quedan=d.agrupar? [].concat(...plan) : plan; ok.length=0; quedan.forEach(x=>ok.push(x)); }
           $('#ix_prev',m).innerHTML='<div class="card"><div class="hd"><h3>Esto encontré en «'+esc(nom)+'»</h3><div class="spacer"></div>'+
               '<span class="pill ok">'+ok.length+' filas listas</span>'+(mal.length? ' <span class="pill bad">'+mal.length+' con problemas</span>':'')+
               (d.agrupar? ' <span class="pill info">'+plan.length+' documentos</span>' : '')+'</div><div class="bd">'+
@@ -3522,13 +3562,29 @@ function combo(cont,o){
            refrescar:(nueva)=>{ if(nueva) o.lista=nueva; inp.value=texto(); } };
 }
 
+/* ---- terceros: el número de documento es obligatorio y no se repite ----
+   Se compara sin puntos, espacios ni dígito de verificación (900.123.456-7 = 900123456). */
+function docKey(x){ return String(x==null?'':x).split('-')[0].replace(/[^0-9a-z]/gi,'').toLowerCase(); }
+function docDe(coll,t){ return t? (coll==='clientes'? t.doc : t.nit) : ''; }
+function terceroPorDoc(coll,doc,menosId){
+  const k=docKey(doc); if(!k) return null;
+  return (S[coll]||[]).find(t=>t.id!==menosId && docKey(docDe(coll,t))===k) || null;
+}
 /* altas rápidas usadas por los buscadores */
 function crearClienteRapido(nombre,d){
-  const c={id:uid('cl'),nombre:nombre.trim(),doc:'',telefono:(d&&d.telefono)||'',limite:0,activo:true};
+  const doc=String((d&&d.doc)||'').trim();
+  if(!docKey(doc)) throw new Error('Escribe el número de documento del cliente');
+  const ya=terceroPorDoc('clientes',doc);
+  if(ya){ toast('Ese documento ya es de «'+ya.nombre+'»: se usa ese cliente','ok',5000); return ya.id; }
+  const c={id:uid('cl'),nombre:nombre.trim(),doc:doc,telefono:(d&&d.telefono)||'',limite:0,activo:true};
   put('clientes',c); return c.id;
 }
 function crearProveedorRapido(nombre,d){
-  const p={id:uid('pr'),nombre:nombre.trim(),nit:'',contacto:'',telefono:(d&&d.telefono)||'',activo:true};
+  const doc=String((d&&d.doc)||'').trim();
+  if(!docKey(doc)) throw new Error('Escribe el NIT o documento del proveedor');
+  const ya=terceroPorDoc('proveedores',doc);
+  if(ya){ toast('Ese documento ya es de «'+ya.nombre+'»: se usa ese proveedor','ok',5000); return ya.id; }
+  const p={id:uid('pr'),nombre:nombre.trim(),nit:doc,contacto:'',telefono:(d&&d.telefono)||'',activo:true};
   put('proveedores',p); return p.id;
 }
 function crearIngredienteRapido(nombre,d){
@@ -3543,17 +3599,17 @@ function crearCategoriaRapida(nombre,d){
   const c={id:uid('c'),nombre:nombre.trim(),emoji:(d&&d.emoji)||'🍽️',orden:S.categorias.length+1,activo:true};
   put('categorias',c); return c.id;
 }
-const CREAR_CLIENTE={nota:'Luego le completas documento y cupo en Clientes',
-  campos:[{k:'telefono',label:'Teléfono (opcional)',valor:''}], fn:crearClienteRapido, lista:()=>S.clientes.filter(x=>x.activo)};
-const CREAR_PROVEEDOR={nota:'Luego le completas NIT y contacto en Proveedores',
-  campos:[{k:'telefono',label:'Teléfono (opcional)',valor:''}], fn:crearProveedorRapido, lista:()=>S.proveedores.filter(x=>x.activo)};
+const CREAR_CLIENTE={nota:'Luego le completas el cupo en Clientes',
+  campos:[{k:'doc',label:'N° de documento (obligatorio)',valor:''},{k:'telefono',label:'Teléfono (opcional)',valor:''}], fn:crearClienteRapido, lista:()=>S.clientes.filter(x=>x.activo)};
+const CREAR_PROVEEDOR={nota:'Luego le completas el contacto en Proveedores',
+  campos:[{k:'doc',label:'NIT o documento (obligatorio)',valor:''},{k:'telefono',label:'Teléfono (opcional)',valor:''}], fn:crearProveedorRapido, lista:()=>S.proveedores.filter(x=>x.activo)};
 const CREAR_INGREDIENTE={nota:'Entra con saldo en cero; la compra le pone el costo',
   campos:[{k:'unidad',label:'Unidad de medida',valor:'g',opciones:['g','kg','ml','L','und','lb','oz']}],
   fn:crearIngredienteRapido, lista:()=>S.ingredientes.filter(x=>x.activo!==false)};
 const CREAR_CATEGORIA={campos:[{k:'emoji',label:'Icono',valor:'🍽️'}],
   fn:crearCategoriaRapida, lista:()=>S.categorias.filter(x=>x.activo)};
 const CREAR_TERCERO={nota:'Queda guardado como proveedor',
-  campos:[{k:'telefono',label:'Teléfono (opcional)',valor:''}],
+  campos:[{k:'doc',label:'NIT o documento (obligatorio)',valor:''},{k:'telefono',label:'Teléfono (opcional)',valor:''}],
   fn:(n,d)=>'proveedor:'+crearProveedorRapido(n,d), lista:()=>listaTerceros()};
 
 /* ============================ COMPONENTES ============================= */
@@ -4492,8 +4548,21 @@ function mCobrar(){
   setMedio('efectivo');
 }
 
+/* lo que pide una venta y no hay en inventario (al corregir una venta, cuenta lo que ya tenía) */
+function faltantesVenta(items,original){
+  const pide={}, ya={};
+  (items||[]).forEach(i=>{ if(i.productoId) pide[i.productoId]=(pide[i.productoId]||0)+(Number(i.cant)||0); });
+  ((original&&original.items)||[]).forEach(i=>{ if(i.productoId) ya[i.productoId]=(ya[i.productoId]||0)+(Number(i.cant)||0); });
+  return Object.keys(pide).map(pid=>{ const p=byId('productos',pid); if(!p) return null;
+    const hay=maxPorReceta(p); if(hay===Infinity) return null;
+    const disp=hay+(ya[pid]||0);
+    return pide[pid]>disp+0.0001? {nombre:p.nombre, hay:Math.max(0,disp), pide:pide[pid]} : null; }).filter(Boolean);
+}
+function textoFaltantes(fl){ return fl.map(x=>x.nombre+' (hay '+num(x.hay,2)+', pides '+num(x.pide,2)+')').join(' · '); }
 function registrarVenta(o){
   const c=S.cart, t=cartTot(c);
+  { const orig=c.editandoId? byId('ventas',c.editandoId) : null, fl=faltantesVenta(c.items,orig);
+    if(fl.length){ toast('No hay inventario suficiente: '+textoFaltantes(fl)+'. Primero registra la compra.','bad',9000); return null; } }
   const pend=pendientesComanda(c);        // lo que la cocina todavía no ha visto
   const original = c.editandoId? byId('ventas',c.editandoId) : null;
   if(original) deshacerVenta(original);              // se recalcula todo desde cero
@@ -9322,8 +9391,10 @@ function analizarImport(hojas){
           unidad:(UNIDADES_COMERCIO.indexOf(normTxt(o.unidad))>=0? normTxt(o.unidad):'und'),
           precio:toN(o.precio), costo:toN(o.costo), stock:toN(o.stock_inicial), stockMin:toN(o.stock_minimo), emoji:o.icono||'🛒'}); }
       else if(def.hoja==='Clientes'){ if(!o.nombre) return;
+        if(!docKey(o.documento)){ avisos.push('Cliente "'+o.nombre+'" sin documento: no se sube'); return; }
         plan.clientes.push({nombre:o.nombre, doc:o.documento||'', telefono:o.telefono||'', limite:toN(o.cupo)}); }
       else if(def.hoja==='Proveedores'){ if(!o.nombre) return;
+        if(!docKey(o.nit)){ avisos.push('Proveedor "'+o.nombre+'" sin NIT: no se sube'); return; }
         plan.proveedores.push({nombre:o.nombre, nit:o.nit||'', contacto:o.contacto||'', telefono:o.telefono||''}); }
       else if(def.hoja==='Cuentas'){ if(!o.nombre) return;
         plan.cuentas.push({nombre:o.nombre, tipo:(normTxt(o.tipo)==='banco'?'banco':'caja'),
@@ -9373,12 +9444,12 @@ function aplicarImport(plan){
     else if(!capasDe(inv.id).length){ inv.costo=o.costo||0; put('ingredientes',inv); }
     cuenta('Productos',!ex); });
 
-  plan.clientes.forEach(o=>{ const ex=buscaPorNombre('clientes',o.nombre);
+  plan.clientes.forEach(o=>{ const ex=terceroPorDoc('clientes',o.doc);
     const d=ex||{id:uid('cl'),activo:true};
     Object.assign(d,{nombre:o.nombre,doc:o.doc,telefono:o.telefono,limite:o.limite,activo:true});
     put('clientes',d); cuenta('Clientes',!ex); });
 
-  plan.proveedores.forEach(o=>{ const ex=buscaPorNombre('proveedores',o.nombre);
+  plan.proveedores.forEach(o=>{ const ex=terceroPorDoc('proveedores',o.nit);
     const d=ex||{id:uid('pr'),activo:true};
     Object.assign(d,{nombre:o.nombre,nit:o.nit,contacto:o.contacto,telefono:o.telefono,activo:true});
     put('proveedores',d); cuenta('Proveedores',!ex); });
@@ -10309,16 +10380,22 @@ function edTercero(coll,t){
   const esC=coll==='clientes';
   const ed=t||{id:uid(esC?'cl':'pr'),nombre:'',doc:'',nit:'',contacto:'',telefono:'',limite:0,activo:true};
   modal({title:(t?'Editar ':'Nuevo ')+(esC?'cliente':'proveedor'),
-    body:'<div class="f" style="margin-bottom:10px"><label>Nombre / razón social</label><input id="n" value="'+esc(ed.nombre)+'"></div>'+
+    body:'<div class="f" style="margin-bottom:10px"><label>'+(esC?'N° de documento':'NIT o documento')+' *</label>'+
+        '<input id="d" value="'+esc((esC?ed.doc:ed.nit)||'')+'" placeholder="Obligatorio" style="font-weight:700"></div>'+
       '<div class="grid" style="grid-template-columns:1fr 1fr">'+
-      '<div class="f"><label>'+(esC?'Documento':'NIT')+'</label><input id="d" value="'+esc(esC?ed.doc:ed.nit)+'"></div>'+
+      '<div class="f"><label>Nombre / razón social *</label><input id="n" value="'+esc(ed.nombre)+'"></div>'+
       '<div class="f"><label>Teléfono</label><input id="t" value="'+esc(ed.telefono||'')+'"></div></div>'+
       (esC? '<div class="f" style="margin-top:10px"><label>Cupo de crédito</label><input id="l" type="number" step="any" value="'+(ed.limite||0)+'"></div>'
           : '<div class="f" style="margin-top:10px"><label>Contacto</label><input id="c" value="'+esc(ed.contacto||'')+'"></div>'),
     footer:(t&&puedeBorrar()?'<button class="btn danger" id="del">Eliminar</button>':'')+
       '<div class="spacer"></div><button class="btn" data-x>Cancelar</button><button class="btn pri" id="ok">Guardar</button>',
     onOpen:m=>{
-      $('#ok',m).onclick=()=>{ ed.nombre=$('#n',m).value.trim(); if(!ed.nombre) return toast('Nombre requerido','warn');
+      setTimeout(()=>{ const x=$('#d',m); if(x && !x.value) x.focus(); },60);
+      $('#ok',m).onclick=()=>{ const doc=$('#d',m).value.trim();
+        if(!docKey(doc)){ $('#d',m).focus(); return toast('El número de documento es obligatorio','warn'); }
+        const ya=terceroPorDoc(coll,doc,ed.id);
+        if(ya) return toast('Ese documento ya está creado: es de «'+ya.nombre+'»','bad',6000);
+        ed.nombre=$('#n',m).value.trim(); if(!ed.nombre) return toast('Nombre requerido','warn');
         if(esC){ ed.doc=$('#d',m).value.trim(); ed.limite=toN($('#l',m).value); }
         else { ed.nit=$('#d',m).value.trim(); ed.contacto=$('#c',m).value.trim(); }
         ed.telefono=$('#t',m).value.trim(); put(coll,ed); closeModal(); render(); toast('Guardado','ok'); };
