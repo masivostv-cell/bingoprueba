@@ -8,7 +8,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Sistema de Manifiestos v21</title>
+<title>Sistema de Manifiestos v22</title>
 
 <!-- << v7 >> Para que al agregarla a la pantalla de inicio se comporte como
      una aplicación y no como una página dentro del navegador. -->
@@ -1654,8 +1654,8 @@ body.perfil-conductor [data-solo-admin]{display:none!important;}
 "use strict";
 
 // << v18 >> Versión de la app (se ve en el menú) y la mínima del Apps Script
-const VERSION_APP = "v21";
-const VERSION_SERVIDOR_MINIMA = 18;
+const VERSION_APP = "v22";
+const VERSION_SERVIDOR_MINIMA = 19;
 let versionServidor = 0;          // la que responde el Apps Script (0 = no se sabe)
 
 // << v21 >> Una descarga parcial con un Apps Script anterior a v18 descargaría
@@ -1670,7 +1670,7 @@ function servidorPermiteParcial(){
   return false;
 }
 
-const API = "https://script.google.com/macros/s/AKfycbzwKwRCVowLpI53NlSGyjlsDNclAJpYIfwGjZqBrMDsHyw9Ctn3SCLhORYF2bFrDk1O/exec";
+const API = "https://script.google.com/macros/s/AKfycbzp84utytFh-sIE5tF0ERVgOmAtUK7NrHQ1EUrwg63RMcGiHCEFOnYbzCX82mJzp5Ni/exec";
 
 const CAMPOS_CANTIDAD = [
   "biosanitarios","cortopunzantes","anatomopatologicos",
